@@ -166,7 +166,7 @@ import {computed, ref, watch} from 'vue';
 import {ElMessage} from 'element-plus';
 import {getShiftSelectList, saveScheduleTemplate} from '@/api/appoint';
 import {getClinicRoomListAll, getEmployeeList} from '@/api/system';
-import {SHIFT_SCOPE_OUTPATIENT, STAFF_TYPE_DOCTOR, STAFF_TYPE_DOCTOR_OPTIONS, staffTypeHasSource, staffTypeText} from '@/lib/scheduleShift';
+import {shiftOptionLabel, SHIFT_SCOPE_OUTPATIENT, STAFF_TYPE_DOCTOR, STAFF_TYPE_DOCTOR_OPTIONS, staffTypeHasSource, staffTypeText} from '@/lib/scheduleShift';
 import {getTitleLabel} from '@/lib/scheduleTitle';
 import {DIAGNOSIS_TIER_LIST, tierAmount, tierDefaultOf} from '@/lib/diagnosisTier';
 
@@ -225,7 +225,7 @@ const loadShiftDict = async (deptId) => {
     return [];
   }
 };
-const shiftDictLabel = (s) => `${s.shiftName} ${s.startTime}~${s.endTime}`;
+const shiftDictLabel = (s) => `${shiftOptionLabel(s)} ${s.startTime}~${s.endTime}`;
 /**
  * 班次回显：编辑时按落库的 shift_id 还原下拉。
  * 班次已停用 / 不适用于本科室 → 不在选项里，就不回显（宁空不猜：反查时间会撞「上午门诊 vs 专家门诊（上午）」）。

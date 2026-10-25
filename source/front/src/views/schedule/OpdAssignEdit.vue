@@ -29,7 +29,7 @@
       <el-form-item label="班次">
         <el-select v-model="formData.shiftId" clearable placeholder="选择班次（可空）" style="width: 100%">
           <el-option v-for="s in shiftOptions" :key="s.id"
-                     :label="`${s.shiftName} ${s.startTime || ''}~${s.endTime || ''}`" :value="s.id"/>
+                     :label="`${shiftOptionLabel(s)} ${s.startTime || ''}~${s.endTime || ''}`" :value="s.id"/>
         </el-select>
       </el-form-item>
       <el-form-item label="是否借调">
@@ -66,7 +66,7 @@ import {computed, reactive, ref, watch} from 'vue'
 import {ElMessage} from 'element-plus'
 import {getAssignCandidates, opdAssignUpsert} from '@/api/opdStation'
 import {getShiftSelectList} from '@/api/appoint'
-import {SHIFT_SCOPE_OUTPATIENT} from '@/lib/scheduleShift'
+import {shiftOptionLabel, SHIFT_SCOPE_OUTPATIENT} from '@/lib/scheduleShift'
 
 const props = defineProps({
   modelValue: {type: Boolean, default: false},

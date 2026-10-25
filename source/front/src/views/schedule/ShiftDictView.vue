@@ -1,8 +1,10 @@
 <template>
-  <!-- 班次字典（biz_shift）独立维护页：全院 4 册班次的唯一维护入口。
-       门诊排班/护理排班/值班点位配置/人力配置标准等场景按「适用域」各取所需。
-       20261019 从 ScheduleView.vue 的「班次字典」签抽出，随排班中心独立菜单一起归位。 -->
+  <!-- 排班字典管理：班次字典 + 公共工位字典，两个Tab合并维护 -->
   <div class="w-full">
+    <el-card shadow="never">
+      <el-tabs v-model="activeDictTab">
+        <!-- ===================== 班次字典 ===================== -->
+        <el-tab-pane label="班次字典" name="shift">
     <div class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
       <div class="filter-row mb-3 flex flex-wrap items-center gap-3">
         <el-input v-model="shiftKeyword" class="!w-56" clearable data-testid="shift-keyword"
@@ -19,7 +21,27 @@
         </el-button>
       </div>
       <el-table v-loading="shiftLoading" :data="shifts" border data-testid="shift-dict-table" style="width: 100%">
-        <el-table-column label="班次名称" min-width="150" prop="shiftName"/>
+        <el-table-column label="班次名称" min-width="150" prop="shiftName">
+          <template #default="{ row }">
+            <div class="flex items-center gap-2">
+              <span v-if="row.color" class="inline-block h-3 w-3 rounded-sm"
+                    :style="{ backgroundColor: row.color }"/>
+              <span>{{ row.shiftName }}</span>
+            </div>
+          </template>
+        </el-table-column>
+        <el-table-column align="center" label="缩写" width="70">
+          <template #default="{ row }">
+            <span v-if="row.shortName" class="font-medium text-slate-700">{{ row.shortName }}</span>
+            <span v-else class="text-slate-300">—</span>
+          </template>
+        </el-table-column>
+        <el-table-column align="center" label="短码" width="80">
+          <template #default="{ row }">
+            <span v-if="row.shiftCode" class="font-mono text-xs text-slate-500">{{ row.shiftCode }}</span>
+            <span v-else class="text-slate-300">—</span>
+          </template>
+        </el-table-column>
         <el-table-column align="center" label="适用域" width="120">
           <template #default="{ row }">
             <el-tag :type="Number(row.useScope) === 2 ? 'success' : 'info'" data-testid="shift-scope-tag"
@@ -66,6 +88,16 @@
                      class="mt-3 justify-end" layout="total, prev, pager, next, sizes"
                      @current-change="handleShiftPageChange" @size-change="handleShiftSizeChange"/>
     </div>
+        </el-tab-pane>
+
+        <!-- ===================== 公共工位字典 ===================== -->
+        <el-tab-pane label="公共工位字典" name="station">
+          <div class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+            <el-empty description="公共工位字典维护请前往「门诊工位派岗」页面 → 公共工位字典 Tab"/>
+          </div>
+        </el-tab-pane>
+      </el-tabs>
+    </el-card>
 
     <!-- 班次编辑弹窗：展示完整详情，仅名称可改（时间/科室/类型/状态只读） -->
     <ScheduleShiftEdit
@@ -100,6 +132,7 @@ import ScheduleShiftEdit from './ScheduleShiftEdit.vue';
 const departments = ref([]);
 const shifts = ref([]);
 const shiftLoading = ref(false);
+const activeDictTab = ref('shift');
 const shiftKeyword = ref('');
 // 适用域筛选：不选就是四册混列；各排班场景按 SHIFT_SCOPE 各取所需，页面只做维护
 const shiftUseScope = ref(null);

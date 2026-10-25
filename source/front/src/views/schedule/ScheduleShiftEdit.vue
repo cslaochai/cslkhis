@@ -1,46 +1,76 @@
 <template>
-  <!-- 班次编辑弹窗：展示完整详情，仅名称可改（时间/科室/类型/状态只读） -->
-  <el-dialog v-model="visible" destroy-on-close title="编辑班次" width="480px">
+  <!-- 班次编辑弹窗：名称/短码/缩写/颜色/夜班/计工时/夜班津贴/适用域/状态可改；
+       起止时间/适用科室/班别 保持只读（改了影响未来排班的默认值，需走 SQL）。
+       提交统一走 shiftUpsert 整条覆盖，只读字段原样带回防止被 null 覆盖。 -->
+  <el-dialog v-model="visible" destroy-on-close title="编辑班次" width="560px">
     <el-form label-position="left" @submit.prevent>
       <el-form-item label="班次名称" required>
-        <el-input v-model="shiftEditName" data-testid="shift-edit-name" maxlength="50"
+        <el-input v-model="form.shiftName" data-testid="shift-edit-name" maxlength="50"
                   placeholder="班次名称（同科室范围内不可重复）"
                   show-word-limit/>
       </el-form-item>
       <div class="grid grid-cols-2 gap-4">
+        <el-form-item label="短码">
+          <el-input v-model="form.shiftCode" maxlength="16" placeholder="如 AM / N / R" clearable/>
+        </el-form-item>
+        <el-form-item label="缩写">
+          <el-input v-model="form.shortName" maxlength="4" placeholder="如 夜 / 休 / 听" clearable/>
+        </el-form-item>
+      </div>
+      <el-form-item label="排班图颜色">
+        <el-color-picker v-model="form.color" show-alpha :predefine="COLOR_PRESETS"/>
+        <span v-if="!form.color" class="ml-3 text-xs text-slate-400">不选=前端默认色</span>
+      </el-form-item>
+      <div class="grid grid-cols-2 gap-4">
         <el-form-item label="起止时间">
-          <el-input :model-value="shiftEditRow ? `${shiftEditRow.startTime} ~ ${shiftEditRow.endTime}` : ''"
-                    disabled/>
+          <el-input :model-value="`${form.startTime} ~ ${form.endTime}`" disabled/>
         </el-form-item>
         <el-form-item label="时长">
-          <el-input :model-value="shiftEditRow ? `${shiftEditRow.durationMinutes} 分钟` : ''" disabled/>
+          <el-input :model-value="`${form.durationMinutes} 分钟`" disabled/>
         </el-form-item>
         <el-form-item label="适用科室">
-          <el-input :model-value="shiftEditRow ? shiftDeptName(shiftEditRow.deptId) : ''" disabled/>
+          <el-input :model-value="shiftDeptName(form.deptId)" disabled/>
         </el-form-item>
-        <el-form-item label="班次类型">
-          <el-input :model-value="shiftEditRow?.scheduleType ? (shiftLabel[shiftEditRow.scheduleType] || '—') : '—'"
-                    disabled/>
+        <el-form-item label="班别">
+          <el-input :model-value="form.scheduleType ? (shiftLabel[form.scheduleType] || '—') : '—'" disabled/>
+        </el-form-item>
+      </div>
+      <el-form-item label="是否夜班">
+        <el-radio-group v-model="form.isNight">
+          <el-radio :value="1">夜班</el-radio>
+          <el-radio :value="0">白班</el-radio>
+        </el-radio-group>
+        <span class="ml-3 text-xs text-slate-400">连班/岗后休息规则按此判定</span>
+      </el-form-item>
+      <div class="grid grid-cols-2 gap-4">
+        <el-form-item label="计工时">
+          <el-switch v-model="form.countWorkHours"
+                     active-text="计" inactive-text="不计"
+                     active-value="1" inactive-value="0"/>
+        </el-form-item>
+        <el-form-item label="夜班津贴">
+          <el-switch v-model="form.countNightAllowance"
+                     active-text="计发" inactive-text="不计"
+                     active-value="1" inactive-value="0"/>
         </el-form-item>
       </div>
       <el-form-item label="适用域">
-        <el-radio-group v-model="shiftEditUseScope" data-testid="shift-edit-scope">
+        <el-radio-group v-model="form.useScope" data-testid="shift-edit-scope">
           <el-radio :value="1">门诊/急诊排班</el-radio>
           <el-radio :value="2">病区护理排班</el-radio>
         </el-radio-group>
       </el-form-item>
       <el-form-item label="状态">
-        <el-radio-group v-model="shiftEditStatus" data-testid="shift-edit-status">
+        <el-radio-group v-model="form.status" data-testid="shift-edit-status">
           <el-radio :value="1">启用</el-radio>
           <el-radio :value="0">停用</el-radio>
         </el-radio-group>
       </el-form-item>
-      <p class="text-xs text-slate-400">可修改名称、适用域与启用状态；起止时间/适用科室/班次类型等口径调整需走 SQL 变更。
-        改成「病区护理排班」后，这条班次就只会出现在护理排班页，门诊排班下拉里再也选不到它。</p>
+      <p class="text-xs text-slate-400">起止时间/适用科室/班别为铺底口径，不在此修改（需走 SQL）；其他字段改完即时生效，已排班次的时间快照不受影响。</p>
     </el-form>
     <template #footer>
-      <el-button v-perm="'shift:dict:edit'" :loading="shiftEditSaving" type="primary"
-                 @click="handleShiftEditSubmit">确定
+      <el-button v-perm="'shift:dict:edit'" :loading="saving" type="primary"
+                 @click="handleSubmit">确定
       </el-button>
       <el-button @click="visible = false">取消</el-button>
     </template>
@@ -50,13 +80,9 @@
 <script setup>
 import {computed, ref, watch} from 'vue';
 import {ElMessage} from 'element-plus';
-import {createShift, renameShift, updateShiftStatus} from '@/api/appoint';
+import {createShift} from '@/api/appoint';
 import {SCHEDULE_TYPE_TEXT} from '@/lib/scheduleShift';
 
-/**
- * 班次字典的「编辑已有班次」：row 传入即编辑（后端 shiftUpsert 是同一个入口）。
- * 科室列表由页面加载一次后 prop 下发 —— 字典列表列与这里必须同一份，不能各拉各的。
- */
 const props = defineProps({
   modelValue: {type: Boolean, default: false},
   row: {type: Object, default: null},
@@ -69,74 +95,80 @@ const visible = computed({
   set: (v) => emit('update:modelValue', v),
 });
 
-// 班次文案唯一口径在 lib/scheduleShift.js（1上午/2下午/3全天/4凌晨/5夜班）
 const shiftLabel = SCHEDULE_TYPE_TEXT;
-const shiftEditRow = ref(null);
-const shiftEditName = ref('');
-const shiftEditStatus = ref(1);
-const shiftEditUseScope = ref(1);
-const shiftEditSaving = ref(false);
+const COLOR_PRESETS = ['#67C23A', '#409EFF', '#F56C6C', '#909399', '#E6A23C', '#9B59B6'];
+
+// 整条 upsert 提交，只读字段（startTime/endTime/deptId/scheduleType/applyStaffType/needRestHours/lateGraceMinutes）
+// 必须原样带回，否则会被后端按 null/默认值覆盖。
+const form = ref({});
+const saving = ref(false);
+
 const shiftDeptName = (deptId) => {
-  if (!deptId)
-    return '全院通用';
+  if (!deptId) return '全院通用';
   const hit = props.departments.find((d) => String(d.id) === String(deptId));
   return hit?.deptName || `科室${deptId}`;
 };
 
 watch(visible, (open) => {
-  if (!open)
-    return;
-  const row = props.row;
-  if (!row)
-    return;
-  shiftEditRow.value = row;
-  shiftEditName.value = row.shiftName;
-  shiftEditStatus.value = row.status ?? 1;
-  shiftEditUseScope.value = Number(row.useScope ?? 1);
+  if (!open) return;
+  const r = props.row;
+  if (!r) return;
+  form.value = {
+    id: r.id,
+    shiftName: r.shiftName,
+    shiftCode: r.shiftCode || '',
+    shortName: r.shortName || '',
+    color: r.color || '',
+    startTime: r.startTime,
+    endTime: r.endTime,
+    durationMinutes: r.durationMinutes,
+    deptId: r.deptId,
+    scheduleType: r.scheduleType,
+    applyStaffType: r.applyStaffType ?? null,
+    useScope: Number(r.useScope ?? 1),
+    isNight: r.isNight ?? 0,
+    needRestHours: r.needRestHours ?? 0,
+    lateGraceMinutes: r.lateGraceMinutes ?? 0,
+    countWorkHours: String(r.countWorkHours ?? 1),
+    countNightAllowance: String(r.countNightAllowance ?? 0),
+    status: r.status ?? 1,
+  };
 });
 
-// ---------- 编辑弹窗：展示完整详情，名称 + 启用状态可改 ----------
-const handleShiftEditSubmit = async () => {
-  const name = shiftEditName.value.trim();
-  if (!name) {
+const handleSubmit = async () => {
+  const f = form.value;
+  if (!f.shiftName?.trim()) {
     ElMessage.warning('班次名称不能为空');
     return;
   }
-  shiftEditSaving.value = true;
+  saving.value = true;
   try {
-    const row = shiftEditRow.value;
-    const nameChanged = name !== row.shiftName;
-    const statusChanged = shiftEditStatus.value !== row.status;
-    const scopeChanged = Number(shiftEditUseScope.value) !== Number(row.useScope ?? 1);
-    if (scopeChanged) {
-      // 改适用域必须整条 upsert（后端只有 rename/updateStatus 两个单列接口，都不碰 use_scope）
-      await createShift({
-        id: row.id,
-        shiftName: name,
-        startTime: row.startTime,
-        endTime: row.endTime,
-        deptId: row.deptId,
-        scheduleType: row.scheduleType,
-        useScope: shiftEditUseScope.value,
-        status: shiftEditStatus.value,
-      });
-    } else {
-      if (nameChanged)
-        await renameShift(row.id, name);
-      if (statusChanged)
-        await updateShiftStatus(row.id, shiftEditStatus.value);
-    }
-    if (!nameChanged && !statusChanged && !scopeChanged) {
-      ElMessage.info('名称、状态与适用域均未修改');
-    } else {
-      ElMessage.success('保存成功');
-    }
+    await createShift({
+      id: f.id,
+      shiftName: f.shiftName.trim(),
+      shiftCode: f.shiftCode?.trim() || null,
+      shortName: f.shortName?.trim() || null,
+      color: f.color || null,
+      startTime: f.startTime,
+      endTime: f.endTime,
+      deptId: f.deptId,
+      scheduleType: f.scheduleType,
+      applyStaffType: f.applyStaffType,
+      useScope: f.useScope,
+      isNight: f.isNight,
+      needRestHours: f.needRestHours,
+      lateGraceMinutes: f.lateGraceMinutes,
+      countWorkHours: Number(f.countWorkHours),
+      countNightAllowance: Number(f.countNightAllowance),
+      status: f.status,
+    });
+    ElMessage.success('保存成功');
     visible.value = false;
     emit('saved');
-  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
-    
+  } catch (e) {
+    /* 错误已由全局拦截器统一提示 */
   } finally {
-    shiftEditSaving.value = false;
+    saving.value = false;
   }
 };
 </script>

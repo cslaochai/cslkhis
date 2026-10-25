@@ -29,7 +29,7 @@
       <el-form-item label="班次" prop="shiftId">
         <div data-testid="dp-shift">
           <el-select v-model="formData.shiftId" placeholder="这一位几点到几点由班次带出" style="width: 100%">
-            <el-option v-for="s in shiftOptions" :key="s.id" :label="s.shiftName" :value="s.id"/>
+            <el-option v-for="s in shiftOptions" :key="s.id" :label="shiftOptionLabel(s)" :value="s.id"/>
           </el-select>
         </div>
       </el-form-item>
@@ -80,7 +80,7 @@ import {
   ORG_UNIT_TYPE_HOSPITAL,
   ORG_UNIT_TYPE_OPTIONS,
 } from '@/lib/staffSchedule'
-import {STAFF_TYPE_OPTIONS} from '@/lib/scheduleShift'
+import {shiftOptionLabel, STAFF_TYPE_OPTIONS} from '@/lib/scheduleShift'
 
 const SHIFT_USE_SCOPE_DUTY = 3
 
@@ -140,7 +140,7 @@ const loadOptions = async () => {
       getShiftSelectList({status: 1, useScope: SHIFT_USE_SCOPE_DUTY}),
     ])
     deptOptions.value = (dRes?.data || []).map((d) => ({id: d.id ?? d.deptId, name: d.deptName ?? d.name}))
-    shiftOptions.value = (sRes?.data || []).map((s) => ({id: s.id, shiftName: s.shiftName}))
+    shiftOptions.value = (sRes?.data || []).map((s) => ({id: s.id, shiftName: s.shiftName, useScope: s.useScope}))
   } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
     
   }

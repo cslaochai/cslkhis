@@ -213,6 +213,73 @@
           </div>
         </div>
       </el-tab-pane>
+
+      <!-- 视图三：全岗位月度工时（医生/护士/医技/行政统一统计） -->
+      <el-tab-pane label="全岗位工时" name="workload" class="min-h-0">
+        <div class="flex min-h-0 flex-1 flex-col rounded-md border border-slate-200 bg-white">
+          <div class="flex shrink-0 items-center justify-between px-3 pt-2">
+            <h3 class="text-sm font-semibold text-slate-700">全岗位月度工时统计</h3>
+            <div class="flex items-center gap-2">
+              <el-date-picker v-model="workloadMonth" type="month"
+                              value-format="YYYY-MM" placeholder="选择月份"
+                              size="small" style="width: 120px" @change="loadWorkload"/>
+            </div>
+          </div>
+          <div v-loading="workloadLoading" class="min-h-0 flex-1 overflow-auto px-3 pb-2">
+            <el-table :data="workloadRows" stripe border size="small">
+              <el-table-column label="工号" prop="empCode" width="90"/>
+              <el-table-column label="姓名" prop="employeeName" width="100"/>
+              <el-table-column label="岗位" prop="staffTypeName" width="90"/>
+              <el-table-column label="科室" prop="deptName" min-width="120" show-overflow-tooltip/>
+              <el-table-column align="right" label="出勤天数" prop="workDays" width="90"/>
+              <el-table-column align="right" label="总工时(h)" prop="totalHours" width="100"/>
+              <el-table-column align="right" label="夜班数" prop="nightDays" width="80"/>
+              <el-table-column align="right" label="休息天数" prop="restDays" width="90"/>
+              <el-table-column align="right" label="加班(h)" prop="overtimeHours" width="90"/>
+            </el-table>
+            <el-empty v-if="!workloadLoading && workloadRows.length === 0" description="暂无工时数据（后端接口待开发）"/>
+          </div>
+        </div>
+      </el-tab-pane>
+
+      <!-- 视图四：排班变更日志（全岗位留痕查询） -->
+      <el-tab-pane label="变更日志" name="logs" class="min-h-0">
+        <div class="flex min-h-0 flex-1 flex-col rounded-md border border-slate-200 bg-white">
+          <div class="shrink-0 px-3 pt-2">
+            <div class="flex flex-wrap items-end gap-3">
+              <el-date-picker v-model="logSearchForm.dateRange" type="daterange"
+                              value-format="YYYY-MM-DD" start-placeholder="开始" end-placeholder="结束"
+                              size="small"/>
+              <el-input v-model="logSearchForm.employeeName" clearable size="small"
+                        placeholder="人员姓名" class="!w-40"/>
+              <el-select v-model="logSearchForm.changeType" clearable size="small"
+                         placeholder="操作类型" class="!w-36">
+                <el-option label="新建" value="CREATE"/>
+                <el-option label="修改" value="UPDATE"/>
+                <el-option label="删除" value="DELETE"/>
+                <el-option label="提交" value="SUBMIT"/>
+                <el-option label="发布" value="PUBLISH"/>
+                <el-option label="撤回" value="RECALL"/>
+                <el-option label="调班" value="ADJUST"/>
+              </el-select>
+              <el-button size="small" type="primary" @click="loadLogs">查询</el-button>
+            </div>
+          </div>
+          <div v-loading="logLoading" class="min-h-0 flex-1 overflow-auto px-3 pb-2 pt-2">
+            <el-table :data="logRows" stripe border size="small">
+              <el-table-column label="日期" prop="scheduleDate" width="110"/>
+              <el-table-column label="人员" prop="employeeName" width="100"/>
+              <el-table-column label="单元" prop="orgName" min-width="140" show-overflow-tooltip/>
+              <el-table-column label="操作类型" prop="changeTypeText" width="100"/>
+              <el-table-column label="变更前" prop="fromText" min-width="150" show-overflow-tooltip/>
+              <el-table-column label="变更后" prop="toText" min-width="150" show-overflow-tooltip/>
+              <el-table-column label="操作人" prop="operatorName" width="100"/>
+              <el-table-column label="操作时间" prop="createTime" width="160"/>
+            </el-table>
+            <el-empty v-if="!logLoading && logRows.length === 0" description="暂无变更记录"/>
+          </div>
+        </div>
+      </el-tab-pane>
     </el-tabs>
 
     <div class="mt-3 grid shrink-0 grid-cols-1 gap-4 xl:grid-cols-2">
@@ -282,7 +349,7 @@
 <script setup>
 import {computed, onMounted, ref} from 'vue'
 import {Search} from '@element-plus/icons-vue'
-import {getScheduleOverviewWeek} from '@/api/staffSchedule'
+import {getScheduleOverviewWeek, getWorkloadMonthly, getScheduleChangeLogPage} from '@/api/staffSchedule'
 import {STAFF_TYPE_OPTIONS} from '@/lib/scheduleShift'
 import {ORG_UNIT_TYPE_OPTIONS, orgUnitTypeText} from '@/lib/staffSchedule'
 import ScheduleOverviewCellDetail from './ScheduleOverviewCellDetail.vue'
@@ -295,6 +362,43 @@ const loading = ref(false)
 
 /** 视图切换：科室在岗（人次）与门诊出诊（号源）是两套度量，分开看 */
 const activeTab = ref('unit')
+
+// ---------------- 变更日志 Tab ----------------
+const logSearchForm = ref({dateRange: null, employeeName: '', changeType: null})
+const logLoading = ref(false)
+const logRows = ref([])
+const loadLogs = async () => {
+  logLoading.value = true
+  try {
+    const res = await getScheduleChangeLogPage({
+      pageNum: 1, pageSize: 50,
+      startDate: logSearchForm.value.dateRange?.[0],
+      endDate: logSearchForm.value.dateRange?.[1],
+      employeeName: logSearchForm.value.employeeName || undefined,
+    })
+    logRows.value = res?.data?.records || []
+  } catch (e) {
+    logRows.value = []
+  } finally {
+    logLoading.value = false
+  }
+}
+
+// ---------------- 全岗位工时 Tab ----------------
+const workloadMonth = ref(new Date().toISOString().slice(0, 7) + '-01')
+const workloadLoading = ref(false)
+const workloadRows = ref([])
+const loadWorkload = async () => {
+  workloadLoading.value = true
+  try {
+    const res = await getWorkloadMonthly(workloadMonth.value)
+    workloadRows.value = res?.data || []
+  } catch (e) {
+    workloadRows.value = []
+  } finally {
+    workloadLoading.value = false
+  }
+}
 
 /** 矩阵切片条件：单元类型 / 单元名称关键词 / 只看有缺口 */
 const orgTypeFilter = ref('')

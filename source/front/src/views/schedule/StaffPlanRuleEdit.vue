@@ -13,7 +13,7 @@
       </el-form-item>
       <el-form-item label="班次">
         <el-select v-model="formData.shiftId" clearable placeholder="留空 = 该单元全部班次共用" style="width: 100%">
-          <el-option v-for="s in shiftOptions" :key="s.id" :label="s.shiftName" :value="s.id"/>
+          <el-option v-for="s in shiftOptions" :key="s.id" :label="shiftOptionLabel(s)" :value="s.id"/>
         </el-select>
       </el-form-item>
       <el-form-item label="岗位类别" prop="staffType">
@@ -65,7 +65,7 @@ import {staffPlanRuleUpsert} from '@/api/staffPlanRule'
 import {getDepartmentSelectList} from '@/api/system'
 import {getShiftSelectList} from '@/api/appoint'
 import {ORG_UNIT_TYPE_HOSPITAL, ORG_UNIT_TYPE_OPTIONS} from '@/lib/staffSchedule'
-import {STAFF_TYPE_OPTIONS} from '@/lib/scheduleShift'
+import {shiftOptionLabel, STAFF_TYPE_OPTIONS} from '@/lib/scheduleShift'
 
 const SHIFT_USE_SCOPE_GENERAL = 4
 
@@ -126,7 +126,7 @@ const ensureOptions = async () => {
       getShiftSelectList({status: 1, useScope: SHIFT_USE_SCOPE_GENERAL}),
     ])
     deptOptions.value = (dRes?.data || []).map((d) => ({id: d.id ?? d.deptId, name: d.deptName ?? d.name}))
-    shiftOptions.value = (sRes?.data || []).map((s) => ({id: s.id, shiftName: s.shiftName}))
+    shiftOptions.value = (sRes?.data || []).map((s) => ({id: s.id, shiftName: s.shiftName, useScope: s.useScope}))
     optionsLoaded = true
   } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
     

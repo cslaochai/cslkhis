@@ -72,7 +72,7 @@ public class OpdStationController {
 
     /** 派岗记录分页（日期区间 + 工位 + 借调 + 姓名关键词） */
     @Operation(summary = "派岗记录分页")
-    @PreAuthorize("hasAuthority('opd:station:list')")
+    @PreAuthorize("isAuthenticated()")
     @PostMapping("/assignPage")
     public Result<PageResult<OpdAssignVO>> assignPage(@Valid @RequestBody OpdAssignPageQueryDTO dto) {
         return Result.success(opdStationService.pageAssign(dto));

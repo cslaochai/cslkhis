@@ -1,7 +1,9 @@
 package com.his.outpatient.controller;
 
 import com.his.outpatient.service.BizClinicSourceOverviewService;
+import com.his.outpatient.service.WorkloadStatService;
 import com.his.outpatient.vo.ScheduleOverviewVO;
+import com.his.outpatient.vo.WorkloadStatVO;
 import com.his.common.base.Result;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -14,6 +16,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.time.LocalDate;
+import java.util.List;
 
 /**
  * 排班总览控制器：一周排班事实的只读聚合查询接口入口。
@@ -25,6 +28,7 @@ import java.time.LocalDate;
 public class ScheduleOverviewController {
 
     private final BizClinicSourceOverviewService bizScheduleOverviewService;
+    private final WorkloadStatService workloadStatService;
 
     /**
      * 排班周总览：把门诊号源、在岗人次、人力缺口、每日总值班按周聚合成一份只读数据。
@@ -36,5 +40,16 @@ public class ScheduleOverviewController {
     public Result<ScheduleOverviewVO> overviewWeek(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate beginDate) {
         return Result.success(bizScheduleOverviewService.overviewWeek(beginDate));
+    }
+
+    /**
+     * 全岗位月度工时统计：按人员聚合当月已发布排班的出勤天数/总工时/休息天数。
+     */
+    @PreAuthorize("hasAuthority('schedule:overview:list')")
+    @Operation(summary = "全岗位月度工时统计")
+    @GetMapping("/workloadMonthly")
+    public Result<List<WorkloadStatVO>> workloadMonthly(
+            @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate monthStart) {
+        return Result.success(workloadStatService.monthlyStats(monthStart));
     }
 }

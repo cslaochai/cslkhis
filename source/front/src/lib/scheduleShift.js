@@ -53,6 +53,17 @@ export const shiftScopeText = (code) => {
 }
 
 /**
+ * 班次下拉选项统一文案：班次名称-适用域（如「急诊后夜班-门诊/急诊排班」）。
+ * 同名班次在不同册（门诊/护理/值守/通用）可并存，拼上适用域避免选错册；
+ * useScope 缺失/未知时不拼，回落纯名称。带起止时间的页面在此函数外自行追加时间。
+ */
+export const shiftOptionLabel = (s) => {
+  if (!s || !s.shiftName) return ''
+  const scope = shiftScopeText(s.useScope)
+  return scope ? `${s.shiftName}-${scope}` : s.shiftName
+}
+
+/**
  * 岗位类别（sql/195，后端 StaffTypeEnum 同口径）唯一口径
  *
  * 排班对象从「医生」泛化到「全院岗位」：护士、技师、药师、收费员、导诊这些岗位每天谁在岗

@@ -21,6 +21,11 @@ export function getScheduleOverviewWeek(beginDate) {
   return request.get('/schedule/overviewWeek', { params: { beginDate } })
 }
 
+/** 全岗位月度工时统计（按人员聚合当月已发布排班的出勤/工时/休息） */
+export function getWorkloadMonthly(monthStart) {
+  return request.get('/schedule/workloadMonthly', { params: { monthStart } })
+}
+
 /** 新增/修改排班（时间与工时由班次带出，超出人力上限只提示不拦） */
 export function staffScheduleUpsert(data) {
   return request.post('/system/staffSchedule/staffScheduleUpsert', data)

@@ -1846,6 +1846,10 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, Biz
         }
         LambdaQueryWrapper<BizSchedule> wrapper = new LambdaQueryWrapper<BizSchedule>()
                 .eq(BizSchedule::getPublishStatus, PublishStatusEnum.PENDING.getCode())
+                // 员工排班审批中心只审「纯员工排班」：排除门诊派生行(clinic_flag=1，走门诊审批)
+                // 与护理病区行(org_type=2，走护理审批)；org_type=1 科室 + org_type=3 全院保留
+                .and(w -> w.isNull(BizSchedule::getClinicFlag).or().eq(BizSchedule::getClinicFlag, 0))
+                .ne(BizSchedule::getOrgType, 2)
                 .eq(dto.getOrgType() != null, BizSchedule::getOrgType, dto.getOrgType())
                 .eq(dto.getOrgId() != null, BizSchedule::getOrgId, dto.getOrgId());
         if (!admin) {

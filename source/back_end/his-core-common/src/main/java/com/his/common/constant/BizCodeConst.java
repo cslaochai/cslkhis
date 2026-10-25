@@ -14,6 +14,10 @@ public interface BizCodeConst {
      */
     String APPOINT_NO_KEY_PREFIX = "APPOINT";
     /**
+     * 复诊挂号单号（与初诊挂号单号独立号段，前缀 FZ 不同不撞唯一索引）
+     */
+    String REVISIT_NO_KEY_PREFIX = "REVISIT";
+    /**
      * 员工档案号
      */
     String EMPLOYEE_NO_KEY_PREFIX = "EMPLOYEE";
@@ -464,6 +468,10 @@ public interface BizCodeConst {
      * 挂号单号前缀
      */
     String APPOINT_NO_PREFIX = "AP";
+    /**
+     * 复诊挂号单号前缀（FZ）
+     */
+    String REVISIT_NO_PREFIX = "FZ";
     /**
      * 药品编码前缀
      */

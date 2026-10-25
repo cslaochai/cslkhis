@@ -5,6 +5,7 @@ import com.his.medicaltech.vo.CdrEventTypeSelectListVO;
 import com.his.medicaltech.vo.CdrTimelineVO;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * 患者全景时间轴（CDR / P5.2）。
@@ -20,4 +21,9 @@ public interface CdrService {
      * 事件类型字典（前端做筛选下拉用；含节点类型归类）
      */
     List<CdrEventTypeSelectListVO> eventDict();
+
+    /**
+     * 临床画像（过敏/慢病/危急值/异常检验/30天就诊/重复检查）
+     */
+    Map<String, Object> getClinicalSummary(CdrQueryDTO dto);
 }

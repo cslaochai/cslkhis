@@ -1,137 +1,121 @@
 <template>
   <div class="w-full">
-    <!-- 工具条：病区 + 周 + 动作。数据范围由后端按岗位收口，这里不给「全部病区」开关 -->
-    <div
-        class="mb-3 flex flex-wrap items-center gap-3 rounded-lg border border-slate-200 bg-white px-4 py-3 shadow-sm filter-row">
-      <el-select v-model="unitKey" :fit-input-width="false" class="!w-64" data-testid="ns-ward"
-                 filterable placeholder="选择排班单元（病区 / 门诊科室）">
-        <el-option v-for="u in units" :key="`${u.unitType}:${u.wardId}`"
-                   :label="`${u.unitType === 2 ? '门诊' : '病区'} · ${u.wardName}（在册 ${u.nurseCount} 人）`"
-                   :value="`${u.unitType}:${u.wardId}`"/>
-      </el-select>
-      <!-- 不用 WW 令牌（没装 dayjs isoWeek 插件会整块渲染报错）；日期选择器也别挂 data-testid，EP 只透传 class/style，
-           验收脚本一律用 .el-date-editor--week / --daterange 这类结构选择器 -->
-      <el-date-picker v-model="weekPick" :clearable="false" class="!w-40" format="YYYY-MM-DD" placeholder="选择周"
-                      type="week" value-format="YYYY-MM-DD"/>
-      <el-button :icon="ArrowLeft" data-testid="ns-prev-week" @click="shiftWeek(-1)">上一周</el-button>
-      <el-button data-testid="ns-this-week" @click="goThisWeek">本周</el-button>
-      <el-button data-testid="ns-next-week" @click="shiftWeek(1)">下一周</el-button>
-      <el-button :icon="Refresh" :loading="matrixLoading" type="primary" @click="reloadAll">刷新</el-button>
-      <el-button v-perm="PERM_ADD" :icon="CopyDocument" data-testid="ns-copy-week" type="success" @click="doCopyWeek">
-        复制上周
-      </el-button>
-      <el-button v-perm="PERM_ADD" :icon="Plus" data-testid="ns-batch-open" type="primary" plain @click="openBatch">
-        批量铺班
-      </el-button>
-      <span class="ml-auto text-sm text-slate-500" data-testid="ns-week-range">
-        {{ weekStart }} ~ {{ weekEnd }}
-        <template v-if="matrix"> · {{ matrix.deptName }}</template>
-      </span>
+    <!-- 顶部统计卡片：跟门诊排班一样，放在最上面 -->
+    <div class="mb-3 grid grid-cols-2 gap-3 sm:grid-cols-4" data-testid="nurse-stats">
+      <div
+          class="rounded-md border border-slate-200 bg-white px-4 py-1.5 text-center transition duration-200 hover:-translate-y-0.5 hover:border-blue-300 hover:shadow-md cursor-default">
+        <p class="text-xl font-semibold text-slate-800">
+          {{ statServed }}<span class="text-sm font-normal text-slate-400"> / {{ statExpected }}</span>
+        </p>
+        <p class="text-xs text-slate-400">应排/实排 · 覆盖 {{ statCoveragePct }}%</p>
+      </div>
+      <div
+          class="rounded-md border border-slate-200 bg-white px-4 py-1.5 text-center transition duration-200 hover:-translate-y-0.5 hover:border-blue-300 hover:shadow-md cursor-default">
+        <p class="text-xl font-semibold text-blue-600">{{ statPlannedDays }}</p>
+        <p class="text-xs text-slate-400">已排班天数</p>
+      </div>
+      <div
+          class="rounded-md border border-slate-200 bg-white px-4 py-1.5 text-center transition duration-200 hover:-translate-y-0.5 hover:border-blue-300 hover:shadow-md cursor-default">
+        <p class="text-xl font-semibold text-slate-800">{{ statTotalShifts }}</p>
+        <p class="text-xs text-slate-400">总排班人次</p>
+      </div>
+      <div
+          class="rounded-md border border-slate-200 bg-white px-4 py-1.5 text-center transition duration-200 hover:-translate-y-0.5 hover:border-blue-300 hover:shadow-md cursor-default"
+          @click="showWarnings = true" style="cursor: pointer">
+        <p :class="weekAlerts.length > 0 ? 'text-xl font-semibold text-red-500' : 'text-xl font-semibold text-emerald-600'">{{ weekAlerts.length }}</p>
+        <p class="text-xs text-slate-400">规则告警条数（点我查看）</p>
+      </div>
     </div>
 
-    <el-tabs v-model="activeTab" class="ns-tabs">
-      <!-- ============ 周排班矩阵 ============ -->
-      <el-tab-pane label="周排班矩阵" name="matrix">
-        <div class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-          <div class="mb-2 flex flex-wrap items-center gap-3 text-sm">
-            <span class="font-medium text-slate-700">在岗人力对照</span>
-            <el-tag v-perm="PERM_ADD" effect="plain" size="small" type="info">有排班权限</el-tag>
-            <el-tag v-if="!hasPerm(PERM_ADD)" effect="plain" size="small" type="warning">只读（无排班权限）</el-tag>
-          </div>
+    <!-- 今日在岗横幅：跟门诊一样，显示当前病区的在岗护士 -->
+    <div class="mb-3 rounded-lg border border-slate-200 bg-white px-4 py-3 shadow-sm" data-testid="ns-on-duty-panel">
+      <div class="mb-2 flex flex-wrap items-center gap-3">
+        <span class="text-base font-medium text-slate-700">今日在岗</span>
+        <span class="text-xs text-slate-400">
+          {{ wardName || '未选病区' }} · 共 {{ onDutyNurseList.length }} 人在岗
+        </span>
+        <div class="ml-auto flex items-center gap-2">
+          <el-button :icon="Refresh" size="small" @click="loadOnDutyNurses">刷新</el-button>
+        </div>
+      </div>
+      <div v-if="onDutyNurseList.length" class="flex flex-wrap items-center gap-2">
+        <el-tag v-for="n in onDutyNurseList" :key="n.scheduleId"
+                effect="light" size="large" type="success">
+          {{ n.employeeName || n.staffName }}
+        </el-tag>
+      </div>
+      <div v-else class="py-2 text-sm text-slate-400">暂无在岗护士</div>
+    </div>
 
-          <!-- 操作提示 + 图例：第一次进页面也能看懂格子怎么用、每个颜色代表什么 -->
-          <div class="mb-3 flex flex-wrap items-center gap-x-4 gap-y-1 rounded-md border border-dashed border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-500"
-               data-testid="ns-legend">
-            <span v-if="canAdd" class="font-medium text-slate-600">点击空格子（+）为该护士当天排班</span>
-            <span v-else>当前为只读，仅查看排班</span>
-            <span class="flex items-center gap-1"><i class="legend-swatch" style="background:#1269B5"></i>色块=班次</span>
-            <span class="flex items-center gap-1"><i class="legend-swatch" style="background:#e2e8f0"></i>灰块=休息/请假/培训/停排</span>
-            <span class="flex items-center gap-1"><i class="legend-swatch legend-mark"></i>角标=发布状态（草稿/待审核/已发布…）</span>
-          </div>
-
-          <!-- 本周发布：整周提交审核 / 整周审核发布。计数来自矩阵 publishSummary，按钮按草稿/待审核是否为 0 禁用 -->
-          <div class="mb-3 flex flex-wrap items-center gap-2 rounded-md border border-slate-200 bg-white px-3 py-2 text-sm"
-               data-testid="ns-publish-bar">
-            <span class="font-medium text-slate-700">本周发布</span>
-            <el-tag v-if="pubSummary.draft" size="small" type="info" data-testid="ns-pub-draft">草稿 {{ pubSummary.draft }}</el-tag>
-            <el-tag v-if="pubSummary.pending" size="small" type="warning" data-testid="ns-pub-pending">待审核 {{ pubSummary.pending }}</el-tag>
-            <el-tag v-if="pubSummary.published" size="small" type="success" data-testid="ns-pub-published">已发布 {{ pubSummary.published }}</el-tag>
-            <el-tag v-if="pubSummary.adjusting" size="small" type="danger" data-testid="ns-pub-adjusting">调班中 {{ pubSummary.adjusting }}</el-tag>
-            <el-tag v-if="pubSummary.changed" size="small" type="primary" data-testid="ns-pub-changed">已变更 {{ pubSummary.changed }}</el-tag>
-            <span v-if="!pubSummary.total" class="text-xs text-slate-400">本周还没有排班，先点格子或复制上周</span>
-            <div class="ml-auto flex items-center gap-2">
-              <el-button v-perm="PERM_ADD" size="small" type="warning" :disabled="!pubSummary.draft"
-                         data-testid="ns-submit-week" @click="doSubmitWeek">整周提交审核</el-button>
-              <el-button v-perm="PERM_AUDIT" size="small" type="success" :disabled="!pubSummary.pending"
-                         data-testid="ns-audit-week" @click="doAuditWeek">整周审核发布</el-button>
+    <el-card shadow="never" style="height: calc(100vh - 260px); min-height: 400px;">
+      <el-tabs v-model="activeNurseTab" class="h-full flex flex-col">
+        <!-- ===================== 周排班矩阵 ===================== -->
+        <el-tab-pane label="周排班矩阵" name="matrix">
+        <div class="rounded-lg border border-slate-200 bg-white shadow-sm">
+          <!-- 搜索条件行：和表格在同一个卡片里 -->
+          <div class="flex flex-wrap items-center gap-3 border-b border-slate-200 px-4 py-3">
+            <span class="text-base font-medium text-slate-700">排班单元</span>
+            <el-select v-model="unitKey" :fit-input-width="false" :clearable="false" class="!w-64" data-testid="ns-ward"
+                       filterable placeholder="选择排班单元（病区 / 门诊科室）">
+              <el-option v-for="u in units" :key="`${u.unitType}:${u.wardId}`"
+                         :label="`${u.unitType === 2 ? '门诊' : '病区'} · ${u.wardName}（在册 ${u.nurseCount} 人）`"
+                         :value="`${u.unitType}:${u.wardId}`"/>
+            </el-select>
+            <span class="text-base font-medium text-slate-700">护士</span>
+            <el-select v-model="filterNurseId" :fit-input-width="false" class="!w-40" clearable
+                       filterable placeholder="全部护士">
+              <el-option v-for="n in (matrix?.nurses || [])" :key="n.employeeId"
+                         :label="n.employeeName" :value="n.employeeId"/>
+            </el-select>
+            <span class="text-base font-medium text-slate-700">周</span>
+            <div class="flex items-center gap-2">
+              <el-button @click="shiftWeek(-1)"><span class="px-0.5 text-base leading-none">‹</span>上一周</el-button>
+              <span class="min-w-[200px] text-center text-base font-medium text-slate-600">{{ weekStart }} ~ {{ weekEnd }}</span>
+              <el-button @click="shiftWeek(1)">下一周<span class="px-0.5 text-base leading-none">›</span></el-button>
+              <el-button link type="primary" @click="goThisWeek">回本周</el-button>
             </div>
+            <span class="ml-auto flex items-center gap-2">
+              <el-button :icon="Refresh" :loading="matrixLoading" type="primary" @click="reloadAll">查询</el-button>
+              <el-button v-perm="PERM_ADD" :icon="MagicStick" type="primary" plain @click="handleGenerateFromTemplate">按模板生成下周</el-button>
+              <el-button v-perm="PERM_ADD" :icon="CopyDocument" data-testid="ns-copy-week" type="success" @click="doCopyWeek">
+                复制到下周
+              </el-button>
+              <el-button v-perm="PERM_ADD" :icon="Plus" data-testid="ns-batch-open" type="primary" plain @click="openBatch">
+                批量铺班
+              </el-button>
+              <el-button v-perm="PERM_ADD" type="warning" :disabled="!pubSummary.draft"
+                         data-testid="ns-submit-week" @click="doSubmitWeek">整周提交审核</el-button>
+              <el-button v-perm="PERM_AUDIT" type="success" :disabled="!pubSummary.pending"
+                         data-testid="ns-audit-week" @click="doAuditWeek">整周审核发布</el-button>
+            </span>
           </div>
 
-          <!-- 本周护理需求：排班的分母。只显示后端算好的三个数，前端不算需求也不判阈值 -->
-          <div
-              v-loading="gapLoading"
-              class="mb-3 flex flex-wrap items-center gap-x-4 gap-y-1 rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm"
-              data-testid="ns-demand-gap">
-            <span class="font-medium text-slate-700">本周护理需求</span>
+          <!-- 人力缺口提示：只显示哪天缺人，其他统计放排班总览 -->
+          <div v-if="gaps.length" class="flex flex-wrap items-center gap-x-4 gap-y-1 border-b border-amber-100 bg-amber-50 px-4 py-2 text-sm"
+               data-testid="ns-gap-tip">
+            <span class="font-medium text-amber-700">人力缺口</span>
             <span v-for="d in (matrix?.days || [])" :key="d" class="flex items-center gap-1">
               <span class="text-slate-400">{{ d.slice(5) }}</span>
-              <span :class="gapClass(d)">
-                {{ gapOf(d) ? `需 ${gapOf(d).requiredCount} / 在岗 ${gapOf(d).scheduledCount}` : '—' }}
+              <span v-if="gapOf(d) && Number(gapOf(d).gapCount) > 0" class="text-red-600 font-medium">
+                缺 {{ gapOf(d).gapCount }} 人
               </span>
-              <span v-if="gapOf(d) && Number(gapOf(d).gapCount) > 0" class="text-red-600">缺 {{
-                  gapOf(d).gapCount
-                }}</span>
-              <span v-else-if="gapOf(d) && Number(gapOf(d).gapCount) < 0"
-                    class="text-emerald-600">富余 {{ -Number(gapOf(d).gapCount) }}</span>
+              <span v-else-if="gapOf(d) && Number(gapOf(d).gapCount) < 0" class="text-emerald-600">
+                富余 {{ -Number(gapOf(d).gapCount) }}
+              </span>
+              <span v-else-if="gapOf(d)" class="text-emerald-600">已满</span>
             </span>
-            <el-button v-perm="PERM_EDIT" :loading="gapLoading" size="small" @click="doRecalcDemand">重算需求
-            </el-button>
-            <span v-if="!gaps.length" class="w-full text-xs text-amber-600">
-              本周（{{ weekStart }} ~ {{ weekEnd }}）没有需求数据：需求按当前在院患者与出诊计划派生，默认覆盖今天起 14 天。点「重算需求」可就本周补算。
-            </span>
-            <span v-else-if="gaps[0].calcBasis" :title="gaps[0].calcBasis" class="w-full text-xs text-slate-400">
-              测算依据：{{ gaps[0].calcBasis }}
-            </span>
+            <el-button v-perm="PERM_EDIT" :loading="gapLoading" size="small" text @click="doRecalcDemand">重算需求</el-button>
           </div>
 
-          <div
-              v-loading="attendLoading"
-              class="mb-3 flex flex-wrap items-center gap-x-4 gap-y-1 rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm"
-              data-testid="ns-attend-summary">
-            <span class="font-medium text-slate-700">本周出勤执行</span>
-            <span v-for="d in (matrix?.days || [])" :key="d"
-                  class="flex cursor-pointer items-center gap-1 hover:underline" @click="openDayDetail(d)">
-              <span class="text-slate-400">{{ d.slice(5) }}</span>
-              <span v-if="isFuture(d)" class="text-slate-300">未到</span>
-              <span v-else-if="attendOf(d)"
-                    :class="Number(attendOf(d).absentHead) > 0 ? 'text-red-600'
-                          : Number(attendOf(d).unrecordedHead) > 0 ? 'text-amber-600' : 'text-emerald-600'">
-                实到 {{ attendOf(d).presentHead }}/{{ attendOf(d).planHead }}
-              </span>
-              <span v-else class="text-slate-400">—</span>
-              <span v-if="!isFuture(d) && attendOf(d) && Number(attendOf(d).unrecordedHead) > 0" class="text-amber-600">
-                未回填 {{ attendOf(d).unrecordedHead }}
-              </span>
-              <span v-if="attendOf(d) && Number(attendOf(d).absentHead) > 0" class="text-red-600">
-                缺勤 {{ attendOf(d).absentHead }}
-              </span>
-            </span>
-            <span v-if="!attends.length" class="w-full text-xs text-slate-400">
-              本周还没有出勤登记 —— 「没有记录」不等于缺勤，点某一天可以逐个补登工时或确认缺勤。
-            </span>
-            <span v-else-if="advice" :title="advice.adviceText" class="w-full text-xs text-slate-400">
-              执行回看：{{ advice.adviceText }}
-            </span>
-          </div>
-
+          <div class="p-4">
           <el-table v-loading="matrixLoading" :data="matrixRows" :height="matrixTableHeight" border
                     data-testid="ns-matrix"
                     size="small" style="width: 100%">
-            <el-table-column fixed label="护士" width="150">
+            <el-table-column fixed label="护士" width="160">
               <template #default="{ row }">
                 <div class="leading-tight">
-                  <span class="font-medium text-slate-800">{{ row.nurseName }}</span>
-                  <span class="ml-1 text-xs text-slate-400">{{ row.nurseTitle }}</span>
+                  <span class="font-bold text-base text-slate-900">{{ row.nurseName }}</span>
+                  <span class="ml-1 text-xs text-slate-500">{{ row.nurseTitle }}</span>
                   <p class="text-xs text-slate-400">{{ row.empCode }}</p>
                 </div>
               </template>
@@ -148,7 +132,7 @@
                     <span v-if="row.dayCells[i].scheduleStatus === 1"
                           :style="{ background: shiftColor(row.dayCells[i].shiftId) }"
                           class="shift-chip">
-                      {{ shortShift(row.dayCells[i].shiftName) }}
+                      {{ shortShift(row.dayCells[i]) }}
                     </span>
                     <span v-else class="status-chip">{{
                         (row.dayCells[i].scheduleStatusText || '—').slice(0, 2)
@@ -182,320 +166,72 @@
                data-testid="ns-empty-week">
             本周还没有排班：点击格子为护士逐个安排班次，或点上方「复制上周」把上周班次整套带过来再微调。
           </div>
-
-          <!-- 底部人力对照：每班每天在岗人数 / 应配下限，缺口标红（数字全部来自后端 staffing） -->
-          <div v-if="staffingRows.length" class="mt-3 overflow-x-auto">
-            <table class="staffing-table" data-testid="ns-staffing">
-              <thead>
-              <tr>
-                <th class="left">班次 ＼ 日期</th>
-                <th v-for="d in (matrix?.days || [])" :key="d">{{ dayHead(d) }}</th>
-              </tr>
-              </thead>
-              <tbody>
-              <tr v-for="s in staffingRows" :key="s.shiftId" :class="{ 'is-total': s.shiftId === '0' }">
-                <td class="left">{{ s.shiftName }}</td>
-                <td v-for="(x, i) in s.days" :key="i"
-                    :class="x && x.minStaff != null && x.staffCount < x.minStaff ? 'is-gap' : ''">
-                  <template v-if="x">{{ x.staffCount }}<span
-                      class="text-slate-400"> / {{ x.minStaff != null ? x.minStaff : '—' }}</span></template>
-                  <span v-else class="text-slate-300">—</span>
-                </td>
-              </tr>
-              </tbody>
-            </table>
-          </div>
-
-          <!-- 本周告警：只列，不拦保存 -->
-          <div class="mt-3" data-testid="ns-warnings">
-            <div class="mb-1 flex items-center gap-2 text-sm">
-              <span class="font-medium text-slate-700">本周规则提示</span>
-              <el-tag effect="dark" size="small" type="danger">{{ weekAlerts.length }} 条告警</el-tag>
-              <el-tag effect="plain" size="small" type="info">{{ weekHints.length }} 条提示</el-tag>
-            </div>
-            <div v-if="!weekAlerts.length && !weekHints.length" class="text-sm text-emerald-600">本周没有规则冲突</div>
-            <ul class="warn-list">
-              <li v-for="(w, i) in matrix?.warnings || []" :key="i"
-                  :class="Number(w.level) === 1 ? 'is-alert' : 'is-hint'" data-testid="ns-warn-item">
-                <el-tag :type="Number(w.level) === 1 ? 'danger' : 'info'" effect="plain" size="small">
-                  {{ warnTypeText(w.type) }}
-                </el-tag>
-                <span class="text-slate-500">{{ w.scheduleDate || '整周' }}</span>
-                <span>{{ w.message }}</span>
-              </li>
-            </ul>
-          </div>
         </div>
-      </el-tab-pane>
-
-      <!-- ============ 规则校验 ============ -->
-      <el-tab-pane label="规则校验" lazy name="check">
-        <div class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-          <div class="filter-row mb-3 flex flex-wrap items-center gap-3">
-            <el-date-picker v-model="checkQuery.startDate" class="!w-40" placeholder="开始日期" type="date"
-                            value-format="YYYY-MM-DD"/>
-            <el-date-picker v-model="checkQuery.endDate" class="!w-40" placeholder="结束日期" type="date"
-                            value-format="YYYY-MM-DD"/>
-            <el-button :icon="Search" :loading="checkLoading" data-testid="ns-check-btn" type="primary"
-                       @click="runCheck">开始校验
-            </el-button>
-            <template v-if="checkResult">
-              <el-tag effect="dark" size="small" type="danger">告警 {{ checkResult.alertCount }}</el-tag>
-              <el-tag effect="plain" size="small" type="info">提示 {{ checkResult.hintCount }}</el-tag>
-              <span class="text-sm text-slate-500">{{ checkResult.wardName }} · {{
-                  checkResult.startDate
-                }} ~ {{ checkResult.endDate }}</span>
-            </template>
-          </div>
-          <el-table v-loading="checkLoading" :data="checkResult?.warnings || []" :height="matrixTableHeight" border
-                    data-testid="ns-check-table">
-            <el-table-column align="center" label="级别" width="80">
-              <template #default="{ row }">
-                <el-tag :type="Number(row.level) === 1 ? 'danger' : 'info'" size="small">
-                  {{ Number(row.level) === 1 ? '告警' : '提示' }}
-                </el-tag>
-              </template>
-            </el-table-column>
-            <el-table-column align="center" label="类型" width="130">
-              <template #default="{ row }">{{ warnTypeText(row.type) }}</template>
-            </el-table-column>
-            <el-table-column align="center" label="日期" prop="scheduleDate" width="120"/>
-            <el-table-column label="班次" prop="shiftName" width="120"/>
-            <el-table-column label="护士" prop="nurseName" width="110"/>
-            <el-table-column align="center" label="实际/标准" width="110">
-              <template #default="{ row }">{{ row.actual ?? '—' }} / {{ row.required ?? '—' }}</template>
-            </el-table-column>
-            <el-table-column label="说明" min-width="300" prop="message" show-overflow-tooltip/>
-          </el-table>
         </div>
-      </el-tab-pane>
+        </el-tab-pane>
 
-      <!-- ============ 月度工时 ============ -->
-      <el-tab-pane label="月度工时" lazy name="workload">
-        <div class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-          <div class="filter-row mb-3 flex flex-wrap items-center gap-3">
-            <el-date-picker v-model="workloadMonth" :clearable="false" class="!w-40" placeholder="统计月份"
-                            type="month"
-                            value-format="YYYY-MM" @change="loadWorkload"/>
-            <el-button :icon="Refresh" :loading="workloadLoading" type="primary" @click="loadWorkload">统计</el-button>
-            <template v-if="workload">
-              <span class="text-sm text-slate-600" data-testid="ns-wl-total">
-                在册 {{ workload.nurseCount }} 人 · 上班 {{
-                  workload.totalWorkDays
-                }} 班 · 夜班 {{ workload.totalNightDays }} 班 ·
-                合计 <b class="text-blue-700">{{ workload.totalWorkHours }}</b> 小时
-                <span v-if="workload.maxWeekHours" class="text-slate-400">（单周上限 {{ workload.maxWeekHours }}h）</span>
-              </span>
-            </template>
+        <!-- ===================== 排班模板 ===================== -->
+        <el-tab-pane label="排班模板" name="template">
+          <div class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+            <el-empty description="排班模板：预设常用排班模式（APN / 8-4 / 小组制等），一键应用到本周"/>
           </div>
-          <el-table v-loading="workloadLoading" :data="workload?.rows || []" :height="matrixTableHeight" border
-                    data-testid="ns-wl-table">
-            <el-table-column fixed label="工号" prop="empCode" width="100"/>
-            <el-table-column fixed label="护士" prop="nurseName" width="110"/>
-            <el-table-column label="职称" prop="nurseTitle" width="90"/>
-            <el-table-column align="center" label="上班" prop="workDays" width="70"/>
-            <el-table-column align="center" label="休息" prop="restDays" width="70"/>
-            <el-table-column align="center" label="请假" prop="leaveDays" width="70"/>
-            <el-table-column align="center" label="培训" prop="trainingDays" width="70"/>
-            <el-table-column align="center" label="停排" prop="suspendedDays" width="70"/>
-            <el-table-column align="center" label="夜班" width="80">
-              <template #default="{ row }">
-                <span :class="row.nightDays > 8 ? 'font-semibold text-red-600' : ''">{{ row.nightDays }}</span>
-              </template>
-            </el-table-column>
-            <el-table-column align="right" label="工时(h)" width="100">
-              <template #default="{ row }">{{ row.workHours }}</template>
-            </el-table-column>
-            <el-table-column align="center" label="缺排班(天)" width="110">
-              <template #default="{ row }">
-                <el-tag v-if="row.missingDays > 0" size="small" type="warning">{{ row.missingDays }}</el-tag>
-                <span v-else class="text-slate-400">0</span>
-              </template>
-            </el-table-column>
-          </el-table>
-          <p class="mt-2 text-xs text-slate-400">
-            夜班口径=班次开始时刻早于 08:00 或晚于 16:00（与连续夜班校验同一把尺）；缺排班天数=当月天数−已写排班行的天数，用来发现「整周没排」。
-          </p>
-        </div>
-      </el-tab-pane>
+        </el-tab-pane>
 
-      <!-- ============ 排班台账 ============ -->
-      <el-tab-pane label="排班台账" lazy name="ledger">
-        <div class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-          <div class="filter-row mb-3 flex flex-wrap items-center gap-3">
-            <el-input v-model="ledger.keyword" class="!w-44" clearable data-testid="ns-ledger-kw"
-                      placeholder="护士姓名/工号"
-                      @clear="searchLedger" @keyup.enter="searchLedger"/>
-            <el-select v-model="ledger.status" :fit-input-width="false" class="!w-36" clearable
-                       data-testid="ns-ledger-status"
-                       placeholder="排班状态" @change="searchLedger">
-              <el-option v-for="o in statusOptions" :key="o.value" :label="o.label" :value="o.value"/>
-            </el-select>
-            <el-date-picker v-model="ledger.dateRange" class="!w-64" end-placeholder="结束日期"
-                            start-placeholder="开始日期"
-                            type="daterange" value-format="YYYY-MM-DD" @change="searchLedger"/>
-            <el-button :icon="Search" type="primary" @click="searchLedger">查询</el-button>
+        <!-- ===================== 派岗记录 ===================== -->
+        <el-tab-pane label="派岗记录" name="assign">
+          <div class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+            <el-form :model="assignSearch" inline class="mb-3">
+              <el-form-item label="日期">
+                <el-date-picker v-model="assignDateRange" type="daterange" range-separator="至"
+                                start-placeholder="开始" end-placeholder="结束" value-format="YYYY-MM-DD"
+                                style="width: 260px"/>
+              </el-form-item>
+              <el-form-item label="人员">
+                <el-input v-model="assignKeyword" clearable placeholder="姓名/工号" style="width: 130px"/>
+              </el-form-item>
+              <el-form-item>
+                <el-button type="primary" @click="loadAssignRecords">查询</el-button>
+              </el-form-item>
+            </el-form>
+            <el-table v-loading="assignLoading" :data="assignRecords" border stripe size="small">
+              <el-table-column label="日期" prop="assignDate" width="110"/>
+              <el-table-column label="工位" prop="stationName" min-width="140"/>
+              <el-table-column label="类别" prop="stationKindText" width="100"/>
+              <el-table-column label="人员" min-width="130">
+                <template #default="{ row }">{{ row.employeeName }}（{{ row.empCode || '—' }}）</template>
+              </el-table-column>
+              <el-table-column label="班次" min-width="170">
+                <template #default="{ row }">
+                  <span v-if="row.shiftName">{{ row.shiftName }} {{ row.startTime }}~{{ row.endTime }}</span>
+                  <span v-else class="text-slate-400">—</span>
+                </template>
+              </el-table-column>
+              <el-table-column label="借调" width="80">
+                <template #default="{ row }">
+                  <el-tag :type="row.isLoan ? 'warning' : 'info'" size="small">{{ row.isLoan ? '借调' : '本岗' }}</el-tag>
+                </template>
+              </el-table-column>
+            </el-table>
+            <el-empty v-if="!assignLoading && assignRecords.length === 0" description="暂无派岗记录"/>
           </div>
-          <el-table v-loading="ledgerLoading" :data="ledgerRows" :max-height="matrixTableHeight" border
-                    data-testid="ns-ledger-table">
-            <el-table-column label="病区" prop="wardName" show-overflow-tooltip width="130"/>
-            <el-table-column align="center" label="日期" prop="scheduleDate" width="110"/>
-            <el-table-column label="工号" prop="empCode" width="90"/>
-            <el-table-column label="护士" prop="nurseName" width="100"/>
-            <el-table-column label="职称" prop="nurseTitle" width="90"/>
-            <el-table-column label="班次" width="120">
-              <template #default="{ row }">{{
-                  row.scheduleStatus === 1 ? row.shiftName : statusText(row.scheduleStatus)
-                }}
-              </template>
-            </el-table-column>
-            <el-table-column align="center" label="起止" width="120">
-              <template #default="{ row }">
-                <span class="font-mono text-xs text-slate-600">{{
-                    row.startTime ? `${row.startTime}~${row.endTime}` : '—'
-                  }}</span>
-              </template>
-            </el-table-column>
-            <el-table-column align="right" label="工时" width="80">
-              <template #default="{ row }">{{ row.workMinutes ? (row.workMinutes / 60).toFixed(1) : '0' }}</template>
-            </el-table-column>
-            <el-table-column align="center" label="来源" width="90">
-              <template #default="{ row }">{{ Number(row.scheduleSource) === 2 ? '复制上周' : '人工' }}</template>
-            </el-table-column>
-            <el-table-column align="center" label="发布态" width="90">
-              <template #default="{ row }">
-                <el-tag :data-testid="`nurse-publish-tag-${row.id}`"
-                        :type="publishStatusTagType(row.publishStatus)" effect="plain" size="small">
-                  {{ row.publishStatusText || '—' }}
-                </el-tag>
-              </template>
-            </el-table-column>
-            <el-table-column label="备注" min-width="160" prop="remark" show-overflow-tooltip/>
-            <el-table-column align="center" fixed="right" label="操作" width="300">
-              <template #default="{ row }">
-                <!-- 发布态流转（G-15）：按钮出现与否 = 当前态 × 权限码，判定全在 lib/nurseSchedule -->
-                <el-button v-if="canSubmitPublish(row)" v-perm="PERM_ADD"
-                           :data-testid="`nurse-publish-submit-${row.id}`" link size="small" type="primary"
-                           @click.stop="runPublishAction('submit', row)">提交审核
-                </el-button>
-                <el-button v-if="canAuditPublish(row)" v-perm="PERM_AUDIT"
-                           :data-testid="`nurse-publish-audit-${row.id}`" link size="small" type="success"
-                           @click.stop="runPublishAction('audit', row)">审核发布
-                </el-button>
-                <el-button v-if="canAdjustPublish(row)" v-perm="PERM_EDIT"
-                           :data-testid="`nurse-publish-adjust-${row.id}`" link size="small" type="warning"
-                           @click.stop="runPublishAction('adjust', row)">进入调班
-                </el-button>
-                <el-button v-if="canRecallPublish(row)" v-perm="PERM_EDIT"
-                           :data-testid="`nurse-publish-recall-${row.id}`" link size="small" type="info"
-                           @click.stop="runPublishAction('recall', row)">撤回
-                </el-button>
-                <el-button v-perm="PERM_DELETE" data-testid="ns-ledger-del" link size="small" type="danger"
-                           @click.stop="removeCell(row)">删除
-                </el-button>
-              </template>
-            </el-table-column>
-          </el-table>
-          <el-pagination :current-page="ledger.pageNum" :page-size="ledger.pageSize" :page-sizes="PAGE_SIZES"
-                         :total="ledgerTotal" background class="mt-3 justify-end"
-                         layout="total, prev, pager, next, sizes, jumper"
-                         @current-change="(v: number) => { ledger.pageNum = v; loadLedger() }"
-                         @size-change="(v: number) => { ledger.pageSize = v; ledger.pageNum = 1; loadLedger() }"/>
-        </div>
-      </el-tab-pane>
+        </el-tab-pane>
+      </el-tabs>
+    </el-card>
 
-      <!-- ============ 审批记录（提交/审核发布/撤回/调班/改格/删格/整周流转留痕，只写不删） ============ -->
-      <el-tab-pane label="审批记录" lazy name="logs">
-        <div class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-          <div class="filter-row mb-3 flex flex-wrap items-center gap-3">
-            <el-input v-model="logQuery.nurseName" class="!w-44" clearable data-testid="ns-log-kw"
-                      placeholder="护士姓名" @clear="searchLogs" @keyup.enter="searchLogs"/>
-            <el-date-picker v-model="logQuery.dateRange" class="!w-64" end-placeholder="结束日期"
-                            start-placeholder="开始日期" type="daterange" value-format="YYYY-MM-DD"
-                            @change="searchLogs"/>
-            <el-button :icon="Search" type="primary" @click="searchLogs">查询</el-button>
-            <span class="text-xs text-slate-400">谁在何时对哪位护士哪天做了提交/发布/撤回/调班/改格，以及新旧班次与原因，全程留痕只写不删</span>
-          </div>
-          <el-table v-loading="logLoading" :data="logRows" :max-height="matrixTableHeight" border
-                    data-testid="ns-log-table">
-            <el-table-column label="发生时间" prop="occurTime" width="160"/>
-            <el-table-column label="操作人" prop="createBy" width="100"/>
-            <el-table-column align="center" label="动作" width="100">
-              <template #default="{ row }">
-                <el-tag effect="plain" size="small">{{ row.actionTypeText }}</el-tag>
-              </template>
-            </el-table-column>
-            <el-table-column label="护士" prop="nurseName" width="100"/>
-            <el-table-column align="center" label="日期" prop="scheduleDate" width="110"/>
-            <el-table-column label="单元" prop="orgName" width="130" show-overflow-tooltip/>
-            <el-table-column label="变更前" prop="fromSnapshot" width="130" show-overflow-tooltip>
-              <template #default="{ row }">{{ row.fromSnapshot || '—' }}</template>
-            </el-table-column>
-            <el-table-column label="变更后" prop="toSnapshot" width="130" show-overflow-tooltip>
-              <template #default="{ row }">{{ row.toSnapshot || '—' }}</template>
-            </el-table-column>
-            <el-table-column align="center" label="数量" prop="amount" width="70">
-              <template #default="{ row }">{{ row.amount ?? '—' }}</template>
-            </el-table-column>
-            <el-table-column label="原因/说明" prop="reason" min-width="180" show-overflow-tooltip/>
-          </el-table>
-          <el-pagination :current-page="logQuery.pageNum" :page-size="logQuery.pageSize" :page-sizes="PAGE_SIZES"
-                         :total="logTotal" background class="mt-3 justify-end"
-                         layout="total, prev, pager, next, sizes, jumper"
-                         @current-change="(v: number) => { logQuery.pageNum = v; loadLogs() }"
-                         @size-change="(v: number) => { logQuery.pageSize = v; logQuery.pageNum = 1; loadLogs() }"/>
-        </div>
-      </el-tab-pane>
-
-      <!-- ============ 人力配置标准 ============ -->
-      <el-tab-pane label="人力配置标准" lazy name="rules">
-        <div class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-          <div class="filter-row mb-3 flex flex-wrap items-center gap-3">
-            <el-button v-perm="PERM_EDIT" :icon="Plus" data-testid="ns-rule-add" type="primary" @click="openRule()">
-              新增标准
-            </el-button>
-            <el-button :icon="Refresh" @click="loadRules">刷新</el-button>
-            <span
-                class="text-sm text-slate-500">「病区合计」是病区级行：周工时上限与连班上限只在这一行有效；班次行只管每班最低/最高在岗。</span>
-          </div>
-          <el-table v-loading="ruleLoading" :data="rules" :height="matrixTableHeight" border
-                    data-testid="ns-rule-table">
-            <el-table-column label="适用班次" prop="shiftName" width="150"/>
-            <el-table-column align="center" label="最低在岗" width="100">
-              <template #default="{ row }">{{ row.minStaff ?? '—' }}</template>
-            </el-table-column>
-            <el-table-column align="center" label="最高在岗" width="100">
-              <template #default="{ row }">{{ row.maxStaff ?? '—' }}</template>
-            </el-table-column>
-            <el-table-column align="center" label="周工时上限(h)" width="130">
-              <template #default="{ row }">{{ row.maxWeekHours ?? '—' }}</template>
-            </el-table-column>
-            <el-table-column align="center" label="连续夜班≤" width="120">
-              <template #default="{ row }">{{ row.maxConsecutiveNightDays ?? '—' }}</template>
-            </el-table-column>
-            <el-table-column align="center" label="连续上班≤" width="120">
-              <template #default="{ row }">{{ row.maxConsecutiveWorkDays ?? '—' }}</template>
-            </el-table-column>
-            <el-table-column align="center" label="状态" width="80">
-              <template #default="{ row }">
-                <el-tag :type="Number(row.status) === 1 ? 'success' : 'info'" size="small">
-                  {{ Number(row.status) === 1 ? '启用' : '停用' }}
-                </el-tag>
-              </template>
-            </el-table-column>
-            <el-table-column label="备注" min-width="180" prop="remark" show-overflow-tooltip/>
-            <el-table-column align="center" fixed="right" label="操作" width="120">
-              <template #default="{ row }">
-                <el-button v-perm="PERM_EDIT" data-testid="ns-rule-edit" link size="small" type="primary"
-                           @click="openRule(row)">编辑
-                </el-button>
-                <el-button v-perm="PERM_EDIT" link size="small" type="danger" @click="removeRule(row)">删除</el-button>
-              </template>
-            </el-table-column>
-          </el-table>
-        </div>
-      </el-tab-pane>
-    </el-tabs>
+    <!-- 规则告警详情弹框 -->
+    <el-dialog v-model="showWarnings" title="本周规则告警详情" width="600px">
+      <el-empty v-if="!weekAlerts.length" description="本周没有规则告警" />
+      <ul v-else class="warn-list">
+        <li v-for="(w, i) in matrix?.warnings || []" :key="i"
+            :class="Number(w.level) === 1 ? 'is-alert' : 'is-hint'">
+          <el-tag :type="Number(w.level) === 1 ? 'danger' : 'info'" effect="plain" size="small">
+            {{ warnTypeText(w.type) }}
+          </el-tag>
+          <span class="text-slate-500">{{ w.scheduleDate || '整周' }}</span>
+          <span>{{ w.message }}</span>
+        </li>
+      </ul>
+    </el-dialog>
 
     <!-- 点格排班弹窗：表单与保存在 NurseScheduleCellEdit；发布态动作回传本页执行 -->
     <NurseScheduleCellEdit v-model="cellVisible" :row="cellRow" :shifts="shifts" :status-options="statusOptions"
@@ -562,7 +298,7 @@
 <script setup>
 import {computed, onMounted, onUnmounted, reactive, ref, watch} from 'vue';
 import {ElMessage, ElMessageBox} from 'element-plus';
-import {ArrowLeft, CopyDocument, Plus, Refresh, Search} from '@element-plus/icons-vue';
+import {ArrowLeft, CopyDocument, MagicStick, Plus, Refresh, Search} from '@element-plus/icons-vue';
 import {
   adjustStartNurseSchedule,
   auditPublishNurseSchedule,
@@ -585,6 +321,7 @@ import {
 import {getStaffDemandGapList, recalcStaffDemand} from '@/api/staffDemand';
 import {getAttendanceAdvice, getAttendanceSummary} from '@/api/staffAttendance';
 import {getOpdAssignPage, getOpdStationSelectList} from '@/api/opdStation';
+import {getShiftSelectList} from '@/api/appoint';
 import {DICT_TYPE, loadDictDataList} from '@/lib/dict-cache';
 import {dictLabelText} from '@/lib/utils';
 import {hasPerm} from '@/lib/perm';
@@ -613,8 +350,6 @@ const statusOptions = computed(() => statusDict.value.map((d) => ({
   label: d.dictLabel,
   value: Number(d.dictValue)
 })));
-/** 格子里班次名的短写：铺底名称都是「护理白班」这类，矩阵列宽放不下 */
-const shortShift = (name) => String(name || '').replace(/^护理/, '');
 const WEEK_DAYS = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
 // ---------------- 本地日期（别用 toISOString：那是 UTC，北京时间 0~8 点会拿到「昨天」） ----------------
 const dstr = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -635,6 +370,34 @@ const wardId = ref(null);
 // 排班单元类型（1-病区 2-门诊科室，sql/209）：病区 id 与科室 id 不在同一个 id 空间，
 // 下拉的 value 必须把类型一起带上，否则「门诊科室的 id」会被当成「病区的 id」。
 const unitType = ref(1);
+const activeNurseTab = ref('matrix');
+const showWarnings = ref(false);
+const filterNurseId = ref(null);
+
+// ---------------- 今日在岗护士 ----------------
+const onDutyNurseList = ref([]);
+const wardName = ref('');
+const loadOnDutyNurses = async () => {
+  // 占位：后续接入真实在岗接口
+  onDutyNurseList.value = [];
+};
+const weekOffset = ref(0);
+
+// ---------------- 派岗记录 ----------------
+const assignSearch = ref({});
+const assignDateRange = ref(null);
+const assignKeyword = ref('');
+const assignLoading = ref(false);
+const assignRecords = ref([]);
+const loadAssignRecords = async () => {
+  // 占位：后续接入真实派岗接口
+  assignLoading.value = true;
+  try {
+    assignRecords.value = [];
+  } finally {
+    assignLoading.value = false;
+  }
+};
 const unitKey = computed({
   get: () => (wardId.value ? `${unitType.value}:${wardId.value}` : ''),
   set: (v) => {
@@ -793,11 +556,30 @@ const openDayDetail = (d) => {
   dayDetailVisible.value = true;
 };
 const shifts = computed(() => matrix.value?.shifts || []);
-/** 班次色卡：按矩阵返回的班次顺序取，保证同一班次在两周内颜色一致 */
+/** 班次字典映射：shiftId -> {color, shortName}，从 /shift/selectList 拉，替代硬编码循环色 */
+const shiftMap = ref({});
+const loadShiftMap = async () => {
+  try {
+    const res = await getShiftSelectList({useScope: 2, status: 1});
+    const list = res?.data || [];
+    const map = {};
+    list.forEach((s) => { map[String(s.id)] = s; });
+    shiftMap.value = map;
+  } catch (e) { /* 拉不到就 fallback 到老循环色 */ }
+};
+/** 班次色卡：优先用班次字典声明的 color，没有再按数组顺序兜底（旧逻辑） */
 const SHIFT_COLORS = ['#1269B5', '#0E9488', '#7C3AED', '#B45309', '#BE123C', '#475569', '#15803D', '#0369A1'];
 const shiftColor = (shiftId) => {
+  const hit = shiftMap.value[String(shiftId)];
+  if (hit?.color) return hit.color;
   const idx = shifts.value.findIndex((s) => String(s.shiftId) === String(shiftId));
   return SHIFT_COLORS[(idx < 0 ? 0 : idx) % SHIFT_COLORS.length];
+};
+/** 班次缩写：优先用字典 shortName，没有再从名字里剥"护理"前缀 */
+const shortShift = (cell) => {
+  const hit = shiftMap.value[String(cell?.shiftId)];
+  if (hit?.shortName) return hit.shortName;
+  return String(cell?.shiftName || '').replace(/^护理/, '');
 };
 const cellOf = (employeeId, date) => (matrix.value?.cells || []).find((c) => String(c.employeeId) === String(employeeId) && c.scheduleDate === date);
 /** 表格行：一行一个护士，带上该护士的 7 个格子（el-table 只认扁平行） */
@@ -833,6 +615,30 @@ const dayHead = (d) => {
   const i = (matrix.value?.days || []).indexOf(d);
   return `${WEEK_DAYS[i < 0 ? 0 : i]} ${d.slice(5)}`;
 };
+
+// ---------------- 顶部统计卡片 ----------------
+/** 应排护士数 = 病区在册护士总数 */
+const statExpected = computed(() => matrix.value?.nurses?.length || 0);
+/** 实排护士数 = 本周至少有一个班次的护士数 */
+const statServed = computed(() => {
+  const nurses = matrix.value?.nurses || [];
+  return nurses.filter(n => (n.days || []).some(d => d && d.status === 1)).length;
+});
+/** 覆盖率 */
+const statCoveragePct = computed(() => {
+  if (!statExpected.value) return 0;
+  return Math.round(statServed.value / statExpected.value * 100);
+});
+/** 已排班天数（护士×日期去重） */
+const statPlannedDays = computed(() => {
+  let count = 0;
+  const nurses = matrix.value?.nurses || [];
+  nurses.forEach(n => (n.days || []).forEach(d => { if (d && d.status === 1) count++; }));
+  return count;
+});
+/** 总排班人次 */
+const statTotalShifts = computed(() => statPlannedDays.value);
+
 const weekAlerts = computed(() => (matrix.value?.warnings || []).filter((w) => Number(w.level) === 1));
 const weekHints = computed(() => (matrix.value?.warnings || []).filter((w) => Number(w.level) !== 1));
 const setWeek = (s) => {
@@ -979,6 +785,10 @@ const doAuditWeek = async () => {
 };
 
 // ---------------- 复制上周 ----------------
+const handleGenerateFromTemplate = async () => {
+  // 占位：后续接入模板生成接口
+  ElMessage.info('按模板生成下周排班功能开发中...');
+};
 const doCopyWeek = async () => {
   const source = addDays(weekStart.value, -7);
   try {
@@ -1262,6 +1072,7 @@ onMounted(async () => {
   statusDict.value = await loadDictDataList(DICT_TYPE.NURSE_SCHEDULE_STATUS);
   calcHeight();
   window.addEventListener('resize', calcHeight);
+  loadShiftMap();
   await loadUnits();
   if (wardId.value) {
     await loadMatrix();
@@ -1327,14 +1138,14 @@ onUnmounted(() => window.removeEventListener('resize', calcHeight));
 /* 空格子的 + 号：淡色小巧，hover 格子时加深变蓝，明确「可点」。
    el-icon 容器固定尺寸，内部 svg 跟随，避免裸 SVG 被 flex 拉伸撑满格子 */
 .cell-plus {
-  width: 11px;
-  height: 11px;
-  color: #d8dee6;
+  width: 14px;
+  height: 14px;
+  color: #94a3b8;
   transition: color 0.15s;
 }
 
 .cell-plus svg {
-  width: 11px;
+  width: 14px;
   height: 11px;
 }
 

@@ -30,6 +30,11 @@ public interface RedisSequenceService {
     String generateAppointNo();
 
     /**
+     * 生成复诊挂号单号：FZ + 年月日 + 5位流水号（独立号段，与初诊挂号单号不共用计数器）
+     */
+    String generateRevisitNo();
+
+    /**
      * 生成员工工号：E + 3位随机段 + 3位段内序号（如 E482001）。
      * 段内计数器走 Redis 递增且永久有效（不过期、不按天重置）——员工编号一经下发终身不变，
      * 键过期/删键都会让下一发从 001 重来撞 uk_emp_code。随机段把空间切成 1000 段 × 999，

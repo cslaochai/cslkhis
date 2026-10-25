@@ -22,6 +22,21 @@ public class ShiftVO {
     private String shiftName;
 
     /**
+     * 班次业务短码（AM/PM/N/E/R）
+     */
+    private String shiftCode;
+
+    /**
+     * 排班图显示缩写（夜/休/听）
+     */
+    private String shortName;
+
+    /**
+     * 排班图颜色HEX
+     */
+    private String color;
+
+    /**
      * 开始时间 HH:mm
      */
     private String startTime;
@@ -81,6 +96,16 @@ public class ShiftVO {
      * 迟到宽限（分钟）：签到晚于「班次开始 + 这个数」才算迟到（sql/214）
      */
     private Integer lateGraceMinutes;
+
+    /**
+     * 是否计工时（1-是 0-否）
+     */
+    private Integer countWorkHours;
+
+    /**
+     * 是否计夜班津贴（1-是 0-否）
+     */
+    private Integer countNightAllowance;
 
     /**
      * 备注

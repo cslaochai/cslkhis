@@ -32,4 +32,16 @@ public class ShiftSelectListVO implements Serializable {
      * 结束时间（HH:mm）
      */
     private String endTime;
+
+    /**
+     * 适用域（ShiftUseScopeEnum）：1-门诊/急诊排班 2-病区护理排班 3-全院值守 4-全院通用
+     * 下拉选项按此拼「班次名称-适用域」，同名班次在不同册并存时避免选错册
+     */
+    private Integer useScope;
+
+    /** 班次缩写（排班格子小标签显示） */
+    private String shortName;
+
+    /** 排班图背景色（HEX，如 #67C23A；空=前端按班别兜底） */
+    private String color;
 }

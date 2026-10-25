@@ -84,7 +84,7 @@
              class="flex flex-col rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
           <div class="filter-row flex flex-wrap items-center gap-3">
             <span class="text-base font-medium text-slate-700">科室</span>
-            <el-select v-model="panelDeptId" :fit-input-width="false" class="!w-48" clearable data-testid="panel-dept"
+            <el-select v-model="panelDeptId" :fit-input-width="false" :clearable="false" class="!w-48" data-testid="panel-dept"
                        filterable placeholder="全部科室"
                        popper-class="schedule-filter-popper"
                        @change="handlePanelDeptChange">
@@ -106,18 +106,19 @@
               <span class="min-w-[190px] text-center text-base font-medium text-slate-600">{{ panelWeekLabel }}</span>
               <el-button @click="handlePanelWeekShift(1)">下一周<span class="px-0.5 text-base leading-none">›</span>
               </el-button>
-              <el-button v-if="panelWeekOffset !== 0" link type="primary" @click="handlePanelBackToThisWeek">
+              <el-button link type="primary" @click="handlePanelBackToThisWeek">
                 回本周
               </el-button>
             </div>
             <span class="ml-auto flex items-center gap-2">
+              <el-button :icon="Refresh" :loading="panelLoading" type="primary" @click="loadPanel">查询</el-button>
               <el-button v-perm="'outpatient:schedule:add'" :loading="generateLoading"
                          :title="`目标周固定为下周（${nextWeekRangeLabel}），与上面「上一周/下一周」的浏览筛选无关；已过去的日期会自动跳过`"
                          data-testid="generate-by-template"
                          @click="handleGenerateFromTemplate">按模板生成下周排班</el-button>
               <el-button v-perm="'outpatient:schedule:add'" :loading="replicateLoading" type="success"
                          @click="handleReplicateNextWeek">
-                复刻到 {{ replicateTargetLabel }}
+                复制到 {{ replicateTargetLabel }}
               </el-button>
               <el-button v-perm="'outpatient:schedule:add'" :loading="weekActionLoading"
                          :disabled="!weekDraftCount" data-testid="week-submit"
@@ -175,6 +176,7 @@
                                   s.status === 0
                                     ? 'border-slate-200 bg-slate-100 text-slate-400 line-through'
                                     : 'border-slate-200 bg-white ' + shiftColor(s)]"
+                           :style="s.status === 0 ? null : shiftBgStyle(s)"
                            :data-testid="`panel-cell-${row.doctorId}-${d}`"
                            :title="cellTooltip(s)">
                         <!-- 第一行：班次名 + 发布态标签居左，label「已挂」+ 已挂/总号源 紧靠右（值加粗） -->
@@ -288,27 +290,6 @@
               </template>
             </div>
           </div>
-
-          <!-- 医生维度周汇总：本周谁的号最紧张一目了然。
-               它自己封顶 + 内部滚（全院视图几百个医生时会铺成十几行），
-               不然汇总越长表格越矮 —— 排班面板的主角是表格，不是这块附注。 -->
-          <div v-if="doctorSummary.length"
-               class="mt-3 max-h-14 shrink-0 overflow-y-auto border-t border-slate-100 pt-2">
-            <p class="mb-2 text-xs font-medium text-slate-500">{{
-                staffTypeText(panelStaffType)
-              }}本周汇总（按已挂号排序）</p>
-            <div class="flex flex-wrap gap-2">
-              <div v-for="row in doctorSummary" :key="row.name"
-                   class="flex items-center gap-2 rounded-md border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs">
-                <span class="font-medium text-slate-700">{{ row.name }}</span>
-                <span class="text-slate-400">{{ row.shifts }} 班</span>
-                <span class="text-slate-500">已挂 <span class="font-semibold text-blue-600">{{
-                    row.used
-                  }}</span>/{{ row.total }}</span>
-                <span v-if="row.stopped > 0" class="font-medium text-red-500">停诊 {{ row.stopped }}</span>
-              </div>
-            </div>
-          </div>
         </div>
       </el-tab-pane>
 
@@ -360,7 +341,8 @@
               </el-table-column>
               <el-table-column label="班次" min-width="90">
                 <template #default="{ row }">
-                  <span :class="['inline-block rounded px-2 py-0.5 text-xs font-medium', shiftColor(row)]">
+                  <span :class="['inline-block rounded px-2 py-0.5 text-xs font-medium', shiftColor(row)]"
+                        :style="shiftBgStyle(row)">
                     {{ shiftText(row) }}
                   </span>
                 </template>
@@ -685,6 +667,7 @@ import {
   updateScheduleStatus,
   updateScheduleTemplateStatus
 } from '@/api/appoint';
+import {getShiftSelectList} from '@/api/appoint';
 import {getDepartmentSelectList, getEmployeeList, getUserInfo} from '@/api/system';
 import {DICT_TYPE, loadDictDataList} from '@/lib/dict-cache';
 import {
@@ -913,6 +896,17 @@ const shiftColors = {
   4: 'bg-indigo-100 text-indigo-700',
   5: 'bg-slate-200 text-slate-700',
 };
+/** 班次字典映射：shiftId -> {color, shortName}，优先用字典声明的颜色 */
+const shiftMap = ref({});
+const loadShiftMap = async () => {
+  try {
+    const res = await getShiftSelectList({useScope: 1, status: 1});
+    const list = res?.data || [];
+    const map = {};
+    list.forEach((s) => { map[String(s.id)] = s; });
+    shiftMap.value = map;
+  } catch (e) { /* 拉不到就 fallback 到老班别色 */ }
+};
 // 班次文案唯一口径在 lib/scheduleShift.js（1上午/2下午/3全天/4凌晨/5夜班）
 const shiftLabel = SCHEDULE_TYPE_TEXT;
 /**
@@ -920,7 +914,19 @@ const shiftLabel = SCHEDULE_TYPE_TEXT;
  * 退回班别（后端按 shift_id 补的派生值），都没了才是「未分类」——不猜。
  */
 const shiftText = (row) => row?.shiftName || shiftLabel[row?.scheduleType] || '未分类';
-const shiftColor = (row) => shiftColors[row?.scheduleType] || 'bg-slate-50 text-slate-600';
+/** 格子背景色：优先用班次字典 color（HEX），没有 fallback 到按班别硬编码 Tailwind 类 */
+const shiftColor = (row) => {
+  const hit = shiftMap.value[String(row?.shiftId)];
+  if (hit?.color) return ''; // 有 color 走 :style，这里返回空 class
+  return shiftColors[row?.scheduleType] || 'bg-slate-50 text-slate-600';
+};
+const shiftBgStyle = (row) => {
+  const hit = shiftMap.value[String(row?.shiftId)];
+  if (hit?.color) {
+    return { backgroundColor: hit.color + '1A', color: hit.color };
+  }
+  return null;
+};
 /** 格子 tooltip：紧凑密度下时段/占用/诊室/预约余量的唯一出口（不丢信息） */
 const cellTooltip = (s) => {
   const parts = [
@@ -991,11 +997,13 @@ const loadOnDuty = async () => {
     onDutyLoading.value = false;
   }
 };
-/** 在岗名单按岗位分组：医生一组、护理一组……按岗位类别码值升序 */
+/** 在岗名单按岗位分组：门诊排班只显示医生，不显示护理/医技 */
 const onDutyGroups = computed(() => {
   const map = new Map();
   for (const s of onDutyList.value) {
     const key = Number(s.staffType);
+    // 门诊排班只显示医生岗（staffType=1），过滤掉护理等其他岗位
+    if (key !== 1) continue;
     if (!map.has(key))
       map.set(key, []);
     map.get(key).push(s);
@@ -1245,19 +1253,17 @@ let deptDefaultApplied = false;
 const applyPanelDefaultDept = async (deptId) => {
   if (deptDefaultApplied || panelDeptId.value != null)
     return;
-  if (deptId == null || deptId === '')
-    return;
-  const hit = departments.value.find((d) => String(d.id) === String(deptId));
+  // 优先用当前用户的科室，找不到就默认选第一个科室
+  let hit = null;
+  if (deptId != null && deptId !== '') {
+    hit = departments.value.find((d) => String(d.id) === String(deptId));
+  }
+  if (!hit && departments.value.length) {
+    hit = departments.value[0];
+  }
   if (hit) {
     panelDeptId.value = hit.id;
-    // 默认科室落地后重拉（首屏那次不带 deptId，不重拉会 UI 与数据不一致）
     await loadPanel();
-    // 我的科室一个医生都没有 → 空面板比"全院"更难用，退回全部科室。
-    // 科室下拉会显示成"全部科室"（清除态），UI 状态本身就是说明，不再弹文字提示。
-    if (!doctorRows.value.length) {
-      panelDeptId.value = null;
-      await loadPanel();
-    }
   }
   deptDefaultApplied = true;
 };
@@ -1659,7 +1665,7 @@ const calcPanelTableHeight = () => {
   const wrap = panelTableWrap.value;
   if (!card || !wrap)
     return;
-  panelCardHeight.value = Math.max(320, window.innerHeight - card.getBoundingClientRect().top - 12);
+  panelCardHeight.value = Math.max(320, window.innerHeight - card.getBoundingClientRect().top - 20);
   // 卡片高度改完要等一帧，flex 分完才知道表格区剩多少（此时量才准）
   requestAnimationFrame(() => {
     panelTableMaxHeight.value = Math.max(240, wrap.clientHeight);
@@ -1687,6 +1693,7 @@ const onWindowResize = () => {
 onMounted(() => {
   calcTplTableHeight();
   window.addEventListener('resize', onWindowResize);
+  loadShiftMap();
   // 必须先拿到科室下拉 → 再把「我的科室」落到真实 option 上 → 再拉面板。
   // 顺序错了会出现「下拉显示 A、表格是全院」的自相矛盾状态（实测踩过）。
   loadDepartments().then(loadPanelDefaultDept).then(() => {

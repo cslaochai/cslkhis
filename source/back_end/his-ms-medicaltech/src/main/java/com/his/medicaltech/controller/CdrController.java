@@ -54,17 +54,6 @@ public class CdrController {
     @Operation(summary = "临床画像（过敏/慢病/危急值/异常检验/30天就诊/重复检查）")
     @GetMapping("/clinicalSummary")
     public Result<java.util.Map<String, Object>> clinicalSummary(@Valid CdrQueryDTO dto) {
-        // TODO: 临床画像跨模块聚合（过敏史/慢病关键词/危急值/异常检验/30天就诊/重复检查），
-        //  目前返回空结构，前端展示默认文案（无过敏记录/未命中慢病关键词等）
-        java.util.Map<String, Object> empty = new java.util.HashMap<>();
-        empty.put("allergyPositive", false);
-        empty.put("allergies", java.util.Collections.emptyList());
-        empty.put("chronicTags", java.util.Collections.emptyList());
-        empty.put("criticalValues", java.util.Map.of("totalCount", 0, "openCount", 0, "items", java.util.Collections.emptyList()));
-        empty.put("abnormalLabs", java.util.Map.of("abnormalCount", 0, "unjudgedCount", 0, "items", java.util.Collections.emptyList()));
-        empty.put("visits30d", java.util.Map.of("outpatientCount", 0, "emergencyCount", 0, "inpatientCount", 0));
-        empty.put("repeatExams", java.util.Collections.emptyList());
-        empty.put("warnings", java.util.Collections.emptyList());
-        return Result.success(empty);
+        return Result.success(cdrService.getClinicalSummary(dto));
     }
 }

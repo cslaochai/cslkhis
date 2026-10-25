@@ -1,6 +1,5 @@
 package com.his.charge.mapper;
 
-import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.his.charge.vo.BedsideWardPatientVO;
@@ -18,7 +17,7 @@ import java.util.List;
  * 这里按床号列<b>本病区全部在院患者</b>（含不欠费的，床旁结算要能找到刚出院的那个人）。
  */
 @Mapper
-public interface BedsideSettlementMapper extends BaseMapper<Object> {
+public interface BedsideSettlementMapper {
 
     /**
      * 病区在院患者榜（带钱况与结算单状态）。

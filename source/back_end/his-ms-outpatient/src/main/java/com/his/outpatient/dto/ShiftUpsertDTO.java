@@ -22,6 +22,21 @@ public class ShiftUpsertDTO {
     private String shiftName;
 
     /**
+     * 班次业务短码（AM/PM/N/E/R，对接考勤机/薪资用；空=不留短码）
+     */
+    private String shiftCode;
+
+    /**
+     * 排班图显示缩写（1~2 字，如 夜/休/听；空=排班图用班次名称前两字）
+     */
+    private String shortName;
+
+    /**
+     * 排班图颜色HEX（如 #F56C6C；空=前端默认色）
+     */
+    private String color;
+
+    /**
      * 开始时间 HH:mm
      */
     @NotBlank(message = "开始时间不能为空")
@@ -89,6 +104,18 @@ public class ShiftUpsertDTO {
      * 迟到宽限（分钟）：签到晚于「班次开始 + 这个数」才算迟到（sql/214）
      */
     private Integer lateGraceMinutes;
+
+    /**
+     * 是否计工时（1-是 0-否；空=是）。休息/听班勾 0。
+     */
+    @AllowedValues(values = {"0", "1"}, message = "是否计工时取值不合法")
+    private Integer countWorkHours;
+
+    /**
+     * 是否计夜班津贴（1-是 0-否；空=否）。只有按夜班发津贴的班次勾 1。
+     */
+    @AllowedValues(values = {"0", "1"}, message = "是否计夜班津贴取值不合法")
+    private Integer countNightAllowance;
 
     /**
      * 备注

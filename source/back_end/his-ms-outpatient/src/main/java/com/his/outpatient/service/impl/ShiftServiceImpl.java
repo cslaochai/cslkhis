@@ -69,6 +69,9 @@ public class ShiftServiceImpl extends ServiceImpl<BizShiftMapper, BizShift> impl
         BizShift shift = new BizShift();
         shift.setId(dto.getId());
         shift.setShiftName(dto.getShiftName());
+        shift.setShiftCode(dto.getShiftCode());
+        shift.setShortName(dto.getShortName());
+        shift.setColor(dto.getColor());
         shift.setStartTime(dto.getStartTime());
         shift.setEndTime(dto.getEndTime());
         shift.setCrossDay(dto.getCrossDay());
@@ -83,6 +86,11 @@ public class ShiftServiceImpl extends ServiceImpl<BizShiftMapper, BizShift> impl
                 ? java.math.BigDecimal.ZERO : dto.getNeedRestHours());
         // 迟到宽限是 NOT NULL 无默认列：不收这个字段就等于新增班次必报 1364，没传按「不宽限」落
         shift.setLateGraceMinutes(dto.getLateGraceMinutes() == null ? 0 : dto.getLateGraceMinutes());
+        // 计工时默认是、计夜班津贴默认否（与 SQL 列 DEFAULT 对齐）
+        shift.setCountWorkHours(dto.getCountWorkHours() == null
+                ? YesOrNoEnum.YES.getCode() : dto.getCountWorkHours());
+        shift.setCountNightAllowance(dto.getCountNightAllowance() == null
+                ? YesOrNoEnum.NO.getCode() : dto.getCountNightAllowance());
         shift.setStatus(dto.getStatus() == null ? EnableStatusEnum.ENABLED.getCode() : dto.getStatus());
         shift.setRemark(dto.getRemark());
         String error = saveShift(shift);
@@ -98,6 +106,9 @@ public class ShiftServiceImpl extends ServiceImpl<BizShiftMapper, BizShift> impl
         ShiftVO vo = new ShiftVO();
         vo.setId(s.getId());
         vo.setShiftName(s.getShiftName());
+        vo.setShiftCode(s.getShiftCode());
+        vo.setShortName(s.getShortName());
+        vo.setColor(s.getColor());
         vo.setStartTime(s.getStartTime());
         vo.setEndTime(s.getEndTime());
         vo.setCrossDay(s.getCrossDay());
@@ -108,6 +119,9 @@ public class ShiftServiceImpl extends ServiceImpl<BizShiftMapper, BizShift> impl
         vo.setApplyStaffType(s.getApplyStaffType());
         vo.setIsNight(s.getIsNight());
         vo.setNeedRestHours(s.getNeedRestHours());
+        vo.setLateGraceMinutes(s.getLateGraceMinutes());
+        vo.setCountWorkHours(s.getCountWorkHours());
+        vo.setCountNightAllowance(s.getCountNightAllowance());
         vo.setStatus(s.getStatus());
         vo.setRemark(s.getRemark());
         return vo;
@@ -123,6 +137,9 @@ public class ShiftServiceImpl extends ServiceImpl<BizShiftMapper, BizShift> impl
         vo.setShiftName(s.getShiftName());
         vo.setStartTime(s.getStartTime());
         vo.setEndTime(s.getEndTime());
+        vo.setUseScope(s.getUseScope());
+        vo.setShortName(s.getShortName());
+        vo.setColor(s.getColor());
         return vo;
     }
 

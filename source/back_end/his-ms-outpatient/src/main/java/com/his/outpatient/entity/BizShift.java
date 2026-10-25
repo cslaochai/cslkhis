@@ -31,6 +31,21 @@ public class BizShift extends BaseEntity {
     private String shiftName;
 
     /**
+     * 班次业务短码（AM/PM/N/E/R，对接考勤机/薪资用；排班图格子里空间小，只放 shortName）
+     */
+    private String shiftCode;
+
+    /**
+     * 排班图显示缩写（1~2 字，如 夜/休/听）
+     */
+    private String shortName;
+
+    /**
+     * 排班图颜色HEX（如 #F56C6C）；NULL=前端按默认色渲染
+     */
+    private String color;
+
+    /**
      * 开始时间 HH:mm（如 08:00）
      */
     private String startTime;
@@ -98,6 +113,22 @@ public class BizShift extends BaseEntity {
      * 急诊可以在这儿给 5 分钟、门诊给 15，各按各的规矩。
      */
     private Integer lateGraceMinutes;
+
+    /**
+     * 是否计工时（1-是 0-否）。
+     *
+     * <p>休息/听班/待班这类 durationMinutes 也是 0 的班次靠它区分「不计工时」与「计 0 工时」，
+     * 工时报表按此汇总，不参与排班事实。
+     */
+    private Integer countWorkHours;
+
+    /**
+     * 是否计夜班津贴（1-是 0-否）。
+     *
+     * <p>与 {@link #isNight} 的区别：isNight 是排班合规（连班/休息）判定；本列是薪资计发标记。
+     * 默认 0——只有明确按夜班发津贴的班次才勾（如急诊后夜班、总值班夜班）。
+     */
+    private Integer countNightAllowance;
 
     /**
      * 状态（0-停用 1-启用）

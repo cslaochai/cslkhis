@@ -706,4 +706,89 @@ public class CdrServiceImpl implements CdrService {
         }
         return ids;
     }
+
+    @Override
+    public Map<String, Object> getClinicalSummary(CdrQueryDTO dto) {
+        Long pid = dto.getPatientId();
+        List<Long> ids = resolveIds(pid);
+
+        String since30d = LocalDateTime.now().minusDays(30).format(DateFormats.DATETIME);
+
+        // ① 过敏史（取最近一次病历里的过敏史文本）
+        String allergyText = cdrMapper.selectLatestAllergyHistory(ids);
+        boolean allergyPositive = TextUtil.hasText(allergyText)
+                && !"无".equals(allergyText.trim()) && !"无过敏".equals(allergyText.trim());
+        List<Map<String, Object>> allergies = new ArrayList<>();
+        if (allergyPositive) {
+            Map<String, Object> a = new HashMap<>();
+            a.put("allergenName", allergyText.length() > 30 ? allergyText.substring(0, 30) : allergyText);
+            a.put("allergySeverity", null);
+            a.put("allergySymptoms", null);
+            a.put("source", "病历");
+            allergies.add(a);
+        }
+
+        // ② 慢病标签（从所有诊断名里匹配关键词）
+        List<String> diagnoses = cdrMapper.selectAllDiagnosisNames(ids);
+        List<String> chronicTags = new ArrayList<>();
+        String[] chronicKeywords = {"高血压", "糖尿病", "冠心病", "哮喘", "慢阻肺", "肝硬化", "肾病综合征", "脑卒中", "恶性肿瘤"};
+        for (String diag : diagnoses) {
+            for (String kw : chronicKeywords) {
+                if (diag.contains(kw) && !chronicTags.contains(kw)) {
+                    chronicTags.add(kw);
+                }
+            }
+        }
+
+        // ③ 30天就诊统计（挂号表按类型分组）
+        List<Map<String, Object>> visitStats = cdrMapper.countRecentVisitsByType(ids, since30d);
+        int outpatientCount = 0, emergencyCount = 0, inpatientCount = 0;
+        for (Map<String, Object> row : visitStats) {
+            String type = String.valueOf(row.get("registType"));
+            int cnt = ((Number) row.get("cnt")).intValue();
+            // regist_type: 1-普通门诊 2-急诊 3-住院（口径与挂号域对齐，未知归门诊）
+            if ("2".equals(type)) emergencyCount += cnt;
+            else if ("3".equals(type)) inpatientCount += cnt;
+            else outpatientCount += cnt;
+        }
+
+        // ④ 重复检查（30天内同一项目 >=2 次）
+        List<Map<String, Object>> repeatRows = cdrMapper.selectRepeatInspections(ids, since30d);
+        List<Map<String, Object>> repeatExams = new ArrayList<>();
+        for (Map<String, Object> row : repeatRows) {
+            Map<String, Object> r = new HashMap<>();
+            r.put("itemName", row.get("itemName"));
+            r.put("count", row.get("cnt"));
+            repeatExams.add(r);
+        }
+
+        // ⑤ 危急值/异常检验：暂未接入检验结果明细，返回 0（后续接 biz_laboratory_record）
+        Map<String, Object> criticalValues = Map.of(
+                "totalCount", 0, "openCount", 0, "items", Collections.emptyList());
+        Map<String, Object> abnormalLabs = Map.of(
+                "abnormalCount", 0, "unjudgedCount", 0, "items", Collections.emptyList());
+
+        // ⑥ 警告
+        List<String> warnings = new ArrayList<>();
+        if (!repeatExams.isEmpty()) {
+            warnings.add("近30天有 " + repeatExams.size() + " 项检查重复开具，请核对是否必要");
+        }
+        if (!chronicTags.isEmpty()) {
+            warnings.add("慢病标签：" + String.join("、", chronicTags) + "，用药注意相互作用");
+        }
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("allergyPositive", allergyPositive);
+        result.put("allergies", allergies);
+        result.put("chronicTags", chronicTags);
+        result.put("criticalValues", criticalValues);
+        result.put("abnormalLabs", abnormalLabs);
+        result.put("visits30d", Map.of(
+                "outpatientCount", outpatientCount,
+                "emergencyCount", emergencyCount,
+                "inpatientCount", inpatientCount));
+        result.put("repeatExams", repeatExams);
+        result.put("warnings", warnings);
+        return result;
+    }
 }

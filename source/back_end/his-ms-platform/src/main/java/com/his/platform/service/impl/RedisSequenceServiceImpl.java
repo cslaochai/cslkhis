@@ -57,6 +57,11 @@ public class RedisSequenceServiceImpl implements RedisSequenceService {
         return no(BizCodeConst.APPOINT_NO_PREFIX, BizCodeConst.APPOINT_NO_KEY_PREFIX, 5);
     }
 
+    @Override
+    public String generateRevisitNo() {
+        return no(BizCodeConst.REVISIT_NO_PREFIX, BizCodeConst.REVISIT_NO_KEY_PREFIX, 5);
+    }
+
     /**
      * 员工编号段计数器 key 前缀，拼 3 位随机段成完整键（如 {@code EMPLOYEE:SEG:482}）。
      * 与按天过期的业务单号键不同：员工编号一经下发终身不变，段内计数器必须永久有效——

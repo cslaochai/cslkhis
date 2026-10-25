@@ -1,11 +1,22 @@
 <template>
-  <!-- 新增班次弹窗：完整建条（防重/时间校验在后端 shiftUpsert） -->
-  <el-dialog v-model="visible" destroy-on-close title="新增字典" width="480px">
+  <!-- 新增班次弹窗：完整建条（防重/时间校验在后端 shiftUpsert）。
+       跨天班次（结束时间 <= 开始时间）由后端按次日处理，前端不拦，只在时长提示里标注。 -->
+  <el-dialog v-model="visible" destroy-on-close title="新增字典" width="560px">
     <el-form label-position="left" @submit.prevent>
       <el-form-item label="班次名称" required>
         <el-input v-model="shiftAddForm.shiftName" maxlength="50" placeholder="如：康复科上午班"
                   show-word-limit/>
       </el-form-item>
+      <div class="grid grid-cols-2 gap-4">
+        <el-form-item label="班次短码">
+          <el-input v-model="shiftAddForm.shiftCode" maxlength="16" placeholder="如 AM / N / R"
+                    clearable/>
+        </el-form-item>
+        <el-form-item label="显示缩写">
+          <el-input v-model="shiftAddForm.shortName" maxlength="4" placeholder="如 夜 / 休 / 听"
+                    clearable/>
+        </el-form-item>
+      </div>
       <div class="grid grid-cols-2 gap-4">
         <el-form-item label="开始时间" required>
           <el-select v-model="shiftAddForm.startTime" class="w-full" data-testid="shift-add-start" filterable>
@@ -19,16 +30,17 @@
         </el-form-item>
       </div>
       <p class="-mt-2 mb-3 text-xs text-slate-400">
-        时长自动计算：{{ shiftAddDuration ? `${shiftAddDuration} 分钟` : '结束时间需晚于开始时间' }}</p>
+        时长自动计算：{{ durationHint }}
+      </p>
       <div class="grid grid-cols-2 gap-4">
         <el-form-item label="适用科室">
           <el-select v-model="shiftAddForm.deptId" class="w-full" filterable placeholder="请选择适用科室">
-            <el-option label="全部科室" value=""/>
+            <el-option label="全部科室" :value="''"/>
             <el-option v-for="d in departments" :key="d.id" :label="d.deptName" :value="d.id"/>
           </el-select>
         </el-form-item>
-        <el-form-item label="班次类型">
-          <el-select v-model="shiftAddForm.scheduleType" class="w-full" clearable placeholder="班次类型">
+        <el-form-item label="班别">
+          <el-select v-model="shiftAddForm.scheduleType" class="w-full" clearable placeholder="班别">
             <el-option v-for="s in shiftOptions" :key="s.value" :label="s.label" :value="s.value"/>
           </el-select>
         </el-form-item>
@@ -37,6 +49,28 @@
                      data-testid="shift-add-scope">
             <el-option v-for="o in SHIFT_SCOPE_OPTIONS" :key="o.value" :label="o.label" :value="o.value"/>
           </el-select>
+        </el-form-item>
+        <el-form-item label="排班图颜色">
+          <el-color-picker v-model="shiftAddForm.color" show-alpha :predefine="COLOR_PRESETS"/>
+        </el-form-item>
+      </div>
+      <el-form-item label="是否夜班">
+        <el-radio-group v-model="shiftAddForm.isNight">
+          <el-radio :value="1">夜班</el-radio>
+          <el-radio :value="0">白班</el-radio>
+        </el-radio-group>
+        <span class="ml-3 text-xs text-slate-400">连班/岗后休息规则按此判定，不要靠起止时间推</span>
+      </el-form-item>
+      <div class="grid grid-cols-2 gap-4">
+        <el-form-item label="计工时">
+          <el-switch v-model="shiftAddForm.countWorkHours"
+                     active-text="计" inactive-text="不计"
+                     active-value="1" inactive-value="0"/>
+        </el-form-item>
+        <el-form-item label="夜班津贴">
+          <el-switch v-model="shiftAddForm.countNightAllowance"
+                     active-text="计发" inactive-text="不计"
+                     active-value="1" inactive-value="0"/>
         </el-form-item>
       </div>
       <el-form-item label="状态">
@@ -79,6 +113,10 @@ const visible = computed({
 });
 
 const shiftOptions = SCHEDULE_TYPE_OPTIONS;
+// 排班图颜色预设：白班/中班/夜班/休息/听班 五档常用色
+const COLOR_PRESETS = [
+  '#67C23A', '#409EFF', '#F56C6C', '#909399', '#E6A23C',
+];
 // 挂号按时段：半小时一档的时刻（00:00 ~ 23:30 共 48 档），班次字典建条时选起止用
 const timeOptions = [];
 for (let h = 0; h < 24; h++) {
@@ -86,37 +124,46 @@ for (let h = 0; h < 24; h++) {
   timeOptions.push(`${hh}:00`, `${hh}:30`);
 }
 
-const shiftAddSaving = ref(false);
-const shiftAddForm = ref({
+const defaultForm = () => ({
   shiftName: '',
+  shiftCode: '',
+  shortName: '',
+  color: '',
   startTime: '08:00',
   endTime: '12:00',
   deptId: '',
   scheduleType: null,
   useScope: SHIFT_SCOPE_OUTPATIENT,
+  isNight: 0,
+  countWorkHours: '1',
+  countNightAllowance: '0',
   status: 1,
 });
-const shiftAddDuration = computed(() => {
+
+const shiftAddSaving = ref(false);
+const shiftAddForm = ref(defaultForm());
+
+// 时长提示：同日按正差算；endTime <= startTime 时按跨天（次日结束）算
+const durationHint = computed(() => {
   const toMin = (t) => (t ? Number(t.slice(0, 2)) * 60 + Number(t.slice(3, 5)) : NaN);
-  const diff = toMin(shiftAddForm.value.endTime) - toMin(shiftAddForm.value.startTime);
-  return Number.isFinite(diff) && diff > 0 ? diff : 0;
+  const s = toMin(shiftAddForm.value.startTime);
+  const e = toMin(shiftAddForm.value.endTime);
+  if (!Number.isFinite(s) || !Number.isFinite(e)) return '—';
+  let diff = e - s;
+  let cross = false;
+  if (diff <= 0) {
+    diff += 24 * 60;
+    cross = true;
+  }
+  return `${diff} 分钟${cross ? '（跨天，结束时间属次日）' : ''}`;
 });
 
 watch(visible, (open) => {
-  if (!open)
-    return;
-  shiftAddForm.value = {
-    shiftName: '',
-    startTime: '08:00',
-    endTime: '12:00',
-    deptId: null,
-    scheduleType: null,
-    useScope: SHIFT_SCOPE_OUTPATIENT,
-    status: 1
-  };
+  if (!open) return;
+  shiftAddForm.value = defaultForm();
 });
 
-// ---------- 新增弹窗：完整建条（名称/起止时间/科室/类型） ----------
+// ---------- 新增弹窗：完整建条 ----------
 const handleShiftAddSubmit = async () => {
   const f = shiftAddForm.value;
   if (!f.shiftName.trim()) {
@@ -127,26 +174,28 @@ const handleShiftAddSubmit = async () => {
     ElMessage.warning('请选择起止时间');
     return;
   }
-  if (f.endTime <= f.startTime) {
-    ElMessage.warning('结束时间必须晚于开始时间（不支持跨零点）');
-    return;
-  }
   shiftAddSaving.value = true;
   try {
     await createShift({
       shiftName: f.shiftName.trim(),
+      shiftCode: f.shiftCode?.trim() || null,
+      shortName: f.shortName?.trim() || null,
+      color: f.color || null,
       startTime: f.startTime,
       endTime: f.endTime,
-      deptId: f.deptId,
+      deptId: f.deptId || null,
       scheduleType: f.scheduleType,
       useScope: f.useScope,
+      isNight: f.isNight,
+      countWorkHours: Number(f.countWorkHours),
+      countNightAllowance: Number(f.countNightAllowance),
       status: f.status,
     });
     ElMessage.success('班次已创建');
     visible.value = false;
     emit('saved');
-  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
-    
+  } catch (error) {
+    /* 错误已由全局拦截器统一提示，无需在此弹窗 */
   } finally {
     shiftAddSaving.value = false;
   }

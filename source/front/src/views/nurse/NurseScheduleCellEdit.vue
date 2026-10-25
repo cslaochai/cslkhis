@@ -26,12 +26,11 @@
       </el-form-item>
       <el-form-item label="兼派公共工位">
         <el-select v-model="form.stationId" clearable filterable
-                   placeholder="不兼派则留空（病区照常上班，仅角标标注公共位）"
+                   placeholder="不兼派则留空"
                    style="width: 100%" data-testid="ns-cell-station">
           <el-option v-for="s in stationOptions" :key="s.id"
                      :label="s.stationName" :value="s.id"/>
         </el-select>
-        <div class="mt-1 text-xs text-slate-400">兼派＝病区班次照排，额外登记到公共工位（导诊/分诊/输液/注射/采血），独立记派岗、不计入病区出勤</div>
       </el-form-item>
       <el-form-item label="备注">
         <el-input v-model="form.remark" :rows="2" maxlength="500"

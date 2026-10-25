@@ -1,7 +1,7 @@
 <template>
   <div data-testid="schedule-approve-view">
-    <el-tabs v-model="activeTab" class="mb-2" @tab-change="handleTabChange">
-      <el-tab-pane label="全院岗位排班" name="staff">
+    <el-tabs v-model="activeTab" :class="{'single-tab': visibleTabCount === 1}" @tab-change="handleTabChange">
+      <el-tab-pane v-if="canAuditStaff" label="全院岗位排班" name="staff">
     <el-card ref="queryCardRef" class="query-card mb-3" shadow="never">
       <div class="query-grid-wrap">
         <el-form class="query-grid" label-width="70px" :model="searchForm">
@@ -20,22 +20,19 @@
         <div class="query-grid-ops">
           <el-button :icon="Search" type="primary" @click="handleSearch">查询</el-button>
           <el-button :icon="Refresh" @click="handleReset">重置</el-button>
+          <el-button v-perm="PERM_SCHEDULE_AUDIT" :icon="CircleCheck" :loading="batchLoading"
+                     data-testid="schedule-approve-batch-audit" type="primary" @click="handleBatchAudit">
+            批量审核发布
+          </el-button>
+          <el-button v-perm="PERM_SCHEDULE_AUDIT" :icon="CloseBold" :loading="batchLoading"
+                     data-testid="schedule-approve-batch-reject" @click="handleBatchReject">
+            批量驳回
+          </el-button>
+          <el-button :icon="Refresh" @click="loadData">刷新</el-button>
+          <span class="ml-2 text-sm text-slate-500">共 {{ pagination.total }} 条待审 · 审核人＝科室主档指定的「排班审核人」</span>
         </div>
       </div>
     </el-card>
-
-    <div class="mb-3 flex flex-wrap items-center gap-2">
-      <el-button v-perm="PERM_SCHEDULE_AUDIT" :icon="CircleCheck" :loading="batchLoading"
-                 data-testid="schedule-approve-batch-audit" type="primary" @click="handleBatchAudit">
-        批量审核发布
-      </el-button>
-      <el-button v-perm="PERM_SCHEDULE_AUDIT" :icon="CloseBold" :loading="batchLoading"
-                 data-testid="schedule-approve-batch-reject" @click="handleBatchReject">
-        批量驳回
-      </el-button>
-      <el-button :icon="Refresh" @click="loadData">刷新</el-button>
-      <span class="text-sm text-slate-500">共 {{ pagination.total }} 条待审 · 审核人＝科室主档指定的「排班审核人」</span>
-    </div>
 
     <el-card class="table-card" shadow="never">
       <div data-testid="schedule-approve-table">
@@ -102,7 +99,7 @@
       </div>
     </el-card>
       </el-tab-pane>
-      <el-tab-pane label="门诊排班" name="clinic">
+      <el-tab-pane v-if="canAuditClinic" label="门诊排班" name="clinic">
         <div class="mb-3 flex flex-wrap items-center gap-2">
           <el-button v-perm="PERM_SCHEDULE_AUDIT" :icon="CircleCheck" :loading="clinicBatchLoading"
                      data-testid="clinic-approve-batch-audit" type="primary" @click="handleClinicBatchAudit">
@@ -169,6 +166,7 @@
           </div>
         </el-card>
       </el-tab-pane>
+
     </el-tabs>
 
     <ScheduleChangeLogDrawer v-model="logVisible" :staff-schedule-id="logRowId" :title="`变更留痕 · ${logTarget}`"/>
@@ -185,7 +183,7 @@
  *
  * 页面只做两件事：把待审的排班捞出来、逐条或批量放行/打回。
  */
-import {onMounted, ref} from 'vue'
+import {computed, onMounted, ref} from 'vue'
 import {ElMessage, ElMessageBox} from 'element-plus'
 import {CircleCheck, Clock, CloseBold, Refresh, Search} from '@element-plus/icons-vue'
 import {
@@ -201,6 +199,7 @@ import {
 } from '@/api/appoint'
 import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination'
 import {useTableMaxHeight} from '@/lib/useTableMaxHeight'
+import {hasPerm} from '@/lib/perm'
 import {
   dutyStatusText,
   ORG_UNIT_TYPE_OPTIONS,
@@ -208,6 +207,11 @@ import {
   PERM_SCHEDULE_AUDIT,
 } from '@/lib/staffSchedule'
 import ScheduleChangeLogDrawer from './ScheduleChangeLogDrawer.vue'
+
+// 按权限显隐 tab：staff:schedule:audit → 全院岗位排班；outpatient:schedule:audit → 门诊排班
+const canAuditStaff = computed(() => hasPerm(PERM_SCHEDULE_AUDIT))
+const canAuditClinic = computed(() => hasPerm('outpatient:schedule:audit'))
+const visibleTabCount = computed(() => (canAuditStaff.value ? 1 : 0) + (canAuditClinic.value ? 1 : 0))
 
 const loading = ref(false)
 const batchLoading = ref(false)
@@ -218,7 +222,8 @@ const pagination = ref({pageNum: 1, pageSize: DEFAULT_PAGE_SIZE, total: 0})
 const {queryCardRef, footerRef, tableMaxHeight} = useTableMaxHeight()
 
 // ---------------- 门诊排班（待我审批）----------------
-const activeTab = ref('staff')
+// 默认 tab 取当前角色能审的第一个：有员工审核权进全院岗位，否则进门诊
+const activeTab = ref(canAuditStaff.value ? 'staff' : 'clinic')
 const clinicLoading = ref(false)
 const clinicBatchLoading = ref(false)
 const clinicTableData = ref([])
@@ -551,6 +556,18 @@ const openChangeLog = (row) => {
 }
 
 onMounted(() => {
-  loadData()
+  if (activeTab.value === 'clinic') {
+    clinicLoaded = true
+    loadClinicData()
+  } else {
+    loadData()
+  }
 })
 </script>
+
+<style scoped>
+/* 只有一个 tab 时隐藏 tab 头（门诊办进去就是纯门诊排班待审列表，不显示 tab 栏） */
+.single-tab :deep(.el-tabs__header) {
+  display: none;
+}
+</style>

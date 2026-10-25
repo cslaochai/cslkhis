@@ -172,7 +172,7 @@ import {computed, ref, watch} from 'vue';
 import {ElMessage} from 'element-plus';
 import {createScheduleBatch, getShiftSelectList} from '@/api/appoint';
 import {getClinicRoomListAll, getEmployeeList} from '@/api/system';
-import {SHIFT_SCOPE_OUTPATIENT, STAFF_TYPE_DOCTOR, staffTypeHasSource, staffTypeText} from '@/lib/scheduleShift';
+import {shiftOptionLabel, SHIFT_SCOPE_OUTPATIENT, STAFF_TYPE_DOCTOR, staffTypeHasSource, staffTypeText} from '@/lib/scheduleShift';
 import {batchDays, fmtISO} from '@/lib/scheduleDate';
 import {getTitleLabel} from '@/lib/scheduleTitle';
 import {DIAGNOSIS_TIER_LIST, tierAmount, tierDefaultOf} from '@/lib/diagnosisTier';
@@ -410,7 +410,7 @@ const loadShiftDict = async (deptId) => {
     return [];
   }
 };
-const shiftDictLabel = (s) => `${s.shiftName} ${s.startTime}~${s.endTime}`;
+const shiftDictLabel = (s) => `${shiftOptionLabel(s)} ${s.startTime}~${s.endTime}`;
 /**
  * 选中班次：时间段由班次带出，表单里不再给改。
  * 需要非常规时段就到「班次字典」建一条，这里只负责选它。
@@ -560,7 +560,7 @@ const handleSubmit = async () => {
   if (formData.value.status !== 0 && staffTypeHasSource(formData.value.staffType)) {
     const noRoom = pairs.filter((p) => !p.roomId && !p.roomName);
     if (noRoom.length) {
-      ElMessage.warning(`启用状态的医生排班必须选诊室：${noRoom.map((p) => p.doctorName).join('、')} 还没分到诊室（分诊台按诊室编号发号，缺诊室患者找不到房间）`);
+      ElMessage.warning(`启用状态的医生排班必须选诊室：${noRoom.map((p) => p.doctorName).join('、')} 还没分到诊室`);
       return;
     }
   }

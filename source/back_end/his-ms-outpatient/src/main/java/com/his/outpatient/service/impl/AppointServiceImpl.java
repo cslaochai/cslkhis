@@ -427,8 +427,8 @@ public class AppointServiceImpl extends ServiceImpl<AppointInfoMapper, AppointIn
                         : patient.getMedicalInsuranceType());
         appointInfo.setMedicalInsuranceNo(patient.getMedicalInsuranceNo());
 
-        // 生成挂号单号
-        String appointNo = redisSequenceService.generateAppointNo();
+        // 生成挂号单号：复诊以 FZ 开头（就诊号在挂号单上按初诊/复诊可一眼区分，号段独立不撞唯一索引）
+        String appointNo = revisit ? redisSequenceService.generateRevisitNo() : redisSequenceService.generateAppointNo();
         appointInfo.setRegistNo(appointNo);
 
         // 科室/医生/就诊日快照：当日回诊(noSchedule)取当前登录人（医生站「建复诊」就是医生本人点的）；

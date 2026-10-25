@@ -626,6 +626,12 @@ const routes = [
                 meta: {title: '排班总览'}
             },
             {
+                path: 'schedule-history',
+                name: 'ScheduleHistory',
+                component: () => import('@/views/schedule/ScheduleHistoryView.vue'),
+                meta: {title: '排班历史查询'}
+            },
+            {
                 path: 'staff-plan-rule',
                 name: 'StaffPlanRule',
                 component: () => import('@/views/schedule/StaffPlanRuleView.vue'),

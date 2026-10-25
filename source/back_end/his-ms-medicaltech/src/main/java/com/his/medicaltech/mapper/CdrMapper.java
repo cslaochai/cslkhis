@@ -13,6 +13,7 @@ import org.apache.ibatis.annotations.Select;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 
 /**
  * CDR 患者全景时间轴 Mapper（P5.2）。
@@ -615,4 +616,56 @@ public interface CdrMapper {
             </script>
             """)
     List<CdrArchiveIdentityRowVO> selectArchiveIdentities(@Param("ids") Collection<Long> ids);
+
+    // ========== 临床画像查询 ==========
+
+    /** 最近一次病历的过敏史文本 */
+    @Select("""
+            <script>
+            SELECT m.allergy_history
+              FROM biz_medical_record m
+             WHERE m.del_flag = 0 AND m.allergy_history IS NOT NULL AND m.allergy_history != ''
+               AND m.patient_id IN <foreach collection='ids' item='id' open='(' separator=',' close=')'>#{id}</foreach>
+             ORDER BY m.visit_date DESC LIMIT 1
+            </script>
+            """)
+    String selectLatestAllergyHistory(@Param("ids") Collection<Long> ids);
+
+    /** 所有诊断名（用于匹配慢病关键词） */
+    @Select("""
+            <script>
+            SELECT DISTINCT m.diagnosis_name
+              FROM biz_medical_record m
+             WHERE m.del_flag = 0 AND m.diagnosis_name IS NOT NULL AND m.diagnosis_name != ''
+               AND m.patient_id IN <foreach collection='ids' item='id' open='(' separator=',' close=')'>#{id}</foreach>
+            </script>
+            """)
+    List<String> selectAllDiagnosisNames(@Param("ids") Collection<Long> ids);
+
+    /** 近 N 天挂号按类型分组统计 */
+    @Select("""
+            <script>
+            SELECT r.regist_type AS registType, COUNT(*) AS cnt
+              FROM biz_appoint_info r
+             WHERE r.del_flag = 0
+               AND r.regist_time >= #{since}
+               AND r.patient_id IN <foreach collection='ids' item='id' open='(' separator=',' close=')'>#{id}</foreach>
+             GROUP BY r.regist_type
+            </script>
+            """)
+    List<Map<String, Object>> countRecentVisitsByType(@Param("ids") Collection<Long> ids, @Param("since") String since);
+
+    /** 近 N 天重复检查（同一项目 >=2 次） */
+    @Select("""
+            <script>
+            SELECT a.inspection_item_name AS itemName, COUNT(*) AS cnt
+              FROM biz_inspection_apply a
+             WHERE a.del_flag = 0
+               AND a.create_time >= #{since}
+               AND a.patient_id IN <foreach collection='ids' item='id' open='(' separator=',' close=')'>#{id}</foreach>
+             GROUP BY a.inspection_item_name
+            HAVING COUNT(*) >= 2
+            </script>
+            """)
+    List<Map<String, Object>> selectRepeatInspections(@Param("ids") Collection<Long> ids, @Param("since") String since);
 }

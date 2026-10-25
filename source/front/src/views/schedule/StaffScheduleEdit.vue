@@ -55,7 +55,7 @@
       </el-form-item>
       <el-form-item v-if="needShift" label="班次" prop="shiftId">
         <el-select v-model="formData.shiftId" placeholder="选择班次（时间与工时由班次带出）" style="width: 100%">
-          <el-option v-for="s in shiftOptions" :key="s.id" :label="s.shiftName" :value="s.id"/>
+          <el-option v-for="s in shiftOptions" :key="s.id" :label="shiftOptionLabel(s)" :value="s.id"/>
         </el-select>
       </el-form-item>
       <el-form-item v-else label="班次">
@@ -103,6 +103,7 @@ import {staffScheduleUpsert} from '@/api/staffSchedule'
 import {getDepartmentSelectList, getEmployeeList} from '@/api/system'
 import {getShiftSelectList} from '@/api/appoint'
 import {getNurseWardSelectList} from '@/api/nurseSchedule'
+import {shiftOptionLabel} from '@/lib/scheduleShift'
 import {
   ATTEND_MODE_OPTIONS,
   DUTY_STATUS_OPTIONS,
@@ -201,7 +202,7 @@ const ensureOptions = async () => {
     ])
     deptOptions.value = (dRes?.data || []).map((d) => ({id: d.id ?? d.deptId, name: d.deptName ?? d.name}))
     wardOptions.value = (wRes?.data || []).map((w) => ({id: w.id ?? w.wardId, name: w.wardName ?? w.name}))
-    shiftOptions.value = (sRes?.data || []).map((s) => ({id: s.id, shiftName: s.shiftName}))
+    shiftOptions.value = (sRes?.data || []).map((s) => ({id: s.id, shiftName: s.shiftName, useScope: s.useScope}))
     optionsLoaded = true
   } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
     
