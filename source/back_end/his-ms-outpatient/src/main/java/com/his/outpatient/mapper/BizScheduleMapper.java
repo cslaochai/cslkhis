@@ -368,13 +368,18 @@ public interface BizScheduleMapper extends BaseMapper<BizSchedule> {
      * 不过滤 staff_type，覆盖医生/护理/医技/药学/收费/行政等全部岗位类别。
      * 用于「全院岗位排班」整周提交/整周审核发布。
      *
+     * <p>员工→门诊联动：门诊绑定行（被 {@code biz_clinic_source} 引用）的发布态由门诊侧
+     * {@code syncCoreSchedulePublish} 独占驱动，整周批量不得带上它们，否则与门诊侧互相覆盖。
+     *
      * @return 实际迁移行数
      */
     @Update("UPDATE biz_schedule SET publish_status = #{toStatus} "
             + "WHERE del_flag = 0 "
             + "AND org_type = #{orgType} AND org_id = #{orgId} "
             + "AND schedule_date BETWEEN #{startDate} AND #{endDate} "
-            + "AND publish_status = #{fromStatus}")
+            + "AND publish_status = #{fromStatus} "
+            + "AND NOT EXISTS (SELECT 1 FROM biz_clinic_source cs "
+            + "    WHERE cs.del_flag = 0 AND cs.staff_schedule_id = biz_schedule.id)")
     int updateWeekPublishStatusAll(@Param("orgType") Integer orgType, @Param("orgId") Long orgId,
                                    @Param("startDate") LocalDate startDate, @Param("endDate") LocalDate endDate,
                                    @Param("fromStatus") Integer fromStatus, @Param("toStatus") Integer toStatus);

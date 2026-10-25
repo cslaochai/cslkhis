@@ -10,10 +10,12 @@ import com.his.common.exception.BusinessException;
 import com.his.common.util.ShiftCoverUtil;
 import com.his.common.util.TextUtil;
 import com.his.outpatient.dto.*;
+import com.his.outpatient.entity.BizClinicSource;
 import com.his.outpatient.entity.BizSchedule;
 import com.his.outpatient.entity.BizShift;
 import com.his.outpatient.entity.BizStaffAttendance;
 import com.his.outpatient.entity.BizStaffPlanRule;
+import com.his.outpatient.mapper.BizClinicSourceMapper;
 import com.his.outpatient.mapper.BizScheduleMapper;
 import com.his.outpatient.mapper.BizStaffAttendanceMapper;
 import com.his.outpatient.service.ScheduleChangeLogService;
@@ -79,6 +81,12 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, Biz
     private final StaffPlanRuleService staffPlanRuleService;
     private final ScheduleChangeLogService scheduleChangeLogService;
     private final BizStaffAttendanceMapper staffAttendanceMapper;
+    /**
+     * 门诊号源 Mapper：员工→门诊 联动的只读引用判据。
+     * 直接依赖 Mapper 而非 {@code BizClinicSourceService}，避免与门诊侧
+     * {@code bindCoreSchedule → ensureForClinic} 形成循环依赖。
+     */
+    private final BizClinicSourceMapper clinicSourceMapper;
 
     private static String tipJoin(String... tips) {
         StringBuilder sb = new StringBuilder();
@@ -104,6 +112,89 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, Biz
         return status != null && status == EnableStatusEnum.DISABLED.getCode();
     }
 
+    /**
+     * 该排班事实被门诊号源引用的条数（del_flag=0）。
+     * 引用计数是「员工→门诊」联动的判据：&gt;0 时这条行归门诊侧管理，
+     * 员工排班侧的删除/换班/停班/发布态动作不得擅自执行，否则产生孤儿号源或状态分叉。
+     */
+    private long clinicRefCount(Long staffScheduleId) {
+        if (staffScheduleId == null) {
+            return 0L;
+        }
+        return clinicSourceMapper.selectCount(new LambdaQueryWrapper<BizClinicSource>()
+                .eq(BizClinicSource::getStaffScheduleId, staffScheduleId));
+    }
+
+    /**
+     * 一批排班行的门诊引用数（按 staff_schedule_id 分组计数），避免逐行查造成 N+1。
+     * staffScheduleId 为空的行（手工排班未派生）不参与计数。
+     */
+    private Map<Long, Long> clinicRefCountsOf(List<Long> staffScheduleIds) {
+        if (staffScheduleIds == null || staffScheduleIds.isEmpty()) {
+            return Map.of();
+        }
+        return clinicSourceMapper.selectList(new LambdaQueryWrapper<BizClinicSource>()
+                .select(BizClinicSource::getStaffScheduleId)
+                .in(BizClinicSource::getStaffScheduleId, staffScheduleIds))
+                .stream()
+                .map(BizClinicSource::getStaffScheduleId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.groupingBy(id -> id, Collectors.counting()));
+    }
+
+    /**
+     * 被门诊号源引用的行，不支持员工排班侧的换班/代班/删除/发布态流转。
+     */
+    private void assertNotClinicBound(BizSchedule schedule) {
+        long refCount = clinicRefCount(schedule.getId());
+        if (refCount > 0) {
+            throw new BusinessException("「" + schedule.getEmployeeName() + "」在 " + schedule.getScheduleDate()
+                    + " 的这个班已挂 " + refCount + " 条门诊号源，由门诊排班管理：请到门诊排班页处理");
+        }
+    }
+
+    /**
+     * 出诊行被改为非上班态（停班/请假/培训/休息）时的门诊联动：
+     * 把被引用的门诊号源置为停诊（不物理删，有在挂患者时由门诊排班页批量退号）。
+     * 有在挂号时返回提示语（沿用「提示不拦」风格）；无需提示返回 null。
+     */
+    private String stopClinicSources(BizSchedule before) {
+        List<BizClinicSource> sources = clinicSourceMapper.selectList(new LambdaQueryWrapper<BizClinicSource>()
+                .eq(BizClinicSource::getStaffScheduleId, before.getId()));
+        if (sources.isEmpty()) {
+            return null;
+        }
+        int registered = 0;
+        for (BizClinicSource source : sources) {
+            if (!ScheduleStatusEnum.stopped(source.getStatus())) {
+                if (source.getUsedSource() != null && source.getUsedSource() > 0) {
+                    registered += source.getUsedSource();
+                }
+                BizClinicSource update = new BizClinicSource();
+                update.setId(source.getId());
+                update.setStatus(ScheduleStatusEnum.STOPPED.getCode());
+                clinicSourceMapper.updateById(update);
+            }
+        }
+        return registered > 0
+                ? "「" + before.getEmployeeName() + "」在 " + before.getScheduleDate() + " 的出诊已随停班停诊，仍有 "
+                        + registered + " 条在挂号，请到门诊排班页批量退号"
+                : "「" + before.getEmployeeName() + "」在 " + before.getScheduleDate() + " 的出诊已随停班停诊";
+    }
+
+    /**
+     * 停班路径放行前提：除出勤态外，班次/时间/单元/人员与改前完全一致。
+     * 避免「顺手改了班次」也走停诊联动，号源侧时间/班次不同步。
+     */
+    private boolean fieldsUnchangedExceptDuty(BizSchedule before, BizSchedule now) {
+        return Objects.equals(before.getEmployeeId(), now.getEmployeeId())
+                && Objects.equals(before.getOrgType(), now.getOrgType())
+                && Objects.equals(before.getOrgId(), now.getOrgId())
+                && Objects.equals(before.getShiftId(), now.getShiftId())
+                && Objects.equals(before.getStartTime(), now.getStartTime())
+                && Objects.equals(before.getEndTime(), now.getEndTime());
+    }
+
     @Override
     public PageResult<StaffScheduleVO> pageVO(StaffSchedulePageQueryDTO dto) {
         LambdaQueryWrapper<BizSchedule> wrapper = scoped(new LambdaQueryWrapper<BizSchedule>()
@@ -125,9 +216,14 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, Biz
                 .orderByAsc(BizSchedule::getId);
         Page<BizSchedule> page = this.page(new Page<>(dto.getPageNum(), dto.getPageSize()), wrapper);
         Map<Long, BizShift> shifts = shiftService.mapByIds(shiftIdsOf(page.getRecords()));
+        // 员工→门诊联动：批量带出门诊引用数（>0 的行前端展示「门诊出诊」来源标记）
+        Map<Long, Long> clinicRefCounts = clinicRefCountsOf(
+                page.getRecords().stream().map(BizSchedule::getId).toList());
         List<StaffScheduleVO> vos = new ArrayList<>(page.getRecords().size());
         for (BizSchedule row : page.getRecords()) {
-            vos.add(toVO(row, shifts.get(row.getShiftId())));
+            StaffScheduleVO vo = toVO(row, shifts.get(row.getShiftId()));
+            vo.setClinicSourceCount(clinicRefCounts.getOrDefault(row.getId(), 0L));
+            vos.add(vo);
         }
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(), vos);
     }
@@ -145,11 +241,24 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, Biz
         // 改之前长什么样要先记住：人力标准的下限只在「这次操作让某个班少了一个人」时才拦，
         // 新增和「改成上班」是往里加人，越加越多，拿下限去卡等于让排班员排不出第一版。
         BizSchedule before = dto.getId() == null ? null : getById(dto.getId());
+        // 员工→门诊联动：门诊绑定行（被号源引用）归门诊侧管理——
+        // 只允许「上班 → 非上班」的纯停班路径（联动停诊），其余改动（班次/时间/单元/人员/出勤态回改）一律拒绝
+        String clinicTip = null;
+        if (before != null && clinicRefCount(before.getId()) > 0) {
+            boolean leaving = StaffDutyStatusEnum.isWorking(before.getDutyStatus())
+                    && !StaffDutyStatusEnum.isWorking(schedule.getDutyStatus());
+            if (leaving && fieldsUnchangedExceptDuty(before, schedule)) {
+                clinicTip = stopClinicSources(before);
+            } else {
+                throw new BusinessException("「" + before.getEmployeeName() + "」在 " + before.getScheduleDate()
+                        + " 的这个班已挂门诊号源，由门诊排班管理：班次/时间/单元/出勤态变更请到门诊排班页操作");
+            }
+        }
         saveOrUpdate(schedule);
         String unitTip = staffPlanRuleService.reviewAfterChange(schedule.getOrgType(), schedule.getOrgId(),
                 schedule.getShiftId(), schedule.getStaffType(), schedule.getScheduleDate(),
                 headcountDrops(before, schedule));
-        return tipJoin(unitTip, reviewEmployee(schedule));
+        return tipJoin(unitTip, reviewEmployee(schedule), clinicTip);
     }
 
     /**
@@ -427,6 +536,8 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, Biz
     public void deleteById(Long id) {
         BizSchedule row = requireById(id);
         assertDeptAccessible(row.getDeptId());
+        // 员工→门诊联动：被门诊号源引用的行归门诊侧管理，物理删会留下孤儿号源
+        assertNotClinicBound(row);
         // 唯一键不含删除标志 → 物理删（软删行继续占键，「删了再重排同一天同一班」必撞重复键）
         baseMapper.purgeById(id);
         // 删完再核一次人力：把人删到「这个班没人接」必须当场拦住，而不是等明天出事故
@@ -440,9 +551,12 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, Biz
         BizSchedule from = requireById(dto.getFromScheduleId());
         assertDeptAccessible(from.getDeptId());
         String reason = dto.getReason().trim();
+        // 员工→门诊联动：出诊相关行（被门诊号源引用）换班/代班会改挂号医生，归门诊侧管理
+        assertNotClinicBound(from);
 
         if (dto.getToScheduleId() != null) {
             BizSchedule to = requireById(dto.getToScheduleId());
+            assertNotClinicBound(to);
             if (Objects.equals(from.getEmployeeId(), to.getEmployeeId())) {
                 throw new BusinessException("换班双方不能是同一个人");
             }
@@ -1494,6 +1608,8 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, Biz
     @Transactional(rollbackFor = Exception.class)
     public void submit(Long id) {
         BizSchedule row = requireScheduleRow(id);
+        // 员工→门诊联动：门诊绑定行的发布态由门诊审核发布驱动，员工排班侧不得提交
+        assertNotClinicBound(row);
         if (!PublishStatusEnum.DRAFT.getCode().equals(row.getPublishStatus())) {
             throw new BusinessException("只有草稿状态的排班可以提交审核");
         }
@@ -1509,6 +1625,8 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, Biz
     @Transactional(rollbackFor = Exception.class)
     public void auditPublish(Long id) {
         BizSchedule row = requireScheduleRow(id);
+        // 员工→门诊联动：门诊绑定行由门诊侧审核发布（syncCoreSchedulePublish），员工侧不得双写
+        assertNotClinicBound(row);
         if (!PublishStatusEnum.PENDING.getCode().equals(row.getPublishStatus())) {
             throw new BusinessException("只有待审核状态的排班可以审核发布");
         }
@@ -1522,6 +1640,8 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, Biz
     @Transactional(rollbackFor = Exception.class)
     public void reject(StaffScheduleRejectDTO dto) {
         BizSchedule row = requireScheduleRow(dto.getId());
+        // 员工→门诊联动：门诊绑定行由门诊侧管理，员工侧不得驳回
+        assertNotClinicBound(row);
         if (!PublishStatusEnum.PENDING.getCode().equals(row.getPublishStatus())) {
             throw new BusinessException("只有待审核状态的排班可以驳回");
         }
@@ -1536,6 +1656,8 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, Biz
     @Transactional(rollbackFor = Exception.class)
     public void recall(Long id) {
         BizSchedule row = requireScheduleRow(id);
+        // 员工→门诊联动：门诊绑定行的发布态由门诊侧驱动，员工排班侧不得撤回
+        assertNotClinicBound(row);
         String from = PublishStatusEnum.getLabel(row.getPublishStatus());
         updatePublishStatus(id, PublishStatusEnum.DRAFT.getCode());
         scheduleChangeLogService.record(id, ScheduleChangeTypeEnum.RECALL, null, null, null, null, null,
@@ -1546,6 +1668,8 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, Biz
     @Transactional(rollbackFor = Exception.class)
     public void adjustStart(Long id) {
         BizSchedule row = requireScheduleRow(id);
+        // 员工→门诊联动：门诊绑定行归门诊侧管理，员工排班侧不得进入调班
+        assertNotClinicBound(row);
         if (!PublishStatusEnum.isEffective(row.getPublishStatus())) {
             throw new BusinessException("只有已发布/已变更的排班可以进入调班");
         }

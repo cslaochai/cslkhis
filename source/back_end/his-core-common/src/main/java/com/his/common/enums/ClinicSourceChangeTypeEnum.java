@@ -64,7 +64,11 @@ public enum ClinicSourceChangeTypeEnum {
     /**
      * 进入调班：已发布/已变更 → 调班中（锁定编辑，号源暂冻结）
      */
-    ADJUST(13, "进入调班");
+    ADJUST(13, "进入调班"),
+    /**
+     * 驳回：待审核 → 草稿（审核人不通过，退回排班人修改）
+     */
+    REJECT(14, "驳回");
 
     private final int code;
     private final String label;

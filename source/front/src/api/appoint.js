@@ -161,6 +161,16 @@ export function scheduleAuditWeek(data) {
     return request.post('/schedule/auditWeek', data)
 }
 
+// 门诊排班「待我审批」分页：管理员/门诊办看全部待审核，普通审核人只看主档指定的本科室
+export function schedulePendingApproval(data) {
+    return request.post('/schedule/pendingApproval', data)
+}
+
+// 驳回：待审核→草稿（审核人不通过，退回排班人修改），body 传 {scheduleId, reason}
+export function scheduleReject(data) {
+    return request.post('/schedule/reject', data)
+}
+
 // ========== 班次字典（biz_shift：医院标准班次，排班/模板「标准班次」下拉的数据源） ==========
 
 // 标准班次列表（deptId 传了 = 该科室适用 + 全院通用；status=1 只取启用）

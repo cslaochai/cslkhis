@@ -53,6 +53,15 @@ public interface SystemFacadeService {
      */
     List<DeptBriefVO> listDepartmentsByScheduleAuditor(Long employeeId);
 
+    /**
+     * 指定员工作为门诊排班审核人（outpatient_auditor_id）所辖的科室列表，
+     * 用于门诊排班待审列表的科室收口。
+     *
+     * @param employeeId 员工ID
+     * @return 该员工没有被指定为任何科室的门诊审核人时返回空列表
+     */
+    List<DeptBriefVO> listDepartmentsByOutpatientAuditor(Long employeeId);
+
     // ---------- 员工 ----------
 
     /**

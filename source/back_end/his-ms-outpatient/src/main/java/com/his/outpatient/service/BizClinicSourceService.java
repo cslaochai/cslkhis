@@ -1,6 +1,7 @@
 package com.his.outpatient.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
+import com.his.common.base.PageResult;
 import com.his.outpatient.dto.ScheduleSelectQueryDTO;
 import com.his.spi.vo.StopImpactItemVO;
 import com.his.common.enums.StaffScheduleSourceEnum;
@@ -111,6 +112,17 @@ public interface BizClinicSourceService extends IService<BizClinicSource> {
 
     /** 进入调班：已发布/已变更 → 调班中（锁定编辑，号源暂冻结） */
     void adjustStart(Long id);
+
+    /**
+     * 门诊排班「待我审批」分页：待审核(1) 的门诊排班行。
+     * 管理员/门诊办角色看全部；普通审核人只看主档 outpatient_auditor_id 指向自己的科室。
+     */
+    PageResult<ScheduleDetailVO> pendingApprovalPage(SchedulePendingQueryDTO dto);
+
+    /**
+     * 驳回：待审核 → 草稿（审核人不通过，退回排班人修改），记 REJECT 留痕。
+     */
+    void reject(ScheduleRejectDTO dto);
 
     /**
      * 整周提交审核：区间内本科室草稿(0) → 待审核(1)，返回迁移条数；已发布/待审核/调班中行不动。

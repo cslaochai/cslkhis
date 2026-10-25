@@ -1,7 +1,9 @@
 package com.his.outpatient.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.his.common.base.PageResult;
 import com.his.common.entity.CurrentUser;
 import com.his.common.enums.*;
 import com.his.common.exception.BusinessException;
@@ -34,6 +36,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * 挂号服务实现
@@ -970,6 +973,54 @@ public class BizClinicSourceServiceImpl extends ServiceImpl<BizClinicSourceMappe
         clinicSourceMapper.updateById(update);
         clinicSourceLogService.record(id, ClinicSourceChangeTypeEnum.ADJUST, null,
                 existing.getDoctorName() + " " + existing.getScheduleDate() + " 进入调班", existing);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public PageResult<ScheduleDetailVO> pendingApprovalPage(SchedulePendingQueryDTO dto) {
+        CurrentUser user = UserUtils.getCurrentUser();
+        if (user == null) {
+            throw new BusinessException("未登录或登录已过期，请重新登录");
+        }
+        String role = user.getCurrentRole();
+        Set<Long> deptIds = null;
+        if (!ROLE_ADMIN.equals(role) && !ROLE_OUTPATIENT_OFFICE.equals(role)) {
+            // 普通门诊审核人：只收主档 outpatient_auditor_id 指向自己的科室
+            deptIds = systemFacadeService.listDepartmentsByOutpatientAuditor(user.getEmployeeId()).stream()
+                    .map(DeptBriefVO::getId).collect(Collectors.toSet());
+            if (deptIds.isEmpty()) {
+                return PageResult.of(0, dto.getPageNum(), dto.getPageSize(), 0, List.of());
+            }
+        }
+        LambdaQueryWrapper<BizClinicSource> wrapper = new LambdaQueryWrapper<BizClinicSource>()
+                .eq(BizClinicSource::getPublishStatus, PublishStatusEnum.PENDING.getCode())
+                .in(deptIds != null, BizClinicSource::getDeptId, deptIds)
+                .orderByAsc(BizClinicSource::getScheduleDate)
+                .orderByAsc(BizClinicSource::getStartTime)
+                .orderByAsc(BizClinicSource::getId);
+        Page<BizClinicSource> page = clinicSourceMapper.selectPage(new Page<>(dto.getPageNum(), dto.getPageSize()), wrapper);
+        return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(), toVOList(page.getRecords()));
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void reject(ScheduleRejectDTO dto) {
+        BizClinicSource existing = clinicSourceMapper.selectById(dto.getScheduleId());
+        if (existing == null) {
+            throw new BusinessException("排班记录不存在");
+        }
+        assertNotPast(existing.getScheduleDate(), "驳回");
+        if (!PublishStatusEnum.PENDING.getCode().equals(existing.getPublishStatus())) {
+            throw new BusinessException("只有待审核状态的排班可以驳回");
+        }
+        assertOutpatientAuditor(existing);
+        BizClinicSource update = new BizClinicSource();
+        update.setId(existing.getId());
+        update.setPublishStatus(PublishStatusEnum.DRAFT.getCode());
+        clinicSourceMapper.updateById(update);
+        String reason = (dto.getReason() == null || dto.getReason().isBlank()) ? "" : "：" + dto.getReason();
+        clinicSourceLogService.record(existing.getId(), ClinicSourceChangeTypeEnum.REJECT, null,
+                existing.getDoctorName() + " " + existing.getScheduleDate() + " 驳回" + reason, existing);
     }
 
     /**

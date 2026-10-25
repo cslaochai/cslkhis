@@ -106,6 +106,17 @@ public class SystemFacadeServiceImpl implements SystemFacadeService {
     }
 
     @Override
+    public List<DeptBriefVO> listDepartmentsByOutpatientAuditor(Long employeeId) {
+        if (employeeId == null) {
+            return List.of();
+        }
+        List<SysDepartment> departments = sysDepartmentMapper.selectList(
+                new LambdaQueryWrapper<SysDepartment>()
+                        .eq(SysDepartment::getOutpatientAuditorId, employeeId));
+        return toDeptBriefList(departments);
+    }
+
+    @Override
     public EmployeeBriefVO findEmployee(Long employeeId) {
         return employeeId == null ? null : toEmployeeBrief(sysEmployeeMapper.selectById(employeeId));
     }

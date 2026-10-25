@@ -113,6 +113,12 @@ public class StaffScheduleVO {
      */
     private Integer clinicFlag;
 
+    /**
+     * 被门诊号源引用的条数（&gt;0 表示这条行挂门诊号源，归门诊排班管理：
+     * 删除/换班/发布态由门诊侧驱动，员工排班侧改动会被拦截并提示）
+     */
+    private Long clinicSourceCount;
+
     /** 工时（分钟） */
     private Integer workMinutes;
 

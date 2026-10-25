@@ -9,6 +9,7 @@ import com.his.outpatient.service.ClinicSourceLogService;
 import com.his.outpatient.vo.*;
 import com.his.spi.vo.StopImpactItemVO;
 import com.his.common.base.Result;
+import com.his.common.base.PageResult;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -112,6 +113,28 @@ public class BizClinicSourceController {
     @PostMapping("/auditWeek")
     public Result<Integer> auditWeek(@Valid @RequestBody ScheduleQueryDTO queryDTO) {
         return Result.success(bizScheduleService.auditWeek(queryDTO));
+    }
+
+    /**
+     * 门诊排班「待我审批」分页：管理员/门诊办看全部待审核，普通审核人只看主档指定的本科室。
+     * 用于排班审批中心「门诊排班」页签取数。
+     */
+    @PreAuthorize("hasAuthority('outpatient:schedule:audit')")
+    @Operation(summary = "门诊排班待我审批（分页）")
+    @PostMapping("/pendingApproval")
+    public Result<PageResult<ScheduleDetailVO>> pendingApproval(@Valid @RequestBody SchedulePendingQueryDTO dto) {
+        return Result.success(bizScheduleService.pendingApprovalPage(dto));
+    }
+
+    /**
+     * 驳回：待审核 → 草稿（审核人不通过，退回排班人修改），记 REJECT 留痕。
+     */
+    @PreAuthorize("hasAuthority('outpatient:schedule:audit')")
+    @Operation(summary = "驳回门诊排班（待审核→草稿）")
+    @PostMapping("/reject")
+    public Result<Void> reject(@Valid @RequestBody ScheduleRejectDTO dto) {
+        bizScheduleService.reject(dto);
+        return Result.success();
     }
 
     /**

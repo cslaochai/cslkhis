@@ -137,9 +137,12 @@
             </template>
           </el-table-column>
           <el-table-column label="响应形态" prop="attendModeText" width="110"/>
-          <el-table-column label="出诊" width="80">
+          <el-table-column label="出诊" width="170">
             <template #default="{ row }">
-              <el-tag v-if="Number(row.clinicFlag) === 1" size="small" type="warning">出诊</el-tag>
+              <el-tag v-if="clinicBound(row)" size="small" type="warning">
+                门诊出诊 {{ Number(row.clinicSourceCount) }} 条号源
+              </el-tag>
+              <el-tag v-else-if="Number(row.clinicFlag) === 1" size="small" type="info">出诊</el-tag>
               <span v-else class="text-gray-400">—</span>
             </template>
           </el-table-column>
@@ -159,6 +162,7 @@
                   v-if="Number(row.dutyStatus) === 1"
                   v-perm="'staff:schedule:edit'"
                   :icon="Switch"
+                  :title="clinicBound(row) ? '已挂门诊号源，换班归门诊排班管理：请到门诊排班页处理' : ''"
                   data-testid="staff-schedule-swap"
                   link
                   type="warning"
@@ -167,7 +171,12 @@
                 换班
               </el-button>
               <el-button v-perm="'staff:schedule:list'" :icon="Clock" link @click="openChangeLog(row)">留痕</el-button>
-              <el-button v-perm="'staff:schedule:delete'" :icon="Delete" link type="danger" @click="handleDelete(row)">
+              <el-button
+                  v-perm="'staff:schedule:delete'"
+                  :icon="Delete"
+                  :title="clinicBound(row) ? '已挂门诊号源，删除归门诊排班管理：请到门诊排班页处理' : ''"
+                  link type="danger" @click="handleDelete(row)"
+              >
                 删除
               </el-button>
               <el-button
@@ -560,6 +569,12 @@ const handleEditSaved = () => {
   loadData()
   loadOnDuty()
 }
+
+/**
+ * 员工→门诊联动穿透标记：这条行被门诊号源引用（clinicSourceCount>0）时归门诊排班管理，
+ * 员工侧的删除/换班/发布态动作会被后端拦截；仅「上班→停班」的修改走联动停诊。
+ */
+const clinicBound = (row) => Number(row.clinicSourceCount || 0) > 0
 
 const handleDelete = async (row) => {
   try {
