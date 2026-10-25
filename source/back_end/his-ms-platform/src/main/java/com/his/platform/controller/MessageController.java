@@ -24,7 +24,6 @@ import java.util.List;
 @RestController
 @RequestMapping("/system/message")
 @RequiredArgsConstructor
-@PreAuthorize("hasAuthority('portal:messages:view')")
 public class MessageController {
 
     private final SysMessageService sysMessageService;
@@ -32,7 +31,10 @@ public class MessageController {
     /**
      * 建立站内信实时推送长连接，新消息到达即下推一帧（含最新未读数）。
      * 用于顶栏消息铃铛；连接断开后由前端退回未读数轮询。
+     * 通用能力（顶栏铃铛基础功能），登录即可用：类级权限注解会静默覆盖所有方法，
+     * 未授权角色连未读数都 403（AGENTS.md §8.1 G5b 反模式），故按方法标注。
      */
+    @PreAuthorize("isAuthenticated()")
     @Operation(summary = "SSE 实时推送连接（新消息即时通知，鉴权走 Authorization 头）")
     @GetMapping(value = "/sse", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter sse() {
@@ -43,6 +45,7 @@ public class MessageController {
      * 当前登录者的未读消息条数。
      * 用于顶栏铃铛徽标初值，以及实时推送断线后 5 秒轮询刷新。
      */
+    @PreAuthorize("isAuthenticated()")
     @Operation(summary = "查询未读消息数量")
     @GetMapping("/unread/count")
     public Result<Integer> unreadCount() {
@@ -53,6 +56,7 @@ public class MessageController {
      * 当前登录者的消息分页。
      * 用于消息中心页列表，以及顶栏消息抽屉的首屏取数。
      */
+    @PreAuthorize("isAuthenticated()")
     @Operation(summary = "查询消息列表")
     @GetMapping("/listPage")
     public Result<PageResult<SysMessageVO>> listPage(@Valid MessagePageQueryDTO queryDTO) {
@@ -63,6 +67,7 @@ public class MessageController {
      * 当前登录者消息按业务类型的分组计数。
      * 供消息列表按类型页签渲染各自的数量徽标。
      */
+    @PreAuthorize("isAuthenticated()")
     @Operation(summary = "按业务类型分组统计消息数（抽屉 Tab 徽标用）")
     @GetMapping("/typeCounts")
     public Result<List<MessageTypeCountVO>> typeCounts() {
