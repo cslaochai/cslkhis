@@ -42,3 +42,8 @@ export function reviewRecord(recordId, approved, remark, reviewerName) {
         params: {recordId, approved, remark, reviewerName}
     })
 }
+
+// 打印就诊文书：现场生成引导单 + 普通处方签 + 饮片处方签三份 PDF
+export function printVisitDocs(recordId) {
+    return request.get('/emr/printVisitDocs', {params: {recordId}})
+}

@@ -175,4 +175,19 @@ public interface EmrService extends IService<BizMedicalRecord> {
      * @return 申请单列表（按创建时间倒序）
      */
     List<BizLaboratoryApplyVO> listLaboratoryApplies(Long registId);
+
+    /**
+     * 结诊事务提交后的异步收尾：只跑规则质控。
+     *
+     * <p>PDF（引导单/处方签）不在结诊时生成，改为医生点「打印就诊文书」按钮时按需现场画
+     * （见 {@link #printVisitDocs(Long)}）。由 AFTER_COMMIT + @Async 触发。
+     */
+    void asyncAfterSubmit(Long recordId);
+
+    /**
+     * 医生点「打印就诊文书」时现场生成三份 PDF：引导单 + 普通处方签（西药+中成药）+ 饮片处方签。
+     *
+     * <p>每次都重画（患者可能中途加了检查/换了药），没有对应内容就对应字段为空。
+     */
+    VisitDocsPrintVO printVisitDocs(Long recordId);
 }

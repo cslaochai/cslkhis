@@ -224,6 +224,15 @@
                          @open-detail="showPatientDetail = true">
         </PatientBriefBar>
 
+        <!-- 医保与收费（紧凑条，替代原 drawer） -->
+        <div v-if="currentPatient.queueStatus == 3 && insuranceInfo"
+             class="flex shrink-0 items-center gap-4 rounded-md bg-blue-50 px-3 py-1.5 text-xs">
+          <span class="text-slate-600">{{ insuranceInfo.medicalInsuranceType || '自费' }}</span>
+          <span class="text-slate-600">报销 <b class="text-emerald-600">{{ insuranceInfo.coverageRatio || 0 }}%</b></span>
+          <span class="text-slate-600">医保支付 ¥{{ (insuranceInfo.insurancePay || 0).toFixed(2) }}</span>
+          <span class="ml-auto text-slate-600">自付 <b class="text-red-600">¥{{ (insuranceInfo.selfPay || 0).toFixed(2) }}</b></span>
+        </div>
+
         <div class="flex min-h-0 flex-1 gap-3">
           <!-- 次栏：病历（对调后的固定 520px 单列文书，真实 HIS 口径：模板化低频录入，不与医嘱抢宽度） -->
           <div :class="recordColCollapsed ? 'w-9' : 'w-[560px]'"
@@ -308,7 +317,7 @@
                         <span v-if="triageChiefComplaintValue.value"
                               class="ml-1 rounded bg-sky-100 px-1.5 py-0.5 text-xs text-sky-600">分诊主诉</span>
                       </label>
-                      <el-input v-model="recordForm.chiefComplaint" :rows="2" placeholder="请输入主诉" type="textarea"/>
+                      <el-input v-model="recordForm.chiefComplaint" :rows="2" :disabled="isRecordSubmitted" placeholder="请输入主诉" type="textarea"/>
                     </div>
                     <div>
                       <div class="mb-1 flex items-center justify-between">
@@ -326,7 +335,7 @@
                           </el-button>
                         </div>
                       </div>
-                      <el-input v-model="recordForm.presentIllness" :rows="3" placeholder="请输入现病史"
+                      <el-input v-model="recordForm.presentIllness" :rows="3" :disabled="isRecordSubmitted" placeholder="请输入现病史"
                                 type="textarea"/>
                     </div>
                     <div class="rounded-md border border-red-200 bg-red-50/50 p-3">
@@ -345,7 +354,7 @@
                           </el-button>
                         </div>
                       </div>
-                      <el-input v-model="recordForm.allergyHistory" :rows="2" placeholder="无过敏史请填写 无"
+                      <el-input v-model="recordForm.allergyHistory" :rows="2" :disabled="isRecordSubmitted" placeholder="无过敏史请填写 无"
                                 type="textarea"/>
                     </div>
                     <div class="space-y-3">
@@ -364,7 +373,7 @@
                             </el-button>
                           </div>
                         </div>
-                        <el-input v-model="recordForm.pastHistory" :rows="2" placeholder="既往病史" type="textarea"/>
+                        <el-input v-model="recordForm.pastHistory" :rows="2" :disabled="isRecordSubmitted" placeholder="既往病史" type="textarea"/>
                       </div>
                       <div>
                         <div class="mb-1 flex items-center justify-between">
@@ -583,7 +592,7 @@
                   <div class="space-y-2">
                     <div><label class="mb-1 block text-sm font-medium text-slate-600">诊断 <span
                         class="text-red-500">*</span></label>
-                      <el-select v-model="recordForm.diagnosis" :loading="icd10Loading"
+                      <el-select v-model="recordForm.diagnosis" :loading="icd10Loading" :disabled="isRecordSubmitted"
                                  :remote-method="handleIcd10Search" class="w-full"
                                  filterable placeholder="输入疾病名称或编码搜索"
                                  remote reserve-keyword
@@ -679,13 +688,22 @@
               </div>
             </div>
             </div>
-            <!-- 病历已提交水印（折叠态不渲染：36px 竖条上 giant 旋转文字会被裁成色块） -->
-            <div v-if="recordForm.recordStatus === 2 && !recordColCollapsed"
-                 class="pointer-events-none absolute inset-0 z-50 flex items-center justify-center">
-              <div class="rotate-[-30deg] text-4xl font-black text-red-500/20 select-none">
-                病历已提交
-              </div>
+
+          <!-- 病历已提交水印：覆盖病历+处方+申请单整个右侧工作区 -->
+          <div v-if="recordForm.recordStatus === 2 && !recordColCollapsed"
+               class="pointer-events-none fixed inset-0 z-50 flex items-center justify-center">
+            <div class="rotate-[-30deg] text-5xl font-black text-red-500/20 select-none">
+              病历已提交
             </div>
+          </div>
+
+          <!-- 结诊提交中全屏遮罩 -->
+          <div v-if="submitting" class="fixed inset-0 z-[100] flex items-center justify-center bg-white/70">
+            <div class="text-center">
+              <div class="text-lg font-bold text-blue-600 mb-2">正在结诊提交...</div>
+              <div class="text-sm text-slate-500">电子签名 + 记账 + 状态收口，请稍候</div>
+            </div>
+          </div>
             <!-- 已审核水印 -->
             <div v-if="recordForm.reviewStatus === 2 && !recordColCollapsed"
                  class="pointer-events-none absolute inset-0 z-50 flex items-center justify-center">
@@ -747,7 +765,7 @@
                               {{ tpl.templateName }}
                             </span>
                           </div>
-                          <el-button v-perm="'opd:doctorWorkstation:add'" :icon="Plus" size="small" type="primary"
+                          <el-button v-if="!isRecordSubmitted" v-perm="'opd:doctorWorkstation:add'" :icon="Plus" size="small" type="primary"
                                      @click="handleAddEmptyDrug">新增药品
                           </el-button>
                         </div>
@@ -970,7 +988,7 @@
                               {{ tpl.templateName }}
                             </el-button>
                           </div>
-                          <el-button v-perm="'opd:doctorWorkstation:add'" :icon="Plus" size="small" type="primary"
+                          <el-button v-if="!isRecordSubmitted" v-perm="'opd:doctorWorkstation:add'" :icon="Plus" size="small" type="primary"
                                      @click="handleAddEmptyInspection">新增检查
                           </el-button>
                         </div>
@@ -1127,7 +1145,7 @@
                               {{ tpl.templateName }}
                             </el-button>
                           </div>
-                          <el-button v-perm="'opd:doctorWorkstation:add'" :icon="Plus" size="small" type="primary"
+                          <el-button v-if="!isRecordSubmitted" v-perm="'opd:doctorWorkstation:add'" :icon="Plus" size="small" type="primary"
                                      @click="handleAddEmptyLaboratory">新增检验
                           </el-button>
                         </div>
@@ -1441,28 +1459,18 @@
               预约复诊
             </el-button>
             <el-button v-if="currentPatient.queueStatus == 3" v-perm="'opd:doctorWorkstation:edit'" type="warning"
-                       @click="handleComplete">
+                       :loading="submitting" @click="handleComplete">
               结诊
             </el-button>
           </div>
           <!-- 结诊后：打印指引 -->
           <div v-else class="flex items-center gap-3">
-            <el-button type="primary" @click="showGuideSheetDialog = true">
-              <el-icon class="mr-1">
-                <Document/>
-              </el-icon>
-              结诊文书
-            </el-button>
-            <el-button type="success" @click="printPrescriptions">
+            <el-button type="success" :loading="printingDocs" @click="handlePrintVisitDocs">
               <el-icon class="mr-1">
                 <Printer/>
               </el-icon>
-              打印处方
+              打印就诊文书
             </el-button>
-            <!-- 结诊提交是原子动作：病历/处方签名失败会整体回滚，所以走到这里必然已签 -->
-            <el-tag data-testid="p5-done-sign-hint" effect="plain" type="success">
-              病历 · 处方 · 申请单均已电子签名（签名中心可验签）
-            </el-tag>
           </div>
         </PageActionBar>
       </template>
@@ -2296,7 +2304,7 @@ import {
   searchLaboratoryItem
 } from '@/api/system';
 import {DICT_TYPE} from '@/lib/dict-cache';
-import {getByRegistId, getEmrRecordList} from '@/api/emr';
+import {getByRegistId, getEmrRecordList, printVisitDocs} from '@/api/emr';
 import {draftEmrText, extractEmrText, predictIcd10 as predictIcd10Ai, transcribeVoice} from '@/api/ai';
 import {localDateStr, shortQueueNo} from '@/lib/utils';
 import {QUEUE_STATUS, queueVisitBadgeOf} from '@/lib/statusColor';
@@ -4813,6 +4821,7 @@ const handleComplete = async () => {
 
 // 实际结诊提交（签名板确认后或无处方时调用）
 const doSubmitRecord = async (submitData) => {
+  submitting.value = true;
   try {
     await submitMedicalRecord(submitData);
     ElMessage.success('结诊成功');
@@ -4828,6 +4837,8 @@ const doSubmitRecord = async (submitData) => {
       await loadData();
       ElMessage.info('就诊状态已被其他操作变更，已为你刷新队列，请核对后重试');
     }
+  } finally {
+    submitting.value = false;
   }
 };
 
@@ -5569,7 +5580,45 @@ watch(() => showGuideSheetDialog.value, (val) => {
   if (val)
     loadGuideContent();
 });
-// ========== 打印处方 ==========
+// ========== 打印就诊文书（引导单 + 处方签，点按钮才现场生成 PDF） ==========
+const printingDocs = ref(false);
+const submitting = ref(false);
+const handlePrintVisitDocs = async () => {
+  if (!recordForm.id) {
+    ElMessage.warning('请先保存病历');
+    return;
+  }
+  printingDocs.value = true;
+  const w = window.open('', '_blank');
+  try {
+    const res = await printVisitDocs(recordForm.id);
+    const data = res.data || {};
+    const items = [
+      { path: data.guidePdfPath, label: '就诊引导单（含缴费二维码）' },
+      { path: data.rxNormalPdfPath, label: '普通处方签（西药+中成药）' },
+      { path: data.rxHerbalPdfPath, label: '中药饮片处方签' },
+    ].filter(x => x.path);
+    if (!items.length) {
+      if (w) w.close();
+      ElMessage.info('本次就诊没有需要打印的文书');
+      return;
+    }
+    if (w) {
+      w.document.write(`<html><head><title>就诊文书</title></head><body style="font-family:sans-serif;padding:20px;">
+        <h2>就诊文书</h2>
+        ${items.map(x => `<p style="margin:12px 0;"><a href="/api/${x.path}" target="_blank" style="font-size:16px;">${x.label}</a></p>`).join('')}
+      </body></html>`);
+      w.document.close();
+    }
+  } catch (e) {
+    if (w) w.close();
+    ElMessage.error('就诊文书生成失败：' + (e?.message || e));
+  } finally {
+    printingDocs.value = false;
+  }
+};
+
+// ========== 打印处方（旧浏览器兜底，后端 PDF 优先） ==========
 const printPrescriptions = () => {
   // 结诊后已有后端处方签 PDF（含医师手写笔迹 + 左上角聚合支付码）：直接打开，可打印/下载
   if (rxPdfUrl.value) {
@@ -5770,6 +5819,8 @@ window.addEventListener('resize', syncCompactViewport);
 onUnmounted(() => window.removeEventListener('resize', syncCompactViewport));
 // 真正的折叠态 = 窄屏 + 用户点了收起；宽屏下恒为展开
 const recordColCollapsed = computed(() => compactViewport.value && recordCollapsed.value);
+// 病历已提交（终态）：整个病历/诊断/处方/申请单只读，要改走修改申请流程
+const isRecordSubmitted = computed(() => Number(recordForm.recordStatus) === 2);
 // 历史就诊：患者级跨就诊次，用弹窗打开（不打断接诊），内嵌 CDR 全景时间轴
 const showPatientDetail = ref(false);
 // 患者条上的到达时间（队列里有 arriveTime 才有值）

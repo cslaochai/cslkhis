@@ -109,6 +109,20 @@ public interface ChargeFacadeService {
      */
     List<BillBriefVO> pendingBillsOfEncounter(Integer encounterType, Long encounterId);
 
+    /**
+     * 结诊时自动把本次就诊全部「1-待结算」L1 行锁成一张 L2 待缴账单（billType=2 门诊诊间结算）。
+     *
+     * <p>为什么需要：医生结诊只写 L1 记账行，L2 账单原先是收费员在收费台手工 settle 才生成的。
+     * 但结诊文书（引导单/处方签）左上角要出聚合支付码——没有 L2 账单就没码，旧代码因此误判
+     * "无待缴账单 = 已结清"，患者明明没缴费却被 PDF 告知已结清。结诊时同步出一张待缴账单，
+     * 患者扫左上角码就能直接付，收费台也能看到这张单。
+     *
+     * <p>幂等：该就诊已有待缴账单时直接返回已有那张，不重复出账。
+     *
+     * @return 新建或已有的待缴账单；本次就诊无应收（全免/无收费项目）时返回 null
+     */
+    BillBriefVO createVisitBill(Integer encounterType, Long encounterId);
+
     // ---------- 账单读侧（费用解释 / 报表） ----------
 
     /**

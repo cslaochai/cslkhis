@@ -7,6 +7,7 @@ import com.his.clinical.dto.MedicalRecordPageQueryDTO;
 import com.his.clinical.service.EmrService;
 import com.his.clinical.vo.BizMedicalRecordVO;
 import com.his.clinical.vo.EmrRecordDetailVO;
+import com.his.clinical.vo.VisitDocsPrintVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -81,5 +82,17 @@ public class EmrController {
                                      @RequestParam(required = false) String reviewerName) {
         boolean success = emrService.reviewRecord(recordId, approved, remark, reviewerName);
         return success ? Result.success("审核完成", null) : Result.error("审核失败");
+    }
+
+    /**
+     * 医生点「打印就诊文书」：现场生成引导单 + 普通处方签 + 饮片处方签三份 PDF。
+     *
+     * <p>结诊时不自动生成 PDF（医生不一定打印，白写盘）；这里按需现场画，
+     * 每次都重画以反映最新开方/检查结果。返回三份 PDF 的相对路径，前端分别打开打印。
+     */
+    @Operation(summary = "打印就诊文书（引导单+处方签）")
+    @GetMapping("/printVisitDocs")
+    public Result<VisitDocsPrintVO> printVisitDocs(@RequestParam Long recordId) {
+        return Result.success(emrService.printVisitDocs(recordId));
     }
 }

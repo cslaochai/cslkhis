@@ -175,6 +175,38 @@ public class ChargeFacadeServiceImpl implements ChargeFacadeService {
         return result;
     }
 
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public BillBriefVO createVisitBill(Integer encounterType, Long encounterId) {
+        if (encounterType == null || encounterId == null) {
+            return null;
+        }
+        // 幂等：已有待缴账单直接返回，不重复出账（回诊/重复结诊场景）
+        List<BillBriefVO> existing = pendingBillsOfEncounter(encounterType, encounterId);
+        if (!existing.isEmpty()) {
+            return existing.get(0);
+        }
+        // 找该就诊全部「1-待结算」L1 行；没有就说明本次无应收（全免/零费用），不出账
+        List<BizFeeRecord> pendingRows = feeRecordService.listPending(encounterType, encounterId);
+        if (pendingRows == null || pendingRows.isEmpty()) {
+            log.info("[结诊出账] 就诊 type={} id={} 无待结算费用行，不生成账单", encounterType, encounterId);
+            return null;
+        }
+        BillSettleUpsertDTO dto = new BillSettleUpsertDTO();
+        dto.setEncounterType(encounterType);
+        dto.setEncounterId(encounterId);
+        // feeIds 留空：settle 内部按 encounterType+encounterId 捞全部待结算行
+        dto.setBillType(BillTypeEnum.OUTPATIENT.getCode());
+        // 医生结诊时按自费出待缴账单；患者有医保的，收费台结算时再做医保 split
+        dto.setSettlementMode(1);
+        dto.setRemark("医生结诊自动出账");
+        BizSettlementBill bill = settlementBillService.settle(dto);
+        log.info("[结诊出账] 账单 {} 患者 {} 行 {} 应缴 ¥{}",
+                bill.getBillNo(), bill.getPatientName(), bill.getFeeCount(),
+                bill.getPayableAmount().toPlainString());
+        return getBill(bill.getId());
+    }
+
     /**
      * 待缴口径：1-待支付 2-部分支付 6-挂账欠费（与 settle 挂账口径一致）；结清/作废/退费不参与出码。
      */
