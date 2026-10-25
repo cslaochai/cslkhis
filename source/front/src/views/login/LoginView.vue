@@ -155,7 +155,7 @@ const PHARM_ABILITY = '药房发药、住院摆药、静配、药房盘点、中
 const MEDTECH_ABILITY = '检查/检验工作站、标本与报告、输血与血库、病理/内镜/超声/放射/心电、血液净化、检验质控与室间质评、危急值（限本科室）'
 const ER_ABILITY = '急诊中心（分诊-抢救-留观）、医生工作站开方、门诊治疗、慢病建档、我的未报、危急值、患者360（限本科室）'
 
-const SCHEDULE_PLANNER_ABILITY = '员工排班 / 门诊排班 / 护理排班 维护与提交（限本科室），排班总览；无审核权限（审核分离，演示「排班员排班 → 门诊办审核」链路）'
+const SCHEDULE_PLANNER_ABILITY = '员工排班 / 门诊排班 维护与提交（限本科室），排班总览；无审核权限（审核分离，演示「排班员排班 → 门诊办审核」链路）'
 const SCHEDULE_AUDITOR_ABILITY = '排班审批中心：员工排班 + 门诊排班双页签，可审核发布 / 驳回（留痕）；门诊排班全局可见（演示审核人）'
 const SCHEDULE_NURSING_AUDITOR_ABILITY = '护理排班审核发布（全院，按科室 nursing_auditor_id 收口）；护理排班维护；排班总览（演示护理二级审核「护士长排 → 护理部审」）'
 
