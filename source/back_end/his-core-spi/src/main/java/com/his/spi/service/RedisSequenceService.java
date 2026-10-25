@@ -30,7 +30,10 @@ public interface RedisSequenceService {
     String generateAppointNo();
 
     /**
-     * 生成员工工号：E + 年月日 + 5位流水号
+     * 生成员工工号：E + 3位随机段 + 3位段内序号（如 E482001）。
+     * 段内计数器走 Redis 递增且永久有效（不过期、不按天重置）——员工编号一经下发终身不变，
+     * 键过期/删键都会让下一发从 001 重来撞 uk_emp_code。随机段把空间切成 1000 段 × 999，
+     * 避免全局 3 位序号在 999 人处撞顶。
      */
     String generateEmployeeNo();
 
