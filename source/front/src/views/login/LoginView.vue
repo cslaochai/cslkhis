@@ -157,6 +157,7 @@ const ER_ABILITY = '急诊中心（分诊-抢救-留观）、医生工作站开�
 
 const SCHEDULE_PLANNER_ABILITY = '员工排班 / 门诊排班 / 护理排班 维护与提交（限本科室），排班总览；无审核权限（审核分离，演示「排班员排班 → 门诊办审核」链路）'
 const SCHEDULE_AUDITOR_ABILITY = '排班审批中心：员工排班 + 门诊排班双页签，可审核发布 / 驳回（留痕）；门诊排班全局可见（演示审核人）'
+const SCHEDULE_NURSING_AUDITOR_ABILITY = '护理排班审核发布（全院，按科室 nursing_auditor_id 收口）；护理排班维护；排班总览（演示护理二级审核「护士长排 → 护理部审」）'
 
 // 全部账号合并为一张表：每行 = 同一科室 + 同一角色；排班流程账号按「排班员 → 审核人」流程顺序置顶
 const credRows = [
@@ -172,6 +173,12 @@ const credRows = [
     role: '门诊办',
     dept: '医院信息系统',
     ability: SCHEDULE_AUDITOR_ABILITY + '；心血管内科排班审核人'
+  },
+  {
+    accounts: ['chenhuilan ( 陈慧兰 )'],
+    role: '护理部排班审核',
+    dept: '护理部',
+    ability: SCHEDULE_NURSING_AUDITOR_ABILITY
   },
   {
     accounts: ['tanyiming ( 谭一鸣 )'],
