@@ -99,8 +99,8 @@
 <script lang="js" setup>
 import {computed, reactive, ref, watch} from 'vue'
 import {ElMessage} from 'element-plus'
-import {staffScheduleUpsert} from '@/api/staffSchedule'
-import {getDepartmentSelectList, getEmployeeList} from '@/api/system'
+import {staffScheduleUpsert, getStaffScheduleUnitSelectList} from '@/api/staffSchedule'
+import {getEmployeeList} from '@/api/system'
 import {getShiftSelectList} from '@/api/appoint'
 import {getNurseWardSelectList} from '@/api/nurseSchedule'
 import {shiftOptionLabel} from '@/lib/scheduleShift'
@@ -109,6 +109,7 @@ import {
   DUTY_STATUS_OPTIONS,
   DUTY_STATUS_WORK,
   dutyStatusNeedShift,
+  ORG_UNIT_TYPE_DEPT,
   ORG_UNIT_TYPE_HOSPITAL,
   ORG_UNIT_TYPE_OPTIONS,
 } from '@/lib/staffSchedule'
@@ -130,8 +131,17 @@ const PUBLISH_STATUS_PUBLISHED = 2
 const props = defineProps({
   modelValue: {type: Boolean, default: false},
   row: {type: Object, default: null},
+  // 排班域（1-岗位出勤 2-急诊值班）：科室候选、排班对象候选与保存入参都按域收口
+  scope: {type: Number, default: 1},
 })
 const emit = defineEmits(['update:modelValue', 'saved'])
+
+// 候选按 scope 缓存：换域要重拉，防止组件复用时把上一个域的候选带过来
+watch(() => props.scope, () => {
+  optionsLoaded = false
+  empLoaded = false
+  empOptions.value = []
+})
 
 const visible = computed({
   get: () => props.modelValue,
@@ -164,7 +174,9 @@ const shiftOptions = ref([])
 const searchEmployee = async (keyword) => {
   empLoading.value = true
   try {
-    const res = await getEmployeeList({empName: keyword || '', pageSize: 50})
+    // scheduleScope 与保存侧 assertScope 同一份域口径：岗位出勤域排除医生/护理/急诊科室员工，
+    // 急诊值班域只出急诊科室医生。候选藏人 + 服务端拦截双闸，直调绕得过前者绕不过后者。
+    const res = await getEmployeeList({empName: keyword || '', pageSize: 50, scheduleScope: props.scope})
     empOptions.value = (res?.data || []).map((e) => ({
       id: e.id, empName: e.empName, deptName: e.deptName,
     }))
@@ -195,12 +207,14 @@ let optionsLoaded = false
 const ensureOptions = async () => {
   if (optionsLoaded) return
   try {
+    // 科室候选用排班单元候选接口（带 scope 域过滤），不再用全量科室下拉 ——
+    // 员工排班页要排除急诊科室，急诊排班页只出急诊叶子科室
     const [dRes, wRes, sRes] = await Promise.all([
-      getDepartmentSelectList({}),
+      getStaffScheduleUnitSelectList({orgType: ORG_UNIT_TYPE_DEPT, scope: props.scope}),
       getNurseWardSelectList({}),
       getShiftSelectList({status: 1, useScope: SHIFT_USE_SCOPE_GENERAL}),
     ])
-    deptOptions.value = (dRes?.data || []).map((d) => ({id: d.id ?? d.deptId, name: d.deptName ?? d.name}))
+    deptOptions.value = (dRes?.data || []).map((d) => ({id: d.id, name: d.name}))
     wardOptions.value = (wRes?.data || []).map((w) => ({id: w.id ?? w.wardId, name: w.wardName ?? w.name}))
     shiftOptions.value = (sRes?.data || []).map((s) => ({id: s.id, shiftName: s.shiftName, useScope: s.useScope}))
     optionsLoaded = true
@@ -270,6 +284,7 @@ const handleSubmit = async () => {
   try {
     const payload = {
       ...formData,
+      scope: props.scope,
       orgId: orgIdRequired.value ? formData.orgId : null,
       shiftId: needShift.value ? formData.shiftId : null,
       clinicFlag: clinicFlagAllowed.value ? formData.clinicFlag : 0,

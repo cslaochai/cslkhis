@@ -53,4 +53,12 @@ public class EmployeeQueryDTO extends PageParam {
     @DateTimeFormat(pattern = "yyyy-MM-dd")
     @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate endDate;
+
+    /**
+     * 排班域候选口径（1-岗位出勤 2-急诊值班）。
+     *
+     * <p>排班页选人下拉专用：1=排除医生/护理/护工岗与急诊科室员工（员工排班页），
+     * 2=只出急诊科室的医生（急诊排班页）。为空=不过滤，保持原行为不动存量调用方。
+     */
+    private Integer scheduleScope;
 }

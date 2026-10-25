@@ -45,4 +45,10 @@ public class StaffScheduleCopyDTO {
     @NotNull(message = "目标区间开始日不能为空")
     @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate toStartDate;
+
+    /**
+     * 排班域（1-岗位出勤 2-急诊值班）：复制只许在本域的单元内进行。
+     * 为空=不校验（兼容内部调用）。
+     */
+    private Integer scope;
 }

@@ -10,7 +10,9 @@ import com.his.common.util.TextUtil;
 import com.his.common.utils.UserUtils;
 import com.his.platform.dto.EmployeeQueryDTO;
 import com.his.platform.dto.EmployeeUpsertDTO;
+import com.his.platform.entity.SysDepartment;
 import com.his.platform.entity.SysEmployee;
+import com.his.platform.mapper.SysDepartmentMapper;
 import com.his.platform.mapper.SysEmployeeMapper;
 import com.his.platform.service.DeptScopeService;
 import com.his.platform.service.EmployeePostService;
@@ -24,6 +26,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -34,6 +37,7 @@ import java.util.stream.Collectors;
 public class SysEmployeeServiceImpl extends ServiceImpl<SysEmployeeMapper, SysEmployee> implements SysEmployeeService {
 
     private final SysEmployeeMapper sysEmployeeMapper;
+    private final SysDepartmentMapper sysDepartmentMapper;
     private final RedisSequenceService redisSequenceService;
     private final EmployeePostService employeePostService;
     private final DeptScopeService deptScopeService;
@@ -70,6 +74,7 @@ public class SysEmployeeServiceImpl extends ServiceImpl<SysEmployeeMapper, SysEm
         } else {
             applyDeptScope(wrapper, queryDTO);
             applyStaffTypeFilter(wrapper, queryDTO);
+            applyScheduleScopeFilter(wrapper, queryDTO);
         }
 
         // 2026-09-22：下拉/名册一律按 **主键升序**（原来是工号序）。
@@ -255,6 +260,79 @@ public class SysEmployeeServiceImpl extends ServiceImpl<SysEmployeeMapper, SysEm
             sb.append(" AND p.dept_id = ").append(queryDTO.getDeptId());
         }
         wrapper.exists(sb.toString());
+    }
+
+    /**
+     * 排班域候选过滤（{@code scheduleScope} 见 {@link EmployeeQueryDTO}）：
+     * <ul>
+     *   <li>1-岗位出勤：排除医生/护理/护工岗（那些域有专用排班页）与急诊科室员工
+     *       （主科室或任一岗位科室命中即排除）；</li>
+     *   <li>2-急诊值班：只出急诊<b>叶子</b>科室的医生（虚父级不当排班单元）。</li>
+     * </ul>
+     * 与保存侧 StaffScheduleServiceImpl.assertScope 同一份域口径 ——
+     * 候选藏人 + 保存拦截双闸，直调绕得过前者绕不过后者。
+     */
+    private void applyScheduleScopeFilter(LambdaQueryWrapper<SysEmployee> wrapper, EmployeeQueryDTO queryDTO) {
+        Integer scope = queryDTO.getScheduleScope();
+        if (scope == null) {
+            return;
+        }
+        if (Integer.valueOf(1).equals(scope)) {
+            wrapper.notExists("SELECT 1 FROM sys_employee_post p INNER JOIN sys_role r ON r.id = p.role_id "
+                    + "WHERE p.employee_id = sys_employee.id AND r.staff_type IN (1, 2, 7) "
+                    + "AND (p.effective_date IS NULL OR p.effective_date <= CURDATE()) "
+                    + "AND (p.expire_date IS NULL OR p.expire_date >= CURDATE())");
+            Set<Long> erIds = erTypeDeptIds();
+            if (!erIds.isEmpty()) {
+                String csv = erIds.stream().map(String::valueOf).collect(Collectors.joining(","));
+                wrapper.and(w -> w.notIn(SysEmployee::getDeptId, erIds)
+                        .and(w2 -> w2.notExists("SELECT 1 FROM sys_employee_post p "
+                                + "WHERE p.employee_id = sys_employee.id AND p.dept_id IN (" + csv + ")")));
+            }
+            return;
+        }
+        if (Integer.valueOf(2).equals(scope)) {
+            Set<Long> leafIds = erTypeDeptIds(true);
+            if (leafIds.isEmpty()) {
+                wrapper.apply("1 = 0");
+                return;
+            }
+            String csv = leafIds.stream().map(String::valueOf).collect(Collectors.joining(","));
+            wrapper.and(w -> w.in(SysEmployee::getDeptId, leafIds)
+                    .or().exists("SELECT 1 FROM sys_employee_post p "
+                            + "WHERE p.employee_id = sys_employee.id AND p.dept_id IN (" + csv + ")"));
+            wrapper.exists("SELECT 1 FROM sys_employee_post p INNER JOIN sys_role r ON r.id = p.role_id "
+                    + "WHERE p.employee_id = sys_employee.id AND r.staff_type = 1 "
+                    + "AND (p.effective_date IS NULL OR p.effective_date <= CURDATE()) "
+                    + "AND (p.expire_date IS NULL OR p.expire_date >= CURDATE())");
+        }
+    }
+
+    /**
+     * 急诊科室ID集合（dept_type 含 6，字典 his_dept_type，增量 SQL 295）。
+     *
+     * @param leafOnly true=只出叶子（排除被其他急诊科室指为父级的虚父级），与值班公开表同口径
+     */
+    private Set<Long> erTypeDeptIds(boolean leafOnly) {
+        List<SysDepartment> rows = sysDepartmentMapper.selectList(new LambdaQueryWrapper<SysDepartment>()
+                .select(SysDepartment::getId, SysDepartment::getParentId)
+                .eq(SysDepartment::getDelFlag, 0)
+                .apply("FIND_IN_SET('6', dept_type) > 0"));
+        if (rows.isEmpty()) {
+            return Collections.emptySet();
+        }
+        if (!leafOnly) {
+            return rows.stream().map(SysDepartment::getId).collect(Collectors.toSet());
+        }
+        Set<Long> parentIds = rows.stream().map(SysDepartment::getParentId)
+                .filter(Objects::nonNull).collect(Collectors.toSet());
+        return rows.stream().map(SysDepartment::getId)
+                .filter(id -> !parentIds.contains(id))
+                .collect(Collectors.toSet());
+    }
+
+    private Set<Long> erTypeDeptIds() {
+        return erTypeDeptIds(false);
     }
 
     /**

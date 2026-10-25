@@ -30,4 +30,10 @@ public class StaffScheduleWeekActionDTO {
      */
     @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate weekStart;
+
+    /**
+     * 排班域（1-岗位出勤 2-急诊值班）：整周操作只许在本域单元内进行。
+     * 为空=不校验（兼容内部调用）。
+     */
+    private Integer scope;
 }

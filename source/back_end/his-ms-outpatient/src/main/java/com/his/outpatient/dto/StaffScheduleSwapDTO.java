@@ -31,4 +31,10 @@ public class StaffScheduleSwapDTO {
      */
     @NotBlank(message = "请填写换班原因")
     private String reason;
+
+    /**
+     * 排班域（1-岗位出勤 2-急诊值班）：换班/代班只许动本域的行。
+     * 为空=不校验（兼容内部调用，如 DutyRosterServiceImpl 代班路径）。
+     */
+    private Integer scope;
 }

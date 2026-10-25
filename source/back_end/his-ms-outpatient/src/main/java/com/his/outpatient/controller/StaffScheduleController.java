@@ -275,7 +275,8 @@ public class StaffScheduleController {
     @Operation(summary = "排班单元候选（科室/病区/全院）")
     @PreAuthorize("hasAuthority('staff:schedule:list')")
     @GetMapping("/unitSelectList")
-    public Result<List<StaffScheduleVO.UnitOption>> unitSelectList(@RequestParam(required = false) Integer orgType) {
-        return Result.success(staffScheduleService.unitSelectList(orgType));
+    public Result<List<StaffScheduleVO.UnitOption>> unitSelectList(@RequestParam(required = false) Integer orgType,
+                                                                   @RequestParam(required = false) Integer scope) {
+        return Result.success(staffScheduleService.unitSelectList(orgType, scope));
     }
 }

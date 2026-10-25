@@ -30,6 +30,17 @@ export const ORG_UNIT_TYPE_HOSPITAL = 3
 export const isHospitalLevel = (orgType) => Number(orgType) === ORG_UNIT_TYPE_HOSPITAL
 
 /**
+ * 排班域（后端 StaffScheduleScopeEnum，biz_schedule 按域拆页后的视图口径）。
+ *
+ * 一张表四个域：门诊号源（门诊排班页）/ 护理（护理排班页）/ 急诊值班（急诊排班页）/
+ * 岗位出勤（员工排班页）。前三个域各有专用页面，员工排班页(STAFF)对它们只排除不承载；
+ * 急诊排班页(ER)只看急诊科室 + 医生。scope 是服务端过滤与越域拦截的唯一依据，
+ * 页面不传 = 不过域（看到别个域的行比报错更危险）。
+ */
+export const SCHEDULE_SCOPE_STAFF = 1
+export const SCHEDULE_SCOPE_ER = 2
+
+/**
  * 出勤状态（biz_staff_schedule.duty_status）
  *
  * 它回答的是「这个人今天来不来」，与 biz_schedule.status（号源态：停诊/正常/已满）**不是一件事**：

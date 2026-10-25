@@ -85,4 +85,14 @@ public class StaffScheduleUpsertDTO {
      * 备注
      */
     private String remark;
+
+    /**
+     * 排班域（1-岗位出勤 2-急诊值班，见 StaffScheduleScopeEnum）。
+     *
+     * <p>服务端越域拦截的依据：scope=ER 只允许「急诊科室 + 医生岗」，
+     * scope=STAFF 拦下急诊科室 / 医生 / 护理（各自有专用页面）。
+     * 前端藏选项挡不住直调，这一层必须服务端兜底。
+     */
+    @AllowedValues(values = {"1", "2"}, message = "排班域取值不合法")
+    private Integer scope;
 }

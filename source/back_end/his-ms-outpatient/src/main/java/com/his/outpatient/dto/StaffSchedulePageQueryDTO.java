@@ -60,4 +60,10 @@ public class StaffSchedulePageQueryDTO extends PageParam {
      * 关键词（姓名/工号模糊匹配）
      */
     private String keyword;
+
+    /**
+     * 排班域（1-岗位出勤 2-急诊值班，见 StaffScheduleScopeEnum）。
+     * 为空=不过域（兼容旧调用与全局查询）；页面必须传，传错域看到的就是别个域的行。
+     */
+    private Integer scope;
 }

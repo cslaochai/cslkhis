@@ -206,6 +206,7 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, Biz
             wrapper.and(w -> w.like(BizSchedule::getEmployeeName, keyword)
                     .or().like(BizSchedule::getEmpCode, keyword));
         }
+        applyScope(wrapper, dto.getScope());
         // 二级键 id：同人同日多班时翻页顺序才稳定（否则翻页会重复同一行、漏掉另一行）
         wrapper.orderByAsc(BizSchedule::getScheduleDate).orderByAsc(BizSchedule::getStartTime)
                 .orderByAsc(BizSchedule::getId);
@@ -289,6 +290,120 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, Biz
         return rows.stream().map(ErDeptRow::getId)
                 .filter(id -> !parentIds.contains(id))
                 .collect(Collectors.toSet());
+    }
+
+    /**
+     * 排班域过滤（列表侧）：scope=ER 只看急诊科室 + 医生岗；scope=STAFF 排除急诊科室、
+     * 医生/护理/护工岗与出诊放号行（clinic_flag=1，归门诊排班页）。
+     *
+     * <p>MP 对空集合的 in/notIn 不拼条件（等于不过滤），所以 scope=ER 且没配任何急诊科室时
+     * 必须显式压成空结果 —— 否则「没有急诊科室」会静默变成「全院的医生都算急诊值班」。
+     */
+    private void applyScope(LambdaQueryWrapper<BizSchedule> wrapper, Integer scope) {
+        if (scope == null) {
+            return;
+        }
+        Set<Long> erIds = erDeptIds();
+        if (StaffScheduleScopeEnum.ER.getCode().equals(scope)) {
+            if (erIds.isEmpty()) {
+                wrapper.apply("1 = 0");
+                return;
+            }
+            wrapper.in(BizSchedule::getOrgId, erIds)
+                    .eq(BizSchedule::getStaffType, StaffTypeEnum.DOCTOR.getCode());
+            return;
+        }
+        if (StaffScheduleScopeEnum.STAFF.getCode().equals(scope)) {
+            if (!erIds.isEmpty()) {
+                wrapper.notIn(BizSchedule::getOrgId, erIds);
+            }
+            wrapper.ne(BizSchedule::getStaffType, StaffTypeEnum.DOCTOR.getCode())
+                    .ne(BizSchedule::getStaffType, StaffTypeEnum.NURSE.getCode())
+                    .ne(BizSchedule::getStaffType, StaffTypeEnum.NURSING_ASSISTANT.getCode())
+                    // 出诊放号行归门诊排班页（与 pendingApprovalPage 同口径，null 老数据不误伤）
+                    .and(w -> w.isNull(BizSchedule::getClinicFlag).or().eq(BizSchedule::getClinicFlag, 0));
+        }
+    }
+
+    /**
+     * 排班域越权拦截（保存侧）：scope=ER 只允许「急诊科室单元 + 医生岗」；
+     * scope=STAFF 拦下急诊科室 / 医生 / 护理 / 护工 —— 那些域有专用页面，
+     * 从员工排班页排不进去。直调接口绕得过前端藏选项，绕不过这里。
+     *
+     * <p>放在 compose 末尾：单元/人/班次都已按服务端重查的结果落好，这里判的是最终事实。
+     */
+    private void assertScope(BizSchedule schedule, Integer scope) {
+        if (scope == null) {
+            return;
+        }
+        if (StaffScheduleScopeEnum.ER.getCode().equals(scope)) {
+            if (!Objects.equals(schedule.getOrgType(), OrgUnitTypeEnum.DEPT.getCode())
+                    || !erDeptIds().contains(schedule.getOrgId())) {
+                throw new BusinessException("急诊排班只能排急诊科室单元（科室档案勾选「急诊科室」类型后生效）");
+            }
+            if (!Objects.equals(schedule.getStaffType(), StaffTypeEnum.DOCTOR.getCode())) {
+                throw new BusinessException("急诊排班只能排医生岗位");
+            }
+            return;
+        }
+        if (StaffScheduleScopeEnum.STAFF.getCode().equals(scope)) {
+            if (erDeptIds().contains(schedule.getOrgId())) {
+                throw new BusinessException("急诊科室排班请到「急诊排班」页操作");
+            }
+            if (Objects.equals(schedule.getStaffType(), StaffTypeEnum.DOCTOR.getCode())) {
+                throw new BusinessException("医生排班请到「急诊排班」或「门诊排班」页操作");
+            }
+            if (Objects.equals(schedule.getStaffType(), StaffTypeEnum.NURSE.getCode())
+                    || Objects.equals(schedule.getStaffType(), StaffTypeEnum.NURSING_ASSISTANT.getCode())) {
+                throw new BusinessException("护理排班请到「护理排班」页操作");
+            }
+        }
+    }
+
+    /**
+     * 单元级域校验（整周提交/审核、周期复制用）：按单元定位的操作只许落在本域单元上。
+     * 全院级（orgType=3，orgId=0）两个域都放行 —— 全院行本身不分域。
+     */
+    private void assertUnitScope(Integer orgType, Long orgId, Integer scope, String opName) {
+        if (scope == null || !Objects.equals(orgType, OrgUnitTypeEnum.DEPT.getCode())) {
+            return;
+        }
+        if (StaffScheduleScopeEnum.ER.getCode().equals(scope) && !erDeptIds().contains(orgId)) {
+            throw new BusinessException(opName + "只能操作急诊科室");
+        }
+        if (StaffScheduleScopeEnum.STAFF.getCode().equals(scope) && erDeptIds().contains(orgId)) {
+            throw new BusinessException("急诊科室的" + opName + "请到「急诊排班」页操作");
+        }
+    }
+
+    /**
+     * 换班/代班的域校验：只许动本域的行。scope=ER 只许急诊科室 + 医生岗的行；
+     * scope=STAFF 不许碰急诊行与医生/护理行（那些域有专用页面）。
+     * 与 {@link #assertScope} 同一份口径，只是一个判「将要保存的行」、一个判「已存在的行」。
+     */
+    private void assertRowScope(BizSchedule row, Integer scope, String opName) {
+        if (scope == null) {
+            return;
+        }
+        boolean erRow = Objects.equals(row.getOrgType(), OrgUnitTypeEnum.DEPT.getCode())
+                && erDeptIds().contains(row.getOrgId());
+        boolean clinicalRow = Objects.equals(row.getStaffType(), StaffTypeEnum.DOCTOR.getCode())
+                || Objects.equals(row.getStaffType(), StaffTypeEnum.NURSE.getCode())
+                || Objects.equals(row.getStaffType(), StaffTypeEnum.NURSING_ASSISTANT.getCode());
+        if (StaffScheduleScopeEnum.ER.getCode().equals(scope)) {
+            if (!erRow || !Objects.equals(row.getStaffType(), StaffTypeEnum.DOCTOR.getCode())) {
+                throw new BusinessException(opName + "只能操作急诊科室的医生排班行");
+            }
+            return;
+        }
+        if (StaffScheduleScopeEnum.STAFF.getCode().equals(scope)) {
+            if (erRow) {
+                throw new BusinessException("急诊科室的排班" + opName + "请到「急诊排班」页操作");
+            }
+            if (clinicalRow) {
+                throw new BusinessException("医生/护理排班的" + opName + "请到「急诊排班」「门诊排班」或「护理排班」页操作");
+            }
+        }
     }
 
     /**
@@ -490,6 +605,7 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, Biz
         applyUnit(schedule, dto.getOrgType(), dto.getOrgId());
         applyEmployee(schedule, dto.getEmployeeId(), dto.getEmployeePostId());
         applyShift(schedule, dto.getShiftId(), status);
+        assertScope(schedule, dto.getScope());
         return schedule;
     }
 
@@ -571,6 +687,7 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, Biz
     @Transactional(rollbackFor = Exception.class)
     public void swap(StaffScheduleSwapDTO dto) {
         BizSchedule from = requireById(dto.getFromScheduleId());
+        assertRowScope(from, dto.getScope(), "换班");
         assertDeptAccessible(from.getDeptId());
         String reason = dto.getReason().trim();
         // 员工→门诊联动：出诊相关行（被门诊号源引用）换班/代班会改挂号医生，归门诊侧管理
@@ -578,6 +695,7 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, Biz
 
         if (dto.getToScheduleId() != null) {
             BizSchedule to = requireById(dto.getToScheduleId());
+            assertRowScope(to, dto.getScope(), "换班");
             assertNotClinicBound(to);
             if (Objects.equals(from.getEmployeeId(), to.getEmployeeId())) {
                 throw new BusinessException("换班双方不能是同一个人");
@@ -656,6 +774,15 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, Biz
         // B-条件必填：单元类型非「全院」时才必填 orgId（全院固定落 0），按请求内容分支，DTO 注解无法表达，保留
         if (unitType != OrgUnitTypeEnum.HOSPITAL && (orgId == null || orgId == ID_NONE)) {
             throw new BusinessException("请选择" + unitType.getLabel());
+        }
+        // 域校验：复制只许在本域单元内进行（急诊科室只能在急诊排班页复制）
+        if (StaffScheduleScopeEnum.ER.getCode().equals(dto.getScope())
+                && !erDeptIds().contains(orgId)) {
+            throw new BusinessException("急诊排班页只能复制急诊科室的排班");
+        }
+        if (StaffScheduleScopeEnum.STAFF.getCode().equals(dto.getScope())
+                && erDeptIds().contains(orgId)) {
+            throw new BusinessException("急诊科室的排班复制请到「急诊排班」页操作");
         }
         List<BizSchedule> sources = list(new LambdaQueryWrapper<BizSchedule>()
                 .eq(BizSchedule::getOrgType, dto.getOrgType())
@@ -841,6 +968,8 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, Biz
      */
     private StaffScheduleVO toOnDutyVO(BizSchedule row, BizShift shift) {
         StaffScheduleVO vo = new StaffScheduleVO();
+        // 行主键必须带出：值班表/在岗名单的消费方（急诊排班页跳转、签到关联）要拿 id 定位到排班行
+        vo.setId(row.getId());
         vo.setEmployeeId(row.getEmployeeId());
         vo.setEmployeeName(row.getEmployeeName());
         vo.setStaffType(row.getStaffType());
@@ -1705,6 +1834,7 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, Biz
     @Override
     @Transactional(rollbackFor = Exception.class)
     public int submitWeek(StaffScheduleWeekActionDTO dto) {
+        assertUnitScope(dto.getOrgType(), dto.getOrgId(), dto.getScope(), "整周提交审核");
         LocalDate start = mondayOf(dto.getWeekStart());
         LocalDate end = start.plusDays(6);
         int moved = baseMapper.updateWeekPublishStatusAll(dto.getOrgType(), dto.getOrgId(), start, end,
@@ -1720,6 +1850,7 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, Biz
     @Override
     @Transactional(rollbackFor = Exception.class)
     public int auditWeek(StaffScheduleWeekActionDTO dto) {
+        assertUnitScope(dto.getOrgType(), dto.getOrgId(), dto.getScope(), "整周审核发布");
         Long deptId = resolveDeptId(dto.getOrgType(), dto.getOrgId());
         assertScheduleAuditor(deptId);
         LocalDate start = mondayOf(dto.getWeekStart());
@@ -1735,14 +1866,29 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, Biz
     }
 
     @Override
-    public List<StaffScheduleVO.UnitOption> unitSelectList(Integer orgType) {
+    public List<StaffScheduleVO.UnitOption> unitSelectList(Integer orgType, Integer scope) {
         List<StaffScheduleVO.UnitOption> options = new ArrayList<>();
         boolean all = orgType == null;
+        // 域收口：急诊排班页(scope=ER)只出急诊叶子科室；员工排班页(scope=STAFF)排除急诊科室。
+        // 叶子口径（去虚父级）与值班公开表一致：排班排到虚父级上没有意义。
+        Set<Long> erInclude = null;
+        Set<Long> erExclude = null;
+        if (StaffScheduleScopeEnum.ER.getCode().equals(scope)) {
+            erInclude = erLeafDeptIds();
+        } else if (StaffScheduleScopeEnum.STAFF.getCode().equals(scope)) {
+            erExclude = erDeptIds();
+        }
         if (all || OrgUnitTypeEnum.HOSPITAL.getCode() == orgType) {
             options.add(new StaffScheduleVO.UnitOption(0L, "全院", null));
         }
         if (all || OrgUnitTypeEnum.DEPT.getCode() == orgType) {
             for (DeptBriefVO dept : systemFacadeService.listEnabledDepartments()) {
+                if (erExclude != null && erExclude.contains(dept.getId())) {
+                    continue;
+                }
+                if (erInclude != null && !erInclude.contains(dept.getId())) {
+                    continue;
+                }
                 options.add(new StaffScheduleVO.UnitOption(dept.getId(), dept.getDeptName(), null));
             }
         }

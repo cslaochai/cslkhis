@@ -383,15 +383,16 @@
       </el-tab-pane>
     </el-tabs>
 
-    <!-- 登记 / 修改 -->
-    <StaffScheduleEdit v-model="dialogVisible" :row="editRow" @saved="handleEditSaved"/>
+    <!-- 登记 / 修改（scope=岗位出勤域：科室候选排除急诊科室，排班对象排除医生/护理/急诊员工） -->
+    <StaffScheduleEdit v-model="dialogVisible" :row="editRow" :scope="SCHEDULE_SCOPE_STAFF" @saved="handleEditSaved"/>
 
-    <!-- 换班 / 代班 -->
-    <StaffScheduleSwapEdit v-model="swapDialogVisible" :row="swapRow" :table-data="tableData"
+    <!-- 换班 / 代班（只许动本域的行，服务端 assertRowScope 兜底） -->
+    <StaffScheduleSwapEdit v-model="swapDialogVisible" :row="swapRow" :scope="SCHEDULE_SCOPE_STAFF"
+                           :table-data="tableData"
                            @saved="handleEditSaved"/>
 
-    <!-- 整周复制 -->
-    <StaffScheduleCopyEdit v-model="copyDialogVisible" @saved="loadData"/>
+    <!-- 整周复制（只许复制本域单元） -->
+    <StaffScheduleCopyEdit v-model="copyDialogVisible" :scope="SCHEDULE_SCOPE_STAFF" @saved="loadData"/>
 
     <!-- 变更留痕 -->
     <ScheduleChangeLogDrawer v-model="logVisible" :staff-schedule-id="logRowId" :title="`变更留痕 · ${logTarget}`"/>
@@ -454,6 +455,7 @@ import {
   ORG_UNIT_TYPE_OPTIONS,
   orgUnitTypeText,
   PERM_SCHEDULE_AUDIT,
+  SCHEDULE_SCOPE_STAFF,
   scheduleChangeTypeText,
   scheduleSourceText,
 } from '@/lib/staffSchedule'
@@ -480,6 +482,7 @@ const searchForm = ref({
 // ---------------- 排班单元候选（科室/病区/全院） ----------------
 // 单元 ID 空间不统一（科室 ID 与病区 ID 各自编号），所以必须先定类型再选单元，
 // 没定类型时单元下拉直接禁用 —— 只按 id 过滤会把另一个空间的行也捞进来。
+// scope=1（岗位出勤域）：科室候选由服务端排除急诊科室（急诊归急诊排班页）。
 const unitOptions = ref([])
 const loadUnitOptions = async (orgType) => {
   if (!orgType) {
@@ -487,7 +490,7 @@ const loadUnitOptions = async (orgType) => {
     return
   }
   try {
-    const res = await getStaffScheduleUnitSelectList({orgType})
+    const res = await getStaffScheduleUnitSelectList({orgType, scope: SCHEDULE_SCOPE_STAFF})
     unitOptions.value = res.code === 200 ? (res.data || []) : []
   } catch {
     unitOptions.value = []
@@ -505,6 +508,8 @@ const loadData = async () => {
   try {
     const res = await getStaffScheduleListPage({
       ...searchForm.value,
+      // 岗位出勤域：服务端排除急诊科室/医生/护理/出诊放号行（急诊排班页看自己域的行）
+      scope: SCHEDULE_SCOPE_STAFF,
       // -1 是「全部（含出诊）」的哨兵值（el-option 禁绑 null），发请求时映射回 null=不过滤
       clinicFlag: searchForm.value.clinicFlag === -1 ? null : searchForm.value.clinicFlag,
       pageNum: pagination.value.pageNum,
@@ -710,7 +715,7 @@ const currentUnit = () => {
     ElMessage.warning('请先在查询条件里选择「排班单元」')
     return null
   }
-  return {orgType: searchForm.value.orgType, orgId: searchForm.value.orgId}
+  return {orgType: searchForm.value.orgType, orgId: searchForm.value.orgId, scope: SCHEDULE_SCOPE_STAFF}
 }
 
 const handleSubmitWeek = async () => {

@@ -46,6 +46,8 @@ import {ORG_UNIT_TYPE_OPTIONS} from '@/lib/staffSchedule'
  */
 const props = defineProps({
   modelValue: {type: Boolean, default: false},
+  // 排班域（1-岗位出勤 2-急诊值班）：复制只许在本域单元内进行，服务端 assertUnitScope 兜底
+  scope: {type: Number, default: 1},
 })
 const emit = defineEmits(['update:modelValue', 'saved'])
 
@@ -84,7 +86,7 @@ const handleCopy = async () => {
   }
   submitLoading.value = true
   try {
-    const res = await staffScheduleCopyRange({...copyForm})
+    const res = await staffScheduleCopyRange({...copyForm, scope: props.scope})
     if (res.code === 200) {
       ElMessage.success(res.message || '复制完成')
       visible.value = false

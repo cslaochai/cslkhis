@@ -215,6 +215,8 @@ public interface StaffScheduleService extends IService<BizSchedule> {
      * 排班单元候选（页面按单元过滤、整周提交审核时选单元用）。
      *
      * @param orgType 单元类型（1-科室 2-病区 3-全院）；为空则三类全给
+     * @param scope   排班域（1-岗位出勤 2-急诊值班，见 StaffScheduleScopeEnum）；
+     *                为空不过域。急诊排班页只出急诊叶子科室，员工排班页排除急诊科室
      */
-    List<StaffScheduleVO.UnitOption> unitSelectList(Integer orgType);
+    List<StaffScheduleVO.UnitOption> unitSelectList(Integer orgType, Integer scope);
 }

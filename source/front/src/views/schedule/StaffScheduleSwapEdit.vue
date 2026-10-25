@@ -73,6 +73,8 @@ const props = defineProps({
   modelValue: {type: Boolean, default: false},
   row: {type: Object, default: null},
   tableData: {type: Array, default: () => []},
+  // 排班域（1-岗位出勤 2-急诊值班）：换班/代班只许动本域的行，服务端 assertRowScope 兜底
+  scope: {type: Number, default: 1},
 })
 const emit = defineEmits(['update:modelValue', 'saved'])
 
@@ -94,7 +96,8 @@ const empLoading = ref(false)
 const searchEmployee = async (keyword) => {
   empLoading.value = true
   try {
-    const res = await getEmployeeList({empName: keyword || '', pageSize: 50})
+    // 承接人候选按域收口（同 StaffScheduleEdit）：岗位出勤域排除医生/护理/急诊科室员工
+    const res = await getEmployeeList({empName: keyword || '', pageSize: 50, scheduleScope: props.scope})
     empOptions.value = (res?.data || []).map((e) => ({
       id: e.id, empName: e.empName, deptName: e.deptName,
     }))
@@ -132,6 +135,7 @@ const handleSwap = async () => {
   try {
     const payload = {
       fromScheduleId: swapForm.fromScheduleId,
+      scope: props.scope,
       reason: swapForm.reason,
     }
     // 传了 toScheduleId 就是互换，不传就是代班 —— 两种形态别混着传

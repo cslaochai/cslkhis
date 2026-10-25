@@ -620,6 +620,12 @@ const routes = [
                 meta: {title: '急诊值班'}
             },
             {
+                path: 'er-schedule',
+                name: 'ErSchedule',
+                component: () => import('@/views/schedule/ErScheduleView.vue'),
+                meta: {title: '急诊排班'}
+            },
+            {
                 path: 'schedule-overview',
                 name: 'ScheduleOverview',
                 component: () => import('@/views/schedule/ScheduleOverview.vue'),
