@@ -20,6 +20,16 @@
           </el-select>
         </el-form-item>
       </div>
+      <!-- 出勤状态（标准 HIS 口径：休息/请假与某个班次是同一张格子上的并列状态，
+           美维 HIS 排班格默认即「休息」，排班=把格子改成某个班——不是两个页面两套表单） -->
+      <el-form-item data-testid="form-duty-status" label="出勤状态">
+        <el-radio-group v-model="formData.dutyStatus">
+          <el-radio v-for="o in DUTY_STATUS_OPTIONS" :key="o.value" :value="o.value">{{ o.label }}</el-radio>
+        </el-radio-group>
+        <div v-if="isRestBatch" class="w-full pt-1 text-xs text-slate-500">
+          所选人员 × 日期区间整段落为考勤「{{ dutyStatusTextOf }}」，不产生号源；与已排出诊冲突的日期会逐条提示。
+        </div>
+      </el-form-item>
       <div class="grid grid-cols-2 gap-4">
         <el-form-item data-testid="form-date-range" label="排班日期" required>
           <el-date-picker
@@ -34,7 +44,7 @@
               value-format="YYYY-MM-DD"
           />
         </el-form-item>
-        <el-form-item label="班次" required>
+        <el-form-item v-if="!isRestBatch" label="班次" required>
           <el-select v-model="shiftDictId" class="w-full" data-testid="form-shift-dict"
                      filterable placeholder="选择班次（时间段由班次带出）"
                      @change="applyShiftDict">
@@ -43,7 +53,12 @@
         </el-form-item>
       </div>
 
-      <div v-if="staffTypeHasSource(formData.staffType)"
+      <el-form-item v-if="isRestBatch" label="备注">
+        <el-input v-model="formData.remark" :rows="2" :maxlength="200" show-word-limit type="textarea"
+                  placeholder="选填：请假事由、培训地点等" data-testid="form-rest-remark"/>
+      </el-form-item>
+
+      <div v-if="!isRestBatch && staffTypeHasSource(formData.staffType)"
            class="mb-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
         <div class="mb-2 flex items-center justify-between">
           <span class="text-sm font-medium text-slate-700">默认值</span>
@@ -88,7 +103,7 @@
 
       <!-- 医生 × 排班参数：一人一行。诊室必须一人一间（排队号前缀按诊室生成、大屏按诊室导诊，
            两位医生同一时段挤一间 = 患者跑错房间）；号源与费用按人可不同。 -->
-      <div v-if="(formData.doctorIds || []).length" class="mb-3 rounded-lg border border-slate-200 p-3"
+      <div v-if="!isRestBatch && (formData.doctorIds || []).length" class="mb-3 rounded-lg border border-slate-200 p-3"
            data-testid="doctor-room-map">
         <div class="mb-1 text-sm font-medium text-slate-700">
           {{
@@ -151,7 +166,7 @@
         </el-table>
       </div>
 
-      <el-form-item label="状态">
+      <el-form-item v-if="!isRestBatch" label="状态">
         <el-radio-group v-model="formData.status">
           <el-radio :value="1">正常</el-radio>
           <el-radio :value="0">停用</el-radio>
@@ -171,8 +186,10 @@
 import {computed, ref, watch} from 'vue';
 import {ElMessage} from 'element-plus';
 import {createScheduleBatch, getShiftSelectList} from '@/api/appoint';
+import {staffScheduleUpsert} from '@/api/staffSchedule';
 import {getClinicRoomListAll, getEmployeeList} from '@/api/system';
 import {shiftOptionLabel, SHIFT_SCOPE_OUTPATIENT, STAFF_TYPE_DOCTOR, staffTypeHasSource, staffTypeText} from '@/lib/scheduleShift';
+import {DUTY_STATUS_OPTIONS, DUTY_STATUS_TEXT} from '@/lib/staffSchedule';
 import {batchDays, fmtISO} from '@/lib/scheduleDate';
 import {getTitleLabel} from '@/lib/scheduleTitle';
 import {DIAGNOSIS_TIER_LIST, tierAmount, tierDefaultOf} from '@/lib/diagnosisTier';
@@ -181,6 +198,10 @@ import {DIAGNOSIS_TIER_LIST, tierAmount, tierDefaultOf} from '@/lib/diagnosisTie
  * 新增排班（批量：人员多选 × 日期区间，人 × 日一次请求）。
  * 与「修改排班」是两个组件：新增的人员是多选、日期是区间、号源费用按人一行；
  * 修改是单条、人员单选、日期一天 —— 字段与版式都不同，不合并。
+ *
+ * 出勤状态（2026-10-26）：休息/请假/培训/停班与「上班」在同一个弹框内切换——
+ * 上班走号源排班（班次/诊室/号源），休息类整段落考勤休息行（staffScheduleUpsert scope=3，不产生号源）。
+ * 对标厂商：排班格上「休」与「某个班」是并列状态（美维 HIS 排班格默认即休息），不是两个入口两套表单。
  *
  * 科室列表由页面加载一次 prop 下发（面板筛选与这里同一份）；
  * 人员/诊室/班次是**表单专用候选**，在本组件里自加载，页面不再持有。
@@ -203,6 +224,10 @@ const employees = ref([]);
 const clinicRooms = ref([]);
 const submitLoading = ref(false);
 const formData = ref({});
+
+/** 本次是否为「休息类」批量（出勤状态 2~5）：隐藏班次/号源/诊室，提交走考勤休息行 */
+const isRestBatch = computed(() => Number(formData.value.dutyStatus) !== 1);
+const dutyStatusTextOf = computed(() => DUTY_STATUS_TEXT[formData.value.dutyStatus] || '休息');
 
 /** 今天（YYYY-MM-DD）：日期不可写过去的判定基准，ISO 串可直接字典序比较 */
 const todayStr = computed(() => fmtISO(new Date()));
@@ -294,6 +319,9 @@ const resetForm = (seed = {}) => {
     isAppointment: 0,
     appointmentSource: 0,
     status: 1,
+    /** 出勤状态：1 上班（走号源排班）；2~5 休息/请假/培训/停班（整段考勤休息行，不产生号源） */
+    dutyStatus: 1,
+    remark: '',
   };
 };
 const doctorRowDefaults = () => ({
@@ -385,8 +413,11 @@ const batchPlanCount = computed(() => {
 const batchPlanDesc = computed(() => {
   const days = formData.value.scheduleDateRange?.length === 2 ? batchDays(formData.value.scheduleDateRange).length : 0;
   const doctors = (formData.value.doctorIds || []).length || 0;
-  return days && doctors
-      ? `${doctors} 位${staffTypeText(formData.value.staffType)}人员 × ${days} 天 = ${batchPlanCount.value} 条` : '';
+  if (!days || !doctors)
+    return '';
+  return isRestBatch.value
+      ? `${doctors} 位人员 × ${days} 天 = ${batchPlanCount.value} 条${dutyStatusTextOf.value}标记`
+      : `${doctors} 位${staffTypeText(formData.value.staffType)}人员 × ${days} 天 = ${batchPlanCount.value} 条`;
 });
 /** 表单里的时间段：只读展示，值由班次带出（手填时段等于绕开班次字典，统计口径就散了） */
 const formTimeRange = computed(() => formData.value.startTime && formData.value.endTime
@@ -527,6 +558,42 @@ const handleSubmit = async () => {
   const pastDays = days.filter(d => d < today);
   if (pastDays.length) {
     ElMessage.warning(`排班日期不能早于今天：${pastDays.join('、')} 已过去，历史排班只读（以门诊日志为准）`);
+    return;
+  }
+  // ===== 休息类批量（出勤状态 2~5）：人 × 日逐条落考勤休息行（门诊出诊域 scope=3），不产生号源 =====
+  // 与后端 day-exclusion 互斥一致：该人该天已有上班行会被拒（先删/先转休再标），失败即停并报告进度。
+  if (isRestBatch.value) {
+    const total = doctorIds.length * days.length;
+    let ok = 0;
+    submitLoading.value = true;
+    try {
+      for (const id of doctorIds) {
+        for (const day of days) {
+          try {
+            await staffScheduleUpsert({
+              scheduleDate: day,
+              orgType: 1,
+              orgId: formData.value.deptId,
+              employeeId: id,
+              dutyStatus: formData.value.dutyStatus,
+              publishStatus: 2,
+              remark: formData.value.remark || '',
+              scope: 3,
+            });
+            ok++;
+          } catch (e) {
+            ElMessage.error(`已保存 ${ok}/${total} 条；${doctorNameOf(id)} ${day} 标记失败：${e.message}`);
+            emit('saved');
+            return;
+          }
+        }
+      }
+    } finally {
+      submitLoading.value = false;
+    }
+    ElMessage.success(`已为 ${doctorIds.length} 位人员 × ${days.length} 天标记「${dutyStatusTextOf.value}」，共 ${total} 条`);
+    visible.value = false;
+    emit('saved');
     return;
   }
   // 班次是时间段的唯一入口：没选班次就没有时间窗（服务端 resolveForScheduling 同样拦）
