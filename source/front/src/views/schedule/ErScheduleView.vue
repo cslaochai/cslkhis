@@ -81,9 +81,6 @@
           <el-button :icon="Refresh" :loading="loading" data-testid="panel-refresh" type="primary" @click="loadPanel">
             查询
           </el-button>
-          <el-button v-perm="'staff:schedule:add'" :icon="Plus" data-testid="er-add" type="primary" @click="openAdd">
-            登记排班
-          </el-button>
           <el-button v-perm="'staff:schedule:add'" :loading="weekLoading" :disabled="!panelStats.draft"
                      data-testid="week-submit" title="把当前科室当前周的草稿一次性提交为待审核（已发布/待审核的不动）"
                      @click="handleSubmitWeek">整周提交审核
@@ -92,7 +89,12 @@
                      data-testid="week-audit" title="把当前科室当前周的待审核一次性审核发布并计入在岗"
                      type="success" @click="handleAuditWeek">整周审核发布
           </el-button>
-          <el-button v-perm="'staff:schedule:add'" data-testid="er-copy" @click="copyVisible = true">整周复制</el-button>
+          <el-button v-perm="'staff:schedule:add'" data-testid="er-copy" type="success" @click="copyVisible = true">
+            复制到 下周
+          </el-button>
+          <el-button v-perm="'staff:schedule:add'" :icon="Plus" data-testid="er-add" type="primary" @click="openAdd">
+            新增排班
+          </el-button>
         </span>
       </div>
 

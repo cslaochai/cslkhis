@@ -86,19 +86,19 @@
               </el-tag>
               <span class="ml-auto flex items-center gap-2">
               <el-button :icon="Refresh" :loading="matrixLoading" type="primary" @click="reloadAll">查询</el-button>
-              <el-button v-perm="PERM_ADD" :icon="MagicStick" type="primary" plain @click="handleGenerateFromTemplate">按模板生成下周</el-button>
+              <el-button v-perm="PERM_ADD" :icon="MagicStick" @click="handleGenerateFromTemplate">按模板生成下周排班</el-button>
               <el-button v-perm="PERM_ADD" :icon="CopyDocument" data-testid="ns-copy-week" type="success"
                          @click="doCopyWeek">
-                复制到下周
-              </el-button>
-              <el-button v-perm="PERM_ADD" :icon="Plus" data-testid="ns-batch-open" type="primary" plain
-                         @click="openBatch">
-                批量铺班
+                复制到 下周
               </el-button>
               <el-button v-perm="PERM_ADD" type="warning" :disabled="!pubSummary.draft"
                          data-testid="ns-submit-week" @click="doSubmitWeek">整周提交审核</el-button>
               <el-button v-perm="PERM_AUDIT" type="success" :disabled="!pubSummary.pending"
                          data-testid="ns-audit-week" @click="doAuditWeek">整周审核发布</el-button>
+              <el-button v-perm="PERM_ADD" :icon="Plus" data-testid="ns-batch-open" type="primary"
+                         @click="openBatch">
+                批量铺班
+              </el-button>
               <!-- 第三档·护理部备案：不阻塞在岗（审核发布即生效），只做留痕与事后退回 -->
               <el-button v-perm="PERM_FILE" :disabled="!canFileWeek(filingStatus)" type="primary" plain
                          data-testid="ns-file-week" @click="doFileWeek">整周备案</el-button>
@@ -955,7 +955,10 @@ const submitBatch = async () => {
       scheduleStatus: batchForm.scheduleStatus,
       shiftId: Number(batchForm.scheduleStatus) === 1 ? batchForm.shiftId : null,
       scheduleDates: batchDays(batchForm.dateRange),
-      items: batchForm.employeeIds.map((id) => ({employeeId: Number(id)})),
+      // employeeId 是后端 ToStringSerializer 化的雪花号（超过 2^53），必须原样传字符串：
+      // 禁 Number()——尾数被抹成库里不存在的 id（如 896600000000000121 → 896600000000000100），
+      // 后端 selectNurse 查不到人，报「该员工不在在册护理名单里」，实际人就在列表里
+      items: batchForm.employeeIds.map((id) => ({employeeId: id})),
       remark: batchForm.remark || undefined,
     });
     ElMessage.success(res.data?.message || res.message || '批量铺班完成');

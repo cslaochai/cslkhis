@@ -17,6 +17,7 @@
             style="width: 160px"
             @change="load"
           />
+          <el-button :icon="Printer" :loading="printing" data-testid="er-duty-print" @click="printDuty">打印</el-button>
           <el-button :icon="Refresh" :loading="loading" @click="load">刷新</el-button>
         </div>
       </div>
@@ -54,12 +55,32 @@
 
 <script setup>
 import {ref, onMounted} from 'vue'
-import {Refresh} from '@element-plus/icons-vue'
-import {getErDutyPublic} from '@/api/staffSchedule'
+import {Refresh, Printer} from '@element-plus/icons-vue'
+import {ElMessage} from 'element-plus'
+import {getErDutyPublic, getErDutyPdf} from '@/api/staffSchedule'
 
 const queryDate = ref(new Date().toISOString().slice(0, 10))
 const rows = ref([])
 const loading = ref(false)
+const printing = ref(false)
+
+// 打印：后端按日期生成并落盘急诊值班表 PDF（已存在则复用），返回直链后新开标签页供打印/保存
+const printDuty = async () => {
+  printing.value = true
+  try {
+    const res = await getErDutyPdf(queryDate.value)
+    const url = res?.data?.url
+    if (!url) {
+      ElMessage.error('生成值班表 PDF 失败：未返回文件地址')
+      return
+    }
+    window.open(url, '_blank')
+  } catch (e) {
+    ElMessage.error('生成值班表 PDF 失败，请稍后重试')
+  } finally {
+    printing.value = false
+  }
+}
 
 // 班次标签色：白班=success，前夜=warning，后夜=danger；其余按班次名兜底
 const shiftTagType = (row) => {

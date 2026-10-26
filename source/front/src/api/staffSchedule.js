@@ -123,3 +123,8 @@ export function getStaffSchedulePendingApproval(data) {
 export function getErDutyPublic(date) {
   return request.get('/system/staffSchedule/erDutyPublic', {params: {date}})
 }
+
+// 急诊值班表 PDF：按日期生成并落盘（已存在复用），返回可直链 URL（/api/uploads/...）
+export function getErDutyPdf(date) {
+  return request.post('/system/staffSchedule/erDutyPdf', null, {params: {date}})
+}

@@ -14,11 +14,13 @@ import com.his.outpatient.dto.StaffScheduleWeekActionDTO;
 import com.his.outpatient.dto.StaffScheduleWorkloadDTO;
 import com.his.outpatient.service.ScheduleChangeLogService;
 import com.his.outpatient.service.StaffScheduleService;
+import com.his.outpatient.service.ErDutyPdfService;
 import com.his.outpatient.vo.ScheduleChangeLogVO;
 import com.his.outpatient.vo.StaffCheckVO;
 import com.his.outpatient.vo.StaffScheduleVO;
 import com.his.outpatient.vo.ErFixedRatioVO;
 import com.his.outpatient.vo.StaffWorkloadVO;
+import com.his.outpatient.vo.ErDutyPdfVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -41,6 +43,7 @@ public class StaffScheduleController {
 
     private final StaffScheduleService staffScheduleService;
     private final ScheduleChangeLogService scheduleChangeLogService;
+    private final ErDutyPdfService erDutyPdfService;
 
     /**
      * 按日期区间、单元、岗位类别、出勤状态与姓名/工号关键词分页查排班行。
@@ -123,6 +126,13 @@ public class StaffScheduleController {
     @GetMapping("/erDutyPublic")
     public Result<List<StaffScheduleVO>> erDutyPublic(@RequestParam(required = false) LocalDate date) {
         return Result.success(staffScheduleService.erDutyPublic(date == null ? LocalDate.now() : date));
+    }
+
+    @Operation(summary = "急诊值班表 PDF（按日期生成并落盘，已存在则复用直链）")
+    @PreAuthorize("isAuthenticated()")
+    @PostMapping("/erDutyPdf")
+    public Result<ErDutyPdfVO> erDutyPdf(@RequestParam(required = false) LocalDate date) {
+        return Result.success(erDutyPdfService.generateOrGet(date));
     }
 
     /**
