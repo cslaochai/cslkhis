@@ -787,6 +787,16 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, Biz
         }
         int copied = 0;
         for (BizSchedule source : sources) {
+            // STAFF 域复制跳过医生/护理/护工行：员工排班页只排医技/药学/收费/行政等岗位，
+            // 历史遗留或误登记的医生/护理行（如曾洁 10-27 休息）复制会原样搬到下周，
+            // 再次挡住门诊/急诊排班（assertDayExclusive 人×日×单元互斥）。复制不拦员工维度，
+            // 只能在这里按行过滤；急诊科室单元已在上方按域拦下。
+            if (StaffScheduleScopeEnum.STAFF.getCode().equals(dto.getScope())
+                    && (Objects.equals(source.getStaffType(), StaffTypeEnum.DOCTOR.getCode())
+                        || Objects.equals(source.getStaffType(), StaffTypeEnum.NURSE.getCode())
+                        || Objects.equals(source.getStaffType(), StaffTypeEnum.NURSING_ASSISTANT.getCode()))) {
+                continue;
+            }
             LocalDate targetDate = dto.getToStartDate().plusDays(
                     source.getScheduleDate().toEpochDay() - dto.getFromStartDate().toEpochDay());
             BizSchedule exist = getOne(new LambdaQueryWrapper<BizSchedule>()
