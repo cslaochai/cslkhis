@@ -785,6 +785,12 @@ const routes = [
                 component: () => import('@/views/system/medGroup/MedGroupView.vue'),
                 meta: {title: '医疗组管理'}
             },
+            {
+                path: 'system/medSubject',
+                name: 'SystemMedSubject',
+                component: () => import('@/views/system/medSubject/MedSubjectView.vue'),
+                meta: {title: '诊疗科目映射'}
+            },
             {path: 'system/dict', name: 'SystemDict', component: () => import('@/views/system/dict/DictView.vue')},
             {
                 path: 'system/config',

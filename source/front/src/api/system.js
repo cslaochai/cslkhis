@@ -620,3 +620,40 @@ export function saveMedGroup(data) {
 export function deleteMedGroup(id) {
     return request.delete('/system/medGroup/deleteById', {params: {id}})
 }
+
+// ==================== 诊疗科目映射（病案首页/卫统/医保上报的标准科别） ====================
+
+// 诊疗科目树（一级 + 二级），带已映射科室数
+export function getMedSubjectTree() {
+    return request.get('/system/medSubject/tree')
+}
+
+// 新增或修改诊疗科目
+export function saveMedSubject(data) {
+    return request.post('/system/medSubject/subjectUpsert', data)
+}
+
+// 删除诊疗科目（被科室引用或还有二级科目时被拦下）
+export function deleteMedSubject(id) {
+    return request.delete('/system/medSubject/deleteSubject', {params: {id}})
+}
+
+// 某科室的诊疗科目对照（整单替换：传什么就是什么）
+export function getDeptSubjectMap(deptId) {
+    return request.get('/system/medSubject/deptMap', {params: {deptId}})
+}
+
+// 保存某科室的诊疗科目对照
+export function saveDeptSubjectMap(deptId, items) {
+    return request.post('/system/medSubject/deptMapUpsert', {deptId, items})
+}
+
+// 反向：某科目被哪些科室当主科目用
+export function getDeptMapBySubject(subjectCode) {
+    return request.get('/system/medSubject/deptMapBySubject', {params: {subjectCode}})
+}
+
+// 还没配科目的临床科室（数据治理待办）
+export function getUnmappedDepts() {
+    return request.get('/system/medSubject/unmappedDepts')
+}
