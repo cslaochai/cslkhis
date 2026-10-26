@@ -1003,6 +1003,10 @@ public class BizClinicSourceServiceImpl extends ServiceImpl<BizClinicSourceMappe
         LambdaQueryWrapper<BizClinicSource> wrapper = new LambdaQueryWrapper<BizClinicSource>()
                 .eq(BizClinicSource::getPublishStatus, PublishStatusEnum.PENDING.getCode())
                 .in(deptIds != null, BizClinicSource::getDeptId, deptIds)
+                .eq(dto.getDeptId() != null, BizClinicSource::getDeptId, dto.getDeptId())
+                .eq(dto.getDoctorId() != null, BizClinicSource::getDoctorId, dto.getDoctorId())
+                .ge(dto.getScheduleDateStart() != null, BizClinicSource::getScheduleDate, dto.getScheduleDateStart())
+                .le(dto.getScheduleDateEnd() != null, BizClinicSource::getScheduleDate, dto.getScheduleDateEnd())
                 .orderByAsc(BizClinicSource::getScheduleDate)
                 .orderByAsc(BizClinicSource::getStartTime)
                 .orderByAsc(BizClinicSource::getId);

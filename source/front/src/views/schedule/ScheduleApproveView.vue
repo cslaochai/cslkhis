@@ -2,17 +2,66 @@
   <div data-testid="schedule-approve-view">
     <el-tabs v-model="activeTab" class="single-tab">
       <el-tab-pane label="门诊排班" name="clinic">
-        <div class="mb-3 flex flex-wrap items-center gap-2">
-          <el-button v-perm="'outpatient:schedule:audit'" :icon="CircleCheck" :loading="clinicBatchLoading"
-                     data-testid="clinic-approve-batch-audit" type="primary" @click="handleClinicBatchAudit">
-            批量审核发布
-          </el-button>
-          <el-button v-perm="'outpatient:schedule:audit'" :icon="CloseBold" :loading="clinicBatchLoading"
-                     data-testid="clinic-approve-batch-reject" @click="handleClinicBatchReject">
-            批量驳回
-          </el-button>
-          <el-button :icon="Refresh" @click="loadClinicData">刷新</el-button>
-        </div>
+        <el-card ref="queryCardRef" class="query-card mb-3" shadow="never">
+          <div class="flex items-start justify-between gap-4">
+            <el-form :model="clinicSearchForm" inline @submit.prevent>
+              <el-form-item label="科室">
+                <el-select
+                    v-model="clinicSearchForm.deptId"
+                    clearable
+                    filterable
+                    placeholder="门诊科室"
+                    style="width: 180px"
+                    @change="handleClinicDeptChange"
+                >
+                  <el-option v-for="d in departmentOptions" :key="d.id" :label="d.deptName" :value="d.id"/>
+                </el-select>
+              </el-form-item>
+              <el-form-item label="医生">
+                <el-select
+                    v-model="clinicSearchForm.doctorId"
+                    :disabled="!clinicSearchForm.deptId"
+                    clearable
+                    filterable
+                    placeholder="先选门诊科室"
+                    style="width: 180px"
+                >
+                  <el-option v-for="e in doctorOptions" :key="e.id" :label="e.empName" :value="e.id"/>
+                </el-select>
+              </el-form-item>
+              <el-form-item label="排班日期">
+                <el-date-picker
+                    v-model="clinicSearchForm.dateRange"
+                    end-placeholder="结束日期"
+                    range-separator="至"
+                    start-placeholder="开始日期"
+                    style="width: 260px"
+                    type="daterange"
+                    value-format="YYYY-MM-DD"
+                />
+              </el-form-item>
+              <el-form-item>
+                <el-button :icon="Search" data-testid="clinic-approve-search" type="primary"
+                           @click="handleClinicSearch">
+                  搜索
+                </el-button>
+                <el-button :icon="Refresh" @click="handleClinicReset">重置</el-button>
+              </el-form-item>
+            </el-form>
+            <!-- 主操作区：批量审核/驳回/刷新靠右，与查询条件视觉分离 -->
+            <div class="flex shrink-0 items-start gap-3">
+              <el-button v-perm="'outpatient:schedule:audit'" :icon="CircleCheck" :loading="clinicBatchLoading"
+                         data-testid="clinic-approve-batch-audit" type="primary" @click="handleClinicBatchAudit">
+                批量审核发布
+              </el-button>
+              <el-button v-perm="'outpatient:schedule:audit'" :icon="CloseBold" :loading="clinicBatchLoading"
+                         data-testid="clinic-approve-batch-reject" @click="handleClinicBatchReject">
+                批量驳回
+              </el-button>
+              <el-button :icon="Refresh" @click="loadClinicData">刷新</el-button>
+            </div>
+          </div>
+        </el-card>
 
         <el-card class="table-card" shadow="never">
           <div data-testid="clinic-approve-table">
@@ -20,7 +69,7 @@
                       @selection-change="handleClinicSelectionChange">
               <el-table-column type="selection" width="45"/>
               <el-table-column label="日期" prop="scheduleDate" width="115"/>
-              <el-table-column label="科室" prop="deptName" min-width="120"/>
+              <el-table-column label="科室" min-width="120" prop="deptName"/>
               <el-table-column label="医生" min-width="120">
                 <template #default="{ row }">
                   {{ row.doctorName }}
@@ -43,7 +92,8 @@
                              link type="success" @click="handleClinicAudit(row)">
                     审核发布
                   </el-button>
-                  <el-button v-perm="'outpatient:schedule:audit'" :icon="CloseBold" data-testid="clinic-approve-reject" link
+                  <el-button v-perm="'outpatient:schedule:audit'" :icon="CloseBold" data-testid="clinic-approve-reject"
+                             link
                              type="danger" @click="handleClinicReject(row)">
                     驳回
                   </el-button>
@@ -54,7 +104,7 @@
 
           <el-empty v-if="!clinicLoading && clinicTableData.length === 0" :image-size="60"
                     description="没有待你审核的门诊排班"/>
-          <div class="list-footer flex items-center justify-end">
+          <div ref="footerRef" class="list-footer flex items-center justify-end">
             <el-pagination
                 v-model:current-page="clinicPagination.pageNum"
                 v-model:page-size="clinicPagination.pageSize"
@@ -75,14 +125,16 @@
 /**
  * 门诊排班审批中心（待我审批）。
  */
-import {onMounted, ref} from 'vue'
+import {onMounted, reactive, ref} from 'vue'
 import {ElMessage, ElMessageBox} from 'element-plus'
-import {CircleCheck, CloseBold, Refresh} from '@element-plus/icons-vue'
+import {CircleCheck, CloseBold, Refresh, Search} from '@element-plus/icons-vue'
 import {
   scheduleAuditPublish as auditPublishClinicSchedule,
   schedulePendingApproval as getClinicSchedulePendingApproval,
   scheduleReject as rejectClinicSchedule,
 } from '@/api/appoint'
+import {getDepartmentSelectList, getEmployeeList} from '@/api/system'
+import {STAFF_TYPE_DOCTOR} from '@/lib/scheduleShift'
 import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination'
 import {useTableMaxHeight} from '@/lib/useTableMaxHeight'
 
@@ -92,13 +144,50 @@ const clinicBatchLoading = ref(false)
 const clinicTableData = ref([])
 const clinicSelectedRows = ref([])
 const clinicPagination = ref({pageNum: 1, pageSize: DEFAULT_PAGE_SIZE, total: 0})
-const {tableMaxHeight} = useTableMaxHeight()
+// 查询卡筛选条件：门诊科室 / 医生（下拉联动）、排班日期区间
+const clinicSearchForm = reactive({
+  deptId: null,
+  doctorId: null,
+  dateRange: [],
+})
+// 科室下拉（仅门诊科室 deptType=1）；医生下拉随所选科室联动
+const departmentOptions = ref([])
+const doctorOptions = ref([])
+
+const loadDepartmentOptions = async () => {
+  try {
+    const res = await getDepartmentSelectList({deptType: 1})
+    departmentOptions.value = res.data || []
+  } catch (e) /* 错误已由全局拦截器统一提示，无需在此弹窗 */ {
+
+  }
+}
+const loadDoctorOptions = async (deptId) => {
+  doctorOptions.value = []
+  if (!deptId) return
+  try {
+    const res = await getEmployeeList({deptId, staffType: STAFF_TYPE_DOCTOR})
+    doctorOptions.value = res.data?.records || res.data || []
+  } catch (e) /* 错误已由全局拦截器统一提示，无需在此弹窗 */ {
+
+  }
+}
+// 切换科室：清空已选医生并重新加载该科室医生下拉
+const handleClinicDeptChange = (deptId) => {
+  clinicSearchForm.doctorId = null
+  loadDoctorOptions(deptId)
+}
+const {queryCardRef, footerRef, tableMaxHeight} = useTableMaxHeight()
 
 // ---------------- 门诊排班：待审取数 / 审核发布 / 驳回 ----------------
 const loadClinicData = async () => {
   clinicLoading.value = true
   try {
     const res = await getClinicSchedulePendingApproval({
+      deptId: clinicSearchForm.deptId || undefined,
+      doctorId: clinicSearchForm.doctorId || undefined,
+      scheduleDateStart: clinicSearchForm.dateRange?.[0] || undefined,
+      scheduleDateEnd: clinicSearchForm.dateRange?.[1] || undefined,
       pageNum: clinicPagination.value.pageNum,
       pageSize: clinicPagination.value.pageSize,
     })
@@ -106,11 +195,22 @@ const loadClinicData = async () => {
       clinicTableData.value = res.data.records || []
       clinicPagination.value.total = res.data.total || 0
     }
-  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */ {
 
   } finally {
     clinicLoading.value = false
   }
+}
+const handleClinicSearch = () => {
+  clinicPagination.value.pageNum = 1
+  loadClinicData()
+}
+const handleClinicReset = () => {
+  clinicSearchForm.deptId = null
+  clinicSearchForm.doctorId = null
+  clinicSearchForm.dateRange = []
+  doctorOptions.value = []
+  handleClinicSearch()
 }
 const handleClinicSizeChange = (v) => {
   clinicPagination.value.pageSize = v
@@ -130,7 +230,7 @@ const handleClinicAudit = async (row) => {
       ElMessage.success('已审核发布')
       loadClinicData()
     }
-  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */ {
 
   }
 }
@@ -147,7 +247,7 @@ const handleClinicReject = async (row) => {
       ElMessage.success('已驳回')
       loadClinicData()
     }
-  } catch (e)  /* 取消或错误：取消无提示，错误已由全局拦截器统一提示 */{
+  } catch (e)  /* 取消或错误：取消无提示，错误已由全局拦截器统一提示 */ {
 
   }
 }
@@ -169,7 +269,7 @@ const handleClinicBatchAudit = async () => {
     await auditPublishClinicSchedule(ids)
     ElMessage.success(`已审核发布 ${rows.length} 条`)
     loadClinicData()
-  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */ {
 
   } finally {
     clinicBatchLoading.value = false
@@ -218,6 +318,7 @@ const handleClinicBatchReject = async () => {
 }
 
 onMounted(() => {
+  loadDepartmentOptions()
   loadClinicData()
 })
 </script>
