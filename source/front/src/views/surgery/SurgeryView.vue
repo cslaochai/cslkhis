@@ -81,7 +81,7 @@
                 placeholder="主刀医师"
                 @change="handleSearch"
             >
-              <el-option v-for="e in employees" :key="e.id" :label="e.empName || e.id" :value="String(e.id)"/>
+              <el-option v-for="e in surgeonOptions" :key="e.id" :label="e.empName || e.id" :value="String(e.id)"/>
             </el-select>
             <el-select
                 v-model="filters.anesthetistId"
@@ -92,7 +92,7 @@
                 placeholder="麻醉医师"
                 @change="handleSearch"
             >
-              <el-option v-for="e in employees" :key="e.id" :label="e.empName || e.id" :value="String(e.id)"/>            </el-select>
+              <el-option v-for="e in anesthetistOptions" :key="e.id" :label="e.empName || e.id" :value="String(e.id)"/>            </el-select>
             <el-select
                 v-model="filters.operationRoom"
                 class="!w-36"
@@ -538,9 +538,11 @@
 
     <SurgeryRoomAssign
         v-model="scheduleVisible"
-        :employees="employees"
+        :anesthetists="anesthetistOptions"
+        :nurses="nurseOptions"
         :rooms="rooms"
         :row="scheduleRow"
+        :surgeons="surgeonOptions"
         @saved="refreshAfterChange"
     />
 
@@ -617,6 +619,11 @@ import {
 } from '@/api/inpatientOperation';
 import {getInpatientListPage} from '@/api/inpatient';
 import {getEmployeeList} from '@/api/system';
+import {
+  OPERATION_ANESTHETIST_ROLE_CODE,
+  OPERATION_SURGEON_STAFF_TYPE,
+  OPERATION_THEATRE_NURSE_ROLE_CODE
+} from '@/lib/operationSchedule';
 import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination';
 import SurgeryApplyEdit from './SurgeryApplyEdit.vue';
 import SurgeryAiSuggest from './SurgeryAiSuggest.vue';
@@ -633,6 +640,10 @@ const text = (v) => (v === null || v === undefined || v === '' ? '—' : String(
 const admissions = ref([]);
 const employees = ref([]);
 const rooms = ref([]);
+// 排台三类人力候选（各按岗位收口，见 loadBaseData）
+const surgeonOptions = ref([]);
+const anesthetistOptions = ref([]);
+const nurseOptions = ref([]);
 const admissionLabel = (a) => `${a.bedNo || '—'} ${a.patientName || '—'}（${a.deptName || a.wardName || '—'}）`;
 const loadBaseData = async () => {
   try {
@@ -646,6 +657,21 @@ const loadBaseData = async () => {
     employees.value = (res.data || []);
   } catch (error) {
     console.error('加载员工失败:', error);
+  }
+  // 排台三类人力候选各按岗位收口，不再让「麻醉医师」下拉出全院 535 人（含行政、药房、病房护士）：
+  // 主刀 = 岗位类别 1（医生）；麻醉医师 = 角色 10041；巡回/器械护士 = 角色 10042。
+  // 角色编码见 lib/operationSchedule.js，与增量 SQL 298 一一对应。
+  try {
+    const [surgeonRes, anesthRes, nurseRes] = await Promise.all([
+      getEmployeeList({staffType: OPERATION_SURGEON_STAFF_TYPE}),
+      getEmployeeList({roleCode: OPERATION_ANESTHETIST_ROLE_CODE}),
+      getEmployeeList({roleCode: OPERATION_THEATRE_NURSE_ROLE_CODE}),
+    ]);
+    surgeonOptions.value = (surgeonRes.data || []);
+    anesthetistOptions.value = (anesthRes.data || []);
+    nurseOptions.value = (nurseRes.data || []);
+  } catch (error) {
+    console.error('加载排台人员候选失败:', error);
   }
   try {
     // 手术间主数据（sql/134）+ 历史自由文本合并后由后端 roomList 给出，前端不再写候选数组

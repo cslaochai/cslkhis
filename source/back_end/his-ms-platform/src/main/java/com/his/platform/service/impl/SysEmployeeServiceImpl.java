@@ -50,6 +50,7 @@ public class SysEmployeeServiceImpl extends ServiceImpl<SysEmployeeMapper, SysEm
                 .eq(queryDTO.getEmpType() != null, SysEmployee::getEmpType, queryDTO.getEmpType());
         applyDeptScope(wrapper, queryDTO);
         applyStaffTypeFilter(wrapper, queryDTO);
+        applyRoleFilter(wrapper, queryDTO);
         wrapper.orderByAsc(SysEmployee::getEmpCode);
 
         Page<SysEmployee> page = sysEmployeeMapper.selectPage(
@@ -74,6 +75,7 @@ public class SysEmployeeServiceImpl extends ServiceImpl<SysEmployeeMapper, SysEm
         } else {
             applyDeptScope(wrapper, queryDTO);
             applyStaffTypeFilter(wrapper, queryDTO);
+            applyRoleFilter(wrapper, queryDTO);
             applyScheduleScopeFilter(wrapper, queryDTO);
         }
 
@@ -260,6 +262,29 @@ public class SysEmployeeServiceImpl extends ServiceImpl<SysEmployeeMapper, SysEm
             sb.append(" AND p.dept_id = ").append(queryDTO.getDeptId());
         }
         wrapper.exists(sb.toString());
+    }
+
+    /**
+     * 按「具体岗位角色」过滤（{@code roleCode} 见 {@link EmployeeQueryDTO}）：
+     * 与 {@link #applyStaffTypeFilter} 同一张岗位表、同一套岗位有效期口径，只是把粒度从
+     * 「岗位类别」（医生/护理/医技…）收到单个角色（麻醉医师 / 手术室护士）。
+     *
+     * <p>典型用途：手术排台把麻醉医师、巡回/器械护士的候选从全院 535 人收到真实岗位上的人。
+     * 只传 roleCode 不传 staffType 时，deptId 仍按主科室快照过滤（走 applyStaffTypeFilter 的 else 分支），
+     * 两者互不干扰——roleCode 已经足够窄，不再叠岗位科室条件。
+     *
+     * <p>用 {@code apply(...{0}...)} 参数化，不把角色编码拼进 SQL 字符串。
+     */
+    private void applyRoleFilter(LambdaQueryWrapper<SysEmployee> wrapper, EmployeeQueryDTO queryDTO) {
+        if (!TextUtil.hasText(queryDTO.getRoleCode())) {
+            return;
+        }
+        wrapper.apply("EXISTS (SELECT 1 FROM sys_employee_post p INNER JOIN sys_role r ON r.id = p.role_id "
+                        + "WHERE p.employee_id = sys_employee.id AND r.role_code = {0} AND r.del_flag = 0"
+                        // 岗位有效期：未到生效日的还没上岗，已过失效日的不能再排
+                        + " AND (p.effective_date IS NULL OR p.effective_date <= CURDATE())"
+                        + " AND (p.expire_date IS NULL OR p.expire_date >= CURDATE()))",
+                queryDTO.getRoleCode());
     }
 
     /**

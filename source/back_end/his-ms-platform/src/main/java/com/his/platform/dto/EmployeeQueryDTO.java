@@ -36,6 +36,17 @@ public class EmployeeQueryDTO extends PageParam {
     private Integer staffType;
 
     /**
+     * 角色编码（精确到某个岗位角色，比 {@link #staffType} 更窄）。
+     *
+     * <p>手术排台选人专用：麻醉医师候选 = 角色编码 10041（麻醉医师）、
+     * 巡回/器械护士候选 = 10042（手术室护士）。
+     * 走 {@code sys_employee_post} 的岗位行判定（含岗位有效期），多岗位员工也能取到。
+     * 用 role_code 而不是角色自增 id —— id 随库重建会变，role_code 是人定的稳定标识。
+     * 为空=不过滤，保持原行为不动存量调用方。
+     */
+    private String roleCode;
+
+    /**
      * 是否只返回指定区间内有门诊排班的员工（true-是）。
      */
     private Boolean onlyScheduled;

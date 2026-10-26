@@ -60,7 +60,7 @@
               placeholder="选择主刀医师"
           >
             <el-option
-                v-for="e in employees"
+                v-for="e in surgeonList"
                 :key="e.id"
                 :label="`${e.empName || e.id}${e.deptName ? '（' + e.deptName + '）' : ''}`"
                 :value="String(e.id)"
@@ -78,7 +78,7 @@
               filterable
               placeholder="可空（未指定）"
           >
-            <el-option v-for="e in employees" :key="e.id" :label="e.empName || e.id" :value="String(e.id)"/>
+            <el-option v-for="e in anesthetistList" :key="e.id" :label="e.empName || e.id" :value="String(e.id)"/>
           </el-select>
         </el-form-item>
         <el-form-item label="巡回护士">
@@ -90,7 +90,7 @@
               placeholder="可空（未指定）"
           >
             <el-option
-                v-for="e in employees"
+                v-for="e in nurseList"
                 :key="e.id"
                 :label="`${e.empName || e.id}${e.deptName ? '（' + e.deptName + '）' : ''}`"
                 :value="String(e.id)"
@@ -106,7 +106,7 @@
               placeholder="可空（未指定）"
           >
             <el-option
-                v-for="e in employees"
+                v-for="e in nurseList"
                 :key="e.id"
                 :label="`${e.empName || e.id}${e.deptName ? '（' + e.deptName + '）' : ''}`"
                 :value="String(e.id)"
@@ -143,7 +143,12 @@ const props = defineProps({
   // 当前要排台/改期的那一条手术申请
   row: {type: Object, default: null},
   rooms: {type: Array, default: () => []},
-  employees: {type: Array, default: () => []},
+  // 三类人力候选各按岗位收口（见 SurgeryView.loadBaseData 与 lib/operationSchedule.js）：
+  // 主刀=医生岗、麻醉医师=角色 10041、巡回/器械护士=角色 10042。
+  // 不再用全院员工列表 —— 那会让「麻醉医师」下拉出现行政、药房、病房护士。
+  surgeons: {type: Array, default: () => []},
+  anesthetists: {type: Array, default: () => []},
+  nurses: {type: Array, default: () => []},
 });
 const emit = defineEmits(['update:modelValue', 'saved']);
 
@@ -156,6 +161,32 @@ const text = (v) => (v === null || v === undefined || v === '' ? '—' : String(
 
 const scheduleSubmitting = ref(false);
 const scheduleTarget = computed(() => props.row);
+
+/**
+ * 候选收口后的历史值兜底：单据上原来是 A，而 A 不在当前岗位候选里（排台时还没有「麻醉医师」
+ * /「手术室护士」角色，或 A 已调岗），必须把 A 原样补进候选 —— 否则 el-select 找不到 label
+ * 会把一串雪花 id 显示出来，看着像坏了；而且提交时仍会原样回传，不会把人改掉。
+ */
+const withCurrent = (list, id, name) => {
+  if (!id || !name) {
+    return list;
+  }
+  if (list.some((e) => String(e.id) === String(id))) {
+    return list;
+  }
+  return [{id: String(id), empName: name, outOfScope: true}, ...list];
+};
+const surgeonList = computed(() =>
+    withCurrent(props.surgeons, scheduleTarget.value?.surgeonId, scheduleTarget.value?.surgeonName));
+const anesthetistList = computed(() =>
+    withCurrent(props.anesthetists, scheduleTarget.value?.anesthetistId, scheduleTarget.value?.anesthetistName));
+const nurseList = computed(() => {
+  const row = scheduleTarget.value;
+  let list = props.nurses;
+  list = withCurrent(list, row?.circulatingNurseId, row?.circulatingNurseName);
+  list = withCurrent(list, row?.scrubNurseId, row?.scrubNurseName);
+  return list;
+});
 const scheduleForm = reactive({
   operationRoom: '',
   plannedStartTime: '',
