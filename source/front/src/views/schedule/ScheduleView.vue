@@ -170,8 +170,43 @@
                             title="为该医生该日补班"
                             @click="handlePanelCellAdd(row, d)">加排班
                     </button>
+                    <!-- 「标休」：当天没排班也能显式记一笔休息/请假——「没排」和「有意休」在考勤上不是一回事 -->
+                    <button v-if="d >= todayStr" v-perm="'outpatient:schedule:add'"
+                            :data-testid="`panel-rest-add-${row.doctorId}-${d}`"
+                            class="absolute right-14 top-0.5 z-20 cursor-pointer rounded border border-slate-300 bg-slate-50 px-1.5 py-0.5 text-[10px] font-medium leading-4 text-slate-500 opacity-0 transition-opacity duration-150 group-hover/cell:opacity-100 hover:bg-slate-100"
+                            title="为该医生该日标休息/请假"
+                            @click="handlePanelCellAddRest(row, d)">标休
+                    </button>
                     <div :class="['flex flex-col gap-1', d >= todayStr ? 'mt-6' : '']">
-                      <div v-for="s in cellsFor(row, d)" :key="s.id"
+                      <template v-for="s in cellsFor(row, d)" :key="s.id || ('ss-' + s.staffScheduleId)">
+                        <!-- 休息/请假/培训/停班行（排班考勤域）：虚线灰格，无号源语义；悬停可改出勤状态 -->
+                        <div v-if="isRestRow(s)"
+                             class="group relative rounded border border-dashed border-slate-300 bg-slate-50 px-2.5 py-1.5 text-left leading-5"
+                             :data-testid="`panel-rest-${row.doctorId}-${d}`"
+                             :title="s.dutyStatusText || '休息'">
+                          <div class="flex items-center justify-between gap-2">
+                            <span class="flex min-w-0 items-center gap-1.5">
+                              <span class="text-sm font-medium text-slate-500">{{ s.dutyStatusText || '休' }}</span>
+                              <el-tag v-if="s.publishStatus != null"
+                                      :type="publishStatusTagType(s.publishStatus)"
+                                      class="!px-1.5 !align-middle shrink-0"
+                                      effect="plain"
+                                      size="small">{{ s.publishStatusText }}
+                              </el-tag>
+                            </span>
+                          </div>
+                          <div v-if="d >= todayStr"
+                               class="mt-1 flex justify-end opacity-0 transition-opacity duration-150 group-hover:opacity-100">
+                            <button v-perm="'outpatient:schedule:edit'"
+                                    :data-testid="`panel-rest-edit-${row.doctorId}-${d}`"
+                                    class="cursor-pointer text-[13px] text-blue-600"
+                                    title="修改出勤状态（休息/请假/培训/停班）"
+                                    @click.stop="handlePanelCellRest(s)">编辑
+                            </button>
+                          </div>
+                        </div>
+                        <!-- 号源/出诊行（原有渲染） -->
+                        <div v-else
                            :class="['group relative rounded border px-2.5 py-1.5 text-left leading-5',
                                   s.status === 0
                                     ? 'border-slate-200 bg-slate-100 text-slate-400 line-through'
@@ -231,6 +266,14 @@
                                     class="cursor-pointer text-[13px] text-red-500"
                                     @click.stop="handleToggleStatus(s)">停
                             </button>
+                            <!-- 转休：出诊行改出勤状态（休息/请假/培训/停班），后端自动停诊其号源并回提示 -->
+                            <span v-perm="'outpatient:schedule:edit'" class="text-slate-400">|</span>
+                            <button v-perm="'outpatient:schedule:edit'"
+                                    :data-testid="`panel-rest-flip-${row.doctorId}-${d}`"
+                                    title="转休息/请假/培训/停班（关联号源将随停诊，有在挂号会提示退号）"
+                                    class="cursor-pointer text-[13px] text-slate-500"
+                                    @click.stop="handlePanelCellRest(s)">休
+                            </button>
                             <!-- 加号只给医生出诊班：出勤岗没有号源池（后端同样拒绝），按钮直接不渲染 -->
                             <template v-if="staffTypeHasSource(s.staffType)">
                               <span v-perm="'outpatient:schedule:edit'" class="text-slate-400">|</span>
@@ -279,7 +322,8 @@
                             </button>
                           </template>
                         </div>
-                      </div>
+                        </div>
+                      </template>
                     </div>
                   </div>
                 </template>
@@ -506,6 +550,16 @@
         @stop="onDetailStop"
     />
 
+    <!-- 休息/请假登记与修改（门诊出诊域）：排班考勤侧弹框，后端对「上班→休息」的出诊行
+         自动联动停诊号源并带回提示；独立休息行落 biz_schedule 不产生号源 -->
+    <StaffScheduleEdit
+        v-model="restEditVisible"
+        :row="restEditRow"
+        :scope="SCHEDULE_SCOPE_OPD"
+        :shift-use-scope="1"
+        @saved="loadPanel"
+    />
+
     <!-- 新增/编辑排班模板弹窗 -->
     <ScheduleTplEdit
         v-model="tplDialogVisible"
@@ -677,6 +731,7 @@ import {
 } from '@/api/appoint';
 import {getShiftSelectList} from '@/api/appoint';
 import {getDepartmentSelectList, getEmployeeList, getUserInfo} from '@/api/system';
+import {SCHEDULE_SCOPE_OPD} from '@/lib/staffSchedule';
 import {DICT_TYPE, loadDictDataList} from '@/lib/dict-cache';
 import {
   SCHEDULE_TYPE_TEXT,
@@ -690,6 +745,7 @@ import {fmtISO} from '@/lib/scheduleDate';
 import {getTitleLabel, getTitleTagClass} from '@/lib/scheduleTitle';
 import ScheduleAdd from './ScheduleAdd.vue';
 import ScheduleEdit from './ScheduleEdit.vue';
+import StaffScheduleEdit from './StaffScheduleEdit.vue';
 import ScheduleTplEdit from './ScheduleTplEdit.vue';
 
 const departments = ref([]);
@@ -1053,11 +1109,58 @@ const panelAllSchedules = ref([]);
 /** 整周流转 loading（提交/发布共用，避免连点） */
 const weekActionLoading = ref(false);
 /** 当前显示周内待提交草稿数 / 待审核数（整周按钮角标；口径 = 当前科室 × 面板所在周全量） */
-const weekDraftCount = computed(() => panelAllSchedules.value.filter((s) => s.publishStatus === PUBLISH_DRAFT).length);
-const weekPendingCount = computed(() => panelAllSchedules.value.filter((s) => s.publishStatus === PUBLISH_PENDING).length);
+const weekDraftCount = computed(() => panelAllSchedules.value.filter((s) => !isRestRow(s) && s.publishStatus === PUBLISH_DRAFT).length);
+const weekPendingCount = computed(() => panelAllSchedules.value.filter((s) => !isRestRow(s) && s.publishStatus === PUBLISH_PENDING).length);
+
+/**
+ * 休息/请假/培训/停班行（排班考勤域）：号源统计、整周提交/审核都不该把它们当班次算，
+ * 但格子要渲染、也要能编辑 —— cellsFor 保留全量，统计侧一律先滤掉。
+ */
+const isRestRow = (s) => s.dutyStatus != null && Number(s.dutyStatus) !== 1;
+
+// 休息行弹框（StaffScheduleEdit，scope=门诊出诊域）：row 预填后组件自己控表单
+const restEditVisible = ref(false);
+const restEditRow = ref(null);
+const toRestEditRow = (s) => ({
+  id: s.staffScheduleId ?? null,
+  scheduleDate: s.scheduleDate,
+  orgType: 1,
+  orgId: s.deptId,
+  orgName: s.deptName,
+  employeeId: s.doctorId,
+  employeeName: s.doctorName,
+  deptName: s.deptName,
+  shiftId: s.shiftId ?? null,
+  shiftName: s.shiftName ?? null,
+  dutyStatus: s.dutyStatus ?? 2,
+  publishStatus: s.publishStatus ?? 2,
+  remark: '',
+});
+/** 已有出诊行「转休」：编辑其排班事实行，上班→休息由后端联动停诊号源 */
+const handlePanelCellRest = (s) => {
+  restEditRow.value = toRestEditRow(s);
+  restEditVisible.value = true;
+};
+/** 空格「标休」：当天没排班也显式记一笔休息/请假（落已发布，立即计入在岗口径） */
+const handlePanelCellAddRest = (row, date) => {
+  restEditRow.value = {
+    scheduleDate: date,
+    orgType: 1,
+    orgId: row.deptId,
+    orgName: row.deptName,
+    employeeId: row.doctorId,
+    employeeName: row.doctorName,
+    deptName: row.deptName,
+    dutyStatus: 2,
+    publishStatus: 2,
+    remark: '',
+  };
+  restEditVisible.value = true;
+};
 /** 本周排班总览：六张置顶卡片（随上周/下周切换联动，口径 = 当前科室筛选 × 面板所在周） */
 const panelStats = computed(() => {
-  const list = panelAllSchedules.value;
+  // 号源统计不含休息行（休息没有号源语义，混进来会稀释班次数与均号量）
+  const list = panelAllSchedules.value.filter((s) => !isRestRow(s));
   const total = list.reduce((a, s) => a + (s.totalSource || 0), 0);
   const shifts = list.length;
   const stopped = list.filter((s) => s.status === 0).length;
@@ -1090,7 +1193,7 @@ const todayStr = computed(() => fmtISO(new Date()));
 /** 医生维度周汇总：每位医生本周班次数与号源占用（医生视图的轻量形态） */
 const doctorSummary = computed(() => {
   const map = new Map();
-  panelSchedules.value.forEach((s) => {
+  panelSchedules.value.filter((s) => !isRestRow(s)).forEach((s) => {
     const key = `${s.deptId}_${s.doctorId}`;
     if (!map.has(key)) {
       map.set(key, {

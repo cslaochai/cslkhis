@@ -170,16 +170,17 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, Biz
     }
 
     /**
-     * 停班路径放行前提：除出勤态外，班次/时间/单元/人员与改前完全一致。
-     * 避免「顺手改了班次」也走停诊联动，号源侧时间/班次不同步。
+     * 停班路径放行前提：单元/人员与改前完全一致。
+     * <p>班次/时间不参与比对：applyShift 对非上班态会把 shift_id 归零、时间清空（落库口径就是
+     * 「休息行没有班次」），拿归零后的行去跟出诊行比班次必然不等 —— 原实现因此把整条
+     * 「上班→休息」停诊联动路径堵死（守卫恒假，转休永远报「请到门诊排班页操作」）。
+     * 「顺手改班次」在转休路径上构造不出来（班次被归零），门诊侧要改时间/班次，
+     * 先把出勤恢复成上班再走号源域。
      */
     private boolean fieldsUnchangedExceptDuty(BizSchedule before, BizSchedule now) {
         return Objects.equals(before.getEmployeeId(), now.getEmployeeId())
                 && Objects.equals(before.getOrgType(), now.getOrgType())
-                && Objects.equals(before.getOrgId(), now.getOrgId())
-                && Objects.equals(before.getShiftId(), now.getShiftId())
-                && Objects.equals(before.getStartTime(), now.getStartTime())
-                && Objects.equals(before.getEndTime(), now.getEndTime());
+                && Objects.equals(before.getOrgId(), now.getOrgId());
     }
 
     @Override
@@ -315,6 +316,14 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, Biz
                     // 出诊放号行归门诊排班页（与 pendingApprovalPage 同口径，null 老数据不误伤）
                     .and(w -> w.isNull(BizSchedule::getClinicFlag).or().eq(BizSchedule::getClinicFlag, 0));
         }
+        if (StaffScheduleScopeEnum.OPD.getCode().equals(scope)) {
+            // 门诊出诊域（出勤侧）：非急诊科室 + 非护理/护工行；医生行（出诊/休息）都归这里
+            if (!erIds.isEmpty()) {
+                wrapper.notIn(BizSchedule::getOrgId, erIds);
+            }
+            wrapper.ne(BizSchedule::getStaffType, StaffTypeEnum.NURSE.getCode())
+                    .ne(BizSchedule::getStaffType, StaffTypeEnum.NURSING_ASSISTANT.getCode());
+        }
     }
 
     /**
@@ -350,6 +359,18 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, Biz
                 throw new BusinessException("护理排班请到「护理排班」页操作");
             }
         }
+        if (StaffScheduleScopeEnum.OPD.getCode().equals(scope)) {
+            if (!Objects.equals(schedule.getOrgType(), OrgUnitTypeEnum.DEPT.getCode())) {
+                throw new BusinessException("门诊排班只能排科室单元");
+            }
+            if (erDeptIds().contains(schedule.getOrgId())) {
+                throw new BusinessException("急诊科室排班请到「急诊排班」页操作");
+            }
+            if (Objects.equals(schedule.getStaffType(), StaffTypeEnum.NURSE.getCode())
+                    || Objects.equals(schedule.getStaffType(), StaffTypeEnum.NURSING_ASSISTANT.getCode())) {
+                throw new BusinessException("护理排班请到「护理排班」页操作");
+            }
+        }
     }
 
     /**
@@ -364,6 +385,9 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, Biz
             throw new BusinessException(opName + "只能操作急诊科室");
         }
         if (StaffScheduleScopeEnum.STAFF.getCode().equals(scope) && erDeptIds().contains(orgId)) {
+            throw new BusinessException("急诊科室的" + opName + "请到「急诊排班」页操作");
+        }
+        if (StaffScheduleScopeEnum.OPD.getCode().equals(scope) && erDeptIds().contains(orgId)) {
             throw new BusinessException("急诊科室的" + opName + "请到「急诊排班」页操作");
         }
     }
@@ -394,6 +418,15 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, Biz
             }
             if (clinicalRow) {
                 throw new BusinessException("医生/护理排班的" + opName + "请到「急诊排班」「门诊排班」或「护理排班」页操作");
+            }
+        }
+        if (StaffScheduleScopeEnum.OPD.getCode().equals(scope)) {
+            if (erRow) {
+                throw new BusinessException("急诊科室的排班" + opName + "请到「急诊排班」页操作");
+            }
+            if (Objects.equals(row.getStaffType(), StaffTypeEnum.NURSE.getCode())
+                    || Objects.equals(row.getStaffType(), StaffTypeEnum.NURSING_ASSISTANT.getCode())) {
+                throw new BusinessException("护理排班的" + opName + "请到「护理排班」页操作");
             }
         }
     }
@@ -1250,11 +1283,18 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, Biz
             }
         }
         // 换班要连对方那条一起排除：它此刻还占着「对方 + 这天 + 这个班」这个键，写完才让开
-        return count(new LambdaQueryWrapper<BizSchedule>()
+        // ⚠️ 无班次行（休息/请假/培训/停班）shift_id 为 NULL：eq(col, null) 恒假，
+        // 判重会静默失效 → 同人同日同单元能插出无数条休息行，必须走 IS NULL（与 sameUnitShiftRow 同坑）
+        LambdaQueryWrapper<BizSchedule> wrapper = new LambdaQueryWrapper<BizSchedule>()
                 .eq(BizSchedule::getEmployeeId, schedule.getEmployeeId())
                 .eq(BizSchedule::getScheduleDate, schedule.getScheduleDate())
-                .eq(BizSchedule::getShiftId, schedule.getShiftId())
-                .notIn(!skip.isEmpty(), BizSchedule::getId, skip)) > 0;
+                .notIn(!skip.isEmpty(), BizSchedule::getId, skip);
+        if (schedule.getShiftId() == null) {
+            wrapper.isNull(BizSchedule::getShiftId);
+        } else {
+            wrapper.eq(BizSchedule::getShiftId, schedule.getShiftId());
+        }
+        return count(wrapper) > 0;
     }
 
     /**
@@ -1877,7 +1917,8 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, Biz
         Set<Long> erExclude = null;
         if (StaffScheduleScopeEnum.ER.getCode().equals(scope)) {
             erInclude = erLeafDeptIds();
-        } else if (StaffScheduleScopeEnum.STAFF.getCode().equals(scope)) {
+        } else if (StaffScheduleScopeEnum.STAFF.getCode().equals(scope)
+                || StaffScheduleScopeEnum.OPD.getCode().equals(scope)) {
             erExclude = erDeptIds();
         }
         if (all || OrgUnitTypeEnum.HOSPITAL.getCode() == orgType) {

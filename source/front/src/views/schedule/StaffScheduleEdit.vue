@@ -114,9 +114,6 @@ import {
   ORG_UNIT_TYPE_OPTIONS,
 } from '@/lib/staffSchedule'
 
-// 出勤排班走 4-全院通用班次册：按岗位类别选本册班次，别把门诊出诊册的班次混进来
-const SHIFT_USE_SCOPE_GENERAL = 4
-
 // 发布态：岗位出勤走审核闭环——新增一律落草稿（后端 resolvePublishStatus 对新增强制草稿，
 // 传已发布也会被压成 0），提交审核 → 科室指定审核人（sys_department.schedule_auditor_id）
 // 审核发布后才计在岗（onDutyAt 只认 2/4）。编辑已发布行时回显原发布态，改单自动转「已变更」。
@@ -131,8 +128,11 @@ const PUBLISH_STATUS_PUBLISHED = 2
 const props = defineProps({
   modelValue: {type: Boolean, default: false},
   row: {type: Object, default: null},
-  // 排班域（1-岗位出勤 2-急诊值班）：科室候选、排班对象候选与保存入参都按域收口
+  // 排班域（1-岗位出勤 2-急诊值班 3-门诊出诊）：科室候选、排班对象候选与保存入参都按域收口
   scope: {type: Number, default: 1},
+  // 班次册（biz_shift.use_scope）：岗位出勤用 4-全院通用；门诊出诊域传 1-门诊/急诊册，
+  // 否则休息行改回上班时会挂错班次（门诊出诊行的班次必须与号源行同册）
+  shiftUseScope: {type: Number, default: 4},
 })
 const emit = defineEmits(['update:modelValue', 'saved'])
 
@@ -212,7 +212,7 @@ const ensureOptions = async () => {
     const [dRes, wRes, sRes] = await Promise.all([
       getStaffScheduleUnitSelectList({orgType: ORG_UNIT_TYPE_DEPT, scope: props.scope}),
       getNurseWardSelectList({}),
-      getShiftSelectList({status: 1, useScope: SHIFT_USE_SCOPE_GENERAL}),
+      getShiftSelectList({status: 1, useScope: props.shiftUseScope}),
     ])
     deptOptions.value = (dRes?.data || []).map((d) => ({id: d.id, name: d.name}))
     wardOptions.value = (wRes?.data || []).map((w) => ({id: w.id ?? w.wardId, name: w.wardName ?? w.name}))

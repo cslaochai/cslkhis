@@ -320,7 +320,8 @@ public class SysEmployeeServiceImpl extends ServiceImpl<SysEmployeeMapper, SysEm
      * <ul>
      *   <li>1-岗位出勤：排除医生/护理/护工岗（那些域有专用排班页）与急诊科室员工
      *       （主科室或任一岗位科室命中即排除）；</li>
-     *   <li>2-急诊值班：只出急诊<b>叶子</b>科室的医生（虚父级不当排班单元）。</li>
+     *   <li>2-急诊值班：只出急诊<b>叶子</b>科室的医生（虚父级不当排班单元）；</li>
+     *   <li>3-门诊出诊：排除护理/护工岗与急诊科室员工，医生放行（门诊排班页标休息用）。</li>
      * </ul>
      * 与保存侧 StaffScheduleServiceImpl.assertScope 同一份域口径 ——
      * 候选藏人 + 保存拦截双闸，直调绕得过前者绕不过后者。
@@ -330,11 +331,20 @@ public class SysEmployeeServiceImpl extends ServiceImpl<SysEmployeeMapper, SysEm
         if (scope == null) {
             return;
         }
-        if (Integer.valueOf(1).equals(scope)) {
-            wrapper.notExists("SELECT 1 FROM sys_employee_post p INNER JOIN sys_role r ON r.id = p.role_id "
-                    + "WHERE p.employee_id = sys_employee.id AND r.staff_type IN (1, 2, 7) "
-                    + "AND (p.effective_date IS NULL OR p.effective_date <= CURDATE()) "
-                    + "AND (p.expire_date IS NULL OR p.expire_date >= CURDATE())");
+        if (Integer.valueOf(1).equals(scope) || Integer.valueOf(3).equals(scope)) {
+            boolean opd = Integer.valueOf(3).equals(scope);
+            if (!opd) {
+                wrapper.notExists("SELECT 1 FROM sys_employee_post p INNER JOIN sys_role r ON r.id = p.role_id "
+                        + "WHERE p.employee_id = sys_employee.id AND r.staff_type IN (1, 2, 7) "
+                        + "AND (p.effective_date IS NULL OR p.effective_date <= CURDATE()) "
+                        + "AND (p.expire_date IS NULL OR p.expire_date >= CURDATE())");
+            } else {
+                // 门诊出诊域只排除护理/护工岗，医生是主角（标休息/请假）
+                wrapper.notExists("SELECT 1 FROM sys_employee_post p INNER JOIN sys_role r ON r.id = p.role_id "
+                        + "WHERE p.employee_id = sys_employee.id AND r.staff_type IN (2, 7) "
+                        + "AND (p.effective_date IS NULL OR p.effective_date <= CURDATE()) "
+                        + "AND (p.expire_date IS NULL OR p.expire_date >= CURDATE())");
+            }
             Set<Long> erIds = erTypeDeptIds();
             if (!erIds.isEmpty()) {
                 String csv = erIds.stream().map(String::valueOf).collect(Collectors.joining(","));

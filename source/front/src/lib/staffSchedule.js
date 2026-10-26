@@ -39,6 +39,8 @@ export const isHospitalLevel = (orgType) => Number(orgType) === ORG_UNIT_TYPE_HO
  */
 export const SCHEDULE_SCOPE_STAFF = 1
 export const SCHEDULE_SCOPE_ER = 2
+/** 门诊出诊域（出勤侧）：门诊排班页的休息/请假/培训/停班行，医生为主角 */
+export const SCHEDULE_SCOPE_OPD = 3
 
 /**
  * 出勤状态（biz_staff_schedule.duty_status）

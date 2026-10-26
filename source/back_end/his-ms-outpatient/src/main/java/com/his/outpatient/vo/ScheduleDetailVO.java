@@ -170,4 +170,21 @@ public class ScheduleDetailVO {
      * 诊室名称
      */
     private String roomName;
+
+    /**
+     * 关联的排班事实ID（biz_schedule.id；出诊派生行必填，独立休息行也带自己的排班行ID）
+     */
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long staffScheduleId;
+
+    /**
+     * 出勤状态（1-上班 2-休息 3-请假 4-培训 5-停班）。
+     * 号源行恒为 1；排班行被「转休」后带 2~5，前端据此把格子渲染成休息态。
+     */
+    private Integer dutyStatus;
+
+    /**
+     * 出勤状态文案（由枚举 label 渲染）
+     */
+    private String dutyStatusText;
 }

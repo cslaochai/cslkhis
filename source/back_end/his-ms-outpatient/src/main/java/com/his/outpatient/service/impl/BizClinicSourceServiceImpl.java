@@ -408,7 +408,90 @@ public class BizClinicSourceServiceImpl extends ServiceImpl<BizClinicSourceMappe
 
     @Override
     public List<ScheduleDetailVO> listDetail(ScheduleQueryDTO queryDTO) {
-        return toVOList(listPage(queryDTO));
+        // toVOList 返回的是 stream.toList() 不可变列表，独立休息行要追加，必须先拷成可变列表
+        List<ScheduleDetailVO> voList = new ArrayList<>(toVOList(listPage(queryDTO)));
+        enrichDutyStatus(voList);
+        voList.addAll(standaloneRestRows(queryDTO, voList));
+        return voList;
+    }
+
+    /**
+     * 给号源行补出勤状态：排班行被「转休」（duty_status 2~5）后，号源行本身只会停在
+     * 「已停诊」，面板看不出「这是有意休息」还是「临时停诊」—— 按绑定的排班行补齐。
+     */
+    private void enrichDutyStatus(List<ScheduleDetailVO> voList) {
+        List<Long> scheduleIds = voList.stream()
+                .map(ScheduleDetailVO::getStaffScheduleId)
+                .filter(Objects::nonNull)
+                .toList();
+        if (scheduleIds.isEmpty()) {
+            return;
+        }
+        Map<Long, BizSchedule> scheduleMap = bizScheduleMapper.selectList(new LambdaQueryWrapper<BizSchedule>()
+                        .in(BizSchedule::getId, scheduleIds))
+                .stream()
+                .collect(Collectors.toMap(BizSchedule::getId, s -> s, (a, b) -> a));
+        for (ScheduleDetailVO vo : voList) {
+            BizSchedule row = vo.getStaffScheduleId() == null ? null : scheduleMap.get(vo.getStaffScheduleId());
+            if (row != null && row.getDutyStatus() != null) {
+                vo.setDutyStatus(row.getDutyStatus());
+                vo.setDutyStatusText(StaffDutyStatusEnum.getLabel(row.getDutyStatus()));
+            }
+        }
+    }
+
+    /**
+     * 独立休息行：排班表里 duty_status≠1、没有被任何号源行引用的行（空格直接标休的产物）。
+     * 门诊排班面板要把它们当格子渲染出来，否则「标了休」在面板上不可见、也改不回来。
+     * 只出非急诊科室（急诊归急诊排班页）+ 与号源行同款的科室数据范围/岗位过滤。
+     */
+    private List<ScheduleDetailVO> standaloneRestRows(ScheduleQueryDTO queryDTO, List<ScheduleDetailVO> clinicVos) {
+        Set<Long> boundScheduleIds = clinicVos.stream()
+                .map(ScheduleDetailVO::getStaffScheduleId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+        Set<Long> erDeptIds = bizScheduleMapper.selectErDepts(DeptTypeEnum.ER.getCode()).stream()
+                .map(com.his.outpatient.dto.ErDeptRow::getId)
+                .collect(Collectors.toSet());
+
+        LambdaQueryWrapper<BizSchedule> wrapper = new LambdaQueryWrapper<BizSchedule>()
+                .eq(BizSchedule::getOrgType, OrgUnitTypeEnum.DEPT.getCode())
+                .ne(BizSchedule::getDutyStatus, StaffDutyStatusEnum.WORK.getCode())
+                .ge(queryDTO.getStartDate() != null, BizSchedule::getScheduleDate, queryDTO.getStartDate())
+                .le(queryDTO.getEndDate() != null, BizSchedule::getScheduleDate, queryDTO.getEndDate())
+                .eq(queryDTO.getStaffType() != null, BizSchedule::getStaffType, queryDTO.getStaffType());
+        Long scopedDeptId = deptScopeService.resolveDeptId(queryDTO.getDeptId());
+        if (scopedDeptId != null) {
+            wrapper.eq(BizSchedule::getDeptId, scopedDeptId);
+        } else if (deptScopeService.isScoped()) {
+            wrapper.in(BizSchedule::getDeptId, deptScopeService.allowedDeptIds());
+        }
+        if (!erDeptIds.isEmpty()) {
+            wrapper.notIn(BizSchedule::getOrgId, erDeptIds);
+        }
+        List<BizSchedule> rows = bizScheduleMapper.selectList(wrapper);
+
+        List<ScheduleDetailVO> result = new ArrayList<>(rows.size());
+        for (BizSchedule row : rows) {
+            if (boundScheduleIds.contains(row.getId())) {
+                continue;
+            }
+            ScheduleDetailVO vo = new ScheduleDetailVO();
+            vo.setDeptId(row.getDeptId());
+            vo.setDeptName(row.getDeptName());
+            vo.setDoctorId(row.getEmployeeId());
+            vo.setDoctorName(row.getEmployeeName());
+            vo.setStaffType(row.getStaffType());
+            vo.setStaffTypeName(StaffTypeEnum.getLabel(row.getStaffType()));
+            vo.setScheduleDate(row.getScheduleDate());
+            vo.setStaffScheduleId(row.getId());
+            vo.setDutyStatus(row.getDutyStatus());
+            vo.setDutyStatusText(StaffDutyStatusEnum.getLabel(row.getDutyStatus()));
+            vo.setPublishStatus(row.getPublishStatus());
+            vo.setPublishStatusText(PublishStatusEnum.getLabel(row.getPublishStatus()));
+            result.add(vo);
+        }
+        return result;
     }
 
     @Override
@@ -677,6 +760,7 @@ public class BizClinicSourceServiceImpl extends ServiceImpl<BizClinicSourceMappe
         vo.setConsultStatus(entity.getConsultStatus());
         vo.setRoomId(entity.getRoomId());
         vo.setRoomName(entity.getRoomName());
+        vo.setStaffScheduleId(entity.getStaffScheduleId());
         return vo;
     }
 
