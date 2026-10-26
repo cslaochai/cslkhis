@@ -119,11 +119,6 @@ public class OpdLogListVO {
     private String slotTime;
 
     /**
-     * 本单结算方式（1-全自费 2-医保联网）
-     */
-    private Integer settlementType;
-
-    /**
      * 医保类型（文字，取自挂号快照）
      */
     private String medicalInsuranceType;

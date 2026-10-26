@@ -327,7 +327,6 @@ public class AppointServiceImpl extends ServiceImpl<AppointInfoMapper, AppointIn
         vo.setVisitDate(appoint.getVisitDate());
         vo.setArriveTime(appoint.getArriveTime());
         vo.setScheduleType(appoint.getScheduleType());
-        vo.setSettlementType(appoint.getSettlementType());
         vo.setMedicalInsuranceType(appoint.getMedicalInsuranceType());
         vo.setMedicalInsuranceNo(appoint.getMedicalInsuranceNo());
         vo.setRegistStatus(appoint.getRegistStatus());
@@ -376,7 +375,6 @@ public class AppointServiceImpl extends ServiceImpl<AppointInfoMapper, AppointIn
         Integer registSource = upsertDTO.getRegistSource();
         appointInfo.setRegistSource(registSource);
         appointInfo.setPatientName(bizPatient.getPatientName());
-        appointInfo.setSettlementType(upsertDTO.getSettlementType());
         appointInfo.setVisitType(upsertDTO.getVisitType());
         appointInfo.setRevisitSource(revisit ? upsertDTO.getRevisitSource() : null);
 
@@ -509,13 +507,17 @@ public class AppointServiceImpl extends ServiceImpl<AppointInfoMapper, AppointIn
             command.setSurchargeFee(feeDecision.getSurchargeFee());
             command.setWaived(feeDecision.isWaived());
             command.setWaiveReason(feeDecision.getReason());
-            // 本单结算方式（1-全自费 2-医保联网）：挂号单选什么就透什么，支持医保患者本单改自费
-            command.setSettlementMode(appointInfo.getSettlementType());
+            // 本单结算方式（1-全自费 2-医保联网）：不再单独存挂号单字段，出账时按费别+医保号现算
+            MedicalInsuranceTypeEnum feeEnum = MedicalInsuranceTypeEnum.fromCode(appointInfo.getMedicalInsuranceType());
+            boolean insuranceChannel = feeEnum != null && feeEnum.isPoolCovered()
+                    && TextUtil.hasText(appointInfo.getMedicalInsuranceNo());
+            command.setSettlementMode(insuranceChannel ? 2 : 1);
 
             BillBriefVO bill = chargeFacadeService.createRegistCharge(command);
             if (bill != null) {
                 appointInfo.setBillId(bill.getBillId());
                 appointInfo.setBillNo(bill.getBillNo());
+                appointInfo.setInsuranceWarning(bill.getInsuranceWarning());
                 this.updateById(appointInfo);
             }
         }
@@ -1193,7 +1195,6 @@ public class AppointServiceImpl extends ServiceImpl<AppointInfoMapper, AppointIn
         vo.setRegistSource(entity.getRegistSource());
         vo.setRegistTime(entity.getRegistTime());
         vo.setVisitDate(entity.getVisitDate());
-        vo.setSettlementType(entity.getSettlementType());
         vo.setMedicalInsuranceType(entity.getMedicalInsuranceType());
         vo.setMedicalInsuranceNo(entity.getMedicalInsuranceNo());
         vo.setRegistStatus(entity.getRegistStatus());
@@ -1205,6 +1206,7 @@ public class AppointServiceImpl extends ServiceImpl<AppointInfoMapper, AppointIn
         vo.setRefundReason(entity.getRefundReason());
         vo.setBillId(entity.getBillId());
         vo.setBillNo(entity.getBillNo());
+        vo.setInsuranceWarning(entity.getInsuranceWarning());
         return vo;
     }
 

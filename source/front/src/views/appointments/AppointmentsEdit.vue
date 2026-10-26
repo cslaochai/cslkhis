@@ -88,9 +88,8 @@ const editForm = ref({
   scheduleId: null,
   visitDate: '',
   visitType: '',
-  // 后端新增/修改共用一个 DTO，patientId/settlementType 是必填项：改号源时原样带回，修改分支不写它们
+  // 后端新增/修改共用一个 DTO，patientId 是必填项：改号源时原样带回，修改分支不写它们
   patientId: null,
-  settlementType: null,
 });
 const employeeList = ref([]);
 const editSchedules = ref([]);
@@ -110,7 +109,6 @@ watch(visible, (open) => {
     visitDate: row.visitDate || '',
     visitType: row.visitType || 1,
     patientId: row.patientId ?? null,
-    settlementType: row.settlementType ?? null,
   };
   editSchedules.value = [];
   // 加载当前科室的医生列表
@@ -167,7 +165,6 @@ const handleEditSubmit = async () => {
       visitType: editForm.value.visitType,
       // 与改约同理：共用 AppointUpsertDTO，registSource 已必填；改挂号不改来源，传 1-窗口挂号（原默认口径）
       registSource: 1,
-      settlementType: editForm.value.settlementType,
     });
     ElMessage.success('修改成功');
     visible.value = false;

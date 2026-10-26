@@ -51,11 +51,6 @@ public class OpdLogPageQueryDTO extends PageParam {
     private Integer registType;
 
     /**
-     * 结算方式：1 自费 2 城镇职工医保 3 城乡居民医保 4 公费 5 商业保险
-     */
-    private Integer settlementType;
-
-    /**
      * 就诊类型：1 初诊 2 复诊（读挂号信息.revisit_type）。
      * <p>注意不要改成就诊类型——那一列 218 行恒为 1，是死列。
      */

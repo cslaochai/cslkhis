@@ -77,38 +77,6 @@
       </template>
 
       <div class="appt-block">
-        <div class="appt-block__title">费用信息</div>
-        <el-form-item label="结算方式" required>
-          <el-select v-model="newAppointment.settlementType" class="w-full" placeholder="选择结算方式"
-                     @change="settlementTouched = true">
-            <el-option v-for="item in settlementTypes" :key="item.value" :label="item.label" :value="item.value"/>
-          </el-select>
-        </el-form-item>
-        <div class="grid grid-cols-2 gap-x-4">
-          <el-form-item :required="addMode === 'new' || Number(newAppointment.settlementType) === 2" label="费别">
-            <el-select v-if="addMode === 'new'" v-model="newPatientForm.medicalInsuranceType" class="w-full" filterable
-                       placeholder="选择费别">
-              <el-option v-for="item in medicalInsuranceTypes" :key="item.dictValue" :label="item.dictLabel"
-                         :value="item.dictValue ?? item.dictLabel"/>
-            </el-select>
-            <!-- 已有患者：选人带出的值也允许按本单改（后端快照以入参为准，患者主档不动） -->
-            <el-select v-else v-model="newAppointment.medicalInsuranceType" class="w-full" placeholder="选择费别">
-              <el-option v-for="item in medicalInsuranceTypes" :key="item.dictValue" :label="item.dictLabel"
-                         :value="item.dictValue ?? item.dictLabel"/>
-              <el-option v-if="newAppointment.medicalInsuranceType
-                && !medicalInsuranceTypes.some((i) => (i.dictValue ?? i.dictLabel) === newAppointment.medicalInsuranceType)"
-                         :label="newAppointment.medicalInsuranceType" :value="newAppointment.medicalInsuranceType"/>
-            </el-select>
-          </el-form-item>
-          <el-form-item :required="Number(newAppointment.settlementType) === 2" label="医保卡号">
-            <el-input v-if="addMode === 'new'" v-model="newPatientForm.medicalInsuranceNo"
-                      placeholder="请输入医保卡号"/>
-            <el-input v-else v-model="newAppointment.medicalInsuranceNo" placeholder="请输入医保卡号"/>
-          </el-form-item>
-        </div>
-      </div>
-
-      <div class="appt-block">
         <div class="appt-block__title">预约信息</div>
         <div class="grid grid-cols-2 gap-x-5 items-start">
           <el-form-item :class="{'col-span-2': isSameDayReturn}" label="就诊类型">
@@ -217,6 +185,32 @@
           </p>
         </div>
       </div>
+
+      <div class="appt-block">
+        <div class="appt-block__title">费用信息</div>
+        <div class="grid grid-cols-2 gap-x-4">
+          <el-form-item :required="addMode === 'new'" label="费别">
+            <el-select v-if="addMode === 'new'" v-model="newPatientForm.medicalInsuranceType" class="w-full" filterable
+                       placeholder="选择费别">
+              <el-option v-for="item in appointmentFeeTypes" :key="item.dictValue" :label="item.dictLabel"
+                         :value="item.dictValue ?? item.dictLabel"/>
+            </el-select>
+            <el-select v-else v-model="newAppointment.medicalInsuranceType" class="w-full" placeholder="选择费别">
+              <el-option v-for="item in appointmentFeeTypes" :key="item.dictValue" :label="item.dictLabel"
+                         :value="item.dictValue ?? item.dictLabel"/>
+              <el-option v-if="newAppointment.medicalInsuranceType
+                && !appointmentFeeTypes.some((i) => (i.dictValue ?? i.dictLabel) === newAppointment.medicalInsuranceType)"
+                         :label="newAppointment.medicalInsuranceType" :value="newAppointment.medicalInsuranceType"/>
+            </el-select>
+          </el-form-item>
+          <el-form-item :required="isAppointmentInsuranceFee" label="医保卡号">
+            <el-input v-if="addMode === 'new'" v-model="newPatientForm.medicalInsuranceNo"
+                      :placeholder="isAppointmentInsuranceFee ? '请输入医保卡号' : '自费患者无需填写'"/>
+            <el-input v-else v-model="newAppointment.medicalInsuranceNo"
+                      :placeholder="isAppointmentInsuranceFee ? '请输入医保卡号' : '自费患者无需填写'"/>
+          </el-form-item>
+        </div>
+      </div>
     </el-form>
     <template #footer>
       <el-button v-perm="'opd:appointments:add'" :loading="addSubmitLoading" type="primary" @click="handleSubmit">
@@ -251,7 +245,7 @@ import {
 } from '@/lib/patientGender';
 import {feeShortLabel, isInsuranceFeeType} from '@/lib/payType';
 import {REVISIT_SOURCE, revisitNeedsNoSchedule} from '@/lib/revisitPolicy';
-import {isAllDept, settlementTypes, slotLabel} from '@/lib/appointments';
+import {isAllDept, slotLabel} from '@/lib/appointments';
 import AppointmentPatientSelect from '@/components/his/AppointmentPatientSelect.vue';
 
 const props = defineProps({
@@ -303,36 +297,18 @@ const newAppointment = ref({
   // 原病历是策略判定（间隔天数、同医生/同科室）的基准，缺它判不出价。
   revisitSource: null,
   revisitRecordId: null,
-  settlementType: 1,
   medicalInsuranceType: '',
   medicalInsuranceNo: '',
 });
-// 当前挂号所选患者的费别是否在统筹范围（联网块提示用；也决定结算方式出不出下拉）
+// 当前挂号所选患者的费别是否在统筹范围（决定医保卡号是否必填/可填）
 const isAppointmentInsuranceFee = computed(() => isInsuranceFeeType(newAppointment.value.medicalInsuranceType));
-// 用户是否在本单显式选过结算方式 —— 选过就不再被费别联动覆盖
-// （「医保患者本单改自费」是合法场景，不能被改费别/补医保号静默掀回联网）
-const settlementTouched = ref(false);
-// 兜底：费别不在统筹范围时本单只能全自费 —— 各联动路径（选人/改费别/切 tab）漏重置的话在这里拦住
-watch(isAppointmentInsuranceFee, (ins) => {
-  if (!ins && Number(newAppointment.value.settlementType) !== 1)
-    newAppointment.value.settlementType = 1;
-});
-// 录入新患者：费别/医保号实时同步到挂号单，并重算默认结算方式
-// （已存在患者走 handlePatientSelect；费别是结算方式的决定因素，录入时联动最自然）
+// 录入新患者：费别/医保号实时同步到挂号单（结算方式提交时由费别推导，不再单独选）
 watch(
     () => [newPatientForm.value.medicalInsuranceType, newPatientForm.value.medicalInsuranceNo],
     () => {
       if (addMode.value !== 'new') return;
       newAppointment.value.medicalInsuranceType = newPatientForm.value.medicalInsuranceType || '自费';
       newAppointment.value.medicalInsuranceNo = newPatientForm.value.medicalInsuranceNo || '';
-      // 结算方式跟随费别纠偏，但不覆盖用户显式选过的：非统筹只能全自费；
-      // 统筹范围且用户没选过 → 默认联网（医保号可后补，提交时校验）。
-      // 老逻辑「统筹+无号才联网」会在号还没填时把用户先选的联网静默改回自费。
-      if (!isInsuranceFeeType(newAppointment.value.medicalInsuranceType)) {
-        newAppointment.value.settlementType = 1;
-      } else if (!settlementTouched.value) {
-        newAppointment.value.settlementType = 2;
-      }
     },
 );
 /**
@@ -397,6 +373,16 @@ const loadMedicalInsuranceTypes = async () => {
     console.error('加载医保类型字典失败:', error);
   }
 };
+/**
+ * 挂号弹框费别只保留三项：自费 / 城镇职工医保 / 城乡居民医保。
+ * 字典里的「公费医疗」「商业医疗保险」在门诊挂号场景不常用，且商业保险不进统筹，
+ * 此处过滤掉避免窗口人员误选；已选患者主档若存了这两项，由模板兜底 option 回显。
+ */
+const APPOINTMENT_FEE_LABELS = ['自费', '城镇职工医保', '城乡居民医保'];
+const appointmentFeeTypes = computed(() =>
+    (medicalInsuranceTypes.value || []).filter((i) =>
+        APPOINTMENT_FEE_LABELS.includes(i.dictLabel) || APPOINTMENT_FEE_LABELS.includes(i.dictValue)),
+);
 // 患者搜索已抽成挂号专用组件 AppointmentPatientSelect（只展示挂号相关信息，比全局搜索窄一档）
 const handlePatientSelect = (patient) => {
   if (!patient)
@@ -409,10 +395,7 @@ const handlePatientSelect = (patient) => {
   // 费别以患者主档为准带出（费别不脱敏）；医保号列表接口不回明文，先置空再异步补真值
   newAppointment.value.medicalInsuranceType = patient.medicalInsuranceType || '自费';
   newAppointment.value.medicalInsuranceNo = patient.medicalInsuranceNo || '';
-  // 默认结算方式：已存在患者按费别即可 —— 费别医保类（职工/居民/公费）默认联网，
-  // 医保号由后端从主档读取（列表可能没带明文）；只是默认值，本单可改全自费。
-  newAppointment.value.settlementType = isInsuranceFeeType(newAppointment.value.medicalInsuranceType) ? 2 : 1;
-  settlementTouched.value = false;
+  // 结算方式不再单独选：提交时按费别推导（职工/居民→联网，其余→自费）
   // 医保号真值补齐：列表接口不回明文医保号（恒 null），而联网结算的提交校验要靠它判断
   // 「主档到底有没有号」。详情接口回明文，选中后取一次补上；用户已手动填过就不覆盖。
   getPatientDetail(patient.id).then((res) => {
@@ -503,9 +486,6 @@ const handleVisitTypeChange = () => {
 // ========== 新建患者 ==========
 /** 切换患者来源 tab；切到「录入新患者」时清空表单（避免上一单填的残留带过来） */
 const switchPatientMode = (mode) => {
-  // 换 tab = 换一轮：结算方式的「用户显式选过」标记归零，否则上一轮选过的联网/自费
-  // 会被这一轮的费别联动继承（改费别时该升级不升级、该保持不保持）
-  settlementTouched.value = false;
   addMode.value = mode;
   if (mode === 'new') {
     resetNewPatientForm();
@@ -735,11 +715,13 @@ const handleSubmit = async () => {
       registSource: 1,
       revisitSource: isRevisit.value ? newAppointment.value.revisitSource : undefined,
       revisitRecordId: isRevisit.value ? newAppointment.value.revisitRecordId : undefined,
-      settlementType: newAppointment.value.settlementType,
       medicalInsuranceType: newAppointment.value.medicalInsuranceType,
       medicalInsuranceNo: newAppointment.value.medicalInsuranceNo,
     });
     ElMessage.success(addMode.value === 'new' ? '患者建档并挂号成功' : '挂号成功');
+    if (data.insuranceWarning) {
+      ElMessage.warning(data.insuranceWarning);
+    }
     visible.value = false;
     const data = res.data || {};
     // 查询账单：金额用来弹缴费窗，状态用来决定**要不要**弹
@@ -787,7 +769,6 @@ const handleSubmit = async () => {
   }
 };
 const resetForm = () => {
-  settlementTouched.value = false;
   newAppointment.value = {
     patientId: null,
     patientName: '',
@@ -802,7 +783,6 @@ const resetForm = () => {
     visitType: 1,
     revisitSource: null,
     revisitRecordId: null,
-    settlementType: 1,
     medicalInsuranceType: '',
     medicalInsuranceNo: '',
   };

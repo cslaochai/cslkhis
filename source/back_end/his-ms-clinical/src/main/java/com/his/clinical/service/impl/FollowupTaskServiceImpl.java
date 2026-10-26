@@ -469,7 +469,6 @@ public class FollowupTaskServiceImpl extends ServiceImpl<BizFollowupTaskMapper, 
         appointDTO.setRevisitRecordId(dto.getRevisitRecordId());
         // 院内人员按计划代约 -> 挂号渠道 4（预约）：扣预约池，不吃当天现场号
         appointDTO.setRegistSource(AppointSourceEnum.APPOINTMENT.getCode());
-        appointDTO.setSettlementType(dto.getSettlementType() == null ? 1 : dto.getSettlementType());
         BizAppointInfoListVO appoint = appointFacadeService.addAppoint(appointDTO);
 
         task.setRevisitRecordId(dto.getRevisitRecordId());

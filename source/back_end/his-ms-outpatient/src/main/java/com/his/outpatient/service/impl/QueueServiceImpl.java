@@ -117,7 +117,6 @@ public class QueueServiceImpl extends ServiceImpl<QueueMapper, Queue> implements
             vo.setRegistNo(registInfo.getRegistNo());
             vo.setGender(registInfo.getGender());
             vo.setAge(registInfo.getAge());
-            vo.setSettlementType(registInfo.getSettlementType());
             vo.setVisitType(registInfo.getVisitType());
             vo.setRevisitRecordId(registInfo.getRevisitRecordId());
             vo.setMedicalInsuranceType(registInfo.getMedicalInsuranceType());
@@ -223,7 +222,6 @@ public class QueueServiceImpl extends ServiceImpl<QueueMapper, Queue> implements
             vo.setRegistNo(registInfo.getRegistNo());
             vo.setGender(registInfo.getGender());
             vo.setAge(registInfo.getAge());
-            vo.setSettlementType(registInfo.getSettlementType());
             vo.setVisitType(registInfo.getVisitType());
             // 批次E/E6：复诊带回原病历ID，医生站据此展示「复诊 · 关联原病历」
             vo.setRevisitRecordId(registInfo.getRevisitRecordId());

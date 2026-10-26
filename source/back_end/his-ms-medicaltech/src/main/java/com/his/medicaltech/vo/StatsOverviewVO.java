@@ -28,7 +28,7 @@ public class StatsOverviewVO {
     private Long opFirstVisitCount;
     /** 复诊数（visit_type=2） */
     private Long opRevisitCount;
-    /** 医保结算门诊数（settlement_type<>1） */
+    /** 医保类费别门诊数（职工/居民/公费，按费别统计） */
     private Long opInsuranceCount;
     /** 门诊日趋势：d=MM-dd, n=门诊量, cancels=退号数 */
     private List<OpTrendRow> opTrend;
@@ -38,8 +38,6 @@ public class StatsOverviewVO {
     private List<CodeCountRow> opTypeDist;
     /** 挂号来源构成（regist_source） */
     private List<CodeCountRow> opSourceDist;
-    /** 结算方式构成（settlement_type） */
-    private List<CodeCountRow> opSettleDist;
     /** 年龄段构成（按年龄字典序输出，图例顺序前端定） */
     private List<NameCountRow> opAgeDist;
 

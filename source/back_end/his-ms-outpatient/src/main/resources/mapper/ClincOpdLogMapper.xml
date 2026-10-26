@@ -53,9 +53,6 @@
         <if test="q.registType != null">
             AND r.regist_type = #{q.registType}
         </if>
-        <if test="q.settlementType != null">
-            AND r.settlement_type = #{q.settlementType}
-        </if>
         <if test="q.revisitType != null">
             AND r.visit_type = #{q.revisitType}
         </if>
@@ -85,7 +82,7 @@
         r.patient_id, r.patient_no, r.patient_name, r.gender, r.age,
         r.dept_id, r.dept_name, r.room_id, r.room_name, r.doctor_id, r.doctor_name,
         r.regist_type, r.regist_source, r.slot_time,
-        r.settlement_type, r.medical_insurance_type,
+        r.medical_insurance_type,
         <!-- 列名对齐用别名：出参字段仍是 revisitType，取值列是 visit_type（同语义两列只认这列） -->
         r.visit_type AS revisit_type,
         q.id AS queue_id, q.queue_no, q.queue_status, q.queue_type,

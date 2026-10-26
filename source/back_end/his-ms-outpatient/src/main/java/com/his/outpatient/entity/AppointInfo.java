@@ -1,5 +1,6 @@
 package com.his.outpatient.entity;
 
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableLogic;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.fasterxml.jackson.annotation.JsonFormat;
@@ -132,11 +133,6 @@ public class AppointInfo extends BaseEntity {
     private LocalDate visitDate;
 
     /**
-     * 本单结算方式（与收费账单 settlement_mode 同口径）：1-全自费 2-医保联网
-     */
-    private Integer settlementType;
-
-    /**
      * 费别/参保类型快照（自费/城镇职工医保/城乡居民医保/公费医疗/商业医疗保险）
      */
     private String medicalInsuranceType;
@@ -195,6 +191,12 @@ public class AppointInfo extends BaseEntity {
      * 账单号
      */
     private String billNo;
+
+    /**
+     * 非持久化：挂号时医保自动结算失败降级自费的提示（createRegistCharge 返回时带上）
+     */
+    @TableField(exist = false)
+    private String insuranceWarning;
 
     /**
      * 逻辑删除标志（0 未删除 1 已删除）

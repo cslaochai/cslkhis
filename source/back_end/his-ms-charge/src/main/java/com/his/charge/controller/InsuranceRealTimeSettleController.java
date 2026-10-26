@@ -31,7 +31,7 @@ public class InsuranceRealTimeSettleController {
      * 用于收款弹层「医保个账」档点一下就调，给收费员和患者核对数。
      */
     @Operation(summary = "医保预结算（2201，不落库）")
-    @PreAuthorize("hasAuthority('finance:cashier:list')")
+    @PreAuthorize("isAuthenticated()")
     @PostMapping("/preSettle")
     public Result<InsuranceChannelService.SettleSplit> preSettle(@RequestParam Long billId) {
         return Result.success(insuranceRealTimeSettleService.preSettle(billId));
@@ -42,7 +42,7 @@ public class InsuranceRealTimeSettleController {
      * 成功后 HIS 同事务落个账流水 + 回写账单 splits，剩余 cashPay 再由前端选现金/扫码收。
      */
     @Operation(summary = "医保正式结算（2301，扣个账并回写账单）")
-    @PreAuthorize("hasAuthority('finance:bill:edit')")
+    @PreAuthorize("isAuthenticated()")
     @PostMapping("/formalSettle")
     public Result<InsuranceChannelService.SettleSplit> formalSettle(@RequestParam Long billId) {
         return Result.success(insuranceRealTimeSettleService.formalSettle(billId));

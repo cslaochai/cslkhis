@@ -135,11 +135,6 @@ public class BizAppointInfoListVO {
     private Integer scheduleType;
 
     /**
-     * 本单结算方式（1-全自费 2-医保联网）
-     */
-    private Integer settlementType;
-
-    /**
      * 费别/参保类型（自费/城镇职工医保/城乡居民医保/公费医疗/商业医疗保险）
      */
     private String medicalInsuranceType;
@@ -203,6 +198,11 @@ public class BizAppointInfoListVO {
      * 账单号
      */
     private String billNo;
+
+    /**
+     * 医保自动结算失败降级自费的提示（挂号接口返回，前端弹警告框）
+     */
+    private String insuranceWarning;
 
     /**
      * 队列记录ID（未签到时为空）

@@ -48,7 +48,8 @@ public interface StatsMapper {
 
     @Select("SELECT COUNT(*) FROM biz_appoint_info "
             + "WHERE del_flag = 0 AND visit_date BETWEEN #{start} AND #{end} AND regist_status <> 5 "
-            + "AND settlement_type IS NOT NULL AND settlement_type <> 1")
+            + "AND medical_insurance_type IS NOT NULL AND medical_insurance_type <> '自费' "
+            + "AND medical_insurance_type NOT LIKE '%商业%'")
     Long countInsurance(@Param("start") String start, @Param("end") String end);
 
     @Select("SELECT DATE_FORMAT(visit_date, '%m-%d') AS d, "
@@ -72,11 +73,6 @@ public interface StatsMapper {
             + "WHERE del_flag = 0 AND visit_date BETWEEN #{start} AND #{end} AND regist_status <> 5 "
             + "GROUP BY code ORDER BY code")
     List<StatsOverviewVO.CodeCountRow> opSourceDist(@Param("start") String start, @Param("end") String end);
-
-    @Select("SELECT settlement_type AS code, COUNT(*) AS cnt FROM biz_appoint_info "
-            + "WHERE del_flag = 0 AND visit_date BETWEEN #{start} AND #{end} AND regist_status <> 5 "
-            + "GROUP BY code ORDER BY code")
-    List<StatsOverviewVO.CodeCountRow> opSettleDist(@Param("start") String start, @Param("end") String end);
 
     // 住院（入院记录）
 

@@ -34,6 +34,7 @@ import com.his.charge.service.FeeRecordService;
 import com.his.charge.service.FundAccountService;
 import com.his.charge.service.InpatientAccountService;
 import com.his.charge.service.InsurancePolicyService;
+import com.his.charge.service.InsuranceRealTimeSettleService;
 import com.his.charge.service.PaymentService;
 import com.his.charge.service.SettlementBillService;
 import com.his.charge.service.ArrearsControlGateService;
@@ -77,6 +78,8 @@ public class ChargeFacadeServiceImpl implements ChargeFacadeService {
     private final BizSettlementBillItemMapper bizSettlementBillItemMapper;
 
     private final BizInsuranceSettlementMapper bizInsuranceSettlementMapper;
+
+    private final InsuranceRealTimeSettleService insuranceRealTimeSettleService;
 
     // ---------- L1 记账 ----------
 
@@ -364,7 +367,46 @@ public class ChargeFacadeServiceImpl implements ChargeFacadeService {
         BizSettlementBill bill = settlementBillService.settle(settleDTO);
         log.info("[挂号费] 记账出账完成 registNo={} 账单={} 应缴 ¥{}",
                 command.getRegistNo(), bill.getBillNo(), bill.getPayableAmount().toPlainString());
-        return toBrief(bill);
+
+        // 医保患者（settlementMode=2）：挂号时自动调 2301 实时结算，成功则 splits 已回写账单；
+        // 失败重试 1 次，再失败降级自费（settlementMode 改回 1、splits 清零），提示患者到窗口处理。
+        String insuranceWarning = null;
+        if (bill.getSettlementMode() != null && bill.getSettlementMode() == 2) {
+            try {
+                insuranceRealTimeSettleService.formalSettle(bill.getId());
+                log.info("[挂号费] 医保自动结算成功 billNo={}", bill.getBillNo());
+            } catch (Exception e1) {
+                log.warn("[挂号费] 医保自动结算首次失败 billNo={} err={}，1秒后重试", bill.getBillNo(), e1.getMessage());
+                try {
+                    Thread.sleep(1000L);
+                    insuranceRealTimeSettleService.formalSettle(bill.getId());
+                    log.info("[挂号费] 医保自动结算重试成功 billNo={}", bill.getBillNo());
+                } catch (Exception e2) {
+                    log.error("[挂号费] 医保自动结算重试仍失败 billNo={} err={}，降级按自费出账", bill.getBillNo(), e2.getMessage());
+                    // 降级：把账单改回全自费
+                    bill.setSettlementMode(1);
+                    bill.setPoolAmount(BigDecimal.ZERO);
+                    bill.setAccountAmount(BigDecimal.ZERO);
+                    bill.setSelfAmount(NumUtil.orZero(bill.getTotalAmount()).subtract(NumUtil.orZero(bill.getDiscountAmount())));
+                    bill.setPayableAmount(NumUtil.orZero(bill.getTotalAmount()).subtract(NumUtil.orZero(bill.getDiscountAmount())));
+                    bizSettlementBillMapper.updateById(bill);
+                    // 行级 splits 也清零
+                    List<BizSettlementBillItem> items = bizSettlementBillItemMapper.selectList(
+                            new LambdaQueryWrapper<BizSettlementBillItem>().eq(BizSettlementBillItem::getBillId, bill.getId()));
+                    for (BizSettlementBillItem row : items) {
+                        row.setPoolAmount(BigDecimal.ZERO);
+                        row.setAccountAmount(BigDecimal.ZERO);
+                        row.setSelfAmount(NumUtil.orZero(row.getAmount()).subtract(NumUtil.orZero(row.getDiscountAmount())));
+                        bizSettlementBillItemMapper.updateById(row);
+                    }
+                    insuranceWarning = "医保实时结算失败，已按全自费出账，请患者到收费窗口处理统筹报销";
+                }
+            }
+        }
+
+        BillBriefVO vo = toBrief(bill);
+        vo.setInsuranceWarning(insuranceWarning);
+        return vo;
     }
 
     @Override

@@ -33,13 +33,6 @@ public class AppointUpsertDTO {
     private Integer visitType;
 
     /**
-     * 本单结算方式 1-全自费 2-医保联网。
-     */
-    @NotNull(message = "结算方式不能为空")
-    @AllowedValues(values = {"1", "2"}, message = "结算方式取值不合法")
-    private Integer settlementType;
-
-    /**
      * 挂号来源（1-窗口挂号 2-自助机挂号 3-网上挂号 4-预约挂号；必填）
      */
     @NotNull(message = "请选择挂号来源")

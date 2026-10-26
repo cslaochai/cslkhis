@@ -460,6 +460,7 @@ public class BizClinicSourceTemplateServiceImpl extends ServiceImpl<BizClinicSou
         int created = 0;
         int skippedExist = 0;
         int skippedOverlap = 0;
+        int skippedRoom = 0;
         int skippedParity = 0;
         int skippedExpired = 0;
         int skippedPast = 0;
@@ -493,6 +494,11 @@ public class BizClinicSourceTemplateServiceImpl extends ServiceImpl<BizClinicSou
                 skippedOverlap++;
                 continue;
             }
+            // 诊室也是资源：同诊室同日同时段已有未停诊排班就跳过（一医一患一诊室）
+            if (hasRoomConflict(existing, tpl.getRoomId(), date, shift.getStartTime(), shift.getEndTime())) {
+                skippedRoom++;
+                continue;
+            }
             BizClinicSource s = buildSchedule(tpl, shift, date);
             try {
                 // 出勤事实与手工排班走同一条派生口径；本方法不带事务，一条模板配错只跳过这一条
@@ -522,13 +528,16 @@ public class BizClinicSourceTemplateServiceImpl extends ServiceImpl<BizClinicSou
             created++;
         }
 
-        int skipped = skippedExist + skippedOverlap + skippedParity + skippedExpired + skippedPast + skippedInvalid;
+        int skipped = skippedExist + skippedOverlap + skippedRoom + skippedParity + skippedExpired + skippedPast + skippedInvalid;
         StringBuilder msg = new StringBuilder("按模板生成 ")
                 .append(monday).append(" ~ ").append(sunday)
                 .append(" 排班完成：新增 ").append(created).append(" 条");
         if (skipped > 0) {
             msg.append("，跳过 ").append(skipped).append(" 条（")
                     .append(skippedExist).append(" 条已存在、").append(skippedOverlap).append(" 条时间冲突");
+            if (skippedRoom > 0) {
+                msg.append("、").append(skippedRoom).append(" 条诊室被占");
+            }
             if (skippedParity > 0) {
                 msg.append("、").append(skippedParity).append(" 条单双周不匹配");
             }
@@ -717,6 +726,23 @@ public class BizClinicSourceTemplateServiceImpl extends ServiceImpl<BizClinicSou
         return list.stream().anyMatch(s ->
                 Objects.equals(s.getDoctorId(), doctorId)
                         && date.equals(s.getScheduleDate())
+                        && TextUtil.hasText(s.getStartTime()) && TextUtil.hasText(s.getEndTime())
+                        && s.getStartTime().compareTo(end) < 0
+                        && start.compareTo(s.getEndTime()) < 0);
+    }
+
+    /**
+     * 诊室占用条件：同诊室同日同时段已有未停诊的排班。
+     * 行业口径（一医一患一诊室）：一个出诊单元内一间诊室只能有一名出诊医师，全天班与上午班时间交叉即算占用。
+     */
+    private boolean hasRoomConflict(List<BizClinicSource> list, Long roomId, LocalDate date, String start, String end) {
+        if (roomId == null || !TextUtil.hasText(start) || !TextUtil.hasText(end)) {
+            return false;
+        }
+        return list.stream().anyMatch(s ->
+                Objects.equals(s.getRoomId(), roomId)
+                        && date.equals(s.getScheduleDate())
+                        && !ScheduleStatusEnum.stopped(s.getStatus())
                         && TextUtil.hasText(s.getStartTime()) && TextUtil.hasText(s.getEndTime())
                         && s.getStartTime().compareTo(end) < 0
                         && start.compareTo(s.getEndTime()) < 0);

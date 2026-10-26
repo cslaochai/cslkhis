@@ -25,4 +25,8 @@ public class BillBriefVO {
      * 净已收（收款合计 - 退款合计）
      */
     private BigDecimal paidAmount;
+    /**
+     * 医保自动结算失败降级自费时给前端的提示（空=医保已成功或本来就是自费）
+     */
+    private String insuranceWarning;
 }

@@ -22,8 +22,6 @@ import com.baomidou.mybatisplus.annotation.TableLogic;
 @TableName("biz_yb_report")
 public class BizInsuranceReport extends BaseEntity {
 
-
-
     /**
      * 医保结算清单ID
      */

@@ -143,6 +143,7 @@ public class BizClinicSourceServiceImpl extends ServiceImpl<BizClinicSourceMappe
         applyStaffType(schedule);
         checkRoomRequired(schedule);
         checkScheduleOverlap(schedule, null);
+        checkRoomOccupied(schedule, null, schedule.getStatus());
 
         initNewScheduleRow(schedule);
         boolean ok = clinicSourceMapper.insert(schedule) > 0;
@@ -262,6 +263,9 @@ public class BizClinicSourceServiceImpl extends ServiceImpl<BizClinicSourceMappe
         applyStaffType(schedule);
         checkRoomRequired(schedule);
         checkScheduleOverlap(schedule, schedule.getId());
+        // 更新传部分字段时 status 可为空（MP 跳列=保留原值），占用判断按兜底后的生效状态算
+        checkRoomOccupied(schedule, schedule.getId(),
+                schedule.getStatus() != null ? schedule.getStatus() : existing.getStatus());
 
         int delta = schedule.getTotalSource() - existing.getTotalSource();
         schedule.setAvailableSource(existing.getAvailableSource() + delta);
@@ -790,6 +794,42 @@ public class BizClinicSourceServiceImpl extends ServiceImpl<BizClinicSourceMappe
         for (BizClinicSource s : existing) {
             if (overlaps(s.getStartTime(), s.getEndTime(), schedule.getStartTime(), schedule.getEndTime())) {
                 throw new BusinessException("该医生在此时间段已有排班，时间冲突");
+            }
+        }
+    }
+
+    /**
+     * 校验同一诊室同一天同一时段只排一名医师。
+     *
+     * <p>行业口径（卫宁等主流 HIS +「一医一患一诊室」）：诊室是参与冲突检测的资源，
+     * 一个出诊单元内一间诊室只能分给一名出诊医师。医生维度的冲突由 {@link #checkScheduleOverlap} 管
+     * （不同医生不拦），这里是空间维度：全天班(08:00-17:00) 与上午班(08:00-12:00) 时间交叉即判占用。
+     * 停诊的班不占诊室（自己停诊或撞上停诊行都放行）。
+     */
+    private void checkRoomOccupied(BizClinicSource schedule, Long excludeId, Integer effectiveStatus) {
+        if (schedule.getRoomId() == null || schedule.getScheduleDate() == null
+                || !TextUtil.hasText(schedule.getStartTime()) || !TextUtil.hasText(schedule.getEndTime())) {
+            return;
+        }
+        if (ScheduleStatusEnum.stopped(effectiveStatus)) {
+            return;
+        }
+        LambdaQueryWrapper<BizClinicSource> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(BizClinicSource::getRoomId, schedule.getRoomId())
+                .eq(BizClinicSource::getScheduleDate, schedule.getScheduleDate())
+                .ne(excludeId != null, BizClinicSource::getId, excludeId);
+        List<BizClinicSource> existing = clinicSourceMapper.selectList(wrapper);
+        for (BizClinicSource s : existing) {
+            if (ScheduleStatusEnum.stopped(s.getStatus())) {
+                continue;
+            }
+            if (overlaps(s.getStartTime(), s.getEndTime(), schedule.getStartTime(), schedule.getEndTime())) {
+                String roomLabel = TextUtil.hasText(s.getRoomName())
+                        ? s.getRoomName() : String.valueOf(s.getRoomId());
+                throw new BusinessException("诊室「" + roomLabel + "」"
+                        + schedule.getScheduleDate() + " " + schedule.getStartTime() + "-" + schedule.getEndTime()
+                        + " 已被「" + s.getDoctorName() + "」的 " + s.getStartTime() + "-" + s.getEndTime()
+                        + " 排班占用：一间诊室同一时段只能有一名出诊医师");
             }
         }
     }

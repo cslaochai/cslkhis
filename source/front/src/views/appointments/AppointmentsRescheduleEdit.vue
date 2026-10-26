@@ -84,11 +84,10 @@ const rescheduleForm = ref({
   scheduleId: null,
   // 新号源下的时间段（可选）：传了按段迁移（还旧段扣新段），不传只迁移主表号源
   slotId: null,
-  // 后端 appointUpsert 是新增/修改共用一个 DTO，patientId/visitType/settlementType 是必填项：
-  // 改约只换号源、这三个值原样带回（修改分支只读 scheduleId/slotId/visitType，不会改写它们）
+  // 后端 appointUpsert 是新增/修改共用一个 DTO，patientId/visitType 是必填项：
+  // 改约只换号源、这两个值原样带回（修改分支只读 scheduleId/slotId/visitType，不会改写它们）
   patientId: null,
   visitType: null,
-  settlementType: null,
   // ↓ 仅展示用（不提交）：打开弹窗时把这条预约**现在**挂的号源/时间段带出来，
   //   否则改约的人对着一个空表单根本不知道自己正在从哪改到哪
   currentSourceText: '',
@@ -118,7 +117,6 @@ watch(visible, (open) => {
     slotId: r.slotId || null,
     patientId: r.patientId ?? null,
     visitType: r.visitType ?? null,
-    settlementType: r.settlementType ?? null,
     // 当前号源 = 挂号挂的那条排班（主页面从 deskScheduleMap 取好传进 schedule）；时间段优先用挂号
     // 自带的段快照（精确到半小时档），没有段快照（历史挂号）就只展示排班窗口
     currentSourceText: (() => {
@@ -185,7 +183,6 @@ const handleConfirmReschedule = async () => {
       // 改约走的是挂号的同一个 DTO（AppointUpsertDTO），registSource 已必填；
       // 改约不改来源，传「1-窗口挂号」与原默认口径一致（该字段在改约分支后端不落库）
       registSource: 1,
-      settlementType: rescheduleForm.value.settlementType,
     });
     visible.value = false;
     ElMessage.success('改约成功');

@@ -168,7 +168,7 @@ public class InsuranceRealTimeSettleServiceImpl implements InsuranceRealTimeSett
         txn.setEncounterId(bill.getEncounterId());
         txn.setDirection(PayDirectionEnum.CHARGE.getCode());
         txn.setPayMethod(PaymentMethodEnum.INSURANCE_ACCOUNT.getCode());
-        txn.setAmount(split.getPersonalAccount());
+        txn.setAmount(NumUtil.orZero(split.getPersonalAccount()));
         txn.setTxnStatus(PayTxnStatusEnum.SUCCESS.getCode());
         txn.setSourceType(TxnSourceEnum.CASHIER.getCode());
         txn.setChannelTxnNo(split.getReceiptNo());
@@ -199,16 +199,19 @@ public class InsuranceRealTimeSettleServiceImpl implements InsuranceRealTimeSett
         BigDecimal leftPool = NumUtil.orZero(split.getInsurancePay());
         BigDecimal leftAccount = NumUtil.orZero(split.getPersonalAccount());
         BigDecimal leftSelf = NumUtil.orZero(split.getSelfPay());
+        BigDecimal totalPool = leftPool;
+        BigDecimal totalAccount = leftAccount;
+        BigDecimal totalSelf = leftSelf;
         for (int i = 0; i < items.size(); i++) {
             BizSettlementBillItem row = items.get(i);
             BigDecimal net = NetAmount.net(row);
             BigDecimal ratio = net.divide(netTotal, 6, RoundingMode.HALF_UP);
             BigDecimal pool = i == items.size() - 1 ? leftPool
-                    : NumUtil.scale(split.getInsurancePay().multiply(ratio), AMOUNT_SCALE);
+                    : NumUtil.scale(totalPool.multiply(ratio), AMOUNT_SCALE);
             BigDecimal account = i == items.size() - 1 ? leftAccount
-                    : NumUtil.scale(split.getPersonalAccount().multiply(ratio), AMOUNT_SCALE);
+                    : NumUtil.scale(totalAccount.multiply(ratio), AMOUNT_SCALE);
             BigDecimal self = i == items.size() - 1 ? leftSelf
-                    : NumUtil.scale(split.getSelfPay().multiply(ratio), AMOUNT_SCALE);
+                    : NumUtil.scale(totalSelf.multiply(ratio), AMOUNT_SCALE);
             leftPool = leftPool.subtract(pool);
             leftAccount = leftAccount.subtract(account);
             leftSelf = leftSelf.subtract(self);
@@ -224,7 +227,7 @@ public class InsuranceRealTimeSettleServiceImpl implements InsuranceRealTimeSett
         BigDecimal account = NumUtil.orZero(split.getPersonalAccount());
         bill.setPoolAmount(pool);
         bill.setAccountAmount(account);
-        bill.setSelfAmount(NumUtil.scale(split.getSelfPay(), AMOUNT_SCALE));
+        bill.setSelfAmount(NumUtil.orZero(split.getSelfPay()));
         bill.setPayableAmount(NumUtil.scale(total.subtract(discount).subtract(pool).subtract(account), AMOUNT_SCALE));
         billMapper.updateById(bill);
     }
@@ -240,6 +243,14 @@ public class InsuranceRealTimeSettleServiceImpl implements InsuranceRealTimeSett
         BillStatusEnum status = BillStatusEnum.fromCode(bill.getBillStatus());
         if (status == BillStatusEnum.VOIDED) {
             throw new BusinessException("账单 " + bill.getBillNo() + " 已作废，不能做医保结算");
+        }
+        // 校验：只有医保联网结算方式的账单才调 2201/2301；自费/公费医疗/离休走别的通道
+        if (bill.getSettlementMode() == null || bill.getSettlementMode() != 2) {
+            throw new BusinessException("账单 " + bill.getBillNo() + " 不是医保结算方式，不能调医保实时结算");
+        }
+        String type = bill.getInsuranceType();
+        if (TextUtil.hasText(type) && type.contains("自费")) {
+            throw new BusinessException("账单 " + bill.getBillNo() + " 费别为自费，不能调医保实时结算");
         }
         return bill;
     }

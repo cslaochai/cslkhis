@@ -1,0 +1,30 @@
+-- =====================================================================
+-- 301 删除挂号单冗余字段 settlement_type
+-- ---------------------------------------------------------------------
+-- 背景：
+--   biz_appoint_info.settlement_type（1-全自费 2-医保联网）是 258 号脚本
+--   留下的两档字段。排查发现它完全冗余：
+--     1. 出账时它透传给收费账单当总开关，但收费侧 resolveInsurance 内部
+--        已经会按患者主档费别+医保号自动判断走不走医保通道；
+--     2. 费别（medical_insurance_type）本身已经决定了走不走医保
+--        （职工/居民/公费 + 有医保号 → 联网，否则自费）；
+--     3. 窗口在挂号时单独选「结算方式」没有业务意义——医保患者偶尔自费
+--        的场景，收费台结算时自然会按自费原价收（参保核验不过即降级）。
+--
+-- 改动：
+--   1. 后端 AppointInfo 实体 / AppointUpsertDTO / 各列表 VO 删除 settlementType 字段；
+--   2. 出账时按患者费别+医保号现算 settlementMode 透传给收费账单；
+--   3. 统计 SQL 改为按费别口径统计医保类门诊数，删除「结算方式构成」饼图；
+--   4. 本脚本 DROP COLUMN。
+--
+-- 不动：
+--   biz_settlement_bill.settlement_mode（账单结果，两档）保留；
+--   sys_insurance_policy.settlement_type（政策险种键 2/3/4）保留；
+--   biz_insurance_settlement.settlement_type（医保结算记录）保留。
+--
+-- 执行顺序：
+--   先发布已删字段的后端代码（实体/DTO/VO 不再引用 settlement_type），
+--   再执行本脚本，否则旧进程 SELECT settlement_type 会报 Unknown column。
+-- =====================================================================
+
+ALTER TABLE biz_appoint_info DROP COLUMN settlement_type;

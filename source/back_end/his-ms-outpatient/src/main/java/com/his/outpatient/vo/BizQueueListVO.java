@@ -179,11 +179,6 @@ public class BizQueueListVO {
     private Integer registStatus;
 
     /**
-     * 本单结算方式（1-全自费 2-医保联网）
-     */
-    private Integer settlementType;
-
-    /**
      * 医保类型
      */
     private String medicalInsuranceType;

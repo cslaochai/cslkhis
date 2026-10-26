@@ -32,8 +32,10 @@
             </el-select>
             <span class="text-sm font-medium text-slate-700">医生</span>
             <el-select v-model="deskDoctorId" class="!w-52" clearable data-testid="desk-doctor-select"
+                       :disabled="isAllDept(deskDeptId)"
+                       :placeholder="isAllDept(deskDeptId) ? '请先选择科室' : '全部医生'"
                        filterable
-                       placeholder="全部医生" @change="handleDeskDoctorChange">
+                       @change="handleDeskDoctorChange">
               <el-option v-for="doc in deskDoctorOptions" :key="doc.id" :label="doc.doctorName" :value="doc.id">
                 <span>{{ doc.doctorName }}</span>
                 <span v-if="isExpertDoctor(doc.id)"
@@ -177,7 +179,7 @@
               <div ref="deskScrollEl" v-loading="deskLoading" :style="{height: deskMaxH + 'px'}"
                    class="overflow-auto rounded border border-slate-200"
                    data-testid="desk-scroll">
-                <!-- 空态要说清「是没排班还是筛掉了」：默认落在我的科室，门诊部/管理员选「全部科室」即可看全院 -->
+                <!-- 空态要说清「是没排班还是筛掉了」：默认落在第一个科室，选「全部科室」即可看全院 -->
                 <div v-if="!deskLoading && !deskColumns.length"
                      class="flex flex-col items-center justify-center gap-1 py-12 text-center"
                      data-testid="desk-empty">
@@ -187,7 +189,7 @@
                     }}
                   </p>
                   <p class="text-sm text-slate-400">
-                    看板默认只显示「我的科室」，把上方「科室」选成「全部科室」即可查看全院；也可以把日期翻到有排班的那天。
+                    看板默认显示第一个科室，把上方「科室」清空选成「全部科室」即可查看全院；也可以把日期翻到有排班的那天。
                   </p>
                 </div>
                 <table v-else :class="deskViewMode === 'day' ? 'w-max min-w-[600px]' : 'w-full min-w-[960px]'"
@@ -520,8 +522,8 @@
               <el-table-column label="结算方式" width="120">
                 <template #default="{ row }">
               <span
-                  :class="['text-xs font-medium', settlementTypes.find(t => t.value === row.settlementType)?.color || 'text-slate-600']">
-                {{ settlementLabel(row.settlementType) }}
+                  :class="['text-xs font-medium', isInsuranceFeeType(row.medicalInsuranceType) ? 'text-teal-600' : 'text-slate-600']">
+                {{ isInsuranceFeeType(row.medicalInsuranceType) ? '医保联网' : '全自费' }}
               </span>
                 </template>
               </el-table-column>
@@ -650,11 +652,12 @@ import {getBillDetailById} from '@/api/settlementBill';
 import {patientAgeText, patientGenderText} from '@/lib/patientGender';
 import PatientSelect from '@/components/his/PatientSelect.vue';
 import QrPayDialog from '@/components/his/QrPayDialog.vue';
-import {getDepartmentSelectList, getDictDataList, getEmployeeList, getUserInfo} from '@/api/system';
+import {getDepartmentSelectList, getDictDataList, getEmployeeList} from '@/api/system';
 import {DICT_TYPE} from '@/lib/dict-cache';
 import {VISIT_TYPE} from '@/lib/dict';
 import {REGIST_TYPE, revisitTypeOf, statusOf} from '@/lib/statusColor';
-import {isAllDept, isRegistPaid, settlementLabel, settlementTypes} from '@/lib/appointments';
+import {isAllDept, isRegistPaid} from '@/lib/appointments';
+import {isInsuranceFeeType} from '@/lib/payType';
 import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination';
 import AppointmentsAdd from './AppointmentsAdd.vue';
 import AppointmentsEdit from './AppointmentsEdit.vue';
@@ -1023,23 +1026,14 @@ const loadDepartments = async () => {
     console.error('加载科室列表失败:', error);
   }
 };
-const myDeptId = ref(null);
-const applyDefaultDept = (deptId) => {
-  const hit = departments.value.find(d => String(d.id) === String(deptId));
-  if (!hit)
-    return;
-  myDeptId.value = hit.id;
+/**
+ * 默认科室 = 科室下拉里的**第一个科室**（2026-10-26 需求）：
+ * 看板打开就落在具体科室上，而不是「全部科室」—— 挂号员日常只挂本科室，全院视角是例外。
+ * 医生下拉与科室联动：没选具体科室（清空成「全部科室」）时医生下拉禁用（见模板 isAllDept 判定）。
+ */
+const applyDefaultDept = () => {
   if (deskDeptId.value == null)
-    deskDeptId.value = hit.id;
-};
-const loadDefaultDept = async () => {
-  try {
-    const res = await getUserInfo();
-    applyDefaultDept(res.data?.deptId);
-  } catch (error) {
-    // 取不到就保持「全部科室」，不阻断看板（默认值不该成为故障点）
-    console.error('加载当前用户科室失败，看板默认「全部科室」:', error);
-  }
+    deskDeptId.value = departments.value[0]?.id ?? null;
 };
 const activeTab = ref('desk');
 /** 弹框里的「格子」：周视图下 = 某医生 × 某天（2026-09-22 起周视图的行就是医生，不再是班次） */
@@ -2009,8 +2003,8 @@ const deskCardDoctorLine = (r) => {
  * 就诊号在第一行年龄后面，所以本行只剩非自费的结算信息。
  */
 const deskCardMetaLine = (r) => {
-  if (Number(r?.settlementType) !== 1)
-    return settlementLabel(r?.settlementType);
+  if (isInsuranceFeeType(r?.medicalInsuranceType))
+    return '医保联网';
   return '';
 };
 /**
@@ -2237,9 +2231,9 @@ onMounted(async () => {
   // 列表 + 统计：2 次请求（原来是 listPage 7 次：1 次列表 + 6 次「读 total」）
   reloadListAndStats();
   loadRevisitSourceDict();
-  // 顺序有讲究：科室列表先到（默认科室要命中下拉里真实存在的 option），再取当前用户科室，最后才拉看板
+  // 顺序有讲究：科室列表先到（默认科室要命中下拉里真实存在的 option），再落默认科室，最后才拉看板
   await loadDepartments();
-  await loadDefaultDept();
+  applyDefaultDept();
   // 默认 tab 是「预约看板」，但 @tab-change 只在用户点击时触发 → 首屏必须自己拉一次
   if (activeTab.value === 'desk') {
     loadDesk();

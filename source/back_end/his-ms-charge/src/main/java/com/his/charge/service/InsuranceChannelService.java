@@ -53,15 +53,25 @@ public interface InsuranceChannelService {
     @NoArgsConstructor
     @AllArgsConstructor
     public static class InsuredStatus implements Serializable {
-        /** 参保库是否查到此卡号 */
+        /**
+         * 参保库是否查到此卡号
+         */
         private boolean found;
-        /** 参保状态是否正常（1-正常参保） */
+        /**
+         * 参保状态是否正常（1-正常参保）
+         */
         private boolean active;
-        /** 险种（城镇职工医保/城乡居民医保/公费医疗） */
+        /**
+         * 险种（城镇职工医保/城乡居民医保/公费医疗）
+         */
         private String insuranceType;
-        /** 参保人姓名 */
+        /**
+         * 参保人姓名
+         */
         private String name;
-        /** 异常说明（未参保/停保/医保平台不可用时的原因） */
+        /**
+         * 异常说明（未参保/停保/医保平台不可用时的原因）
+         */
         private String errMsg;
     }
 
@@ -123,7 +133,9 @@ public interface InsuranceChannelService {
     public static class SettleRequest implements Serializable {
         private String tradeNo;
         private String billNo;
-        /** 就诊类型：1-门诊 2-住院 */
+        /**
+         * 就诊类型：1-门诊 2-住院
+         */
         private String encounterType;
         private String idCard;
         private String insuranceNo;
@@ -137,9 +149,13 @@ public interface InsuranceChannelService {
     public static class FeeItem implements Serializable {
         private String ybCode;
         private String name;
-        /** 目录支付类别：甲 / 乙 / 丙 */
+        /**
+         * 目录支付类别：甲 / 乙 / 丙
+         */
         private String payClass;
-        /** 乙类先行自付比例（0~1） */
+        /**
+         * 乙类先行自付比例（0~1）
+         */
         private BigDecimal selfRatio;
         private BigDecimal price;
         private Integer qty;
@@ -155,21 +171,33 @@ public interface InsuranceChannelService {
     public static class SettleSplit implements Serializable {
         private Integer infcode;
         private String tradeNo;
-        /** 医保结算单号（YBZ+yyyyMMdd+序列），2301 成功时回 */
+        /**
+         * 医保结算单号（YBZ+yyyyMMdd+序列），2301 成功时回
+         */
         private String receiptNo;
         private String insuranceType;
         private String name;
         private BigDecimal total;
-        /** 统筹支付（医保基金付） */
+        /**
+         * 统筹支付（医保基金付）
+         */
         private BigDecimal insurancePay;
-        /** 个账支付（从参保人个人账户扣） */
+        /**
+         * 个账支付（从参保人个人账户扣）
+         */
         private BigDecimal personalAccount;
-        /** 现金支付（患者当场掏） */
+        /**
+         * 现金支付（患者当场掏）
+         */
         private BigDecimal cashPay;
-        /** 个人自付总额（= 个账 + 现金） */
+        /**
+         * 个人自付总额（= 个账 + 现金）
+         */
         private BigDecimal selfPay;
         private BigDecimal deductible;
-        /** 个账扣后余额 */
+        /**
+         * 个账扣后余额
+         */
         private BigDecimal accountBalanceAfter;
         private String warnMsg;
         private String errMsg;

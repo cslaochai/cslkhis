@@ -289,8 +289,16 @@ const isPaid = computed(() => Number(payStatus.value) === PAY_STATUS_PAID);
 const isClosed = computed(() => Number(payStatus.value) === PAY_STATUS_CLOSED);
 const isCash = computed(() => method.value === CASH_METHOD);
 const isInsurance = computed(() => method.value === INSURANCE_METHOD);
-/** 这张账单是不是医保结算方式（settlementMode=2）：只有医保账单才显示「医保个账」档 */
-const isInsuranceBill = computed(() => Number(summary.value.settlementMode) === 2);
+/** 这张账单是不是还需要手动走医保个账（settlementMode=2 且尚未 splits）：
+ * 挂号时医保已自动 2301 结完（poolAmount>0），不显示医保档；
+ * 诊中结算（收费台手动结账）settlementMode=2 但 poolAmount=0，才显示医保档让操作员刷社保卡。 */
+const isInsuranceBill = computed(() => {
+  if (Number(summary.value.settlementMode) !== 2) return false;
+  // 已 splits 回写（挂号自动结成功）→ 不再需要手动走医保档
+  if (Number(summary.value.poolAmount) > 0 || Number(summary.value.accountAmount) > 0) return false;
+  const type = summary.value.insuranceType || '';
+  return !type.includes('自费');
+});
 const methodOptions = computed(() => {
   const base = props.allowCash
     ? [{code: CASH_METHOD, label: '现金'}, {code: SCAN_METHOD, label: '扫码收款'}]

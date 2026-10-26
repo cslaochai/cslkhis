@@ -95,7 +95,6 @@ public class StatsServiceImpl implements StatsService {
         vo.setOpDeptTop(statsMapper.opDeptTop(s, e));
         vo.setOpTypeDist(statsMapper.opTypeDist(s, e));
         vo.setOpSourceDist(statsMapper.opSourceDist(s, e));
-        vo.setOpSettleDist(statsMapper.opSettleDist(s, e));
         vo.setOpAgeDist(statsMapper.opAgeDist(s, e));
     }
 
