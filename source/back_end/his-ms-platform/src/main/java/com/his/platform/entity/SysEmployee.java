@@ -72,6 +72,23 @@ public class SysEmployee extends BaseEntity {
     private Long deptId;
 
     /**
+     * 病区ID（护理人员用）。
+     *
+     * <p>医生不填：医生归属科室 + 医疗组，查房时才到病区（跨科收治时「医生跟着患者走」）。
+     * 护士填：护理按病区垂直管理，跨科收治患者的护理由所在病区统一负责。
+     */
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long wardId;
+
+    /**
+     * 医疗组ID（医生用，sys_med_group.id）。
+     *
+     * <p>依据三级医院评审标准：科主任按科室/病区床位与工作量组建医疗组，实行三级查房。
+     */
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long groupId;
+
+    /**
      * 主科室名称
      */
     private String deptName;

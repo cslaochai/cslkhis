@@ -95,6 +95,24 @@
           </el-radio-group>
         </el-form-item>
       </div>
+      <!-- 工作归属：病区（护理）与医疗组（医疗）是与「科室」正交的维度，不替代岗位授权 -->
+      <div class="grid grid-cols-2 gap-4">
+        <el-form-item label="病区" prop="wardId">
+          <el-select v-model="formData.wardId" clearable data-testid="emp-ward" filterable
+                     placeholder="护理人员填写，医生留空">
+            <el-option v-for="w in wardOptions" :key="w.wardId" :label="w.wardName" :value="w.wardId"/>
+          </el-select>
+        </el-form-item>
+        <el-form-item label="医疗组" prop="groupId">
+          <el-select v-model="formData.groupId" clearable data-testid="emp-group" filterable
+                     placeholder="医生填写，护理留空">
+            <el-option v-for="g in groupOptions" :key="g.id" :label="g.groupName" :value="g.id"/>
+          </el-select>
+        </el-form-item>
+      </div>
+      <div class="-mt-2 mb-3 text-xs text-gray-400">
+        医生归属科室 + 医疗组，护士归属病区；两者都可留空，不影响岗位授权与数据权限。
+      </div>
       <!-- 签名笔迹：员工档案预维护，结诊处方签名与检查检验报告审核时直接引用（不每次手写） -->
       <el-form-item label-width="0">
         <div class="w-full">
@@ -240,7 +258,9 @@ import {
   getDepartmentTree,
   getEmployeeDetail,
   getEmployeeQualificationList,
+  getMedGroupSelectList,
   getRoleList,
+  getWardSelectList,
   updateEmployee,
   upsertEmployeeQualificationBatch
 } from '@/api/system'
@@ -269,6 +289,9 @@ const dialogTitle = computed(() => (props.row ? '编辑员工' : '新增员工')
 // 只有本表单用的参照数据（科室树、角色名册、证书两张字典）随表单在弹框打开时拉一次
 const deptList = ref([])
 const roleList = ref([])
+// 病区（护理人员填）与医疗组（医生填）：与科室是两个正交维度，护士挂病区、医生挂科室+医疗组
+const wardOptions = ref([])
+const groupOptions = ref([])
 const certTypeOptions = ref([])  // 资格证书类型
 const certOrgOptions = ref([])   // 证书发证机关
 let refLoaded = false
@@ -277,9 +300,14 @@ const loadRefs = async () => {
   if (refLoaded) return
   refLoaded = true
   try {
-    const [deptRes, roleRes] = await Promise.all([getDepartmentTree(), getRoleList({})])
+    const [deptRes, roleRes, wardRes, groupRes] = await Promise.all([
+      getDepartmentTree(), getRoleList({}), getWardSelectList(), getMedGroupSelectList()
+    ])
     if (deptRes.code === 200) deptList.value = deptRes.data || []
     if (roleRes.code === 200) roleList.value = roleRes.data || []
+    // 下拉失败不阻断员工表单：病区/医疗组是可选归属，取不到就是空列表
+    if (wardRes && wardRes.code === 200) wardOptions.value = wardRes.data || []
+    if (groupRes && groupRes.code === 200) groupOptions.value = groupRes.data || []
     const map = await loadDictDataMap('his_emp_cert_type,his_emp_cert_org')
     certTypeOptions.value = map['his_emp_cert_type'] || []
     certOrgOptions.value = map['his_emp_cert_org'] || []
@@ -312,6 +340,8 @@ const formData = reactive({
   phone: '',
   email: '',
   status: 1,
+  wardId: null,
+  groupId: null,
   signImage: '',
 })
 
@@ -351,6 +381,8 @@ const resetForm = () => {
   formData.phone = ''
   formData.email = ''
   formData.status = 1
+  formData.wardId = null
+  formData.groupId = null
   formData.signImage = ''
   postRows.value = []
   certRows.value = []
@@ -396,6 +428,8 @@ watch(visible, async (open) => {
       formData.phone = data.phone || ''
       formData.email = data.email || ''
       formData.status = data.status ?? 1
+      formData.wardId = data.wardId || null
+      formData.groupId = data.groupId || null
       // 签名笔迹回显：有则预填到画板（可重签更新）；清空画板后保存 = 清除笔迹
       formData.signImage = data.signImage || ''
       signImageSaved.value = !!data.signImage

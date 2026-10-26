@@ -1,6 +1,7 @@
 package com.his.platform.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
@@ -12,8 +13,12 @@ import com.his.platform.dto.EmployeeQueryDTO;
 import com.his.platform.dto.EmployeeUpsertDTO;
 import com.his.platform.entity.SysDepartment;
 import com.his.platform.entity.SysEmployee;
+import com.his.platform.entity.SysMedGroup;
+import com.his.platform.entity.SysWard;
 import com.his.platform.mapper.SysDepartmentMapper;
 import com.his.platform.mapper.SysEmployeeMapper;
+import com.his.platform.mapper.SysMedGroupMapper;
+import com.his.platform.mapper.SysWardMapper;
 import com.his.platform.service.DeptScopeService;
 import com.his.platform.service.EmployeePostService;
 import com.his.platform.service.RedisSequenceService;
@@ -38,6 +43,8 @@ public class SysEmployeeServiceImpl extends ServiceImpl<SysEmployeeMapper, SysEm
 
     private final SysEmployeeMapper sysEmployeeMapper;
     private final SysDepartmentMapper sysDepartmentMapper;
+    private final SysWardMapper sysWardMapper;
+    private final SysMedGroupMapper sysMedGroupMapper;
     private final RedisSequenceService redisSequenceService;
     private final EmployeePostService employeePostService;
     private final DeptScopeService deptScopeService;
@@ -139,6 +146,15 @@ public class SysEmployeeServiceImpl extends ServiceImpl<SysEmployeeMapper, SysEm
         // 详情回显才带签名笔迹（base64 大字段）；列表/下拉的 convertToVO 不填它
         if (vo != null) {
             vo.setSignImage(emp.getSignImage());
+            // 病区 / 医疗组名称只在详情补：列表按人查名是 N+1，而列表本身不展示这两列
+            if (emp.getWardId() != null) {
+                SysWard ward = sysWardMapper.selectById(emp.getWardId());
+                vo.setWardName(ward == null ? null : ward.getWardName());
+            }
+            if (emp.getGroupId() != null) {
+                SysMedGroup group = sysMedGroupMapper.selectById(emp.getGroupId());
+                vo.setGroupName(group == null ? null : group.getGroupName());
+            }
         }
         return vo;
     }
@@ -173,6 +189,9 @@ public class SysEmployeeServiceImpl extends ServiceImpl<SysEmployeeMapper, SysEm
         emp.setIsExpert(upsertDTO.getIsExpert());
         emp.setExpertPrice(upsertDTO.getExpertPrice());
         emp.setStatus(upsertDTO.getStatus());
+        // 病区（护理用）/ 医疗组（医生用）：与科室是两个正交维度，护士挂病区、医生挂科室+医疗组
+        emp.setWardId(upsertDTO.getWardId());
+        emp.setGroupId(upsertDTO.getGroupId());
         // 主科室快照两个字段不从入参写：它们由 replacePosts 按主岗位回填。
         // MyBatis-Plus 的 updateById 跳过 null 字段，所以未提交岗位的部分更新（如名册切换启用状态）
         // 也不会把主科室洗掉。
@@ -186,6 +205,15 @@ public class SysEmployeeServiceImpl extends ServiceImpl<SysEmployeeMapper, SysEm
         } else {
             emp.setId(empId);
             sysEmployeeMapper.updateById(emp);
+            // updateById 走 NOT_NULL 策略会跳过 null —— 护士调离病区后 ward_id 就清不掉。
+            // 表单整单提交（posts != null）时显式补一次，允许置空；名册切启用状态那种
+            // 部分更新（posts = null）不动这两个字段。
+            if (upsertDTO.getPosts() != null) {
+                sysEmployeeMapper.update(null, new LambdaUpdateWrapper<SysEmployee>()
+                        .eq(SysEmployee::getId, empId)
+                        .set(SysEmployee::getWardId, upsertDTO.getWardId())
+                        .set(SysEmployee::getGroupId, upsertDTO.getGroupId()));
+            }
         }
 
         // 岗位（角色 × 科室）整体替换：鉴权直接 join 岗位表，主科室由主岗位回填。
@@ -399,6 +427,9 @@ public class SysEmployeeServiceImpl extends ServiceImpl<SysEmployeeMapper, SysEm
         vo.setStatus(emp.getStatus());
         vo.setDeptId(emp.getDeptId());
         vo.setDeptName(emp.getDeptName());
+        // 病区与医疗组只填 ID：列表页按人查名会变成 N+1，名称在 getInfo 里补
+        vo.setWardId(emp.getWardId());
+        vo.setGroupId(emp.getGroupId());
 
         // 岗位（角色 × 科室）是唯一的授权口径：科室清单与角色编码都从它派生，
         // 免得「档案里 4 个科室、3 个角色，但组合出来的岗位只有 2 个」两处数据各说各话。

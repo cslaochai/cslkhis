@@ -79,7 +79,22 @@ public class SysWard {
     private Long deptId;
 
     /**
+     * 总床位数
+     */
+    private Integer totalBeds;
+
+    /**
+     * 已占用床位数
+     */
+    private Integer occupiedBeds;
+
+    /**
      * 状态（0-停用 1-正常）
      */
     private Integer status;
+
+    /**
+     * 备注
+     */
+    private String remark;
 }

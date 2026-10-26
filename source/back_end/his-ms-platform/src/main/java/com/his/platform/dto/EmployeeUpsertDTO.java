@@ -1,5 +1,7 @@
 package com.his.platform.dto;
 
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import com.his.common.validation.AllowedValues;
 import jakarta.validation.Valid;
 import lombok.Data;
@@ -120,6 +122,21 @@ public class EmployeeUpsertDTO {
      * 入职日期（整型，兼容历史数据）
      */
     private Integer entryDate;
+
+    /**
+     * 病区ID（护理人员填；医生留空）。
+     *
+     * <p>医生归属科室 + 医疗组，查房时才到病区；护士按病区垂直管理，
+     * 跨科收治患者的护理由所在病区统一负责。与「科室」是两个正交维度。
+     */
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long wardId;
+
+    /**
+     * 医疗组ID（医生填；护理人员留空），取值来自 sys_med_group。
+     */
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long groupId;
 
     /**
      * 岗位列表（角色 × 科室），一行即「以某角色在某科室执业」。

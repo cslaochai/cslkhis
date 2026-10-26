@@ -773,6 +773,18 @@ const routes = [
                 name: 'SystemClinicRoom',
                 component: () => import('@/views/system/clinicRoom/ClinicRoomView.vue')
             },
+            {
+                path: 'system/ward',
+                name: 'SystemWard',
+                component: () => import('@/views/system/ward/WardView.vue'),
+                meta: {title: '病区管理'}
+            },
+            {
+                path: 'system/medGroup',
+                name: 'SystemMedGroup',
+                component: () => import('@/views/system/medGroup/MedGroupView.vue'),
+                meta: {title: '医疗组管理'}
+            },
             {path: 'system/dict', name: 'SystemDict', component: () => import('@/views/system/dict/DictView.vue')},
             {
                 path: 'system/config',

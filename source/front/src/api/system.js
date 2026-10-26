@@ -561,3 +561,62 @@ export function updatePatientTag(data) {
 export function deletePatientTag(id) {
     return request.delete('/system/patientTag/deleteById', {params: {tagId: id}})
 }
+
+// ==================== 病区管理（病区-科室多对多） ====================
+
+// 分页查询病区（deptId 过滤走多对多，含跨科收治的病区）
+export function getWardListPage(params) {
+    return request.post('/system/ward/listPage', params)
+}
+
+// 查询病区列表（不分页）
+export function getWardList(params) {
+    return request.post('/system/ward/list', params)
+}
+
+// 病区下拉：传 deptId 返回该科室可收治的病区，不传返回全部启用病区
+export function getWardSelectList(deptId) {
+    return request.get('/system/ward/selectList', {params: {deptId}})
+}
+
+// 病区详情（含收治科室清单与专科优先床数）
+export function getWardDetail(wardId) {
+    return request.get('/system/ward/getById', {params: {wardId}})
+}
+
+// 新增或修改病区
+export function saveWard(data) {
+    return request.post('/system/ward/wardUpsert', data)
+}
+
+// 删除病区（有病床/在院患者/挂人时被拦下，提示改为停用）
+export function deleteWard(wardId) {
+    return request.delete('/system/ward/deleteById', {params: {wardId}})
+}
+
+// ==================== 医疗组 / 主诊组 ====================
+
+// 分页查询医疗组
+export function getMedGroupListPage(params) {
+    return request.post('/system/medGroup/listPage', params)
+}
+
+// 医疗组下拉：传 deptId 只返回该科室的医疗组
+export function getMedGroupSelectList(deptId) {
+    return request.get('/system/medGroup/selectList', {params: {deptId}})
+}
+
+// 医疗组详情
+export function getMedGroupDetail(id) {
+    return request.get('/system/medGroup/getById', {params: {id}})
+}
+
+// 新增或修改医疗组
+export function saveMedGroup(data) {
+    return request.post('/system/medGroup/medGroupUpsert', data)
+}
+
+// 删除医疗组（组内还有医师时被拦下）
+export function deleteMedGroup(id) {
+    return request.delete('/system/medGroup/deleteById', {params: {id}})
+}

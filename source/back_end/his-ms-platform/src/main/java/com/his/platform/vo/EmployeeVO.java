@@ -127,6 +127,28 @@ public class EmployeeVO {
     private String deptName;
 
     /**
+     * 病区ID（护理人员有值）
+     */
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long wardId;
+
+    /**
+     * 病区名称
+     */
+    private String wardName;
+
+    /**
+     * 医疗组ID（医生有值）
+     */
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long groupId;
+
+    /**
+     * 医疗组名称
+     */
+    private String groupName;
+
+    /**
      * 科室ID列表（所有执业科室）
      */
     private List<String> deptIds;
