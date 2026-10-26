@@ -95,6 +95,10 @@
           <el-button v-perm="'staff:schedule:add'" :icon="Plus" data-testid="er-add" type="primary" @click="openAdd">
             新增排班
           </el-button>
+          <el-button v-perm="'staff:schedule:add'" :icon="Plus" data-testid="er-batch" plain type="primary"
+                     @click="batchVisible = true">
+            批量排班
+          </el-button>
         </span>
       </div>
 
@@ -146,6 +150,9 @@
     <!-- 登记 / 修改（复用员工排班弹框，scope=急诊值班域） -->
     <StaffScheduleEdit v-model="editVisible" :row="editRow" :scope="SCHEDULE_SCOPE_ER" @saved="handleSaved"/>
 
+    <!-- 批量排班：人员多选 × 日期区间（同域同后端口径，新增一律草稿） -->
+    <StaffScheduleBatchEdit v-model="batchVisible" :scope="SCHEDULE_SCOPE_ER" @saved="handleSaved"/>
+
     <!-- 换班 / 代班 -->
     <StaffScheduleSwapEdit v-model="swapVisible" :row="swapRow" :scope="SCHEDULE_SCOPE_ER" :table-data="tableData"
                            @saved="handleSaved"/>
@@ -170,6 +177,7 @@ import {
   submitWeekStaffSchedule,
 } from '@/api/staffSchedule'
 import StaffScheduleEdit from './StaffScheduleEdit.vue'
+import StaffScheduleBatchEdit from './StaffScheduleBatchEdit.vue'
 import StaffScheduleSwapEdit from './StaffScheduleSwapEdit.vue'
 import StaffScheduleCopyEdit from './StaffScheduleCopyEdit.vue'
 import {
@@ -322,6 +330,7 @@ const shiftTagType = (row) => {
 
 // ---------------- 弹框与行内操作 ----------------
 const editVisible = ref(false)
+const batchVisible = ref(false)
 const editRow = ref(null)
 const openAdd = () => {
   editRow.value = null

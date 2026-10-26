@@ -708,9 +708,13 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, Biz
         // 唯一键不含删除标志 → 物理删（软删行继续占键，「删了再重排同一天同一班」必撞重复键）
         baseMapper.purgeById(id);
         // 删完再核一次人力：把人删到「这个班没人接」必须当场拦住，而不是等明天出事故。
-        // 只对上班行生效——删休息/请假/培训/停班行不改变在岗数，闸门若照跑会拿
-        // 「本来就没人上班」的单元（无班次规则按全部班次匹配）把「取消标休」误拦死。
-        if (StaffDutyStatusEnum.isWorking(row.getDutyStatus())) {
+        // 只对「生效中的上班行」生效——两层的行删了都不改变在岗数：
+        //   ① 休息/请假/培训/停班行：本来就不在岗（闸门若照跑会拿「本来就没人上班」的单元
+        //      把「取消标休」误拦死）；
+        //   ② 草稿/待审核行：onDutyAt 只认 已发布/已变更，删一条没生效的班不减在岗，
+        //      按「全部班次」匹配最低在岗时会把「删草稿」误拦死。
+        if (StaffDutyStatusEnum.isWorking(row.getDutyStatus())
+                && PublishStatusEnum.isEffective(row.getPublishStatus())) {
             staffPlanRuleService.reviewAfterChange(row.getOrgType(), row.getOrgId(),
                     row.getShiftId(), row.getStaffType(), row.getScheduleDate(), true);
         }

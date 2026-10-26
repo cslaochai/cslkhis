@@ -66,23 +66,7 @@
         <el-radio-group v-model="formData.attendMode">
           <el-radio v-for="o in ATTEND_MODE_OPTIONS" :key="o.value" :value="o.value">{{ o.label }}</el-radio>
         </el-radio-group>
-      </el-form-item>
-      <el-form-item v-if="needShift" label="是否出诊">
-        <el-switch
-            v-model="formData.clinicFlag"
-            :active-value="1"
-            :disabled="!clinicFlagAllowed"
-            :inactive-value="0"
-        />
-        <span class="ml-2 text-xs text-gray-400">
-          {{ clinicFlagAllowed ? '只有医生岗的出诊班会生成门诊号源（非医生岗后端会裁掉）' : '听班不放号：人在院外待命' }}
-        </span>
-      </el-form-item>
-      <el-form-item v-if="needShift" label="发布态">
-        <el-select v-model="formData.publishStatus" style="width: 100%">
-          <el-option :value="PUBLISH_STATUS_DRAFT" label="草稿（提交审核后生效）"/>
-          <el-option :value="PUBLISH_STATUS_PUBLISHED" label="已发布（审核生效，编辑时保持）"/>
-        </el-select>
+        <div class="w-full text-xs text-gray-400">坐班=正常到岗；听班=二线待命，不进在岗名单、不接派单；留院值班=夜间/节假日住宿舍值守</div>
       </el-form-item>
       <el-form-item label="备注">
         <el-input v-model="formData.remark" :rows="2" placeholder="如：本周三下午参加院感培训" type="textarea"/>
@@ -114,11 +98,9 @@ import {
   ORG_UNIT_TYPE_OPTIONS,
 } from '@/lib/staffSchedule'
 
-// 发布态：岗位出勤走审核闭环——新增一律落草稿（后端 resolvePublishStatus 对新增强制草稿，
-// 传已发布也会被压成 0），提交审核 → 科室指定审核人（sys_department.schedule_auditor_id）
-// 审核发布后才计在岗（onDutyAt 只认 2/4）。编辑已发布行时回显原发布态，改单自动转「已变更」。
-const PUBLISH_STATUS_DRAFT = 0
-const PUBLISH_STATUS_PUBLISHED = 2
+// 发布态：本弹框不传、不展示——新增一律后端落草稿（resolvePublishStatus 对没传的新行强制 0），
+// 修改已发布行由后端按原态自动迁移（生效态→已变更），杜绝从这里直接选「已发布」绕过审核闸。
+// 出诊号源派生行（clinic_flag=1）由门诊排班页产生，本弹框不提供该开关（手工置 1 会被审批中心滤掉）。
 
 /**
  * 登记 / 修改排班：后端是同一个 staffScheduleUpsert，
@@ -153,7 +135,7 @@ const formRef = ref(null)
 const formData = reactive({
   id: null, scheduleDate: null, orgType: 1, orgId: null, employeeId: null, employeePostId: null,
   shiftId: null, dutyStatus: DUTY_STATUS_WORK, attendMode: 1, clinicFlag: 0,
-  publishStatus: PUBLISH_STATUS_DRAFT, remark: '',
+  remark: '',
 })
 const rules = {
   scheduleDate: [{required: true, message: '请选择排班日期', trigger: 'change'}],
@@ -194,14 +176,12 @@ const orgIdOptions = computed(() => {
 })
 const orgIdRequired = computed(() => Number(formData.orgType) !== ORG_UNIT_TYPE_HOSPITAL)
 
-const needShift = computed(() => dutyStatusNeedShift(formData.dutyStatus))
 /**
  * 听班一律不放号：AttendModeEnum.releasesSource —— 给一个在家待命的人放号，患者到了没人看。
- * 「是不是医生岗」这里不判：岗位类别由 员工→岗位→角色→sys_role.staff_type 三级派生，
- * 员工接口只给到 posts、没有 staff_type，前端判就是猜。这一层由服务端 applyStaffType 收口，
- * 传了不合规的出诊标志后端会裁成 0 并在返回文案里说明。
+ * 是否出诊(clinic_flag) 本弹框不再提供：号源派生行只由门诊排班页产生，
+ * 这里只在编辑既有行时原样带回、新增恒 0（手工置 1 会被排班审批中心滤掉）。
  */
-const clinicFlagAllowed = computed(() => Number(formData.attendMode) !== 2)
+const needShift = computed(() => dutyStatusNeedShift(formData.dutyStatus))
 
 let optionsLoaded = false
 const ensureOptions = async () => {
@@ -241,7 +221,6 @@ const resetForm = () => {
   formData.dutyStatus = DUTY_STATUS_WORK
   formData.attendMode = 1
   formData.clinicFlag = 0
-  formData.publishStatus = PUBLISH_STATUS_DRAFT
   formData.remark = ''
 }
 
@@ -262,7 +241,6 @@ watch(visible, async (open) => {
   formData.dutyStatus = row.dutyStatus
   formData.attendMode = row.attendMode || 1
   formData.clinicFlag = row.clinicFlag ?? 0
-  formData.publishStatus = row.publishStatus ?? PUBLISH_STATUS_DRAFT
   formData.remark = row.remark || ''
   if (row.employeeId && !empOptions.value.some((e) => e.id === row.employeeId)) {
     empOptions.value = [{id: row.employeeId, empName: row.employeeName, deptName: row.deptName}, ...empOptions.value]
@@ -287,7 +265,10 @@ const handleSubmit = async () => {
       scope: props.scope,
       orgId: orgIdRequired.value ? formData.orgId : null,
       shiftId: needShift.value ? formData.shiftId : null,
-      clinicFlag: clinicFlagAllowed.value ? formData.clinicFlag : 0,
+      // clinicFlag：新增恒 0（号源派生行只由门诊排班页产生）；编辑既有行时原样带回
+      clinicFlag: formData.id ? (formData.clinicFlag ?? 0) : 0,
+      // publishStatus 不传：新增后端落草稿；修改由后端按原态自动迁移（生效态→已变更）
+      publishStatus: null,
     }
     const res = await staffScheduleUpsert(payload)
     if (res.code === 200) {
