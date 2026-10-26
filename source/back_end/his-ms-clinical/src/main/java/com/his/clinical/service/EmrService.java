@@ -6,6 +6,7 @@ import com.his.clinical.entity.BizInspectionApply;
 import com.his.clinical.entity.BizLaboratoryApply;
 import com.his.clinical.entity.BizMedicalRecord;
 import com.his.clinical.entity.BizPrescription;
+import com.his.clinical.support.QcOperator;
 import com.his.clinical.vo.*;
 import com.his.common.base.PageResult;
 import com.his.spi.vo.MyMedicalRecordVO;
@@ -181,8 +182,10 @@ public interface EmrService extends IService<BizMedicalRecord> {
      *
      * <p>PDF（引导单/处方签）不在结诊时生成，改为医生点「打印就诊文书」按钮时按需现场画
      * （见 {@link #printVisitDocs(Long)}）。由 AFTER_COMMIT + @Async 触发。
+     *
+     * @param operator 结诊医生身份快照，取自发布事件时的登录态 —— 收尾线程里没有登录态，只能由调用方带进来
      */
-    void asyncAfterSubmit(Long recordId);
+    void asyncAfterSubmit(Long recordId, QcOperator operator);
 
     /**
      * 医生点「打印就诊文书」时现场生成三份 PDF：引导单 + 普通处方签（西药+中成药）+ 饮片处方签。

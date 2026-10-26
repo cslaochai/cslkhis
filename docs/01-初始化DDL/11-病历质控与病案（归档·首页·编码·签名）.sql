@@ -473,6 +473,7 @@ CREATE TABLE `biz_quality_control` (
   `record_source` varchar(16) NOT NULL DEFAULT 'OUTPATIENT' COMMENT '质控对象来源',
   `patient_id` bigint NOT NULL DEFAULT '0' COMMENT '患者ID',
   `qc_type` tinyint NOT NULL DEFAULT '0' COMMENT '质控类型（0-综合 1-完整性检查 2-规范性检查 3-逻辑性检查 4-AI内涵质控）',
+  `trigger_source` tinyint NOT NULL DEFAULT '1' COMMENT '质控触发来源（1-人工 2-结诊自动 3-定时补扫）',
   `qc_content` varchar(500) NOT NULL DEFAULT '' COMMENT '检查内容',
   `qc_result` tinyint NOT NULL DEFAULT '0' COMMENT '检查结果（0-不通过 1-通过）',
   `error_count` int COMMENT '错误数量',
@@ -495,6 +496,7 @@ CREATE TABLE `biz_quality_control` (
   KEY `idx_record_id` (`record_id`),
   KEY `idx_patient_id` (`patient_id`),
   KEY `idx_qc_type` (`qc_type`),
+  KEY `idx_trigger_source` (`trigger_source`,`qc_time`),
   KEY `idx_qc_status` (`qc_status`),
   KEY `idx_record_source` (`record_source`,`qc_time`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='质控检查记录';

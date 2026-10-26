@@ -9,6 +9,7 @@ import com.his.common.exception.BusinessException;
 import com.his.clinical.dto.QcCandidatePageQueryDTO;
 import com.his.clinical.dto.QcExecuteDTO;
 import com.his.clinical.dto.QcPageQueryDTO;
+import com.his.clinical.dto.QcSystemExecuteDTO;
 import com.his.clinical.entity.BizMedicalRecord;
 import com.his.clinical.entity.BizQualityControl;
 import com.his.clinical.mapper.BizMedicalRecordMapper;
@@ -19,6 +20,7 @@ import com.his.clinical.vo.QcIssueVO;
 import com.his.clinical.vo.QcResultVO;
 import com.his.clinical.support.QcRuleEngine;
 import com.his.clinical.support.QcSnapshot;
+import com.his.clinical.support.QcOperator;
 import com.his.clinical.vo.*;
 import com.his.spi.service.InpatientFacadeService;
 import com.his.spi.vo.InpatientRecordBriefVO;
@@ -53,6 +55,16 @@ public class QualityControlServiceImpl extends ServiceImpl<BizQualityControlMapp
      * 批量质控单次上限，防止前端误传全表 ID
      */
     private static final int MAX_BATCH_SIZE = 200;
+    /**
+     * 补扫回看窗口（天）：只捞这几天内结诊的病历，避免每次全表反查
+     */
+    private static final int RESCAN_WINDOW_DAYS = 3;
+    /**
+     * 补扫的操作人（定时任务豁免，见 AGENTS §12）：没有登录态，落带任务名的系统身份，
+     * 让人一眼看出这张单不是人点的、是哪个任务跑的。
+     */
+    private static final String SYSTEM_RESCAN_OPERATOR = "system:qcAutoRescan";
+    private static final Long SYSTEM_RESCAN_EMPLOYEE_ID = 0L;
 
     private final BizMedicalRecordMapper bizMedicalRecordMapper;
 
@@ -257,27 +269,85 @@ public class QualityControlServiceImpl extends ServiceImpl<BizQualityControlMapp
 
     @Override
     public BizQualityControlVO executeQc(QcExecuteDTO dto) {
-        // C-非 web 入参：除 QualityControlController 的 HTTP 入口外，还被 EmrServiceImpl 病历保存链路
-        // new QcExecuteDTO() 后直调，Bean Validation 不覆盖内部调用，保留
-        if (dto == null || dto.getRecordId() == null) {
-            throw new BusinessException("病历ID不能为空");
-        }
-        Integer qcType = normalizeQcType(dto.getQcType());
         CurrentUser operatorUser = UserUtils.getCurrentUser();
         if (operatorUser == null) {
             throw new BusinessException("当前用户信息不存在");
         }
-        QcSnapshot snapshot = loadSnapshot(QcRecordSourceEnum.fromCode(dto.getRecordSource()), dto.getRecordId());
+        return doExecuteQc(dto.getRecordSource(), dto.getRecordId(), normalizeQcType(dto.getQcType()),
+                QcTriggerSourceEnum.MANUAL,
+                new QcOperator(operatorUser.getEmployeeId(), operatorUser.getRealName()));
+    }
+
+    /**
+     * C-非 web 入参：结诊收尾与定时补扫在新线程里直调，Bean Validation 不覆盖内部调用，
+     * 病历与触发来源缺值必须由这里拦住（HTTP 入口那侧靠 DTO 注解）。
+     */
+    @Override
+    public BizQualityControlVO executeQcBySystem(QcSystemExecuteDTO dto) {
+        if (dto == null || dto.getOperator() == null || dto.getTriggerSource() == null) {
+            throw new BusinessException("系统质控缺少操作人或触发来源");
+        }
+        return doExecuteQc(dto.getRecordSource(), dto.getRecordId(), normalizeQcType(dto.getQcType()),
+                dto.getTriggerSource(), dto.getOperator());
+    }
+
+    @Override
+    public List<QcIssueVO> inspectSubmitVeto(QcSnapshot snapshot) {
+        QcResultVO result = qcRuleEngine.inspect(snapshot, RecordQcTypeEnum.COMPREHENSIVE.getCode());
+        List<QcIssueVO> vetoIssues = new ArrayList<>();
+        for (QcIssueVO issue : result.getIssues()) {
+            if (issue.getSeverity() != null && issue.getSeverity() == QcSeverityEnum.FATAL.getCode()) {
+                vetoIssues.add(issue);
+            }
+        }
+        enrich(vetoIssues);
+        return vetoIssues;
+    }
+
+    @Override
+    public int autoRescanOutpatientQc(int limit) {
+        List<Long> recordIds = baseMapper.selectRecordsWithoutAutoQc(QcRecordSourceEnum.OUTPATIENT.getCode(),
+                List.of(QcTriggerSourceEnum.CLINIC_SUBMIT.getCode(), QcTriggerSourceEnum.AUTO_RESCAN.getCode()),
+                List.of(RecordStatusEnum.SUBMITTED.getCode(), RecordStatusEnum.ARCHIVED.getCode()),
+                LocalDateTime.now().minusDays(RESCAN_WINDOW_DAYS), limit);
+        if (recordIds.isEmpty()) {
+            return 0;
+        }
+        QcOperator rescanOperator = new QcOperator(SYSTEM_RESCAN_EMPLOYEE_ID, SYSTEM_RESCAN_OPERATOR);
+        int done = 0;
+        for (Long recordId : recordIds) {
+            try {
+                QcSystemExecuteDTO dto = new QcSystemExecuteDTO();
+                dto.setRecordSource(QcRecordSourceEnum.OUTPATIENT.getCode());
+                dto.setRecordId(recordId);
+                dto.setTriggerSource(QcTriggerSourceEnum.AUTO_RESCAN);
+                dto.setOperator(rescanOperator);
+                executeQcBySystem(dto);
+                done++;
+            } catch (Exception ex) {
+                // 单张失败不拖垮整批：下一轮补扫还会把它捞回来（判据是「没有自动质控单」）
+                log.error("[质控补扫] 门诊病历补跑质控失败 recordId={}", recordId, ex);
+            }
+        }
+        log.info("[质控补扫] 近 {} 天漏单 {} 份，补跑成功 {} 份", RESCAN_WINDOW_DAYS, recordIds.size(), done);
+        return done;
+    }
+
+    private BizQualityControlVO doExecuteQc(String recordSource, Long recordId, Integer qcType,
+                                            QcTriggerSourceEnum triggerSource, QcOperator operator) {
+        if (recordId == null) {
+            throw new BusinessException("病历ID不能为空");
+        }
+        QcSnapshot snapshot = loadSnapshot(QcRecordSourceEnum.fromCode(recordSource), recordId, triggerSource);
         QcResultVO result = qcRuleEngine.inspect(snapshot, qcType);
 
-        String operator = operatorUser.getRealName();
         BizQualityControl saved = null;
         for (int attempt = 1; attempt <= MAX_NO_RETRY && saved == null; attempt++) {
             try {
-                saved = qcStoreService.save(snapshot, result, qcType, operator);
+                saved = qcStoreService.save(snapshot, result, qcType, triggerSource, operator);
             } catch (DuplicateKeyException ex) {
                 // 单号撞唯一索引：事务已回滚，必须在事务外重试（这也是把落库单独拆成 Bean 的原因）
-                log.warn("[病案质控] 第 {} 次生成质控单号冲突，重试（recordId={}）", attempt, dto.getRecordId());
+                log.warn("[病案质控] 第 {} 次生成质控单号冲突，重试（recordId={}）", attempt, recordId);
             }
         }
         if (saved == null) {
@@ -364,23 +434,34 @@ public class QualityControlServiceImpl extends ServiceImpl<BizQualityControlMapp
     }
 
     // 码值中文与等级换算
-    private QcSnapshot loadSnapshot(QcRecordSourceEnum source, Long recordId) {
+    private QcSnapshot loadSnapshot(QcRecordSourceEnum source, Long recordId, QcTriggerSourceEnum triggerSource) {
         if (source == QcRecordSourceEnum.OUTPATIENT) {
             BizMedicalRecord record = bizMedicalRecordMapper.selectById(recordId);
             if (record == null) {
                 throw new BusinessException("门诊病历不存在或已删除：" + recordId);
             }
-            // 执行质控是写操作：受限岗位只能质控本科室病历（病历保存链路的自动质控同样生效，
-            // 该链路外层有兜底日志，不会中断归档流程）
-            deptScopeService.assertDeptAccessible(record.getDeptId());
+            assertLoginDeptIfManual(triggerSource, record.getDeptId());
             return QcSnapshot.ofOutpatient(record);
         }
         InpatientRecordBriefVO record = patientFacadeService.getInpatientRecord(recordId);
         if (record == null) {
             throw new BusinessException("住院文书不存在或已删除：" + recordId);
         }
-        deptScopeService.assertDeptAccessible(record.getDeptId());
+        assertLoginDeptIfManual(triggerSource, record.getDeptId());
         return QcSnapshot.ofInpatient(record);
+    }
+
+    /**
+     * 科室数据范围只在人工入口拦：质控工作台的点是「这个岗位能不能看这份病历」。
+     *
+     * <p>结诊自动质控与定时补扫跑在没有登录态的新线程里，而收口判定链
+     * （{@code DeptScopeService#canAccessDept}）拿不到登录态就直接报「未登录，无权查看」——
+     * 内部链路本来没有「当前岗位」这个概念，拿登录态的门禁去拦它，等于每一条自动质控都必失败。
+     */
+    private void assertLoginDeptIfManual(QcTriggerSourceEnum triggerSource, Long deptId) {
+        if (triggerSource == QcTriggerSourceEnum.MANUAL) {
+            deptScopeService.assertDeptAccessible(deptId);
+        }
     }
 
     /**
@@ -389,6 +470,7 @@ public class QualityControlServiceImpl extends ServiceImpl<BizQualityControlMapp
     private void enrich(BizQualityControlVO vo) {
         vo.setRecordSourceText(QcRecordSourceEnum.getLabel(vo.getRecordSource()));
         vo.setQcTypeText(RecordQcTypeEnum.getLabel(vo.getQcType()));
+        vo.setTriggerSourceText(QcTriggerSourceEnum.getLabel(vo.getTriggerSource()));
         vo.setQcStatusText(RuleCheckStatusEnum.getLabel(vo.getQcStatus()));
         vo.setQcResultText(dictCacheService.getDicDataLabel(DictTypeConst.QC_RESULT, vo.getQcResult()));
         vo.setRecordStatusText(RecordStatusEnum.getLabel(vo.getRecordStatus()));

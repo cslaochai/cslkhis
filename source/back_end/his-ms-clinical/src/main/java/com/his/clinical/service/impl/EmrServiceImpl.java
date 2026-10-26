@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.his.clinical.constant.EmrSubmitConst;
 import com.his.clinical.dto.*;
 import com.his.clinical.entity.*;
 import com.his.clinical.event.ClinicSubmittedEvent;
@@ -13,6 +14,8 @@ import com.his.clinical.service.AiDraftDiffService;
 import com.his.clinical.service.EmrService;
 import com.his.clinical.service.EmrSignatureService;
 import com.his.clinical.service.QualityControlService;
+import com.his.clinical.support.QcOperator;
+import com.his.clinical.support.QcSnapshot;
 import com.his.clinical.vo.*;
 import com.his.common.base.PageResult;
 import com.his.common.entity.CurrentUser;
@@ -1395,6 +1398,25 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
         }
     }
 
+    /**
+     * 结诊定稿的否决项闸：把「即将定稿」的病历内容交给质控引擎挑一遍否决项，
+     * 命中就按「需要二次确认」的响应码抛出缺陷清单，由前端弹框让医生选「去修改」还是「仍要结诊」。
+     *
+     * <p>报错文案就是给医生看的那份清单（逐条问题描述），不许缩成一句「质控不通过」——
+     * 医生得知道改哪一条。放行后结诊收尾照旧出综合质控单，这些否决项仍然留痕在单上。
+     */
+    private void assertNoSubmitVeto(BizMedicalRecord bizMedicalRecord) {
+        List<QcIssueVO> vetoIssues = qualityControlService.inspectSubmitVeto(QcSnapshot.ofOutpatient(bizMedicalRecord));
+        if (vetoIssues.isEmpty()) {
+            return;
+        }
+        String details = vetoIssues.stream()
+                .map(QcIssueVO::getErrorDetail)
+                .collect(Collectors.joining("；"));
+        throw new BusinessException(EmrSubmitConst.QC_CONFIRM_CODE,
+                "病历有 " + vetoIssues.size() + " 项否决项缺陷：" + details + "。修改后可重新结诊。");
+    }
+
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Long saveMedicalRecord(MedicalRecordSaveDTO recordSaveDTO, boolean isSubmit) {
@@ -1487,6 +1509,12 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
         bizMedicalRecord.setDiagnosisCode(recordSaveDTO.getDiagnosisCode());
         bizMedicalRecord.setDiagnosisName(recordSaveDTO.getDiagnosisName());
         bizMedicalRecord.setTreatmentPlan(recordSaveDTO.getTreatmentPlan());
+
+        // 结诊定稿预检（事中的那一道）：否决项命中就先不把这份病历定稿。
+        // 放在任何写入之前 —— 命中即抛，整个事务回滚，本次什么都没落库，医生改完原样重发即可。
+        if (isSubmit && !Boolean.TRUE.equals(recordSaveDTO.getForceSubmit())) {
+            assertNoSubmitVeto(bizMedicalRecord);
+        }
 
         // 用实体自身是否有 id 判断新增/更新，不再看 DTO：按 registId 兜底命中的既有病历也要走更新
         if (bizMedicalRecord.getId() != null) {
@@ -1756,12 +1784,19 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
             //     医生点结诊要等好几秒。它们都是事后产物，不该在关键路径上。
             //     用 afterCommit 确保主事务提交成功后才跑；失败只记日志，不影响结诊结果。
             final Long submittedRecordId = bizMedicalRecord.getId();
+            // 身份快照必须在这里取：收尾跑在事务提交后的独立线程里，那里没有登录态，
+            // 而质控单上的质控人必须是点结诊的这位医生。
+            CurrentUser submitUser = UserUtils.getCurrentUser();
+            if (submitUser == null) {
+                throw new BusinessException("当前用户信息不存在");
+            }
+            final QcOperator submittedOperator = new QcOperator(submitUser.getEmployeeId(), submitUser.getRealName());
             if (TransactionSynchronizationManager.isSynchronizationActive()) {
                 TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
                     @Override
                     public void afterCommit() {
                         try {
-                            eventPublisher.publishEvent(new ClinicSubmittedEvent(submittedRecordId));
+                            eventPublisher.publishEvent(new ClinicSubmittedEvent(submittedRecordId, submittedOperator));
                         } catch (Exception ex) {
                             log.error("[结诊收尾] 发布事件失败 recordId={}", submittedRecordId, ex);
                         }
@@ -1769,7 +1804,7 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
                 });
             } else {
                 // 极端情况：没有事务同步（被非事务上下文调用），直接同步跑保底
-                asyncAfterSubmit(submittedRecordId);
+                asyncAfterSubmit(submittedRecordId, submittedOperator);
             }
         }
 
@@ -2384,7 +2419,7 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
     }
 
     @Override
-    public void asyncAfterSubmit(Long recordId) {
+    public void asyncAfterSubmit(Long recordId, QcOperator operator) {
         if (recordId == null) {
             return;
         }
@@ -2405,11 +2440,13 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
 
         // ② 规则质控（事后提醒，失败只记日志）
         try {
-            QcExecuteDTO qcDto = new QcExecuteDTO();
+            QcSystemExecuteDTO qcDto = new QcSystemExecuteDTO();
             qcDto.setRecordSource(QcRecordSourceEnum.OUTPATIENT.getCode());
             qcDto.setRecordId(recordId);
             qcDto.setQcType(RecordQcTypeEnum.COMPREHENSIVE.getCode());
-            qualityControlService.executeQc(qcDto);
+            qcDto.setTriggerSource(QcTriggerSourceEnum.CLINIC_SUBMIT);
+            qcDto.setOperator(operator);
+            qualityControlService.executeQcBySystem(qcDto);
         } catch (Exception ex) {
             log.error("[结诊收尾] 规则质控失败 recordNo={}", record.getRecordNo(), ex);
         }

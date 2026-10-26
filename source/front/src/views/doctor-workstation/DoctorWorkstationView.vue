@@ -2408,6 +2408,7 @@ import {getByRegistId, getEmrRecordList, printVisitDocs} from '@/api/emr';
 import {draftEmrText, extractEmrText, predictIcd10 as predictIcd10Ai, transcribeVoice} from '@/api/ai';
 import {localDateStr, shortQueueNo} from '@/lib/utils';
 import {QUEUE_STATUS, queueVisitBadgeOf} from '@/lib/statusColor';
+import {handleEmrSubmitVeto} from '@/lib/emrSubmit';
 import {
   deleteDiagTemplate,
   deleteDrugPackage,
@@ -4954,16 +4955,17 @@ const handleComplete = async () => {
   }
   try {
     await doSubmitRecord(submitData);
-  } catch (error) /* 错误已由全局拦截器统一提示，无需在此弹窗 */ {
+  } catch (error) /* 提示与弹框全在 doSubmitRecord 里收口 */ {
 
   }
 };
 
 // 实际结诊提交（签名板确认后或无处方时调用）
-const doSubmitRecord = async (submitData) => {
+// forceSubmit=true 表示医生在否决项弹框里点了「仍要结诊」：缺陷不会消失，结诊收尾照旧出质控单留痕
+const doSubmitRecord = async (submitData, forceSubmit = false) => {
   submitting.value = true;
   try {
-    await submitMedicalRecord(submitData);
+    await submitMedicalRecord({...submitData, forceSubmit}, {silent: true});
     ElMessage.success('结诊成功');
     // 异步预生成就诊文书（引导单/处方签 PDF）：不 await、不阻塞结诊流程，
     // 生成完成后自动弹出「结诊文书」供医生打印给患者（缴费二维码在引导单左上角）
@@ -4974,9 +4976,19 @@ const doSubmitRecord = async (submitData) => {
     // 刷新队列
     loadData();
   } catch (error) {
-    // 乐观锁冲突（挂号/队列状态已被并发操作变更）：具体原因已由全局拦截器提示，
-    // 这里自动刷新队列并引导重试，不静默也不让医生对着过期状态干瞪眼。
-    if (String(error?.message || '').includes('状态已变更')) {
+    // 本请求带 silent，提示归这里管（否决项要弹框，不能让全局红条先弹一遍）
+    const message = String(error?.message || '');
+    const vetoAction = await handleEmrSubmitVeto(error);
+    if (vetoAction === 'force') {
+      await doSubmitRecord(submitData, true);
+      return;
+    }
+    if (vetoAction === 'cancel') {
+      return;
+    }
+    ElMessage.error(message || '结诊失败');
+    // 乐观锁冲突（挂号/队列状态已被并发操作变更）：这里自动刷新队列并引导重试，不静默也不让医生对着过期状态干瞪眼。
+    if (message.includes('状态已变更')) {
       await loadData();
       ElMessage.info('就诊状态已被其他操作变更，已为你刷新队列，请核对后重试');
     }

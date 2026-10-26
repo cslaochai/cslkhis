@@ -222,6 +222,12 @@ public class MedicalRecordSaveDTO {
      */
     private String aiDraftPresentIllness;
 
+    /**
+     * 已知晓结诊定稿质控的否决项、仍要结诊：结诊被否决项拦下后，医生在弹框里点
+     * 「仍要结诊」时前端带 true 重发。临时保存不传。
+     */
+    private Boolean forceSubmit;
+
     // 处方信息
 
     /**

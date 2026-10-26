@@ -29,6 +29,12 @@
   。禁止举例、跨表引用、口径说明、踩坑警告——这些放代码注释或本文件。全库结构基线在 `docs/sql/`（23 个领域文件，由
   `workspace/_gen_ddl_by_domain.mjs` 从 dev 库导出）。
 - **状态码**：200 成功 / 201 创建 / 400 校验失败 / 401·403 权限 / 500 服务端异常。
+- **业务码走 HTTP 200 的响应体，`code` 才是业务结果**：`BusinessException(code, msg)` 经
+  `GlobalExceptionHandler#handleBusinessException` 兜成 `200 + {"code":<业务码>,"message":...}`（方法上没有 `@ResponseStatus`，别按
+  4xx 预期写前端）。前端 `request.js` 把 `res.code` 挂到 `err.code`，所以**判业务码用 `err.code`，不解析 message 文本**。
+  - `409` = **需要二次确认才能继续**（唯一在用：门诊结诊定稿预检命中否决项，`EmrSubmitConst.QC_CONFIRM_CODE`）。这类请求必须带
+    `{silent: true}`（否则全局 toast 与页面弹框说同一件事两遍），确认后带 `forceSubmit` 重发同一体。
+  - 新增「要用户拍板」的业务码前先想清楚：只有「服务端知道、界面还要解释」的才配独立码，其余一律 400 + message。
 - **响应结构**：统一 `{ "code": 200, "message": "success", "data": {} }`。
 - **主键入参一律 `Long`，禁止手写 `parseId(String)` 转换层**：
     - `ToStringSerializer` 只管**出参**；**入参**侧 Jackson 自己能把 `"1857..."` 反序列化成 Long。
@@ -95,6 +101,11 @@
   别名或脚本 `d2str()`。BIGINT 一律字符串化（Java `ToStringSerializer`；Node `supportBigNumbers + bigNumberStrings` 双开）。
 - **裸 SQL（尤其跨模块 `@Select`）先 `information_schema.COLUMNS` 对列名再写**：select 不存在的列编译不报错，运行时
   `Unknown column` 兜成 500，与业务失败零区别（G15 已踩）。
+- **注解 SQL 里用动态标签（`<if>`/`<foreach>`/`<where>`/`<set>`）必须让整串以 `<script>` 开头**：MyBatis 只在字符串
+  **起始**是 `<script>` 时才解析标签，否则标签文本原样进 SQL，而 `<foreach>` 里的 `#{d}` 会被当成裸参数名——分页 count
+  阶段先炸 `BindingException: Parameter 'd' not found`，接口 500 且零业务线索（质控单 `listPage` 就这么坏了很久）。
+  常量拼接同理：`@Select(PROJECTION + """...""")` 的 `<script>` 必须在 `PROJECTION` 的第一个字面量里，写在后面那段不算。
+  判据：`node workspace/_check_script_less_dynamic_sql.mjs` → `GATE PASS`（已含同文件常量展开，不误报）。
 - **写库的「原因/异常」文本先截到列宽**：原始异常拼进 `VARCHAR(500)` 会 `Data too long`，「记账失败」升级 500。`NOT NULL` 无默认列传
   null 整条 insert 失败，写 gateway/biller 先确认必填列有值。
   **这类字段禁止在 DTO 加 `@Size(max = 列宽)`**：入参 400 抢在服务端截断前，把「粘贴长说明」变成请求失败。必填靠 `@NotBlank`
@@ -511,21 +522,24 @@ public enum XxxEnum {
   `username` 是账号拼音，混进操作人列会让按人名检索直接漏。
 - **禁塞默认值**：`"system"`/`"未知操作人"`/`"系统"`/`String.valueOf(empId)`/`try-catch-return-null` 全禁。取不到就是**报错
   **（NPE 兜 500，或自己抛 BusinessException），不继续执行。塞假值 = 「谁干的」被藏进库，零报错。
-- **三处定时任务豁免**（唯一允许落系统值）：
+- **四处定时任务豁免**（唯一允许落系统值）：
 
   | 位置 | 值 | 触发 |
     |---|---|---|
   | `DayEndSettleServiceImpl.currentOperator()` | `system:dayEndSettle` | cron 00:10 + 懒触发 |
   | `ExamAppointmentServiceImpl` | `system:examNoShow` | `ExamNoShowTrigger` 每 10 分钟 |
   | `FollowupTaskServiceImpl` | `system:autoFollowup` | `DischargeFollowupTrigger` 每 10 分钟 |
+  | `QualityControlServiceImpl.autoRescanOutpatientQc` | `system:qcAutoRescan`（employeeId `0L`） | `QcAutoRescanTrigger` 每 10 分钟 |
 
-  后两处做法是方法加 operator 参数由调用方显式传，**不是**方法内判空回落。⚠ 改 cron 链路前用调用图查清会不会取当前人，别凭方法名猜。
+  前三处做法是方法加 operator 参数由调用方显式传，**不是**方法内判空回落；第四处是补扫自己在方法里造
+  `QcOperator`（没有登录态可传），常量私有、名字带能力，回查能一眼看出「这不是人干的」。⚠ 改 cron
+  链路前用调用图查清会不会取当前人，别凭方法名猜。
 - **旁路审计特例**（不抛异常，也不塞假名字）：`OperLogInterceptor`/`FieldChangeRecorderImpl`/`PriceServiceImpl`/
   `SysLogServiceImpl`/`AiAuditServiceImpl` 取不到登录态留空/null（能看出「这条没操作人」）。⚠ 取操作人的行在 try 块内会被吞成
   warn——挪到 try 外或明确接受丢失。
 - 判据：
   `grep -rnE '"system"|"未知操作人"|"系统操作"|getCurrentEmployeeName\(\)|getCurrentEmployeeId\(\)' --include=*.java source/back_end`
-  只允许命中上表三处常量、`ChannelEnum.SYSTEM`、`AiMessageDTO.ROLE_SYSTEM`、`OperLogInterceptor.resolveTitle` 的
+  只允许命中上表四处常量、`ChannelEnum.SYSTEM`、`AiMessageDTO.ROLE_SYSTEM`、`OperLogInterceptor.resolveTitle` 的
   `return "系统"`（操作模块标题，非操作人）。
 
 ## 13. 工具三件套与通用收口（TextUtil / NumUtil / TimeUtil）

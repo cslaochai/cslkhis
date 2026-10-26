@@ -1,5 +1,6 @@
 package com.his.clinical.service;
 
+import com.his.clinical.config.ClinicAfterSubmitExecutorConfig;
 import com.his.clinical.event.ClinicSubmittedEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -18,9 +19,11 @@ import org.springframework.transaction.event.TransactionalEventListener;
  * <p>触发条件：
  * <ul>
  *   <li>{@link TransactionPhase#AFTER_COMMIT}：主事务提交成功才跑，回滚了不跑；</li>
- *   <li>{@link Async}：在独立线程池跑，不占 Tomcat 请求线程。</li>
+ *   <li>{@link Async}：在结诊收尾专用线程池跑（有界队列，见
+ *   {@link com.his.clinical.config.ClinicAfterSubmitExecutorConfig}），不占 Tomcat 请求线程。</li>
  * </ul>
- * 失败只记日志，不回滚结诊（结诊已提交成功）。
+ * 失败只记日志，不回滚结诊（结诊已提交成功）；队列打满被拒的病历不补第二次尝试，
+ * 由质控补扫任务按「结诊了却没有自动质控单」捞回。
  */
 @Slf4j
 @Component
@@ -29,11 +32,11 @@ public class ClinicAfterSubmitListener {
 
     private final EmrService emrService;
 
-    @Async
+    @Async(ClinicAfterSubmitExecutorConfig.BEAN_NAME)
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void onClinicSubmitted(ClinicSubmittedEvent event) {
         try {
-            emrService.asyncAfterSubmit(event.getRecordId());
+            emrService.asyncAfterSubmit(event.getRecordId(), event.getOperator());
         } catch (Exception ex) {
             log.error("[结诊收尾] 异步收尾失败 recordId={}", event.getRecordId(), ex);
         }

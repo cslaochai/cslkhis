@@ -103,6 +103,16 @@ public class BizQualityControlVO {
     private String qcTypeText;
 
     /**
+     * 质控触发来源（1-人工 2-结诊自动 3-定时补扫）
+     */
+    private Integer triggerSource;
+
+    /**
+     * 触发来源文案（由枚举 label 渲染）
+     */
+    private String triggerSourceText;
+
+    /**
      * 质控内容
      */
     private String qcContent;

@@ -294,6 +294,7 @@ import RxSignDialog from '@/views/doctor-workstation/RxSignDialog.vue';
 import EmergencyTransferEdit from '@/views/emergency/EmergencyTransferEdit.vue';
 import {getEmergencyList, updateEmergencyStatus} from '@/api/emergency';
 import {getPrescriptionList, saveMedicalRecord, submitMedicalRecord} from '@/api/doctor';
+import {handleEmrSubmitVeto} from '@/lib/emrSubmit';
 import {getByRegistId} from '@/api/emr';
 import {getPatientFullDetail} from '@/api/patient';
 import {getStockList} from '@/api/pharmacy';
@@ -618,8 +619,17 @@ const onRxSigned = async (dataUrl) => {
   if (!data) return;
   data.prescriptions = data.prescriptions.map((rx) => ({...rx, doctorSignature: dataUrl || ''}));
   saving.value = true;
+  // 结诊带 silent：否决项拦截要弹框让医生选，不能让全局红条先弹一遍；其余失败提示归本函数
   try {
-    const res = await submitMedicalRecord(data);
+    let res;
+    try {
+      res = await submitMedicalRecord(data, {silent: true});
+    } catch (e) {
+      const action = await handleEmrSubmitVeto(e);
+      if (action === 'cancel') return;
+      if (action !== 'force') throw e;
+      res = await submitMedicalRecord({...data, forceSubmit: true}, {silent: true});
+    }
     if (res.data) recordForm.id = res.data;
     ElMessage.success('已保存并提交（处方已签名）');
     if (current.value?.registId) {
@@ -628,7 +638,9 @@ const onRxSigned = async (dataUrl) => {
       rxLoaded.push(...(rxRes.data || []));
       bindRxDraft();
     }
-  } catch (e) { /* 全局提示 */ } finally { saving.value = false; }
+  } catch (e) {
+    ElMessage.error(String(e?.message || '结诊失败'));
+  } finally { saving.value = false; }
 };
 
 // ---------- 轮询 ----------

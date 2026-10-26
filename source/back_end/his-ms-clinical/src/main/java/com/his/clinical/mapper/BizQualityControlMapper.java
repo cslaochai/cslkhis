@@ -14,6 +14,7 @@ import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 /**
@@ -31,7 +32,7 @@ public interface BizQualityControlMapper extends BaseMapper<BizQualityControl> {
      * 文本块与 String 常量拼接在注解里是编译期常量，可以这么写。
      */
     String QC_VO_COLUMNS = """
-            q.id, q.qc_no, q.record_id, q.record_source, q.patient_id, q.qc_type, q.qc_content,
+            q.id, q.qc_no, q.record_id, q.record_source, q.patient_id, q.qc_type, q.trigger_source, q.qc_content,
             q.qc_result, q.error_count, q.error_detail, q.score, q.severity_max,
             q.qc_status, q.qc_by, q.qc_time, q.create_by, q.create_time,
             q.update_by, q.update_time, q.del_flag, q.remark,
@@ -64,11 +65,12 @@ public interface BizQualityControlMapper extends BaseMapper<BizQualityControl> {
      * null = 当前角色不限科室（全院）；非 null = 只能看集合内科室（按病历归属科室收口，
      * 质控单本身无科室列，取门诊/住院文书两表的 COALESCE）。
      */
-    @Select("SELECT " + QC_VO_COLUMNS + QC_VO_JOINS + """
+    @Select("<script>" + "SELECT " + QC_VO_COLUMNS + QC_VO_JOINS + """
             WHERE q.del_flag = 0
               AND (#{q.patientId} IS NULL OR q.patient_id = #{q.patientId})
               AND (#{q.recordSource} IS NULL OR q.record_source = #{q.recordSource})
               AND (#{q.qcType} IS NULL OR q.qc_type = #{q.qcType})
+              AND (#{q.triggerSource} IS NULL OR q.trigger_source = #{q.triggerSource})
               AND (#{q.qcStatus} IS NULL OR q.qc_status = #{q.qcStatus})
               AND (#{q.qcResult} IS NULL OR q.qc_result = #{q.qcResult})
               AND (#{q.keyword} IS NULL OR #{q.keyword} = ''
@@ -80,6 +82,7 @@ public interface BizQualityControlMapper extends BaseMapper<BizQualityControl> {
               <if test="deptIds != null"> AND COALESCE(m.dept_id, r.dept_id) IN
                 <foreach collection="deptIds" item="d" open="(" separator="," close=")">#{d}</foreach></if>
             ORDER BY q.qc_time DESC, q.id DESC
+            </script>
             """)
     IPage<BizQualityControlVO> selectQcPage(IPage<BizQualityControlVO> page, @Param("q") QcPageQueryDTO query,
                                             @Param("deptIds") List<Long> deptIds);
@@ -273,5 +276,34 @@ public interface BizQualityControlMapper extends BaseMapper<BizQualityControl> {
             ORDER BY severity DESC, rule_code ASC, id ASC
             """)
     List<QcIssueVO> listIssueByQc(@Param("qcId") Long qcId);
+
+    /**
+     * 自动质控漏单候选（定时补扫用）：窗口期内已结诊、却没有自动质控单的门诊病历。
+     *
+     * <p>「有没有做过」只看自动触发来源，不看人工单 —— 质控台上人工跑过一份，
+     * 不代表医生结诊时那次引擎跑过了（线程池拒绝、进程重启都会把收尾整批丢掉）。
+     * 按 submit_time 开窗：结诊那一刻才是这件事该发生的时点。
+     */
+    @Select("""
+            <script>
+            SELECT m.id
+            FROM biz_medical_record m
+            WHERE m.del_flag = 0
+              AND m.record_status IN <foreach collection="recordStatuses" item="s" open="(" separator="," close=")">#{s}</foreach>
+              AND m.submit_time >= #{sinceTime}
+              AND NOT EXISTS (SELECT 1 FROM biz_quality_control q
+                              WHERE q.del_flag = 0
+                                AND q.record_source = #{recordSource}
+                                AND q.record_id = m.id
+                                AND q.trigger_source IN <foreach collection="triggerSources" item="t" open="(" separator="," close=")">#{t}</foreach>)
+            ORDER BY m.submit_time ASC, m.id ASC
+            LIMIT #{limit}
+            </script>
+            """)
+    List<Long> selectRecordsWithoutAutoQc(@Param("recordSource") String recordSource,
+                                          @Param("triggerSources") List<Integer> triggerSources,
+                                          @Param("recordStatuses") List<Integer> recordStatuses,
+                                          @Param("sinceTime") LocalDateTime sinceTime,
+                                          @Param("limit") int limit);
 
 }

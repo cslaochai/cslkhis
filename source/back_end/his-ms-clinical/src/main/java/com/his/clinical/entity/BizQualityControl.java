@@ -47,6 +47,11 @@ public class BizQualityControl extends BaseEntity {
     private Integer qcType;
 
     /**
+     * 质控触发来源（1-人工 2-结诊自动 3-定时补扫）
+     */
+    private Integer triggerSource;
+
+    /**
      * 检查内容
      */
     private String qcContent;

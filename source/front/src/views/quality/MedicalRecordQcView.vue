@@ -102,6 +102,12 @@
                        style="width: 150px" @change="() => { qcQuery.pageNum = 1; loadQcList() }">
               <el-option v-for="o in qcTypeOptions" :key="o.code" :label="o.text" :value="o.code"/>
             </el-select>
+            <el-select v-model="qcQuery.triggerSource" clearable data-testid="p5-qc-f-trigger" placeholder="触发来源"
+                       style="width: 130px" @change="() => { qcQuery.pageNum = 1; loadQcList() }">
+              <el-option :value="1" label="人工"/>
+              <el-option :value="2" label="结诊自动"/>
+              <el-option :value="3" label="定时补扫"/>
+            </el-select>
             <el-select v-model="qcQuery.qcResult" clearable data-testid="p5-qc-f-result" placeholder="结论"
                        style="width: 110px" @change="() => { qcQuery.pageNum = 1; loadQcList() }">
               <el-option :value="1" label="通过"/>
@@ -124,7 +130,7 @@
             </el-input>
             <el-button type="primary" @click="() => { qcQuery.pageNum = 1; loadQcList() }">查询</el-button>
             <el-button
-                @click="() => { qcQuery.recordSource = ''; qcQuery.qcType = undefined; qcQuery.qcResult = undefined; qcQuery.qcStatus = undefined; qcQuery.keyword = ''; qcQuery.pageNum = 1; loadQcList() }">
+                @click="() => { qcQuery.recordSource = ''; qcQuery.qcType = undefined; qcQuery.triggerSource = undefined; qcQuery.qcResult = undefined; qcQuery.qcStatus = undefined; qcQuery.keyword = ''; qcQuery.pageNum = 1; loadQcList() }">
               清除
             </el-button>
           </div>
@@ -152,6 +158,11 @@
               <el-table-column label="类型" width="110">
                 <template #default="{ row }">
                   <span class="text-xs">{{ row.qcTypeText }}</span>
+                </template>
+              </el-table-column>
+              <el-table-column label="触发来源" width="100">
+                <template #default="{ row }">
+                  <span class="text-xs">{{ row.triggerSourceText || '—' }}</span>
                 </template>
               </el-table-column>
               <el-table-column label="得分" width="80">
@@ -625,6 +636,7 @@ const qcTotal = ref(0);
 const qcQuery = reactive({
   recordSource: '',
   qcType: undefined,
+  triggerSource: undefined,
   qcStatus: undefined,
   qcResult: undefined,
   keyword: '',
@@ -695,6 +707,8 @@ const loadQcList = async () => {
       params.recordSource = qcQuery.recordSource;
     if (qcQuery.qcType !== undefined && qcQuery.qcType !== null)
       params.qcType = qcQuery.qcType;
+    if (qcQuery.triggerSource !== undefined && qcQuery.triggerSource !== null)
+      params.triggerSource = qcQuery.triggerSource;
     if (qcQuery.qcStatus !== undefined && qcQuery.qcStatus !== null)
       params.qcStatus = qcQuery.qcStatus;
     if (qcQuery.qcResult !== undefined && qcQuery.qcResult !== null)

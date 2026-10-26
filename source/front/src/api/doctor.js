@@ -70,9 +70,9 @@ export function saveMedicalRecord(data) {
     return request.post('/medicalRecord/recordSave', data)
 }
 
-// 结诊提交
-export function submitMedicalRecord(data) {
-    return request.post('/medicalRecord/recordSubmitDirect', data)
+// 结诊提交。config 透传给 axios（结诊调用带 silent：否决项拦截要弹框让医生选，不能让全局提示先弹一次红条）
+export function submitMedicalRecord(data, config) {
+    return request.post('/medicalRecord/recordSubmitDirect', data, config)
 }
 
 // 医生撤回结诊（已提交→草稿，本人当日未缴费未执行；已归档拒绝）

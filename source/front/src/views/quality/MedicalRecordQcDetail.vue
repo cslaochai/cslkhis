@@ -15,7 +15,8 @@
           </span>
           <span data-testid="p5-qc-detail-issuecount">问题：<b>{{ num(detail.errorCount) }}</b> 条</span>
         </div>
-        <p class="mt-2 text-xs text-slate-500">{{ detail.qcContent }} · 质控人 {{ detail.qcBy || '—' }} ·
+        <p class="mt-2 text-xs text-slate-500">{{ detail.qcContent }} · 触发 {{ detail.triggerSourceText || '—' }} ·
+          质控人 {{ detail.qcBy || '—' }} ·
           {{ detail.qcTime || '—' }}</p>
 
         <!-- 明细表为空但 error_count>0：这类单子的问题只存在 error_detail 文本里
