@@ -114,6 +114,22 @@ const CATALOG = {
         severity: 'warning', kind: 'task',
         owner: '总值班', permissions: ['portal:messages:view'],
     },
+    // 接通发送方（DutyCallServiceImpl.call，sql/297）：临床二/三线听班呼叫。
+    // 收件人是当班听班医生（排班上、点位 attend_mode=2），不是岗位、不是全科室 ——
+    // 听班是「叫这一班的那个人」。待办型：闭环动作是「到岗应答」，点已读不算到岗。
+    'duty-call': {
+        label: '听班呼叫', tagClass: 'bg-orange-100 text-orange-700',
+        severity: 'warning', kind: 'task',
+        owner: '听班值班医生', permissions: ['portal:messages:view'],
+    },
+    // 接通发送方（DutyCallServiceImpl.escalateOne，sql/297）：听班呼叫到岗超时 →
+    // 升级给上一层级（三线 / 全院总值班）。与 duty-call 分码：原被叫人仍要看到
+    // 自己那条呼叫，混成一条码会让原被叫人的待办被升级通知顶掉。
+    'duty-call-esc': {
+        label: '听班呼叫超时升级', tagClass: 'bg-red-100 text-red-700',
+        severity: 'urgent', kind: 'task',
+        owner: '三线值班医生 / 总值班', permissions: ['portal:messages:view'],
+    },
     // admit 当前发送方语义是「患者已收治入院 → 通知开证医生」（InpatientServiceImpl.notifyAdmitted），
     // 医生知道收进哪张床即可，无需动作 → 通知型。若日后接「待收治待办」再拆码值，别复用这个。
     admit: {
@@ -278,6 +294,9 @@ export function messageHandleStatusMeta(handleStatus) {
 /** payload 里值得渲染成摘要 chip 的已知键（后端新增键时在这里登记，未知键一律忽略） */
 const PAYLOAD_KEYS = [
     ['patientName', '患者'],
+    ['callNo', '呼叫单号'],
+    ['targetLevelText', '被叫层级'],
+    ['deptName', '科室'],
     ['itemName', '项目'],
     ['prescriptionNo', '处方'],
     ['criticalNo', '危急值号'],

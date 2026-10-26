@@ -644,12 +644,6 @@ const routes = [
                 meta: {title: '人力配置标准'}
             },
             {
-                path: 'opd-station',
-                name: 'OpdStation',
-                component: () => import('@/views/schedule/OpdStationView.vue'),
-                meta: {title: '门诊工位派岗'}
-            },
-            {
                 path: 'perf',
                 name: 'Performance',
                 component: () => import('@/views/performance/PerformanceView.vue'),
@@ -702,6 +696,12 @@ const routes = [
                 name: 'DutyPost',
                 component: () => import('@/views/duty/DutyPostView.vue'),
                 meta: {title: '值班点位配置'}
+            },
+            {
+                path: 'duty-call',
+                name: 'DutyCall',
+                component: () => import('@/views/duty/DutyCallView.vue'),
+                meta: {title: '听班呼叫'}
             },
             {
                 path: 'departments',

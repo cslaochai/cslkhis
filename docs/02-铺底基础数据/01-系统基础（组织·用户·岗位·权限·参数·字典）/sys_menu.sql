@@ -1,4 +1,4 @@
--- sys_menu  铺底数据：525 行（按主键序 自 dev 库 2026-10-25 导出）
+-- sys_menu  铺底数据：522 行（按主键序 自 dev 库 2026-10-25 导出；2026-10-26 删除门诊工位派岗 2960/29601/29602）
 SET NAMES utf8mb4;
 SET FOREIGN_KEY_CHECKS = 0;
 START TRANSACTION;
@@ -507,7 +507,6 @@ VALUES
 INSERT INTO `sys_menu` (`id`, `menu_name`, `parent_id`, `sort_order`, `menu_type`, `path`, `component`, `menu_key`, `icon`, `permission`, `is_frame`, `is_cache`, `is_visible`, `status`, `create_by`, `create_time`, `update_by`, `update_time`, `del_flag`, `remark`, `create_by_id`, `update_by_id`)
 VALUES
 (2950, '我的未报', 200, 22, 2, '/my-unreported', 'outpatient-log/MyUnreportedView', 'opd.myUnreported', 'Bell', 'opd:outpatientLog:mine', 0, 0, 1, 1, 'admin', '2026-10-10 16:06:37', 'admin', '2026-10-10 16:06:37', 0, '医生自查本人应报未报（后端强制本人，非全院台账）', 1, 1),
-(2960, '门诊工位派岗', 2945, 8, 2, '/opd-station', 'schedule/OpdStationView', 'org.opdStation:list', NULL, 'opd:station:list', 0, 0, 1, 1, 'admin', '2026-10-19 12:46:39', 'admin', '2026-10-25 15:43:50', 0, '公共工位字典 + 按日派岗/借调登记', 1, 1),
 (2980, '门诊排班-审核发布', 804, 4, 3, NULL, NULL, 'outpatient.schedule:audit', NULL, 'outpatient:schedule:audit', 0, 1, 0, 1, 'admin', '2026-10-19 13:10:29', 'admin', '2026-10-19 13:10:29', 0, 'G-15 排班发布态：待审核→已发布的审核动作（独立审核人）', 1, 1),
 (2981, '病区护理排班-审核发布', 331, 4, 3, '', '', 'nursing.schedule:audit', '', 'nursing:schedule:audit', 0, 0, 1, 1, 'admin', '2026-10-19 13:10:29', 'admin', '2026-10-19 13:10:29', 0, 'G-15 排班发布态：待审核→已发布的审核动作（独立审核人）', 1, 1),
 (2982, '总值班排班-审核发布', 806, 4, 3, NULL, NULL, 'org.duty:audit', NULL, 'org:duty:audit', 0, 1, 0, 1, 'admin', '2026-10-19 13:10:29', 'admin', '2026-10-19 13:10:29', 0, 'G-15 排班发布态：待审核→已发布的审核动作（独立审核人）', 1, 1),
@@ -521,8 +520,6 @@ VALUES
 (29391, '班次字典-新增', 2939, 1, 3, NULL, NULL, 'org.shiftDict:add', NULL, 'shift:dict:add', 0, 1, 0, 1, 'admin', '2026-10-19 18:01:31', 'admin', '2026-10-19 18:01:31', 0, '新增班次（完整建条，后端 shiftUpsert）', 1, 1),
 (29392, '班次字典-修改', 2939, 2, 3, NULL, NULL, 'org.shiftDict:edit', NULL, 'shift:dict:edit', 0, 1, 0, 1, 'admin', '2026-10-19 18:01:31', 'admin', '2026-10-19 18:01:31', 0, '班次改名 / 状态开关 / 适用域整条覆盖', 1, 1),
 (29393, '班次字典-删除', 2939, 3, 3, NULL, NULL, 'org.shiftDict:delete', NULL, 'shift:dict:delete', 0, 1, 0, 1, 'admin', '2026-10-19 18:01:31', 'admin', '2026-10-19 18:01:31', 0, '逻辑删班次（界面当前只给停用，未接该动作）', 1, 1),
-(29601, '门诊工位-派岗/新增', 2960, 1, 3, NULL, NULL, 'org.opdStation:add', NULL, 'opd:station:add', 0, 1, 0, 1, 'admin', '2026-10-19 12:46:39', 'admin', '2026-10-19 12:46:39', 0, '工位字典新增/修改与派岗登记同走 upsert', 1, 1),
-(29602, '门诊工位-撤销/删除', 2960, 2, 3, NULL, NULL, 'org.opdStation:delete', NULL, 'opd:station:delete', 0, 1, 0, 1, 'admin', '2026-10-19 12:46:39', 'admin', '2026-10-19 12:46:39', 0, '撤销派岗 / 删除工位字典行（物理删）', 1, 1),
 (29603, '员工排班-审核发布', 2935, 4, 3, NULL, NULL, 'org.staffSchedule:audit', NULL, 'staff:schedule:audit', 0, 1, 0, 1, 'admin', '2026-10-20 10:27:30', 'admin', '2026-10-20 10:27:30', 0, '全院岗位排班：待审核→已发布 / 驳回（科室指定审核人）', 1, 1),
 (29604, '排班审批中心', 2945, 5, 2, '/schedule-approve', 'views/schedule/ScheduleApproveView.vue', 'org.scheduleApprove', 'Stamp', 'staff:schedule:audit', 0, 0, 1, 1, 'admin', '2026-10-20 10:27:30', 'admin', '2026-10-20 10:27:30', 0, '待我审批：全院岗位排班的待审聚合（逐条/批量审核发布与驳回）', 1, 1),
 (29605, '急诊值班', 2945, 6, 2, '/er-duty', 'views/schedule/ErDutyView.vue', 'org.erDuty', 'FirstAidKit', 'schedule:erDuty:view', 0, 1, 1, 1, 'admin', '2026-10-20 10:54:39', 'admin', '2026-10-20 10:54:39', 0, '急诊值班表（公开只读）：急诊三科当天已发布医生值班，全院可查', 1, 1),

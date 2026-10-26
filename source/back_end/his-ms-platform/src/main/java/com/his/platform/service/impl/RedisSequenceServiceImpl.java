@@ -93,6 +93,11 @@ public class RedisSequenceServiceImpl implements RedisSequenceService {
     }
 
     @Override
+    public String generateDutyCallNo() {
+        return no(BizCodeConst.DUTY_CALL_NO_PREFIX, BizCodeConst.DUTY_CALL_NO_KEY_PREFIX, 5);
+    }
+
+    @Override
     public String generatePurchaseNo() {
         return no(BizCodeConst.PURCHASE_NO_PREFIX, BizCodeConst.PURCHASE_NO_KEY_PREFIX, 4);
     }

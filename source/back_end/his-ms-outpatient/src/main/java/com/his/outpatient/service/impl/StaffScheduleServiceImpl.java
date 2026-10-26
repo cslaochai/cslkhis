@@ -9,12 +9,9 @@ import com.his.common.enums.*;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.ShiftCoverUtil;
 import com.his.common.util.TextUtil;
+import com.his.common.utils.UserUtils;
 import com.his.outpatient.dto.*;
-import com.his.outpatient.entity.BizClinicSource;
-import com.his.outpatient.entity.BizSchedule;
-import com.his.outpatient.entity.BizShift;
-import com.his.outpatient.entity.BizStaffAttendance;
-import com.his.outpatient.entity.BizStaffPlanRule;
+import com.his.outpatient.entity.*;
 import com.his.outpatient.mapper.BizClinicSourceMapper;
 import com.his.outpatient.mapper.BizScheduleMapper;
 import com.his.outpatient.mapper.BizStaffAttendanceMapper;
@@ -23,14 +20,9 @@ import com.his.outpatient.service.ShiftService;
 import com.his.outpatient.service.StaffPlanRuleService;
 import com.his.outpatient.service.StaffScheduleService;
 import com.his.outpatient.vo.*;
-import com.his.spi.service.SystemFacadeService;
-import com.his.spi.vo.DeptBriefVO;
-import com.his.spi.vo.EmployeeBriefVO;
-import com.his.spi.vo.EmployeePostBriefVO;
-import com.his.spi.vo.RoleBriefVO;
-import com.his.spi.vo.WardBriefVO;
 import com.his.spi.service.DeptScopeService;
-import com.his.common.utils.UserUtils;
+import com.his.spi.service.SystemFacadeService;
+import com.his.spi.vo.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -129,8 +121,8 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, Biz
             return Map.of();
         }
         return clinicSourceMapper.selectList(new LambdaQueryWrapper<BizClinicSource>()
-                .select(BizClinicSource::getStaffScheduleId)
-                .in(BizClinicSource::getStaffScheduleId, staffScheduleIds))
+                        .select(BizClinicSource::getStaffScheduleId)
+                        .in(BizClinicSource::getStaffScheduleId, staffScheduleIds))
                 .stream()
                 .map(BizClinicSource::getStaffScheduleId)
                 .filter(Objects::nonNull)
@@ -173,7 +165,7 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, Biz
         }
         return registered > 0
                 ? "「" + before.getEmployeeName() + "」在 " + before.getScheduleDate() + " 的出诊已随停班停诊，仍有 "
-                        + registered + " 条在挂号，请到门诊排班页批量退号"
+                + registered + " 条在挂号，请到门诊排班页批量退号"
                 : "「" + before.getEmployeeName() + "」在 " + before.getScheduleDate() + " 的出诊已随停班停诊";
     }
 
@@ -1276,11 +1268,11 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, Biz
         }
         if (StaffDutyStatusEnum.isWorking(schedule.getDutyStatus())) {
             throw new BusinessException("「" + schedule.getEmployeeName() + "」在 " + schedule.getScheduleDate()
-                    + " 已排休息/请假，先删掉那条记录才能排上班");
+                    + " 已排休息/请假");
         }
         throw new BusinessException("「" + schedule.getEmployeeName() + "」在 " + schedule.getScheduleDate()
                 + " 已经排了班，改成" + StaffDutyStatusEnum.getLabel(schedule.getDutyStatus())
-                + "要先删掉那条排班（他的号源也得跟着停）");
+        );
     }
 
     /**
@@ -1341,7 +1333,7 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, Biz
             if (theirs.from().isBefore(mine.to()) && theirs.to().isAfter(mine.from())) {
                 throw new BusinessException("「" + schedule.getEmployeeName() + "」在 "
                         + other.getScheduleDate() + " 已排「" + timeText(other) + "」，"
-                        + "与本次的「" + timeText(schedule) + "」时间重叠：一个人同一时刻只能在一个班上当岗");
+                        + "与本次的「" + timeText(schedule) + "」时间重叠");
             }
         }
     }

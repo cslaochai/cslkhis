@@ -16,7 +16,6 @@ import com.his.charge.dto.BillSettleUpsertDTO;
 import com.his.charge.dto.BillVoidDTO;
 import com.his.charge.dto.PendingEncounterPageQueryDTO;
 import com.his.charge.entity.*;
-import com.his.charge.mapper.BizInsuranceCatalogRuleMapper;
 import com.his.charge.mapper.BizPaymentTxnMapper;
 import com.his.charge.mapper.BizSettlementBillItemMapper;
 import com.his.charge.mapper.BizSettlementBillMapper;
@@ -60,7 +59,6 @@ public class SettlementBillServiceImpl extends ServiceImpl<BizSettlementBillMapp
 
     private static final int AMOUNT_SCALE = 2;
     private static final int QTY_SCALE = 2;
-    private static final BigDecimal HUNDRED = new BigDecimal("100");
 
     private static final int W_BILL_NO = 32;
     private static final int W_PATIENT_NO = 32;
@@ -92,8 +90,6 @@ public class SettlementBillServiceImpl extends ServiceImpl<BizSettlementBillMapp
     private final InsurancePolicyService insurancePolicyService;
 
     private final RedisSequenceService redisSequenceService;
-
-    private final BizInsuranceCatalogRuleMapper bizInsuranceCatalogRuleMapper;
 
     private final InsuranceChannelService insuranceChannelService;
 
@@ -641,32 +637,14 @@ public class SettlementBillServiceImpl extends ServiceImpl<BizSettlementBillMapp
     }
 
     /**
-     * 账单行快照 + 逐行 split（按医保目录报销规则逐条算）。
+     * 账单行快照 + 逐行 split 占位。
      *
-     * <p>split 必须落到行：2304 结算清单要逐项目报费率，整单一个数报不出去。
+     * <p>出账时 pool/account/self 全部置 0 占位：真实 splits 由收款时调医保平台
+     * 2201/2301 返回后回写（见 InsuranceRealTimeSettleController）。
+     * 院内不再按规则表估算统筹——那是假数，跟医保平台实际分解结果对不上。
      */
     private List<BizSettlementBillItem> buildItems(BizFeeRecord first, List<BizFeeRecord> rows,
                                                    BigDecimal discount, PatientInsurance insurance) {
-        // 批量查规则：避免 N+1
-        List<String> itemCodes = new ArrayList<>();
-        for (BizFeeRecord row : rows) {
-            if (TextUtil.hasText(row.getItemCode())) {
-                itemCodes.add(row.getItemCode());
-            }
-        }
-        Map<String, BizInsuranceCatalogRule> ruleByItem = new HashMap<>();
-        if (!itemCodes.isEmpty()) {
-            LocalDate settleDate = LocalDate.now();
-            List<BizInsuranceCatalogRule> rules = bizInsuranceCatalogRuleMapper.selectBatchRules(
-                    itemCodes, first.getEncounterType(), insurance.type(), settleDate);
-            for (BizInsuranceCatalogRule rule : rules) {
-                // 键必须是「项目编码 + 费别」成对：同一项目可能同时配了甲类和乙类规则，
-                // 只按 item_code 存会把先到的那条（另一费别的待遇）套到本行上 → 多报/少报统筹。
-                // putIfAbsent 保留 mapper 排序里的第一条（精确险种 > 通用 > priority 升序）。
-                ruleByItem.putIfAbsent(ruleKey(rule.getItemCode(), rule.getCatalogType()), rule);
-            }
-        }
-
         List<BizSettlementBillItem> items = new ArrayList<>();
         for (BizFeeRecord row : rows) {
             BizSettlementBillItem item = new BizSettlementBillItem();
@@ -688,108 +666,15 @@ public class SettlementBillServiceImpl extends ServiceImpl<BizSettlementBillMapp
             item.setAmount(amount);
             item.setDiscountAmount(BigDecimal.ZERO);
 
-            // 按规则表逐条算 pool/account/self；规则按「项目编码 + 本行费别」成对取，
-            // 没配到这一对的（漏配/只配了另一费别）才回落到 byItemType 硬推定
-            BizInsuranceCatalogRule rule = TextUtil.hasText(row.getItemCode())
-                    ? ruleByItem.get(ruleKey(row.getItemCode(), item.getCatalogType())) : null;
-            BigDecimal pool = insurance.covered() ? computePoolFromRule(amount, item.getCatalogType(), rule, insurance) : BigDecimal.ZERO;
-            item.setPoolAmount(pool);
-            // 个账是"刷参保人卡扣的额度"，是一笔真实收款（pay_method=4），不是账单层的分摊：
-            // 报盘没回这个数之前恒为 0，绝不拿估算值去充门面
+            // 出账时 splits 全部占位 0：收款时调 2201/2301 拿真实值后回写。
+            // 自费患者（未参保/停保/未带社保卡）一路都是 0，直接收全额，跟以前行为一致。
+            item.setPoolAmount(BigDecimal.ZERO);
             item.setAccountAmount(BigDecimal.ZERO);
-            item.setSelfAmount(NumUtil.scale(amount.subtract(pool), AMOUNT_SCALE));
+            item.setSelfAmount(amount);
             items.add(item);
         }
         allocateDiscount(items, discount);
         return items;
-    }
-
-    /**
-     * 规则取用键：项目编码 + 费别。
-     *
-     * <p>费别必须进键，否则同一项目配了甲、乙两条规则时会串（拿乙类待遇报甲类行）。
-     * 分隔符用 {@code ::}：项目编码是业务自定短码，不含冒号，不会撞。
-     */
-    private String ruleKey(String itemCode, Integer catalogType) {
-        return itemCode + "::" + catalogType;
-    }
-
-    /**
-     * 按规则表算统筹：优先用规则的 self_pay_ratio/pool_ratio，没有规则时退回到整单比例。
-     *
-     * <p>起付线/封顶线都只在「本行可报基数」上生效，不跨行、也不跨结算单累计 ——
-     * 跨单累计需要年度累计台账，现有表结构承载不了（deductible/ceiling 是行级配置，不是累计器）。
-     * 真要按年度限额控，得先有累计台账；在那之前，超限的行按规则比例照算，
-     * 由医保局端兜总量，不在院内单行里做假累计。
-     */
-    private BigDecimal computePoolFromRule(BigDecimal amount, Integer catalogType,
-                                           BizInsuranceCatalogRule rule, PatientInsurance insurance) {
-        if (amount.signum() <= 0 || catalogType == null) {
-            return BigDecimal.ZERO;
-        }
-        // 有规则时按规则算
-        if (rule != null) {
-            // 先扣自付比例
-            BigDecimal selfPayRatio = rule.getSelfPayRatio() == null ? BigDecimal.ZERO : rule.getSelfPayRatio();
-            BigDecimal afterSelfPay = amount;
-            if (FeeCatalogTypeEnum.CLASS_B.getCode().equals(catalogType) && selfPayRatio.signum() > 0) {
-                // 乙类先自付 X%
-                BigDecimal firstSelf = rate(amount, selfPayRatio);
-                afterSelfPay = amount.subtract(firstSelf);
-            } else if (FeeCatalogTypeEnum.CLASS_C.getCode().equals(catalogType)
-                    || FeeCatalogTypeEnum.SELF_PAY.getCode().equals(catalogType)) {
-                // 丙类/自费全自费
-                return BigDecimal.ZERO;
-            }
-            // 再扣起付线：行级起付（本次就诊该行先自付的部分），0 = 无起付线。
-            // 湖南职工门诊是「每次起付 + 年度累计不超过」的组合（湘医保发〔2023〕22号），
-            // 年度累计那半截需要跨单台账，这里只落「单行起付」这一半能落的。
-            BigDecimal deductible = rule.getDeductible();
-            if (deductible != null && deductible.compareTo(BigDecimal.ZERO) > 0
-                    && afterSelfPay.compareTo(deductible) > 0) {
-                afterSelfPay = afterSelfPay.subtract(deductible);
-            }
-            // 再套封顶线：超出的**部分**不报，不是整行清零。
-            // 原来写 afterSelfPay = BigDecimal.ZERO：一行金额 1000、封顶 900，本行能报 900 却报 0，
-            // 少报统筹 —— 少报不会被医保局飞检抓，多报才会，但算错的数迟早要有人去核。
-            BigDecimal ceiling = rule.getCeiling();
-            if (ceiling != null && ceiling.compareTo(BigDecimal.ZERO) > 0
-                    && afterSelfPay.compareTo(ceiling) > 0) {
-                afterSelfPay = ceiling;
-            }
-            // 最后按统筹比例报
-            BigDecimal poolRatio = rule.getPoolRatio();
-            if (poolRatio != null && poolRatio.signum() > 0) {
-                return rate(afterSelfPay, poolRatio);
-            }
-            return BigDecimal.ZERO;
-        }
-        // 没有规则时退回到整单比例（向后兼容）
-        return computePool(amount, catalogType, insurance);
-    }
-
-    /**
-     * 甲类按报销比例进统筹；乙类先扣先行自付，剩余部分再按比例报；丙类/自费不报。
-     */
-    private BigDecimal computePool(BigDecimal amount, Integer catalogType, PatientInsurance insurance) {
-        if (amount.signum() <= 0 || catalogType == null) {
-            return BigDecimal.ZERO;
-        }
-        if (FeeCatalogTypeEnum.CLASS_A.getCode().equals(catalogType)) {
-            return rate(amount, insurance.coverageRatio());
-        }
-        if (FeeCatalogTypeEnum.CLASS_B.getCode().equals(catalogType)) {
-            BigDecimal firstSelf = rate(amount, insurance.selfPayRatio());
-            return rate(amount.subtract(firstSelf), insurance.coverageRatio());
-        }
-        return BigDecimal.ZERO;
-    }
-
-    private BigDecimal rate(BigDecimal amount, BigDecimal percent) {
-        if (percent == null || percent.signum() <= 0) {
-            return BigDecimal.ZERO;
-        }
-        return amount.multiply(percent).divide(HUNDRED, AMOUNT_SCALE, RoundingMode.HALF_UP);
     }
 
     /**

@@ -4,6 +4,9 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.his.charge.config.InsuranceProperties;
 import com.his.charge.service.InsuranceChannelService;
+import com.his.charge.service.InsuranceChannelService.FeeItem;
+import com.his.charge.service.InsuranceChannelService.SettleRequest;
+import com.his.charge.service.InsuranceChannelService.SettleSplit;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.TextUtil;
 import lombok.extern.slf4j.Slf4j;
@@ -197,5 +200,85 @@ public class RemoteInsuranceChannelServiceImpl implements InsuranceChannelServic
     private BigDecimal decimal(JsonNode node, String field) {
         JsonNode v = node.path(field);
         return v.isNumber() ? v.decimalValue() : null;
+    }
+
+    @Override
+    public SettleSplit preSettle(SettleRequest request) {
+        return callSettle("/gateway/2201", request);
+    }
+
+    @Override
+    public SettleSplit formalSettle(SettleRequest request) {
+        return callSettle("/gateway/2301", request);
+    }
+
+    /**
+     * 实时结算（2201/2301 共用）：把 SettleRequest JSON POST 到 mss，解析 {@code data} 段。
+     * 平台连不上/返回非 200 时，返回 infcode=-1 且带 errMsg，由调用方降级为「自费收」。
+     */
+    private SettleSplit callSettle(String path, SettleRequest request) {
+        String body;
+        try {
+            body = objectMapper.writeValueAsString(request);
+        } catch (Exception e) {
+            SettleSplit err = new SettleSplit();
+            err.setInfcode(-1);
+            err.setTradeNo(request.getTradeNo());
+            err.setErrMsg("医保结算请求序列化失败：" + e.getMessage());
+            return err;
+        }
+        String response;
+        try {
+            response = restClient.post()
+                    .uri(path)
+                    .contentType(JSON_UTF8)
+                    .accept(MediaType.APPLICATION_JSON)
+                    .body(body)
+                    .retrieve()
+                    .body(String.class);
+        } catch (RestClientException e) {
+            log.error("[医保通道] 实时结算调用失败 path={} tradeNo={}：{}", path, request.getTradeNo(), e.getMessage());
+            SettleSplit err = new SettleSplit();
+            err.setInfcode(-1);
+            err.setTradeNo(request.getTradeNo());
+            err.setErrMsg("医保平台连接失败：" + e.getMessage());
+            return err;
+        }
+        try {
+            JsonNode root = objectMapper.readTree(response);
+            int code = root.path("code").asInt(-1);
+            if (code != 200) {
+                String msg = root.path("message").asText("医保平台返回失败");
+                SettleSplit err = new SettleSplit();
+                err.setInfcode(-1);
+                err.setTradeNo(request.getTradeNo());
+                err.setErrMsg(msg);
+                return err;
+            }
+            JsonNode d = root.path("data");
+            SettleSplit split = new SettleSplit();
+            split.setInfcode(d.path("infcode").asInt(-1));
+            split.setTradeNo(text(d, "tradeNo"));
+            split.setReceiptNo(text(d, "receiptNo"));
+            split.setInsuranceType(text(d, "insuranceType"));
+            split.setName(text(d, "name"));
+            split.setTotal(decimal(d, "total"));
+            split.setInsurancePay(decimal(d, "insurancePay"));
+            split.setPersonalAccount(decimal(d, "personalAccount"));
+            split.setCashPay(decimal(d, "cashPay"));
+            split.setSelfPay(decimal(d, "selfPay"));
+            split.setDeductible(decimal(d, "deductible"));
+            split.setAccountBalanceAfter(decimal(d, "accountBalanceAfter"));
+            split.setWarnMsg(text(d, "warnMsg"));
+            split.setErrMsg(text(d, "errMsg"));
+            return split;
+        } catch (Exception e) {
+            log.error("[医保通道] 实时结算响应解析失败 path={} body={}", path, response, e);
+            SettleSplit err = new SettleSplit();
+            err.setInfcode(-1);
+            err.setTradeNo(request.getTradeNo());
+            err.setErrMsg("医保平台响应解析失败");
+            return err;
+        }
     }
 }

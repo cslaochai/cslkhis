@@ -48,6 +48,11 @@ public interface RedisSequenceService {
     String generateEmergencyNo();
 
     /**
+     * 生成听班呼叫单号：DC + 年月日 + 5位流水号（sql/297）
+     */
+    String generateDutyCallNo();
+
+    /**
      * 生成采购订单号：CG + 年月日 + 4位流水号
      * 单号一经生成即固化（订单表 order_no 有唯一索引），不随订单编辑而变。
      */

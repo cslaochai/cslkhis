@@ -1,0 +1,7 @@
+# 短信验证码配置
+his:
+  sms:
+    code:
+      ttl-seconds: 300
+      resend-seconds: 60
+      length: 6

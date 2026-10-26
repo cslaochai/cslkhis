@@ -225,7 +225,7 @@
                           </button>
                           <!-- 调班中(PUBLISH_ADJUSTING)：停、加属变更动作，连同它们紧邻的分隔竖线一起隐藏，只留详情与撤回 -->
                           <template v-if="s.publishStatus !== PUBLISH_ADJUSTING">
-                            <span class="text-slate-200">|</span>
+                            <span v-perm="'outpatient:schedule:delete'" class="text-slate-400">|</span>
                             <button v-perm="'outpatient:schedule:delete'"
                                     :title="staffTypeHasSource(s.staffType) ? '快捷停诊' : '停用该班次'"
                                     class="cursor-pointer text-[13px] text-red-500"
@@ -233,7 +233,7 @@
                             </button>
                             <!-- 加号只给医生出诊班：出勤岗没有号源池（后端同样拒绝），按钮直接不渲染 -->
                             <template v-if="staffTypeHasSource(s.staffType)">
-                              <span class="text-slate-200">|</span>
+                              <span v-perm="'outpatient:schedule:edit'" class="text-slate-400">|</span>
                               <button v-perm="'outpatient:schedule:edit'" class="cursor-pointer text-[13px] text-blue-600"
                                       title="专家加号"
                                       @click.stop="handleAddSource(s)">加
@@ -242,27 +242,35 @@
                           </template>
                           <!-- 发布流转（G-15）：状态互斥，当前态动作 + 撤回；调班中只剩撤回 -->
                           <template v-if="s.publishStatus != null">
-                            <span class="text-slate-200">|</span>
-                            <button v-if="s.publishStatus === PUBLISH_DRAFT" v-perm="'outpatient:schedule:add'"
-                                    :data-testid="`publish-submit-${s.id}`"
-                                    class="cursor-pointer text-[13px] font-medium text-blue-600"
-                                    title="提交审核（草稿→待审核）"
-                                    @click.stop="handlePublishSubmit(s)">提交审核
-                            </button>
-                            <button v-else-if="s.publishStatus === PUBLISH_PENDING" v-perm="'outpatient:schedule:audit'"
-                                    :data-testid="`publish-audit-${s.id}`"
-                                    class="cursor-pointer text-[13px] font-medium text-emerald-600"
-                                    title="审核发布（待审核→已发布，同时对外出号）"
-                                    @click.stop="handleAuditPublish(s)">审核发布
-                            </button>
-                            <button v-else-if="isPublishEffective(s.publishStatus)" v-perm="'outpatient:schedule:edit'"
-                                    :data-testid="`publish-adjust-${s.id}`"
-                                    class="cursor-pointer text-[13px] font-medium text-sky-600"
-                                    title="进入调班（已发布/已变更→调班中，号源暂冻结）"
-                                    @click.stop="handleAdjustStart(s)">进入调班
-                            </button>
+                            <template v-if="s.publishStatus === PUBLISH_DRAFT">
+                              <span v-perm="'outpatient:schedule:add'" class="text-slate-400">|</span>
+                              <button v-perm="'outpatient:schedule:add'"
+                                      :data-testid="`publish-submit-${s.id}`"
+                                      class="cursor-pointer text-[13px] font-medium text-blue-600"
+                                      title="提交审核（草稿→待审核）"
+                                      @click.stop="handlePublishSubmit(s)">提交审核
+                              </button>
+                            </template>
+                            <template v-else-if="s.publishStatus === PUBLISH_PENDING">
+                              <span v-perm="'outpatient:schedule:audit'" class="text-slate-400">|</span>
+                              <button v-perm="'outpatient:schedule:audit'"
+                                      :data-testid="`publish-audit-${s.id}`"
+                                      class="cursor-pointer text-[13px] font-medium text-emerald-600"
+                                      title="审核发布（待审核→已发布，同时对外出号）"
+                                      @click.stop="handleAuditPublish(s)">审核发布
+                              </button>
+                            </template>
+                            <template v-else-if="isPublishEffective(s.publishStatus)">
+                              <span v-perm="'outpatient:schedule:edit'" class="text-slate-400">|</span>
+                              <button v-perm="'outpatient:schedule:edit'"
+                                      :data-testid="`publish-adjust-${s.id}`"
+                                      class="cursor-pointer text-[13px] font-medium text-sky-600"
+                                      title="进入调班（已发布/已变更→调班中，号源暂冻结）"
+                                      @click.stop="handleAdjustStart(s)">进入调班
+                              </button>
+                            </template>
                             <!-- 调班中动作按钮已不渲染，撤回前这条分隔竖线一并隐藏，避免出现孤立竖线 -->
-                            <span v-if="s.publishStatus !== PUBLISH_ADJUSTING" class="text-slate-200">|</span>
+                            <span v-if="s.publishStatus !== PUBLISH_ADJUSTING" class="text-slate-400">|</span>
                             <button v-perm="'outpatient:schedule:edit'"
                                     :data-testid="`publish-recall-${s.id}`"
                                     class="cursor-pointer text-[13px] text-slate-400 hover:text-red-500"

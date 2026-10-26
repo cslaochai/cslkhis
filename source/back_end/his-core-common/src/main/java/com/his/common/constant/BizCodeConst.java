@@ -40,6 +40,10 @@ public interface BizCodeConst {
      */
     String EMERGENCY_NO_KEY_PREFIX = "EMERGENCY";
     /**
+     * 听班呼叫单号（sql/297）。独立号段：与急诊单号（JZ）前缀不同，Redis 计数器也独立。
+     */
+    String DUTY_CALL_NO_KEY_PREFIX = "DUTY_CALL";
+    /**
      * 药品采购订单号
      */
     String PURCHASE_NO_KEY_PREFIX = "PURCHASE";
@@ -492,6 +496,10 @@ public interface BizCodeConst {
      * 急诊单号前缀（JZ = 急诊）
      */
     String EMERGENCY_NO_PREFIX = "JZ";
+    /**
+     * 听班呼叫单号前缀（DC = Duty Call，sql/297）
+     */
+    String DUTY_CALL_NO_PREFIX = "DC";
     /**
      * 采购订单号前缀（CG = 采购）
      */

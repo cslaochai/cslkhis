@@ -33,7 +33,7 @@
           </el-select>
         </div>
         <div v-if="currentPost()" class="mt-1 text-xs text-gray-500">
-          班次与角色由点位带出：{{ currentPost().shiftName }} {{ currentPost().startTime }}~{{ currentPost().endTime }}
+          {{ currentPost().shiftName }} {{ currentPost().startTime }}~{{ currentPost().endTime }}
         </div>
       </el-form-item>
       <el-form-item label="班次" prop="shiftType">
@@ -249,9 +249,9 @@ const handleSubmit = async () => {
       ElMessage.success(formData.id ? '修改成功' : '登记成功')
       visible.value = false
       emit('saved')
-    } 
-  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
-    
+    }
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */ {
+
   } finally {
     submitLoading.value = false
   }

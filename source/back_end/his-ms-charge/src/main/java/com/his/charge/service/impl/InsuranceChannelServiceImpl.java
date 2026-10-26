@@ -9,6 +9,8 @@ import com.his.common.enums.InsuranceReportStatusEnum;
 import com.his.common.enums.InsuranceReportTypeEnum;
 import com.his.charge.mapper.BizInsuranceReportMapper;
 import com.his.charge.service.InsuranceChannelService;
+import com.his.charge.service.InsuranceChannelService.SettleRequest;
+import com.his.charge.service.InsuranceChannelService.SettleSplit;
 import com.his.common.util.DateFormats;
 import com.his.common.util.TextUtil;
 import lombok.RequiredArgsConstructor;
@@ -112,6 +114,25 @@ public class InsuranceChannelServiceImpl extends ServiceImpl<BizInsuranceReportM
                 insuranceNo, idCard, name);
         return new InsuredStatus(false, false, null, null,
                 "mock 通道未接医保平台，无法核验参保状态");
+    }
+
+    @Override
+    public SettleSplit preSettle(SettleRequest request) {
+        return mockSettle(request);
+    }
+
+    @Override
+    public SettleSplit formalSettle(SettleRequest request) {
+        return mockSettle(request);
+    }
+
+    private SettleSplit mockSettle(SettleRequest request) {
+        log.info("实时结算(mock 通道，无医保平台可查) tradeNo={} → 按自费原价", request.getTradeNo());
+        SettleSplit split = new SettleSplit();
+        split.setInfcode(-1);
+        split.setTradeNo(request.getTradeNo());
+        split.setErrMsg("mock 通道未接医保平台，无法联网结算");
+        return split;
     }
 
     private Receipt fail(String errMsg, String replyTime, OutboundMessage message) {

@@ -164,16 +164,22 @@ const SCHEDULE_NURSING_FILING_ABILITY = '护理排班整周备案与退回（全
 const credRows = [
   // 排班流程（推荐演示链路：排班员 → 审核人 → 全院）
   {
+    accounts: ['admin ( 超级管理员  )'],
+    role: '系统管理员',
+    dept: '医院信息系统',
+    ability: '全部业务页面 + 系统管理（用户/角色/菜单/字典/参数/日志审计）'
+  },
+  {
+    accounts: ['xuyan ( 许妍  )'],
+    role: '前台导诊',
+    dept: '院办',
+    ability: '挂号预约（全院科室）、收费结算窗口、结算账单查询、患者管理、患者标签（分诊工作站与就诊总览已收回）'
+  },
+  {
     accounts: ['wanghaitao ( 王海涛 )'],
     role: '科室排班员',
     dept: '心血管内科',
     ability: SCHEDULE_PLANNER_ABILITY
-  },
-  {
-    accounts: ['caoyumei ( 曹玉梅  )', 'qiuhaotian ( 邱昊天  )'],
-    role: '护士长',
-    dept: '心血管内科',
-    ability: HEAD_NURSE_ABILITY
   },
   {
     accounts: ['liumin ( 刘敏 )'],
@@ -181,8 +187,25 @@ const credRows = [
     dept: '医院信息系统',
     ability: SCHEDULE_AUDITOR_ABILITY + '；心血管内科排班审核人'
   },
+  {
+    accounts: ['linxinyi ( 林心怡  )'],
+    role: '分诊护士',
+    dept: '心血管内科',
+    ability: '分诊工作站：队列/呼叫/重呼/过号/复诊优先/分诊卡体征与分级/患者签到，默认诊区=心内科（限本科室）'
+  },
+  {
+    accounts: ['caoyumei ( 曹玉梅  )', 'qiuhaotian ( 邱昊天  )'],
+    role: '区护士长',
+    dept: '心血管内科',
+    ability: HEAD_NURSE_ABILITY
+  },
   // 护理三级链第二档：科护士长，审核发布片区内病区的整周排班
-  {accounts: ['yangshuhua ( 杨淑华 )'], role: '科护士长', dept: '心血管内科', ability: SCHEDULE_NURSING_AREA_AUDITOR_ABILITY},
+  {
+    accounts: ['yangshuhua ( 杨淑华 )'],
+    role: '科护士长',
+    dept: '心血管内科',
+    ability: SCHEDULE_NURSING_AREA_AUDITOR_ABILITY
+  },
   {
     accounts: ['chenhuilan ( 陈慧兰 )'],
     role: '护理部主任',
@@ -193,60 +216,15 @@ const credRows = [
     accounts: ['tanyiming ( 谭一鸣 )'],
     role: '医务科',
     dept: '医务科',
-    ability: '员工排班（全院）、人力配置标准、排班总览；无临床业务页面'
+    ability: '员工排班（全院，含审核发布）、急诊排班（含审核发布）、人力配置标准、排班总览、门诊排班审核、排班字典管理、急诊值班；无临床业务页面'
   },
-  {
-    accounts: ['xuyan ( 许妍  )'],
-    role: '前台导诊',
-    dept: '院办',
-    ability: '挂号预约（全院科室）、收费结算窗口、结算账单查询、患者管理、患者标签（分诊工作站与就诊总览已收回）'
-  },
+
   // 三个治疗科室（推荐账号）
   {
     accounts: ['moyuanhang ( 莫远航 )', 'shijiaming ( 施佳明  )', 'wangsheng ( 王升  )', 'zengjie ( 曾洁 )', 'zhengmingyuan ( 郑明远 )'],
     role: '医生',
     dept: '心血管内科',
     ability: DOCTOR_ABILITY
-  },
-  {
-    accounts: ['guhanmei ( 顾寒梅  )', 'kangyinuo ( 康一诺  )', 'pengsiqi ( 彭思琪  )'],
-    role: '护士',
-    dept: '心血管内科',
-    ability: NURSE_ABILITY
-  },
-  {
-    accounts: ['linxinyi ( 林心怡  )'],
-    role: '分诊护士',
-    dept: '心血管内科',
-    ability: '分诊工作站：队列/呼叫/重呼/过号/复诊优先/分诊卡体征与分级/患者签到，默认诊区=心内科（限本科室）'
-  },
-  {
-    accounts: ['chenzeyu ( 陈泽宇  )', 'fanlicheng ( 范立诚  )', 'kangyihang ( 康亦航  )', 'nitian ( 倪天  )'],
-    role: '医生',
-    dept: '神经内科',
-    ability: DOCTOR_ABILITY
-  },
-  {
-    accounts: ['dengxinyi ( 邓心怡  )', 'jinbailu ( 金白露  )'],
-    role: '护士',
-    dept: '神经内科',
-    ability: NURSE_ABILITY
-  },
-  {accounts: ['xuheyu ( 徐和玉  )'], role: '护士长', dept: '神经内科', ability: HEAD_NURSE_ABILITY},
-  {
-    accounts: ['jinxin ( 金欣  )', 'limin ( 李敏  )', 'qinan ( 齐楠  )', 'shijiajie ( 石嘉杰  )'],
-    role: '医生',
-    dept: '肿瘤内科',
-    ability: DOCTOR_ABILITY
-  },
-  {accounts: ['sumin ( 苏敏  )', 'zhuchunyan ( 朱春燕  )'], role: '护士', dept: '肿瘤内科', ability: NURSE_ABILITY},
-  {accounts: ['wenmingzhu ( 温明珠  )'], role: '护士长', dept: '肿瘤内科', ability: HEAD_NURSE_ABILITY},
-  // 其他科室
-  {
-    accounts: ['admin ( 超级管理员  )'],
-    role: '系统管理员',
-    dept: '医院信息系统',
-    ability: '全部业务页面 + 系统管理（用户/角色/菜单/字典/参数/日志审计）'
   },
   {
     accounts: ['lirui ( 李瑞  )'],

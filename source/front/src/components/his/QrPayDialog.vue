@@ -74,6 +74,55 @@
         </div>
         <p v-if="error" class="mt-2 text-center text-sm text-red-600">{{ error }}</p>
       </div>
+
+      <!-- 医保个账：刷社保卡→2201预结算→核对→2301扣个账→剩余cashPay转现金/扫码 -->
+      <div v-else-if="isInsurance" class="min-h-[236px] rounded-lg border border-slate-200 p-3 text-sm">
+        <template v-if="!insuranceSplit">
+          <div class="py-2 text-center text-slate-500">
+            <p>请患者出示医保电子凭证 / 社保卡</p>
+            <p class="mt-1 text-xs">系统将调医保平台预结算，计算统筹与个账分摊</p>
+          </div>
+          <el-button :loading="insuranceLoading" data-testid="insurance-pre-settle" type="primary"
+                     class="mt-2 w-full" @click="doPreSettle">
+            调医保预结算（2201）
+          </el-button>
+        </template>
+        <template v-else-if="!insuranceConfirmed">
+          <div class="space-y-1.5 py-1">
+            <div class="flex justify-between">
+              <span class="text-slate-500">医保统筹报销</span>
+              <b class="text-emerald-600">-{{ moneyText(insuranceSplit.insurancePay) }}</b>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-slate-500">医保个账扣款</span>
+              <b class="text-emerald-600">-{{ moneyText(insuranceSplit.personalAccount) }}</b>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-slate-500">个人自付（现金/扫码）</span>
+              <b class="text-red-600">{{ moneyText(insuranceSplit.cashPay) }}</b>
+            </div>
+            <div v-if="insuranceSplit.warnMsg" class="rounded bg-amber-50 px-2 py-1 text-xs text-amber-700">
+              {{ insuranceSplit.warnMsg }}
+            </div>
+          </div>
+          <el-button :loading="insuranceLoading" data-testid="insurance-formal-settle" type="success"
+                     class="mt-2 w-full" @click="doFormalSettle">
+            确认扣个账（2301）
+          </el-button>
+        </template>
+        <template v-else>
+          <div class="py-2 text-center">
+            <el-icon class="text-emerald-500" size="40"><CircleCheckFilled/></el-icon>
+            <p class="mt-1 font-medium text-emerald-600">医保个账已扣 {{ moneyText(insuranceSplit.personalAccount) }}</p>
+            <p class="mt-1 text-xs text-slate-500">医保单号：{{ insuranceSplit.receiptNo }}</p>
+            <p class="mt-2 text-sm text-slate-600">
+              剩余自付 <b class="text-red-600">{{ moneyText(insuranceSplit.cashPay) }}</b> 元，请选择现金或扫码收款
+            </p>
+          </div>
+        </template>
+        <p v-if="error" class="mt-2 text-center text-sm text-red-600">{{ error }}</p>
+      </div>
+
       <div v-else
            class="flex min-h-[236px] flex-col items-center justify-center rounded-lg border border-slate-200 p-3">
         <el-skeleton v-if="creating" :rows="3" animated class="w-full"/>
@@ -147,7 +196,7 @@
 <script setup>
 import {computed, onUnmounted, ref, watch} from 'vue';
 import {Bell, CircleCheckFilled, MuteNotification, Refresh} from '@element-plus/icons-vue';
-import {closeQrPayByBill, createQrPay, getBillDetailById, payBill, queryQrPayResult,} from '@/api/settlementBill';
+import {closeQrPayByBill, createQrPay, formalSettleInsurance, getBillDetailById, payBill, preSettleInsurance, queryQrPayResult,} from '@/api/settlementBill';
 import {moneyText} from '@/lib/patientField';
 
 /**
@@ -190,6 +239,8 @@ const PAY_STATUS_CLOSED = 2;
 const SCAN_METHOD = 'SCAN';
 /** 现金档的哨兵值（不是落库码值） */
 const CASH_METHOD = 'CASH';
+/** 医保个账档的哨兵值（收款窗口刷社保卡→2201预结算→2301扣个账） */
+const INSURANCE_METHOD = 'INSURANCE';
 /** 支付方式码值 1-现金（PaymentMethodEnum.CASH） */
 const PAY_METHOD_CASH = 1;
 /** 轮询间隔与后端「同单查单节流」同宽：比它更快只会撞上被节流的那一轮，白多一次请求 */
@@ -222,6 +273,12 @@ const billDetail = ref(null);
 /** 出码返回的身份事实（服务端按 billId 查到的账单号/患者/金额），是头部显示的核对基准 */
 const billing = ref(null);
 const detailLoading = ref(false);
+/** 医保个账档：2201 预结算返回的 splits（统筹/个账/自付） */
+const insuranceSplit = ref(null);
+/** 医保个账档：2201/2301 请求中 */
+const insuranceLoading = ref(false);
+/** 医保个账档：2301 已成功扣个账 */
+const insuranceConfirmed = ref(false);
 /** 过期时刻在本地时钟上的落点（由服务端口径的剩余时长锚定） */
 const countdownDeadline = ref(0);
 const nowTick = ref(Date.now());
@@ -231,9 +288,18 @@ let tickTimer = null;
 const isPaid = computed(() => Number(payStatus.value) === PAY_STATUS_PAID);
 const isClosed = computed(() => Number(payStatus.value) === PAY_STATUS_CLOSED);
 const isCash = computed(() => method.value === CASH_METHOD);
-const methodOptions = computed(() => (props.allowCash
+const isInsurance = computed(() => method.value === INSURANCE_METHOD);
+/** 这张账单是不是医保结算方式（settlementMode=2）：只有医保账单才显示「医保个账」档 */
+const isInsuranceBill = computed(() => Number(summary.value.settlementMode) === 2);
+const methodOptions = computed(() => {
+  const base = props.allowCash
     ? [{code: CASH_METHOD, label: '现金'}, {code: SCAN_METHOD, label: '扫码收款'}]
-    : [{code: SCAN_METHOD, label: '扫码收款'}, {code: CASH_METHOD, label: '现金'}]));
+    : [{code: SCAN_METHOD, label: '扫码收款'}, {code: CASH_METHOD, label: '现金'}];
+  if (isInsuranceBill.value && !insuranceConfirmed.value) {
+    base.splice(0, 0, {code: INSURANCE_METHOD, label: '医保个账'});
+  }
+  return base;
+});
 const dialogTitle = computed(() => (props.allowCash ? '收费' : '扫码收款'));
 /** 现金只收账单尚欠：应收/已收都由服务端现算，页面不自减（尚欠没回来时退回父页面传入的本单金额） */
 const cashAmount = computed(() => Number(summary.value.unpaidAmount ?? props.amount) || 0);
@@ -254,10 +320,11 @@ watch(visible, (v) => {
   if (!v) {
     return;
   }
-  method.value = props.allowCash ? CASH_METHOD : SCAN_METHOD;
+  // 医保账单默认停在「医保个账」档：收费员开弹层就是为了刷社保卡，让他自己切一档是多余动作
+  method.value = isInsuranceBill.value ? INSURANCE_METHOD : (props.allowCash ? CASH_METHOD : SCAN_METHOD);
   codesAlive.value = false;
   loadBillDetail();
-  if (!isCash.value) {
+  if (!isCash.value && !isInsurance.value) {
     generate();
   }
 });
@@ -468,6 +535,51 @@ function genRequestId() {
   return Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 10);
 }
 
+/** 2201 预结算：调医保平台算 splits，不落库 */
+async function doPreSettle() {
+  if (!props.billId) {
+    error.value = '缺少账单';
+    return;
+  }
+  insuranceLoading.value = true;
+  error.value = '';
+  try {
+    const res = await preSettleInsurance(props.billId);
+    insuranceSplit.value = res.data || null;
+  } catch (e) {
+    error.value = e.message || '医保预结算失败';
+  } finally {
+    insuranceLoading.value = false;
+  }
+}
+
+/** 2301 正式结算：医保平台扣个账、出 YBZ 单号，HIS 同事务落个账流水+回写 splits */
+async function doFormalSettle() {
+  if (!props.billId || !insuranceSplit.value) {
+    error.value = '请先预结算';
+    return;
+  }
+  insuranceLoading.value = true;
+  error.value = '';
+  try {
+    const res = await formalSettleInsurance(props.billId);
+    const data = res.data || {};
+    insuranceSplit.value = data;
+    insuranceConfirmed.value = true;
+    // 个账扣完，重取账单明细（pool/account/self 已回写，cashPay 就是剩下的钱）
+    await loadBillDetail();
+    // 自动切到现金档收剩余（收费员当面收现金最直接；要扫码收费员自己切）
+    method.value = props.allowCash ? CASH_METHOD : SCAN_METHOD;
+    if (method.value === SCAN_METHOD) {
+      await generate();
+    }
+  } catch (e) {
+    error.value = e.message || '医保正式结算失败';
+  } finally {
+    insuranceLoading.value = false;
+  }
+}
+
 async function pollOnce() {
   if (isPaid.value || !payNo.value) {
     return;
@@ -561,6 +673,9 @@ function onClosed() {
   cashSubmitting.value = false;
   codesAlive.value = false;
   requestId.value = '';
+  insuranceSplit.value = null;
+  insuranceConfirmed.value = false;
+  insuranceLoading.value = false;
   resetQrState();
   error.value = '';
   pollError.value = '';

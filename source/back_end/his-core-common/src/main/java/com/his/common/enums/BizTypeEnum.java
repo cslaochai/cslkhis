@@ -62,7 +62,16 @@ public enum BizTypeEnum {
     // duty-coord：发给「当日总值班」的全院协调待办（sql/169）。
     // 触发点三个：①急诊候诊/留观升级阶梯走完仍没人接 ②床位跨科调配 ③双向转诊待确认超时。
     // 收件人是 DutyRosterService.current() 解析出来的那个人，不是科室、不是静态配置。
-    DUTY_COORD("duty-coord", "全院协调");
+    DUTY_COORD("duty-coord", "全院协调"),
+    // duty-call：临床二/三线听班呼叫（sql/297）。
+    // 收件人是当班听班医生（biz_duty_roster 排班上、点位 attend_mode=2），
+    // 不是岗位、不是全科室 —— 听班是「叫这一班的那个人」，叫科室等于没叫。
+    // 待办型：闭环动作是「到岗应答」，点已读不算到岗。
+    DUTY_CALL("duty-call", "听班呼叫"),
+    // duty-call-esc：听班呼叫到岗超时 → 升级给上一层级（三线/科主任/总值班）。
+    // 与 duty-call 分码：升级是给「更高级别的人」的，原被叫人仍要看到自己那条呼叫，
+    // 混成一条码会让收件箱里原被叫人的待办被升级通知顶掉。
+    DUTY_CALL_ESC("duty-call-esc", "听班呼叫超时升级");
 
     private final String type;
     private final String desc;

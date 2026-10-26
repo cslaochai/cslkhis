@@ -320,7 +320,7 @@ public class StaffPlanRuleServiceImpl extends ServiceImpl<BizStaffPlanRuleMapper
         int streak = streakOf(rows, null, date, false);
         if (streak > limit) {
             return "「" + nurse + "」截至 " + date + " 已连续上班 " + streak + " 天，超过上限 " + limit
-                    + " 天（不影响保存，建议安排一天休息）";
+                    + " 天";
         }
         return null;
     }

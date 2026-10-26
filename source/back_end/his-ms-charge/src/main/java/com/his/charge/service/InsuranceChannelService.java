@@ -33,6 +33,22 @@ public interface InsuranceChannelService {
      */
     InsuredStatus checkInsured(String insuranceNo, String idCard, String name);
 
+    /**
+     * 2201 费用预结算（HIS 收费窗口实时调，医保平台算 splits，不落库）。
+     *
+     * <p>在收款弹层「医保个账」档点一下就调，返回统筹/个账/现金 splits 给收费员核对。
+     * 与 {@link #checkInsured} 的区别：checkInsured 只查人在不在，这里连费用一起算。
+     */
+    SettleSplit preSettle(SettleRequest request);
+
+    /**
+     * 2301 门诊正式结算（HIS 收费窗口实时调，医保平台当场扣个账、出医保结算单号）。
+     *
+     * <p>收费员核对 splits 后点「确认医保结算」调一次；同一 tradeNo 幂等。
+     * 成功后 HIS 侧只需再收 {@link SettleSplit#cashPay} 那段现金/扫码。
+     */
+    SettleSplit formalSettle(SettleRequest request);
+
     @Data
     @NoArgsConstructor
     @AllArgsConstructor
@@ -95,5 +111,67 @@ public interface InsuranceChannelService {
         private BigDecimal totalAmount;
         private BigDecimal insurancePay;
         private String receiptNo;
+    }
+
+    /**
+     * 实时结算请求（2201/2301 共用）。
+     * tradeNo 由 HIS 侧生成（账单号+时间戳），2301 幂等键。
+     */
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class SettleRequest implements Serializable {
+        private String tradeNo;
+        private String billNo;
+        /** 就诊类型：1-门诊 2-住院 */
+        private String encounterType;
+        private String idCard;
+        private String insuranceNo;
+        private String patientName;
+        private List<FeeItem> items;
+    }
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class FeeItem implements Serializable {
+        private String ybCode;
+        private String name;
+        /** 目录支付类别：甲 / 乙 / 丙 */
+        private String payClass;
+        /** 乙类先行自付比例（0~1） */
+        private BigDecimal selfRatio;
+        private BigDecimal price;
+        private Integer qty;
+    }
+
+    /**
+     * 实时结算返回（2201/2301 共用）。
+     * infcode=0 成功；2301 成功时 receiptNo 有值。
+     */
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class SettleSplit implements Serializable {
+        private Integer infcode;
+        private String tradeNo;
+        /** 医保结算单号（YBZ+yyyyMMdd+序列），2301 成功时回 */
+        private String receiptNo;
+        private String insuranceType;
+        private String name;
+        private BigDecimal total;
+        /** 统筹支付（医保基金付） */
+        private BigDecimal insurancePay;
+        /** 个账支付（从参保人个人账户扣） */
+        private BigDecimal personalAccount;
+        /** 现金支付（患者当场掏） */
+        private BigDecimal cashPay;
+        /** 个人自付总额（= 个账 + 现金） */
+        private BigDecimal selfPay;
+        private BigDecimal deductible;
+        /** 个账扣后余额 */
+        private BigDecimal accountBalanceAfter;
+        private String warnMsg;
+        private String errMsg;
     }
 }

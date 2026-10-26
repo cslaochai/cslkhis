@@ -81,3 +81,19 @@ export function queryQrPayResult(data) {
 export function closeQrPayByBill(data) {
     return request.post('/charge/qrPay/closeByBill', data)
 }
+
+// ==================== 门诊医保实时结算（收款窗口刷社保卡） ====================
+//
+// 时序：preSettle（2201 预结算拿 splits，不落库）→ 收费员跟患者核对 → formalSettle（2301 扣个账）
+// → 剩余 cashPay 再走现金/扫码。
+// 两个接口都按 billId 调，组 SettleRequest 由后端从账单+患者主档取，前端不拼费用明细。
+
+// 2201 预结算：返回统筹/个账/自付 splits，不落库
+export function preSettleInsurance(billId) {
+    return request.post('/charge/insurance/preSettle', null, {params: {billId}})
+}
+
+// 2301 正式结算：扣个账、出 YBZ 单号，同事务落个账流水+回写账单 splits
+export function formalSettleInsurance(billId) {
+    return request.post('/charge/insurance/formalSettle', null, {params: {billId}})
+}
