@@ -41,9 +41,11 @@
               data-testid="duty-call-target"
               :type="currentTarget.callable ? 'success' : 'danger'"
           >
-            {{ currentTarget.callable
-              ? `${currentTarget.targetLevelText} · ${currentTarget.employeeName}${currentTarget.phone ? '（' + currentTarget.phone + '）' : ''}`
-              : `${currentTarget.targetLevelText} 未排班，暂不可呼叫` }}
+            {{
+              currentTarget.callable
+                  ? `${currentTarget.targetLevelText} · ${currentTarget.employeeName}${currentTarget.phone ? '（' + currentTarget.phone + '）' : ''}`
+                  : `${currentTarget.targetLevelText} 未排班，暂不可呼叫`
+            }}
           </el-tag>
           <span v-else class="text-xs text-gray-400">该科室没有配置临床二/三线听班点位</span>
         </div>
@@ -65,7 +67,8 @@
               type="textarea"
           />
         </div>
-      </el-form-item>      <el-form-item label="到岗时限" prop="timeoutMinutes">
+      </el-form-item>
+      <el-form-item label="到岗时限" prop="timeoutMinutes">
         <el-input-number v-model="formData.timeoutMinutes" :min="1" :max="120" style="width: 160px"/>
         <span class="ml-2 text-xs text-gray-500">分钟内未到岗即升级到上一层级</span>
       </el-form-item>
@@ -83,12 +86,13 @@
 import {computed, ref, watch} from 'vue'
 import {ElMessage} from 'element-plus'
 import {dutyCallCreate, getDutyCallTargets} from '@/api/dutyCall'
-import {getDepartmentSelectList} from '@/api/system'
 
 const props = defineProps({
   modelValue: {type: Boolean, default: false},
   /** 默认科室（从页面上下文带进来） */
   defaultDeptId: {type: [String, Number], default: null},
+  /** 科室下拉（父页面加载一次下传，避免两处各拉一遍） */
+  deptOptions: {type: Array, default: () => []},
 })
 const emit = defineEmits(['update:modelValue', 'saved'])
 
@@ -99,7 +103,6 @@ const visible = computed({
 
 const formRef = ref()
 const submitting = ref(false)
-const deptOptions = ref([])
 const targets = ref([])
 
 const formData = ref({
@@ -150,7 +153,7 @@ const loadTargets = async () => {
       shiftType: formData.value.shiftType,
     })
     targets.value = res?.data || []
-  } catch (e) /* 错误已由全局拦截器统一提示 */{
+  } catch (e) /* 错误已由全局拦截器统一提示 */ {
     targets.value = []
   }
 }
@@ -175,7 +178,7 @@ const handleSubmit = async () => {
     ElMessage.success(res?.message || '呼叫已发出')
     emit('saved')
     visible.value = false
-  } catch (e) /* 错误已由全局拦截器统一提示 */{
+  } catch (e) /* 错误已由全局拦截器统一提示 */ {
   } finally {
     submitting.value = false
   }
@@ -193,13 +196,7 @@ watch(visible, async (open) => {
     callReason: '',
     timeoutMinutes: 10,
   }
-  if (!deptOptions.value.length) {
-    try {
-      const res = await getDepartmentSelectList({})
-      deptOptions.value = (res?.data || []).map((d) => ({id: d.id ?? d.deptId, name: d.deptName ?? d.name}))
-    } catch (e) /* 错误已由全局拦截器统一提示 */{
-    }
-  }
+  // 科室下拉由父页面加载一次下传（AGENTS.md §2：列表列也用的下拉页面加载一次，禁止两处各拉一遍）
   await loadTargets()
 })
 </script>

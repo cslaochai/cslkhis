@@ -63,6 +63,47 @@
         </div>
       </template>
 
+      <!-- 听班呼叫：呼叫单详情 + 到岗应答闭环 -->
+      <template v-else-if="isDutyCall && dutyCallDetail">
+        <div class="space-y-3 text-sm">
+          <div class="flex flex-wrap items-center gap-2 rounded-lg border border-orange-200 bg-orange-50 p-3">
+            <span class="font-semibold text-orange-700">{{ dutyCallDetail.callNo || '-' }}</span>
+            <el-tag :type="dutyCallStatusTagType(dutyCallDetail.status)" size="small">
+              {{ dutyCallDetail.statusText || '未知状态' }}
+            </el-tag>
+            <el-tag v-if="dutyCallDetail.targetLevelText" type="info" size="small">
+              {{ dutyCallDetail.targetLevelText }}听班
+            </el-tag>
+            <el-tag v-if="dutyCallDetail.patientName" size="small" type="warning">
+              患者：{{ dutyCallDetail.patientName }}
+              <span v-if="dutyCallDetail.patientLocation">（{{ dutyCallDetail.patientLocation }}）</span>
+            </el-tag>
+          </div>
+          <div class="grid grid-cols-2 gap-2">
+            <p><strong>值班：</strong>{{ dutyCallDetail.dutyDate || '-' }} {{ dutyCallDetail.shiftTypeText || '' }}</p>
+            <p><strong>呼叫科室：</strong>{{ dutyCallDetail.deptName || '-' }}</p>
+            <p><strong>呼叫时间：</strong>{{ fmtTime(dutyCallDetail.callTime) }}</p>
+            <p><strong>到岗时间：</strong>{{ dutyCallDetail.arriveTime ? fmtTime(dutyCallDetail.arriveTime) : '未到岗' }}</p>
+            <p v-if="dutyCallDetail.escalateTime" class="col-span-2 text-red-600">
+              <strong>升级记录：</strong>{{ fmtTime(dutyCallDetail.escalateTime) }}
+              （原 {{ dutyCallDetail.escalateFromLevelText || '-' }} 未到岗，已升级）
+            </p>
+          </div>
+          <p><strong>呼叫事由：</strong>{{ dutyCallDetail.callReason || '-' }}</p>
+          <p v-if="dutyCallDetail.targetPhone"><strong>值班电话：</strong>{{ dutyCallDetail.targetPhone }}</p>
+        </div>
+        <div v-if="dutyCallDetail.canArrive" class="space-y-2 border-t pt-3">
+          <el-input v-model="arriveNote" :rows="2" maxlength="200" placeholder="到岗说明（选填，如 已到床旁）" show-word-limit
+                    type="textarea"/>
+          <el-button v-perm="'org:dutyCall:arrive'" :loading="handling" type="primary" @click="submitArrive">
+            到岗应答
+          </el-button>
+        </div>
+        <div v-else-if="dutyCallDetail.status === 0" class="border-t pt-3 text-sm text-gray-500">
+          当前登录人不是本次被叫值班人，无法应答到岗。请切换到被叫值班人的账号，或在「听班呼叫」页处理。
+        </div>
+      </template>
+
       <!-- 检查/检验报告：结构化 HTML -->
       <template v-else-if="htmlContent">
         <div v-html="htmlContent"></div>
@@ -89,6 +130,7 @@ import {
   handleCriticalValue,
   receiveCriticalValue
 } from '@/api/medicaltech';
+import {dutyCallArrive, getDutyCallDetail} from '@/api/dutyCall';
 import {messageLabel} from '@/lib/messageCatalog';
 
 const props = defineProps({
@@ -102,10 +144,16 @@ const visible = computed({
 });
 const bizType = computed(() => props.message?.bizType || '');
 const isCritical = computed(() => bizType.value === 'critical');
+// 听班呼叫：待办型消息必须在这里闭环「到岗应答」—— 只标已读等于没应答，
+// 呼叫单还是「待到岗」，收件箱却看着像处理过了。
+const isDutyCall = computed(() => bizType.value === 'duty-call' || bizType.value === 'duty-call-esc');
 const loading = ref(false);
 // inspection / report 走结构化 HTML（与报告详情同口径）；critical 走 Vue 模板（带动作）
 const htmlContent = ref('');
 const criticalDetail = ref(null);
+// 听班呼叫单详情（bizId → 呼叫单）
+const dutyCallDetail = ref(null);
+const arriveNote = ref('');
 const dialogTitle = computed(() => {
   if (!props.message)
     return '消息详情';
@@ -117,6 +165,8 @@ const CATALOG_PREFIX = {
   inspection: '检查报告详情',
   report: '检验报告详情',
   critical: '危急值处置',
+  'duty-call': '听班呼叫',
+  'duty-call-esc': '听班呼叫超时升级',
 };
 const fmtTime = (v) => (v ? String(v).replace('T', ' ').slice(0, 16) : '—');
 const loadDetail = async () => {
@@ -125,6 +175,7 @@ const loadDetail = async () => {
   loading.value = true;
   htmlContent.value = '';
   criticalDetail.value = null;
+  dutyCallDetail.value = null;
   try {
     const id = props.message.bizId;
     if (bizType.value === 'inspection') {
@@ -133,6 +184,8 @@ const loadDetail = async () => {
       htmlContent.value = await renderLaboratory(id);
     } else if (isCritical.value) {
       await loadCritical(id);
+    } else if (isDutyCall.value) {
+      await loadDutyCall(id);
     }
     // 其他类型：直接展示 message.content（模板里兜底）
   } catch (error) {
@@ -149,6 +202,37 @@ const loadCritical = async (id) => {
     return;
   }
   criticalDetail.value = res.data;
+};
+/* ---------- 听班呼叫：取呼叫单详情 + 到岗应答闭环 ---------- */
+const loadDutyCall = async (id) => {
+  const res = await getDutyCallDetail(id);
+  if (!res.data) {
+    ElMessage.warning('未找到该听班呼叫单（可能已被删除）');
+    return;
+  }
+  dutyCallDetail.value = res.data;
+};
+/** 呼叫状态配色：待到岗橙、已到岗绿、已超时升级红、已取消灰 */
+const dutyCallStatusTagType = (status) => {
+  if (status === 1) return 'success';
+  if (status === 2) return 'danger';
+  if (status === 3) return 'info';
+  return 'warning';
+};
+const submitArrive = async () => {
+  if (!dutyCallDetail.value)
+    return;
+  handling.value = true;
+  try {
+    await dutyCallArrive({id: dutyCallDetail.value.id, arriveNote: arriveNote.value.trim()});
+    ElMessage.success('已登记到岗，呼叫单闭环');
+    await loadDutyCall(dutyCallDetail.value.id);
+    arriveNote.value = '';
+    emit('processed');
+  } catch (error) /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+  } finally {
+    handling.value = false;
+  }
 };
 /* ---------- 检查/检验报告结构化渲染（自 MessagesView 收口至此） ---------- */
 const renderInspection = async (recordId) => {
@@ -270,6 +354,7 @@ const submitHandle = async () => {
 watch(visible, (v) => {
   if (v) {
     handleMeasure.value = '';
+    arriveNote.value = '';
     loadDetail();
   }
 });

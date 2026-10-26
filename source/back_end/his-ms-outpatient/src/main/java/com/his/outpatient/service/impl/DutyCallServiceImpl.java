@@ -188,7 +188,11 @@ public class DutyCallServiceImpl extends ServiceImpl<BizDutyCallMapper, BizDutyC
     public DutyCallVO arrive(DutyCallArriveDTO dto) {
         CurrentOperator operator = currentOperator();
         BizDutyCall call = requireCall(dto.getId());
-        if (!DutyCallStatusEnum.isWaiting(call.getStatus())) {
+        // 待到岗(0) 与 已超时升级(2) 都能应答：
+        //   升级后呼叫单状态是 2，此时接手的正是当前被叫人（三线/总值班）——
+        //   只允许 0 的话，升级出去的呼叫永远没人能应答，链路等于断在这里。
+        if (!DutyCallStatusEnum.isWaiting(call.getStatus())
+                && !Integer.valueOf(DutyCallStatusEnum.ESCALATED.getCode()).equals(call.getStatus())) {
             throw new BusinessException("该呼叫当前状态为「" + DutyCallStatusEnum.getLabelOrUnknown(call.getStatus())
                     + "」，不能重复应答到岗");
         }
@@ -196,19 +200,23 @@ public class DutyCallServiceImpl extends ServiceImpl<BizDutyCallMapper, BizDutyC
         if (!Objects.equals(call.getTargetEmpId(), operator.employeeId())) {
             throw new BusinessException("只有被叫值班人本人可以应答到岗");
         }
+        Integer fromStatus = call.getStatus();
         LocalDateTime now = LocalDateTime.now();
         call.setArriveTime(now);
         call.setStatus(DutyCallStatusEnum.ARRIVED.getCode());
         bizDutyCallMapper.updateById(call);
 
-        writeLog(call, DutyCallActionEnum.ARRIVE, DutyCallStatusEnum.PENDING.getCode(),
+        writeLog(call, DutyCallActionEnum.ARRIVE, fromStatus,
                 DutyCallStatusEnum.ARRIVED.getCode(), operator.id(), operator.name(),
                 TextUtil.hasText(dto.getArriveNote()) ? dto.getArriveNote().trim()
                         : String.format("已到岗（呼叫后 %d 分钟）", minutesBetween(call.getCallTime(), now)));
 
-        // 闭环站内信待办：呼叫已处置完，收件箱不该一直挂着「待处理」
+        // 闭环站内信待办：呼叫已处置完，收件箱不该一直挂着「待处理」。
+        // ⚠ 两个码值都要关：呼叫刚发起时发的是 duty-call；若中途超时升级过，
+        //   当前被叫人收到的是 duty-call-esc。只关一个码值，他到了岗收件箱还挂着"待处理"。
         try {
             sysMessageService.closeTodoByBiz(BizTypeEnum.DUTY_CALL.getType(), call.getId(), 1);
+            sysMessageService.closeTodoByBiz(BizTypeEnum.DUTY_CALL_ESC.getType(), call.getId(), 1);
         } catch (Exception ex) {
             log.warn("[听班呼叫] 关闭待办失败 callNo={}：{}", call.getCallNo(), ex.getMessage());
         }
@@ -239,7 +247,9 @@ public class DutyCallServiceImpl extends ServiceImpl<BizDutyCallMapper, BizDutyC
                 DutyCallStatusEnum.CANCELED.getCode(), operator.id(), operator.name(), call.getCancelReason());
 
         try {
+            // 同 arrive：两个码值都关（升级过的呼叫，升级通知也该一起撤掉）
             sysMessageService.closeTodoByBiz(BizTypeEnum.DUTY_CALL.getType(), call.getId(), 2);
+            sysMessageService.closeTodoByBiz(BizTypeEnum.DUTY_CALL_ESC.getType(), call.getId(), 2);
         } catch (Exception ex) {
             log.warn("[听班呼叫] 关闭待办失败 callNo={}：{}", call.getCallNo(), ex.getMessage());
         }
@@ -260,9 +270,16 @@ public class DutyCallServiceImpl extends ServiceImpl<BizDutyCallMapper, BizDutyC
                 .eq(q.getDeptId() != null, BizDutyCall::getDeptId, q.getDeptId())
                 .eq(q.getTargetLevel() != null, BizDutyCall::getTargetLevel, q.getTargetLevel())
                 .eq(q.getTargetEmpId() != null, BizDutyCall::getTargetEmpId, q.getTargetEmpId())
-                .eq(q.getStatus() != null, BizDutyCall::getStatus, q.getStatus())
-                .eq(Boolean.TRUE.equals(q.getMineOnly()) && currentEmpId != null,
-                        BizDutyCall::getTargetEmpId, currentEmpId);
+                .eq(q.getStatus() != null, BizDutyCall::getStatus, q.getStatus());
+        // 「我的」两种视角（单选，互斥）：
+        //   1 待我到岗 = 我是被叫人；2 我发起的 = 我是呼叫发起人（create_by_id 记的发起人）
+        if (q.getMineType() != null && currentEmpId != null) {
+            if (q.getMineType() == 1) {
+                w.eq(BizDutyCall::getTargetEmpId, currentEmpId);
+            } else if (q.getMineType() == 2) {
+                w.eq(BizDutyCall::getCreateById, currentEmpId);
+            }
+        }
         // 二级键收口：同一天同班次内顺序必须稳定，否则分页会重复/漏行
         w.orderByDesc(BizDutyCall::getDutyDate)
                 .orderByDesc(BizDutyCall::getShiftType)
@@ -530,8 +547,11 @@ public class DutyCallServiceImpl extends ServiceImpl<BizDutyCallMapper, BizDutyC
             }});
             sysMessageService.sendSystemMessage(call.getTargetEmpId(), name, title, content,
                     BizTypeEnum.DUTY_CALL_ESC.getType(), call.getId(), "urgent", payload, 0);
-            // 原被叫人的待办闭环：他已被认定超时到岗，待办挂着没意义
-            sysMessageService.closeTodoByBiz(BizTypeEnum.DUTY_CALL.getType(), call.getId(), 1);
+            // 原被叫人的待办闭环：他已被认定超时未到岗。
+            // ⚠ 状态用「已关闭(2)」不是「已处理(1)」—— 二线压根没到岗，标成"已处理"会让收件箱
+            //   看起来像他响应过了，追溯时得出错误结论（他明明是被升级掉的）。
+            //   只关 duty-call 码值：升级通知走 duty-call-esc 独立码，不会被这一句误关。
+            sysMessageService.closeTodoByBiz(BizTypeEnum.DUTY_CALL.getType(), call.getId(), 2);
         } catch (Exception ex) {
             log.warn("[听班呼叫] 升级通知失败 callNo={}：{}", call.getCallNo(), ex.getMessage());
         }
@@ -594,14 +614,24 @@ public class DutyCallServiceImpl extends ServiceImpl<BizDutyCallMapper, BizDutyC
         vo.setCancelReason(call.getCancelReason());
         vo.setTimeoutMinutes(timeoutMinutes);
         if (call.getCallTime() != null) {
-            LocalDateTime deadline = call.getCallTime().plusMinutes(timeoutMinutes);
+            // 待到岗：时限从呼叫时间算
+            // 已超时升级：时限从升级时间重算 —— 新接手的被叫人（三线/总值班）拿到的是
+            //   自己的那一份时限，不是「上一任已经超掉的那个」，否则他看到的是负数倒计时。
+            LocalDateTime deadline = Integer.valueOf(DutyCallStatusEnum.ESCALATED.getCode()).equals(call.getStatus())
+                    && call.getEscalateTime() != null
+                    ? call.getEscalateTime().plusMinutes(timeoutMinutes)
+                    : call.getCallTime().plusMinutes(timeoutMinutes);
             vo.setDeadlineTime(deadline);
             vo.setRemainSeconds(DutyCallStatusEnum.isWaiting(call.getStatus())
+                    || Integer.valueOf(DutyCallStatusEnum.ESCALATED.getCode()).equals(call.getStatus())
                     ? Duration.between(LocalDateTime.now(), deadline).getSeconds() : null);
         }
-        vo.setCanArrive(DutyCallStatusEnum.isWaiting(call.getStatus())
+        // 待到岗(0) 与 已超时升级(2) 都还能应答/取消：升级后接手的正是当前被叫人
+        boolean open = DutyCallStatusEnum.isWaiting(call.getStatus())
+                || Integer.valueOf(DutyCallStatusEnum.ESCALATED.getCode()).equals(call.getStatus());
+        vo.setCanArrive(open
                 && currentEmpId != null && Objects.equals(call.getTargetEmpId(), currentEmpId));
-        vo.setCanCancel(DutyCallStatusEnum.isWaiting(call.getStatus())
+        vo.setCanCancel(open
                 && currentEmpId != null && Objects.equals(call.getCreateById(), currentEmpId));
         return vo;
     }

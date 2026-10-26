@@ -34,6 +34,13 @@ public class DutyCallPageQueryDTO extends PageParam {
     /** 状态：0-待到岗 1-已到岗 2-已超时升级 3-已取消 */
     private Integer status;
 
-    /** 只看我的（当前登录人是被叫人） */
-    private Boolean mineOnly;
+    /**
+     * 「我的」视角（当前登录人相关）：
+     * <ul>
+     *   <li>1 = 待我到岗（我是被叫值班人，且呼叫还没到岗）</li>
+     *   <li>2 = 我发起的（我是呼叫发起人）</li>
+     * </ul>
+     * 留空 = 全部。前端用单选切换，避免「待我到岗」和「我发起的」两个勾选框互相打架。
+     */
+    private Integer mineType;
 }

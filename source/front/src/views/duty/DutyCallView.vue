@@ -35,8 +35,23 @@
               <el-option :label="'已取消'" :value="3"/>
             </el-select>
           </el-form-item>
-          <el-form-item>
-            <el-checkbox v-model="mineOnly" data-testid="duty-call-mine">只看待我到岗</el-checkbox>
+          <el-form-item label="呼叫科室">
+            <el-select
+                v-model="searchForm.deptId"
+                clearable
+                data-testid="duty-call-filter-dept"
+                filterable
+                placeholder="全部"
+                style="width: 170px"
+            >
+              <el-option v-for="d in deptOptions" :key="d.id" :label="d.name" :value="d.id"/>
+            </el-select>
+          </el-form-item>
+          <el-form-item label="视角">
+            <el-select v-model="searchForm.mineType" clearable data-testid="duty-call-mine" placeholder="全部" style="width: 150px">
+              <el-option :label="'待我到岗'" :value="1"/>
+              <el-option :label="'我发起的'" :value="2"/>
+            </el-select>
           </el-form-item>
           <el-form-item>
             <el-button :icon="Search" type="primary" @click="handleSearch">查询</el-button>
@@ -139,7 +154,7 @@
       </div>
     </el-card>
 
-    <DutyCallCreate v-model="createVisible" @saved="handleSaved"/>
+    <DutyCallCreate v-model="createVisible" :dept-options="deptOptions" @saved="handleSaved"/>
     <DutyCallDetail v-model="detailVisible" :id="currentId"/>
   </div>
 </template>
@@ -149,6 +164,7 @@ import {onMounted, ref} from 'vue';
 import {Check, Close, Plus, Refresh, Search, View} from '@element-plus/icons-vue';
 import {ElMessage, ElMessageBox} from 'element-plus';
 import {dutyCallArrive, dutyCallCancel, dutyCallEscalateOverdue, getDutyCallListPage} from '@/api/dutyCall';
+import {getDepartmentSelectList} from '@/api/system';
 import DutyCallCreate from './DutyCallCreate.vue';
 import DutyCallDetail from './DutyCallDetail.vue';
 import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination';
@@ -156,7 +172,7 @@ import {useTableMaxHeight} from '@/lib/useTableMaxHeight';
 
 const loading = ref(false);
 const tableData = ref([]);
-const mineOnly = ref(false);
+const deptOptions = ref([]);
 const createVisible = ref(false);
 const detailVisible = ref(false);
 const currentId = ref(null);
@@ -166,6 +182,8 @@ const searchForm = ref({
   endDate: '',
   targetLevel: null,
   status: null,
+  deptId: null,
+  mineType: null,
 });
 
 const pagination = ref({pageNum: 1, pageSize: DEFAULT_PAGE_SIZE, total: 0});
@@ -188,7 +206,8 @@ const loadData = async () => {
       endDate: searchForm.value.endDate || undefined,
       targetLevel: searchForm.value.targetLevel ?? undefined,
       status: searchForm.value.status ?? undefined,
-      mineOnly: mineOnly.value || undefined,
+      deptId: searchForm.value.deptId ?? undefined,
+      mineType: searchForm.value.mineType ?? undefined,
     });
     const data = res?.data || {};
     tableData.value = data.records || [];
@@ -206,8 +225,7 @@ const handleSearch = () => {
 };
 
 const handleReset = () => {
-  searchForm.value = {beginDate: '', endDate: '', targetLevel: null, status: null};
-  mineOnly.value = false;
+  searchForm.value = {beginDate: '', endDate: '', targetLevel: null, status: null, deptId: null, mineType: null};
   pagination.value.pageNum = 1;
   loadData();
 };
@@ -289,5 +307,18 @@ const handleSaved = () => {
   loadData();
 };
 
-onMounted(loadData);
+// 科室下拉：查询卡按科室筛 + 发起弹框也要用（页面加载一次，弹框复用这份，避免两处各拉一遍）
+const loadDeptOptions = async () => {
+  if (deptOptions.value.length) return;
+  try {
+    const res = await getDepartmentSelectList({});
+    deptOptions.value = (res?.data || []).map((d) => ({id: d.id ?? d.deptId, name: d.deptName ?? d.name}));
+  } catch (e) /* 错误已由全局拦截器统一提示 */{
+  }
+};
+
+onMounted(() => {
+  loadDeptOptions();
+  loadData();
+});
 </script>
