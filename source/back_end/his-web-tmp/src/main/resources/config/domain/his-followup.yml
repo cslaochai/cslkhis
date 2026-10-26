@@ -1,6 +1,0 @@
-# 随访配置
-his:
-  followup:
-    # 外呼通道：mock=人工（护士自己拨，只登记「待外呼」）；aliyun-vms=自动外呼。
-    # 两环境当前同值；接自动外呼时下沉到 profile 文件，凭据同理由 profile 提供
-    call-channel: mock
