@@ -550,13 +550,11 @@
         @stop="onDetailStop"
     />
 
-    <!-- 休息/请假登记与修改（门诊出诊域）：排班考勤侧弹框，后端对「上班→休息」的出诊行
-         自动联动停诊号源并带回提示；独立休息行落 biz_schedule 不产生号源 -->
-    <StaffScheduleEdit
+    <!-- 休息/请假轻量标记（门诊出诊域）：点格子即定 日期·科室·医生，弹层只问「休什么」；
+         出诊行转休由后端自动联动停诊号源并带回提示；独立休息行落 biz_schedule 不产生号源 -->
+    <ScheduleRestEdit
         v-model="restEditVisible"
         :row="restEditRow"
-        :scope="SCHEDULE_SCOPE_OPD"
-        :shift-use-scope="1"
         @saved="loadPanel"
     />
 
@@ -731,7 +729,6 @@ import {
 } from '@/api/appoint';
 import {getShiftSelectList} from '@/api/appoint';
 import {getDepartmentSelectList, getEmployeeList, getUserInfo} from '@/api/system';
-import {SCHEDULE_SCOPE_OPD} from '@/lib/staffSchedule';
 import {DICT_TYPE, loadDictDataList} from '@/lib/dict-cache';
 import {
   SCHEDULE_TYPE_TEXT,
@@ -745,7 +742,7 @@ import {fmtISO} from '@/lib/scheduleDate';
 import {getTitleLabel, getTitleTagClass} from '@/lib/scheduleTitle';
 import ScheduleAdd from './ScheduleAdd.vue';
 import ScheduleEdit from './ScheduleEdit.vue';
-import StaffScheduleEdit from './StaffScheduleEdit.vue';
+import ScheduleRestEdit from './ScheduleRestEdit.vue';
 import ScheduleTplEdit from './ScheduleTplEdit.vue';
 
 const departments = ref([]);
@@ -1135,6 +1132,8 @@ const toRestEditRow = (s) => ({
   dutyStatus: s.dutyStatus ?? 2,
   publishStatus: s.publishStatus ?? 2,
   remark: '',
+  // 出诊行（非休息行）转休要提示「号源将随停诊」；休息行本就没有号源
+  clinicBound: !isRestRow(s),
 });
 /** 已有出诊行「转休」：编辑其排班事实行，上班→休息由后端联动停诊号源 */
 const handlePanelCellRest = (s) => {

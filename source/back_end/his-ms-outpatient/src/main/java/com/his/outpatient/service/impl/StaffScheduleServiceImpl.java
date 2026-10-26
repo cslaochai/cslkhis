@@ -244,9 +244,13 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, Biz
             }
         }
         saveOrUpdate(schedule);
+        // 门诊出诊域不适用「最低在岗」硬拦：出诊行转休 = 医生停诊请假，是门诊排班的常规操作，
+        // 号源侧由 stopClinicSources 联动兜底；硬拦会把「今天只有他一个医生出诊」的科室卡死。
+        // 最低在岗是岗位出勤域（病区/急诊值班）的口径，门诊域一律只提示不拦。
+        boolean enforceMin = !StaffScheduleScopeEnum.OPD.getCode().equals(dto.getScope())
+                && headcountDrops(before, schedule);
         String unitTip = staffPlanRuleService.reviewAfterChange(schedule.getOrgType(), schedule.getOrgId(),
-                schedule.getShiftId(), schedule.getStaffType(), schedule.getScheduleDate(),
-                headcountDrops(before, schedule));
+                schedule.getShiftId(), schedule.getStaffType(), schedule.getScheduleDate(), enforceMin);
         return tipJoin(unitTip, reviewEmployee(schedule), clinicTip);
     }
 
@@ -703,9 +707,13 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, Biz
         assertNotClinicBound(row);
         // 唯一键不含删除标志 → 物理删（软删行继续占键，「删了再重排同一天同一班」必撞重复键）
         baseMapper.purgeById(id);
-        // 删完再核一次人力：把人删到「这个班没人接」必须当场拦住，而不是等明天出事故
-        staffPlanRuleService.reviewAfterChange(row.getOrgType(), row.getOrgId(),
-                row.getShiftId(), row.getStaffType(), row.getScheduleDate(), true);
+        // 删完再核一次人力：把人删到「这个班没人接」必须当场拦住，而不是等明天出事故。
+        // 只对上班行生效——删休息/请假/培训/停班行不改变在岗数，闸门若照跑会拿
+        // 「本来就没人上班」的单元（无班次规则按全部班次匹配）把「取消标休」误拦死。
+        if (StaffDutyStatusEnum.isWorking(row.getDutyStatus())) {
+            staffPlanRuleService.reviewAfterChange(row.getOrgType(), row.getOrgId(),
+                    row.getShiftId(), row.getStaffType(), row.getScheduleDate(), true);
+        }
     }
 
     @Override
