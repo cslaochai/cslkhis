@@ -115,13 +115,18 @@ SELECT 8920610264000000001, 'duty.call.timeout_minutes', '10', '听班呼叫到�
        '听班呼叫发出后多少分钟未到岗即升级到上一层级', 'system', 'system', '0', '0'
 WHERE NOT EXISTS (SELECT 1 FROM sys_config WHERE config_key = 'duty.call.timeout_minutes');
 
--- ---------- 4. 菜单：听班呼叫（挂「全院总值班」806 下） ----------
+-- ---------- 4. 菜单：听班呼叫（挂「排班值守中心」2945 下） ----------
+-- ⚠ path 必须是**带前导斜杠的绝对路径**（存量全是 /duty-roster /er-schedule 这种，
+--   路由守卫按 path 匹配菜单树，写成 "duty-call" 会被判成「没配菜单」直接跳走）。
+-- ⚠ component 两种写法库里都有（duty/DutyRosterView 与 views/duty/DutyPostView.vue），
+--   这里跟同目录的「值班点位配置」对齐用 views/ 形式。
+-- ⚠ parent 必须是目录（2945 排班值守中心）；806 是页面级菜单（menu_type=2），不能当父。
 DELETE FROM sys_menu WHERE id IN (29616, 29617, 29618, 29619);
 INSERT INTO sys_menu (id, menu_key, menu_name, parent_id, permission, sort_order, path, component, icon,
                        menu_type, is_frame, is_cache, is_visible, status,
                        create_by, create_time, update_by, update_time, del_flag, remark, create_by_id, update_by_id)
 VALUES
-(29616, 'org.dutyCall', '听班呼叫', 806, 'org:dutyCall:list', 4, 'duty-call', 'duty/DutyCallView', 'phone',
+(29616, 'org.dutyCall', '听班呼叫', 2945, 'org:dutyCall:list', 11, '/duty-call', 'views/duty/DutyCallView.vue', 'phone',
  2, 0, 1, 1, 1, 'system', now(), 'system', now(), 0, '临床二/三线听班呼叫：发起呼叫、到岗应答、超时升级', '0', '0'),
 (29617, 'org.dutyCall.call', '听班呼叫-发起呼叫', 29616, 'org:dutyCall:call', 1, NULL, NULL, NULL,
  3, 0, 1, 0, 1, 'system', now(), 'system', now(), 0, '发起听班呼叫', '0', '0'),
@@ -162,6 +167,15 @@ FROM sys_role r WHERE r.del_flag = 0 AND r.status = 1 AND r.id IN (1,2,8);
 INSERT INTO sys_role_menu (id, role_id, menu_id)
 SELECT 8920610263000000300 + ROW_NUMBER() OVER (ORDER BY r.id) - 1, r.id, 29619
 FROM sys_role r WHERE r.del_flag = 0 AND r.status = 1 AND r.id IN (1,2,8,26,27);
+
+-- 祖先目录「排班值守中心(2945)」：菜单树从根(0)构建，祖先链断了子菜单就进不了树
+--   —— 医生(2)/急诊医生(8) 原本没有 2945，光授权 29616 的话 /duty-call 页面进不去
+--   （路由守卫按菜单树判权限，缺目录会直接跳回工作台）。
+--   补 2945 不会让这些角色看到该目录下别的菜单：那些菜单他们没单独授权。
+SET @rm_id = 8920610263000000400;
+INSERT INTO sys_role_menu (id, role_id, menu_id)
+SELECT @rm_id := @rm_id + 1, r.id, 2945
+FROM sys_role r WHERE r.del_flag = 0 AND r.status = 1 AND r.id IN (2, 8);
 
 -- ---------- 6. 铺临床二/三线听班排班（近 14 天） ----------
 -- 为什么必须铺：biz_duty_roster 临床（duty_scope=6）排班 0 行，

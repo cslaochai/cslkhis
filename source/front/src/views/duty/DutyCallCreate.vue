@@ -55,17 +55,17 @@
         <el-input v-model="formData.patientLocation" clearable maxlength="100" placeholder="选填，如 呼吸内科 3 床"/>
       </el-form-item>
       <el-form-item label="呼叫事由" prop="callReason">
-        <el-input
-            v-model="formData.callReason"
-            data-testid="duty-call-reason"
-            :rows="3"
-            maxlength="500"
-            placeholder="如：患者突发胸闷血氧下降，一线处理后仍不缓解，需二线到场指导"
-            show-word-limit
-            type="textarea"
-        />
-      </el-form-item>
-      <el-form-item label="到岗时限" prop="timeoutMinutes">
+        <div data-testid="duty-call-reason" style="width: 100%">
+          <el-input
+              v-model="formData.callReason"
+              :rows="3"
+              maxlength="500"
+              placeholder="如：患者突发胸闷血氧下降，一线处理后仍不缓解，需二线到场指导"
+              show-word-limit
+              type="textarea"
+          />
+        </div>
+      </el-form-item>      <el-form-item label="到岗时限" prop="timeoutMinutes">
         <el-input-number v-model="formData.timeoutMinutes" :min="1" :max="120" style="width: 160px"/>
         <span class="ml-2 text-xs text-gray-500">分钟内未到岗即升级到上一层级</span>
       </el-form-item>

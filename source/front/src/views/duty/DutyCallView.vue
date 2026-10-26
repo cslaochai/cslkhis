@@ -191,7 +191,7 @@ const loadData = async () => {
       mineOnly: mineOnly.value || undefined,
     });
     const data = res?.data || {};
-    tableData.value = data.list || data.records || [];
+    tableData.value = data.records || [];
     pagination.value.total = Number(data.total || 0);
   } catch (e) /* 错误已由全局拦截器统一提示 */{
     tableData.value = [];
