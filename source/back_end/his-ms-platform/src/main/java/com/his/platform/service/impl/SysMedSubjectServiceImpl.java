@@ -17,6 +17,7 @@ import com.his.platform.service.SysMedSubjectService;
 import com.his.platform.vo.DeptSubjectItemVO;
 import com.his.platform.vo.DeptSubjectVO;
 import com.his.platform.vo.MedSubjectVO;
+import com.his.spi.service.MedSubjectFacadeService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
@@ -28,11 +29,14 @@ import java.util.stream.Collectors;
 
 /**
  * 诊疗科目与科室映射服务实现。
+ *
+ * <p>同时实现 {@link com.his.spi.service.MedSubjectFacadeService}：住院/收费等模块要取
+ * 「科室的标准诊疗科目码」时走 SPI 端口，不能直接查本模块的表。
  */
 @Service
 @RequiredArgsConstructor
 public class SysMedSubjectServiceImpl extends ServiceImpl<SysMedSubjectMapper, SysMedSubject>
-        implements SysMedSubjectService {
+        implements SysMedSubjectService, MedSubjectFacadeService {
 
     /**
      * 一级科目代码：两位数字（01 ~ 99）
@@ -274,6 +278,44 @@ public class SysMedSubjectServiceImpl extends ServiceImpl<SysMedSubjectMapper, S
                 .filter(d -> !mappedDeptIds.contains(d.getId()))
                 .map(d -> toDeptSubjectVO(d, Collections.emptyList(), Collections.emptyMap(), parentNames))
                 .collect(Collectors.toList());
+    }
+
+    // ------------------------------------------------------------------
+    // MedSubjectFacadeService（跨模块出口）
+    // ------------------------------------------------------------------
+
+    @Override
+    public String getPrimarySubjectCode(Long deptId) {
+        if (deptId == null) {
+            return null;
+        }
+        List<SysDeptSubjectMap> rels = sysDeptSubjectMapMapper.selectList(
+                new LambdaQueryWrapper<SysDeptSubjectMap>()
+                        .eq(SysDeptSubjectMap::getDeptId, deptId)
+                        .eq(SysDeptSubjectMap::getIsPrimary, 1));
+        // 唯一性由 saveDeptMap 保证，这里仍按集合取第一条：真出现脏数据也不要抛异常把上报打断
+        return rels.isEmpty() ? null : rels.get(0).getSubjectCode();
+    }
+
+    @Override
+    public Map<Long, String> getPrimarySubjectCodes(Collection<Long> deptIds) {
+        if (deptIds == null || deptIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        return sysDeptSubjectMapMapper.selectList(new LambdaQueryWrapper<SysDeptSubjectMap>()
+                        .in(SysDeptSubjectMap::getDeptId, deptIds)
+                        .eq(SysDeptSubjectMap::getIsPrimary, 1)).stream()
+                .collect(Collectors.toMap(SysDeptSubjectMap::getDeptId,
+                        SysDeptSubjectMap::getSubjectCode, (a, b) -> a));
+    }
+
+    @Override
+    public String getSubjectName(String subjectCode) {
+        if (!TextUtil.hasText(subjectCode)) {
+            return null;
+        }
+        SysMedSubject subject = getByCode(subjectCode);
+        return subject == null ? null : subject.getSubjectName();
     }
 
     // ------------------------------------------------------------------

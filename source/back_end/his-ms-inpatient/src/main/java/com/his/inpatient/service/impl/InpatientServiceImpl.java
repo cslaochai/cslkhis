@@ -41,6 +41,7 @@ import com.his.spi.vo.WardVO;
 import com.his.common.entity.CurrentUser;
 import com.his.common.enums.BizTypeEnum;
 import com.his.spi.service.DeptScopeService;
+import com.his.spi.service.MedSubjectFacadeService;
 import com.his.spi.service.DictCacheService;
 import com.his.spi.service.SysMessageService;
 import com.his.common.utils.UserUtils;
@@ -101,6 +102,12 @@ public class InpatientServiceImpl extends ServiceImpl<BizInpatientSummaryMapper,
      * 住院结算状态与预交金余额端口（实现在 his-charge）
      */
     private final ChargeFacadeService chargeFacadeService;
+
+    /**
+     * 诊疗科目映射端口（实现在 his-ms-platform）：病案首页上报要的是国家卫健委的科目代码，
+     * 不是院内 dept_id，只能走端口折算，不能直接查平台模块的表。
+     */
+    private final MedSubjectFacadeService medSubjectFacadeService;
 
     /**
      * 时间精度统一到「秒」。
@@ -187,6 +194,10 @@ public class InpatientServiceImpl extends ServiceImpl<BizInpatientSummaryMapper,
         if (summary != null) {
             InpatientDetailVO.SummaryInfo si = new InpatientDetailVO.SummaryInfo();
             BeanUtils.copyProperties(summary, si);
+            // 上报科目按「出院科室」折算；出院科室为空说明还没办出院，退回入院科室
+            Long reportDeptId = summary.getDeptId() != null ? summary.getDeptId() : summary.getAdmitDeptId();
+            si.setSubjectCode(medSubjectFacadeService.getPrimarySubjectCode(reportDeptId));
+            si.setSubjectName(medSubjectFacadeService.getSubjectName(si.getSubjectCode()));
             vo.setSummary(si);
             vo.setSummaryStatusText(SummaryStatusEnum.getLabel(summary.getSummaryStatus()));
             if (info.getInpatientDays() == null) {

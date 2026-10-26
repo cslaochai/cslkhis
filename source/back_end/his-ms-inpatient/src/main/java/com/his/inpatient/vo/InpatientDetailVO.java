@@ -233,6 +233,19 @@ public class InpatientDetailVO {
          * 备注
          */
         private String remark;
+
+        /**
+         * 上报用诊疗科目代码（国家卫健委《医疗机构诊疗科目名录》，如 03.01）。
+         *
+         * <p>不是首页存储字段：由科室主数据折算出来，上报端（卫统/医保结算清单）要的「科室」
+         * 是这个码而不是院内 dept_id。科室没配映射时为 null —— 如实留空，别兜默认科目。
+         */
+        private String subjectCode;
+
+        /**
+         * 上报用诊疗科目名称
+         */
+        private String subjectName;
     }
 
     /**
