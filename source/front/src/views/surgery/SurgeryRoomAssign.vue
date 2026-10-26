@@ -16,14 +16,17 @@
       </div>
       <el-form label-width="100px">
         <el-form-item label="手术间" required>
+          <!-- 禁 allow-create：手术间是主数据（sys_operation_room），自由输入会造出
+               「【P4】1号手术间」「OR-3」这类对不上主数据的脏值，排台总表只能把它们
+               全塞进「未登记手术间」兜底桶。历史脏值在本下拉里仍会原样显示（EP 找不到
+               label 就显示 value），改期时顺手改成规范名称即可。 -->
           <el-select
               v-model="scheduleForm.operationRoom"
-              allow-create
               class="!w-full"
               data-testid="p4-op-schedule-room"
               default-first-option
               filterable
-              placeholder="选择或输入手术间"
+              placeholder="选择手术间"
           >
             <el-option v-for="r in rooms" :key="r" :label="r" :value="r"/>
           </el-select>
@@ -173,10 +176,12 @@ watch(visible, (open) => {
   scheduleForm.plannedEndTime = row.plannedEndTime || '';
   scheduleForm.surgeonId = row.surgeonId || '';
   scheduleForm.assistantName = row.assistantName || '';
-  scheduleForm.anesthetistId = '';
+  // 四个排台人力字段必须**全部**回填：漏一个就是「改期时静默把那个人抹掉」——
+  // 后端 schedule() 是整组覆盖写（setXxx(dto.getXxx())），不传就等于清空。
+  scheduleForm.anesthetistId = row.anesthetistId || '';
   scheduleForm.circulatingNurseId = row.circulatingNurseId || '';
   scheduleForm.scrubNurseId = row.scrubNurseId || '';
-  scheduleForm.scheduleRemark = '';
+  scheduleForm.scheduleRemark = row.scheduleRemark || '';
 });
 
 const submitSchedule = async () => {

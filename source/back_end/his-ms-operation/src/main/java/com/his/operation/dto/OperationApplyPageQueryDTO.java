@@ -34,6 +34,12 @@ public class OperationApplyPageQueryDTO extends PageParam implements Serializabl
     private Long surgeonId;
 
     /**
+     * 麻醉医师ID（员工ID）。麻醉医师看自己的台用——排台把 anesthetist_id 定了，
+     * 麻醉科就该能"按我筛"拿到今天/本周要做的台次。
+     */
+    private Long anesthetistId;
+
+    /**
      * 状态（0-待排期 1-已排期 2-术前核对完成 3-已完成 4-已取消）
      */
     private Integer operationStatus;

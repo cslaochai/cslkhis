@@ -84,6 +84,16 @@
               <el-option v-for="e in employees" :key="e.id" :label="e.empName || e.id" :value="String(e.id)"/>
             </el-select>
             <el-select
+                v-model="filters.anesthetistId"
+                class="!w-44"
+                clearable
+                data-testid="p4-op-filter-anesthetist"
+                filterable
+                placeholder="麻醉医师"
+                @change="handleSearch"
+            >
+              <el-option v-for="e in employees" :key="e.id" :label="e.empName || e.id" :value="String(e.id)"/>            </el-select>
+            <el-select
                 v-model="filters.operationRoom"
                 class="!w-36"
                 clearable
@@ -140,6 +150,12 @@
                 <div v-if="row.circulatingNurseName || row.scrubNurseName" class="mt-1 text-[11px] text-slate-500">
                   巡 {{ text(row.circulatingNurseName) }} · 洗 {{ text(row.scrubNurseName) }}
                 </div>
+              </template>
+            </el-table-column>
+            <el-table-column label="麻醉" min-width="130">
+              <template #default="{ row }">
+                <span class="text-slate-700">{{ text(row.anesthetistName) }}</span>
+                <div class="text-[11px] text-slate-400">{{ text(row.anesthesiaTypeText) }}</div>
               </template>
             </el-table-column>
             <el-table-column label="状态 / 进度" min-width="190">
@@ -322,19 +338,24 @@
               </div>
               <div class="space-y-2 p-2">
                 <div
-                    v-for="op in col.ops"
+                    v-for="(op, opIdx) in col.ops"
                     :key="op.id"
                     :class="op.isEmergency === 1 ? 'border-red-200 bg-red-50' : 'border-slate-200 bg-slate-50'"
                     :data-testid="`p134-mx-op-${op.id}`"
                     class="rounded-md border p-2"
                 >
                   <div class="text-[12px] font-semibold text-slate-900">
+                    <span class="mr-1 rounded bg-slate-200 px-1 text-[11px] font-semibold text-slate-700"
+                          :data-testid="`p134-mx-seq-${op.id}`">第{{ opIdx + 1 }}台</span>
                     {{ hm(op.plannedStartTime) }}~{{ hm(op.plannedEndTime) }}
                     <el-tag v-if="op.isEmergency === 1" effect="plain" size="small" type="danger">急诊</el-tag>
                   </div>
                   <div class="text-[12px] text-slate-700">{{ text(op.patientName) }} · {{
                       text(op.plannedOperationName)
                     }}
+                  </div>
+                  <div class="mt-1 text-[11px] text-slate-600">
+                    术者：{{ text(op.surgeonName) }} · 麻醉：{{ text(op.anesthetistName) }}
                   </div>
                   <div class="mt-1 flex items-center justify-between">
                     <el-tag :type="statusTagType(op.operationStatus)" size="small">{{
@@ -347,7 +368,7 @@
                     </span>
                   </div>
                   <div v-if="op.circulatingNurseName || op.scrubNurseName" class="mt-1 text-[11px] text-slate-500">
-                    巡回：{{ text(op.circulatingNurseName) }} · 洗手：{{ text(op.scrubNurseName) }}
+                    巡回：{{ text(op.circulatingNurseName) }} · 器械/洗手：{{ text(op.scrubNurseName) }}
                   </div>
                   <div class="mt-1 flex flex-wrap gap-x-2">
                     <el-button
@@ -646,6 +667,7 @@ const filters = reactive({
   admissionId: '',
   operationStatus: '',
   surgeonId: '',
+  anesthetistId: '',
   operationRoom: '',
   keyword: '',
 });
@@ -656,6 +678,7 @@ const loadList = async () => {
       admissionId: filters.admissionId || undefined,
       operationStatus: filters.operationStatus === '' ? undefined : filters.operationStatus,
       surgeonId: filters.surgeonId || undefined,
+      anesthetistId: filters.anesthetistId || undefined,
       operationRoom: filters.operationRoom || undefined,
       keyword: filters.keyword || undefined,
       pageNum: pageNum.value,
@@ -697,6 +720,7 @@ const resetFilters = () => {
   filters.admissionId = '';
   filters.operationStatus = '';
   filters.surgeonId = '';
+  filters.anesthetistId = '';
   filters.operationRoom = '';
   filters.keyword = '';
   pageNum.value = 1;

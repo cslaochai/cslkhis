@@ -46,6 +46,7 @@ public interface BizOperationApplyMapper extends BaseMapper<BizOperationApply> {
               AND (#{q.patientId} IS NULL OR c.patient_id = #{q.patientId})
               AND (#{q.applyDeptId} IS NULL OR c.apply_dept_id = #{q.applyDeptId})
               AND (#{q.surgeonId} IS NULL OR c.surgeon_id = #{q.surgeonId})
+              AND (#{q.anesthetistId} IS NULL OR c.anesthetist_id = #{q.anesthetistId})
               AND (#{q.operationStatus} IS NULL OR c.operation_status = #{q.operationStatus})
               AND (#{q.unfinishedOnly} IS NULL OR #{q.unfinishedOnly} = 0
                    OR c.operation_status IN (0, 1, 2))
