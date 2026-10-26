@@ -1,52 +1,32 @@
 package com.his.clinical.service.impl;
 
-import com.his.spi.vo.MyMedicalRecordVO;
 import cn.hutool.core.bean.BeanUtil;
-import cn.hutool.extra.qrcode.QrCodeUtil;
-import cn.hutool.extra.qrcode.QrConfig;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.his.spi.service.QueueFacadeService;
-import com.his.spi.service.RegistStateFacadeService;
-import com.his.spi.vo.RegistStateRowVO;
-import com.his.spi.vo.QueueStateRowVO;
-import com.his.spi.dto.FeeBookDTO;
-import com.his.spi.service.ChargeFacadeService;
-import com.his.spi.vo.FeeRecordVO;
-import com.his.spi.vo.FeeTypeSumVO;
-import com.his.spi.vo.BillBriefVO;
-import com.his.spi.vo.QrPayResultVO;
+import com.his.clinical.dto.*;
+import com.his.clinical.entity.*;
+import com.his.clinical.event.ClinicSubmittedEvent;
+import com.his.clinical.mapper.*;
+import com.his.clinical.service.AiDraftDiffService;
+import com.his.clinical.service.EmrService;
+import com.his.clinical.service.EmrSignatureService;
+import com.his.clinical.service.QualityControlService;
+import com.his.clinical.vo.*;
 import com.his.common.base.PageResult;
-import com.his.spi.vo.ExecStatusVO;
-import com.his.spi.dto.SignCommandDTO;
+import com.his.common.entity.CurrentUser;
 import com.his.common.enums.*;
 import com.his.common.exception.BusinessException;
-import com.his.clinical.event.ClinicSubmittedEvent;
-import com.his.clinical.service.EmrSignatureService;
-import com.his.spi.service.RedisSequenceService;
 import com.his.common.support.TcmGramUnits;
 import com.his.common.util.DateFormats;
 import com.his.common.util.NumUtil;
 import com.his.common.util.TextUtil;
-import com.his.spi.vo.SignatureVO;
-import com.his.spi.service.MedicalTechFacadeService;
-import com.his.spi.vo.LabItemVO;
-import com.his.spi.vo.PatientBriefVO;
-import com.his.clinical.dto.*;
-import com.his.clinical.entity.*;
-import com.his.clinical.mapper.*;
-import com.his.clinical.service.AiDraftDiffService;
-import com.his.clinical.service.EmrService;
-import com.his.clinical.service.QualityControlService;
-import com.his.clinical.vo.*;
-import com.his.spi.service.PatientFacadeService;
-import com.his.spi.service.DrugMasterFacadeService;
-import com.his.spi.vo.DrugBriefVO;
-import com.his.common.entity.CurrentUser;
-import com.his.spi.service.DeptScopeService;
 import com.his.common.utils.UserUtils;
+import com.his.spi.dto.FeeBookDTO;
+import com.his.spi.dto.SignCommandDTO;
+import com.his.spi.service.*;
+import com.his.spi.vo.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
@@ -57,7 +37,6 @@ import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.util.CollectionUtils;
 
-import java.awt.image.BufferedImage;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -72,42 +51,33 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedicalRecord> implements EmrService {
     static final String[] HUIFANG_TYPE = {"糖尿病", "高血压", "冠心病"};
-
+    /**
+     * 手写笔迹 PNG dataURL 长度上限（字符数），与病危告知/请假签收同一口径
+     */
+    private static final int RX_SIGNATURE_MAX = 512 * 1024;
     private final BizPrescriptionMapper bizPrescriptionMapper;
     private final BizPrescriptionDetailMapper bizPrescriptionDetailMapper;
     private final BizPrescriptionAuditLogMapper bizPrescriptionAuditLogMapper;
     private final BizInspectionApplyMapper bizInspectionApplyMapper;
     private final BizLaboratoryApplyMapper bizLaboratoryApplyMapper;
     private final BizMedicalRecordLogMapper bizMedicalRecordLogMapper;
-
     private final DeptScopeService deptScopeService;
     private final ChargeFacadeService chargeFacadeService;
     private final com.his.spi.service.QrPayFacadeService qrPayFacadeService;
-
     private final PatientFacadeService patientFacadeService;
-
     private final RegistStateFacadeService registStateFacadeService;
     private final DrugMasterFacadeService drugMasterFacadeService;
-
     private final EmrSignatureService emrSignatureService;
     private final RedisSequenceService redisSequenceService;
     private final QueueFacadeService queueFacadeService;
-
     private final BizMedicalRecordArchiveMapper bizMedicalRecordArchiveMapper;
-
     private final QualityControlService qualityControlService;
-
     private final BizFollowupTaskMapper bizFollowupTaskMapper;
     private final BizChronicRecordMapper bizChronicRecordMapper;
-
     private final MedicalTechFacadeService medicalTechFacadeService;
-
     private final AiDraftDiffService aiDraftDiffService;
-
     private final com.his.spi.service.StockFacadeService stockFacadeService;
-
     private final com.his.spi.service.AntibioticFacadeService antibioticFacadeService;
-
     private final ApplicationEventPublisher eventPublisher;
 
     /**
@@ -420,9 +390,6 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
             throw new BusinessException("处方 " + p.getPrescriptionNo() + " 开方签名失败：" + e.getMessage());
         }
     }
-
-    /** 手写笔迹 PNG dataURL 长度上限（字符数），与病危告知/请假签收同一口径 */
-    private static final int RX_SIGNATURE_MAX = 512 * 1024;
 
     /**
      * 校验开方医师手写笔迹（PNG dataURL）。空值放行（老前端/未手写）；
@@ -2366,8 +2333,8 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
             }
             document.add(createParagraph((TextUtil.hasText(signed.getDoctorName()) ? signed.getDoctorName() : record.getDoctorName())
                     + (signed.getDoctorSignedTime() != null
-                        ? "（电子签名 · " + signed.getDoctorSignedTime().format(DateFormats.DATETIME) + "，可验签）"
-                        : "（电子签名，可验签）"), normalFont));
+                    ? "（电子签名 · " + signed.getDoctorSignedTime().format(DateFormats.DATETIME) + "，可验签）"
+                    : "（电子签名，可验签）"), normalFont));
         } else {
             document.add(createParagraph(record.getDoctorName(), normalFont));
         }
@@ -2473,5 +2440,168 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
         vo.setRxNormalPdfPath(generateNormalRxPdf(record));
         vo.setRxHerbalPdfPath(generateHerbalRxPdf(record));
         return vo;
+    }
+
+    // ========== 医生撤回结诊 ==========
+    // 真实 HIS（东软/卫宁）门诊病历撤回口径：医生刚结诊发现开错，在当前患者身上直接撤回，
+    // 不是单独开菜单（那是病案修改申请流程，走审批）。闸门与反向动作见 EmrService.revokeRecord。
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void revokeRecord(Long recordId, Long queueId, String reason) {
+        if (recordId == null) {
+            throw new BusinessException("请选择要撤回的病历");
+        }
+        BizMedicalRecord record = this.getById(recordId);
+        if (record == null) {
+            throw new BusinessException("病历不存在");
+        }
+        CurrentUser currentUser = UserUtils.getCurrentUser();
+
+        // 闸门1：状态必须是已提交(2)。已归档(3)/已作废(4) 医生无权撤回。
+        if (!Integer.valueOf(RecordStatusEnum.SUBMITTED.getCode()).equals(record.getRecordStatus())) {
+            if (Integer.valueOf(RecordStatusEnum.ARCHIVED.getCode()).equals(record.getRecordStatus())) {
+                throw new BusinessException("病历已归档，不允许医生撤回；如需修改请走病案修改申请流程");
+            }
+            throw new BusinessException("病历状态不是「已提交」，不能撤回");
+        }
+        // 闸门2：本人开的病历。
+        if (!Objects.equals(record.getDoctorId(), currentUser.getEmployeeId())) {
+            throw new BusinessException("只能撤回本人开具的病历");
+        }
+        // 闸门3：当日就诊（隔日病历走病案修改申请）。
+        if (record.getVisitDate() != null && !LocalDate.now().equals(record.getVisitDate())) {
+            throw new BusinessException("隔日病历不允许医生自助撤回，请联系病案室走修改申请");
+        }
+        // 闸门4：未缴费。pendingBillsOfEncounter 返回「未结清」账单（待支付/部分支付/挂账）。
+        //   - 有待支付账单 → 可以撤回（红冲L1后账单自动作废）；
+        //   - 无账单但有应收（sumNet > 0）→ 已缴费/已结算，拒绝（走收费台退费）；
+        //   - 无账单且无应收（0元单，没开药没开检查）→ 允许撤回。
+        List<BillBriefVO> pendingBills = chargeFacadeService.pendingBillsOfEncounter(
+                EncounterTypeEnum.OUTPATIENT.getCode(), record.getRegistId());
+        if (pendingBills == null || pendingBills.isEmpty()) {
+            BigDecimal netDue = chargeFacadeService.sumNetGroupByItemType(
+                            EncounterTypeEnum.OUTPATIENT.getCode(), record.getRegistId()).stream()
+                    .map(FeeTypeSumVO::getAmount)
+                    .filter(Objects::nonNull)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            if (netDue.compareTo(BigDecimal.ZERO) > 0) {
+                throw new BusinessException("该就诊已缴费/已结算，不能直接撤回；如需退费请到收费台办理");
+            }
+        }
+        // 闸门5：检查/检验未开始执行。已签到/已采样的不能撤回。
+        List<Long> applyIds = bizInspectionApplyMapper.selectList(
+                        new LambdaQueryWrapper<BizInspectionApply>().eq(BizInspectionApply::getRecordId, recordId))
+                .stream().map(BizInspectionApply::getId).toList();
+        List<Long> labApplyIds = bizLaboratoryApplyMapper.selectList(
+                        new LambdaQueryWrapper<BizLaboratoryApply>().eq(BizLaboratoryApply::getRecordId, recordId))
+                .stream().map(BizLaboratoryApply::getId).toList();
+        if (!applyIds.isEmpty()) {
+            List<ExecStatusVO> exStatus = medicalTechFacadeService.listInspectionExecStatus(applyIds);
+            boolean anyStarted = exStatus.stream().anyMatch(s -> Boolean.TRUE.equals(s.getStarted()));
+            if (anyStarted) {
+                throw new BusinessException("检查申请已开始执行，不能撤回；如需取消请到医技科办理");
+            }
+        }
+        if (!labApplyIds.isEmpty()) {
+            List<ExecStatusVO> labStatus = medicalTechFacadeService.listLaboratoryExecStatus(labApplyIds);
+            boolean anyStarted = labStatus.stream().anyMatch(s -> Boolean.TRUE.equals(s.getStarted()));
+            if (anyStarted) {
+                throw new BusinessException("检验申请已开始执行，不能撤回；如需取消到检验科办理");
+            }
+        }
+
+        // ---- 反向动作（同事务）----
+        // 1. 病历状态：已提交 → 草稿，清提交时刻/审核状态/签名状态。
+        record.setRecordStatus(RecordStatusEnum.DRAFT.getCode());
+        record.setReviewStatus(0);
+        record.setSubmitTime(null);
+        record.setSignStatus(ObjectSignStatusEnum.UNSIGNED.getCode());
+        this.updateById(record);
+
+        // 2. 作废病历签名（P5.5）。listByBiz 拿到当前有效签，逐个 invalidate。
+        try {
+            List<SignatureVO> signs = emrSignatureService.listByBiz(SignBizTypeEnum.OUTPATIENT_RECORD.getCode(), recordId);
+            if (signs != null) {
+                for (SignatureVO s : signs) {
+                    if (s.getSignStatus() != null && s.getSignStatus() == 1) { // 1=有效签名
+                        emrSignatureService.invalidate(s.getId(),
+                                "医生撤回结诊：" + (TextUtil.hasText(reason) ? reason : "未填原因"),
+                                currentUser.getEmployeeId(), currentUser.getRealName());
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.warn("[撤回结诊] 病历签名作废失败 recordId={}：{}", recordId, e.getMessage());
+        }
+
+        // 3. 处方：签名作废 + 状态回退草稿。
+        List<BizPrescription> prescriptions = bizPrescriptionMapper.selectList(
+                new LambdaQueryWrapper<BizPrescription>().eq(BizPrescription::getRecordId, recordId));
+        for (BizPrescription rx : prescriptions) {
+            try {
+                List<SignatureVO> rxSigns = emrSignatureService.listByBiz(SignBizTypeEnum.PRESCRIPTION.getCode(), rx.getId());
+                if (rxSigns != null) {
+                    for (SignatureVO s : rxSigns) {
+                        if (s.getSignStatus() != null && s.getSignStatus() == 1) {
+                            emrSignatureService.invalidate(s.getId(),
+                                    "医生撤回结诊：处方随病历一起回退",
+                                    currentUser.getEmployeeId(), currentUser.getRealName());
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                log.warn("[撤回结诊] 处方签名作废失败 prescriptionId={}：{}", rx.getId(), e.getMessage());
+            }
+            rx.setPrescriptionStatus(PrescriptionStatusEnum.DRAFT.getCode());
+            bizPrescriptionMapper.updateById(rx);
+        }
+
+        // 4. L1 记账行红冲：检查/检验/处方明细逐行 findBookedBySource + reverse。
+        String revokeReason = "医生撤回结诊" + (TextUtil.hasText(reason) ? "：" + reason : "");
+        for (BizInspectionApply apply : bizInspectionApplyMapper.selectList(
+                new LambdaQueryWrapper<BizInspectionApply>().eq(BizInspectionApply::getRecordId, recordId))) {
+            FeeRecordVO fee = chargeFacadeService.findBookedBySource(
+                    FeeSourceTypeEnum.EXAM_APPLY.getCode(), apply.getId(), apply.getInspectionItemCode());
+            if (fee != null) {
+                chargeFacadeService.reverse(fee.getId(), revokeReason);
+            }
+        }
+        for (BizLaboratoryApply apply : bizLaboratoryApplyMapper.selectList(
+                new LambdaQueryWrapper<BizLaboratoryApply>().eq(BizLaboratoryApply::getRecordId, recordId))) {
+            FeeRecordVO fee = chargeFacadeService.findBookedBySource(
+                    FeeSourceTypeEnum.LAB_APPLY.getCode(), apply.getId(), apply.getLaboratoryItemCode());
+            if (fee != null) {
+                chargeFacadeService.reverse(fee.getId(), revokeReason);
+            }
+        }
+        for (BizPrescription rx : prescriptions) {
+            for (BizPrescriptionDetail pd : bizPrescriptionDetailMapper.selectList(
+                    new LambdaQueryWrapper<BizPrescriptionDetail>().eq(BizPrescriptionDetail::getPrescriptionId, rx.getId()))) {
+                FeeRecordVO fee = chargeFacadeService.findBookedBySource(
+                        FeeSourceTypeEnum.PRESCRIPTION.getCode(), pd.getId(), pd.getDrugCode());
+                if (fee != null) {
+                    chargeFacadeService.reverse(fee.getId(), revokeReason);
+                }
+            }
+        }
+
+        // 5. 队列/挂号回退就诊中（结诊的反向）。
+        if (record.getRegistId() != null && registStateFacadeService.getRegistRow(record.getRegistId()) != null) {
+            registStateFacadeService.updateRegistStatus(record.getRegistId(),
+                    AppointStatusEnum.ACCEPTED.getCode(),
+                    List.of(AppointStatusEnum.COMPLETED.getCode()));
+        }
+        if (queueId != null && registStateFacadeService.getQueueRow(queueId) != null) {
+            registStateFacadeService.finishQueue(queueId,
+                    QueueStatusEnum.CONSULTING.getCode(), null,
+                    List.of(QueueStatusEnum.COMPLETED.getCode()));
+        }
+
+        // 6. 归档记录作废（结诊时 generateArchive 落的那条待归档记录）。
+        bizMedicalRecordArchiveMapper.delete(new LambdaQueryWrapper<BizMedicalRecordArchive>()
+                .eq(BizMedicalRecordArchive::getRecordId, recordId));
+
+        // 7. 留痕。
+        addRecordLog(recordId, record.getRecordNo(), "撤回结诊", null, "已提交", reason);
     }
 }

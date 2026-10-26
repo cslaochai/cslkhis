@@ -4,12 +4,11 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.his.spi.dto.BillPayDTO;
 import com.his.charge.dto.BillRefundDTO;
 import com.his.charge.dto.BillVoidDTO;
+import com.his.charge.dto.InvoiceIssueDTO;
 import com.his.charge.dto.PaymentTxnPageQueryDTO;
 import com.his.charge.entity.*;
-import com.his.common.enums.InsuranceCancelFlagEnum;
 import com.his.charge.mapper.BizFundAccountTxnMapper;
 import com.his.charge.mapper.BizPaymentTxnMapper;
 import com.his.charge.mapper.BizSettlementBillItemMapper;
@@ -24,9 +23,10 @@ import com.his.common.mq.event.ChargeBillPaidEvent;
 import com.his.common.util.DateFormats;
 import com.his.common.util.NumUtil;
 import com.his.common.util.TextUtil;
+import com.his.common.utils.UserUtils;
+import com.his.spi.dto.BillPayDTO;
 import com.his.spi.service.IdempotentGuardService;
 import com.his.spi.service.RedisSequenceService;
-import com.his.common.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
@@ -95,6 +95,8 @@ public class PaymentServiceImpl extends ServiceImpl<BizPaymentTxnMapper, BizPaym
 
     private final ChargePayChannelService chargePayChannelService;
 
+    private final InvoiceService invoiceService;
+
     private final HisMqPublisher mqPublisher;
 
     private static List<BizPaymentTxnVO> toVOList(List<BizPaymentTxn> txns) {
@@ -105,6 +107,13 @@ public class PaymentServiceImpl extends ServiceImpl<BizPaymentTxnMapper, BizPaym
             records.add(vo);
         }
         return records;
+    }
+
+    private static BillRefundDTO.RefundLine refundLineOf(Long feeId, BigDecimal quantity) {
+        BillRefundDTO.RefundLine line = new BillRefundDTO.RefundLine();
+        line.setFeeId(feeId);
+        line.setQuantity(quantity);
+        return line;
     }
 
     @Override
@@ -173,6 +182,9 @@ public class PaymentServiceImpl extends ServiceImpl<BizPaymentTxnMapper, BizPaym
             txns.add(chargeOne(bill, item, source));
         }
         settlementBillService.refreshFromTxns(bill.getId());
+        // 厂商口径：收款与出票是同一个动作。账单结清即在同一事务内自动出票，
+        // 收费台不留「已支付待出票」中间态；出票失败整笔收款回滚，钱票永远同真同假。
+        autoIssueOnPaid(bill.getId());
         log.info("[收款] 账单 {} 收 {} 笔 合计 ¥{}（尚需 ¥{}）来源={}", bill.getBillNo(), txns.size(),
                 total.toPlainString(), remaining.toPlainString(), source.getDesc());
 
@@ -217,6 +229,24 @@ public class PaymentServiceImpl extends ServiceImpl<BizPaymentTxnMapper, BizPaym
             mqPublisher.send(HisMqTopics.CHARGE_BILL_PAID, "bill_paid", event,
                     String.valueOf(bill.getId()));
         }
+    }
+
+    /**
+     * 收款刷新账单后回读状态：结清（3-已支付）即出票，未收齐不出。
+     * 票面金额取净实收（issueByBill 现算流水），部分支付永远走不到这里。
+     */
+    private void autoIssueOnPaid(Long billId) {
+        BizSettlementBill settled = settlementBillService.getById(billId);
+        if (settled == null || !BillStatusEnum.PAID.getCode().equals(settled.getBillStatus())) {
+            return;
+        }
+        // 0 元结清（全额减免/纯统筹后付）无票可开，别拿 issueByBill 的报错把收款回滚掉
+        if (NumUtil.orZero(settled.getPaidAmount()).subtract(NumUtil.orZero(settled.getRefundAmount())).signum() <= 0) {
+            return;
+        }
+        InvoiceIssueDTO issueDTO = new InvoiceIssueDTO();
+        issueDTO.setBillId(billId);
+        invoiceService.issueByBill(issueDTO);
     }
 
     @Override
@@ -283,6 +313,9 @@ public class PaymentServiceImpl extends ServiceImpl<BizPaymentTxnMapper, BizPaym
 
         List<BizPaymentTxn> refunds = payBackEachOrigTxn(bill, paidPart, source, dto);
         settlementBillService.refreshFromTxns(bill.getId());
+        // 收款即出票的连带口径：钱一退，票面就和实收不符，有效票必须同步作废；
+        // 收齐后重开走发票管理「重开」，收费台不再留手工出票口
+        invoiceService.voidByBill(bill.getId(), "账单退费，票据同步作废：" + dto.getReason());
         // 钱退回去了，来源单据必须跟着退回未缴费：处方挂着「已缴费」，药房就会把退掉的药发出去
         sourceAdvanceService.revertByBill(bill.getId(), dto.getReason());
         // 账单的钱变了，医保清单必须跟着动：整单退 → 作废（已报盘的连带发 2305 撤回）；
@@ -297,6 +330,8 @@ public class PaymentServiceImpl extends ServiceImpl<BizPaymentTxnMapper, BizPaym
                 refunds.size(), source.getDesc(), dto.getReason());
         return toVOList(refunds);
     }
+
+    // 住院预交金：bill_id 为空的收/退流水 + 住院资金账户（sql/140）
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -339,6 +374,8 @@ public class PaymentServiceImpl extends ServiceImpl<BizPaymentTxnMapper, BizPaym
         voidDTO.setBillId(billId);
         voidDTO.setReason(reason);
         settlementBillService.voidBill(voidDTO);
+        // 整单撤销连带作废有效票（同退费口径：钱票同真同假）
+        invoiceService.voidByBill(billId, "账单撤销，票据同步作废：" + reason);
 
         int reversed = 0;
         List<Long> reversedFeeIds = new ArrayList<>();
@@ -358,8 +395,6 @@ public class PaymentServiceImpl extends ServiceImpl<BizPaymentTxnMapper, BizPaym
                 bill.getBillNo(), net.toPlainString(), refunds.size(), reversed, source.getDesc(), reason);
         return true;
     }
-
-    // 住院预交金：bill_id 为空的收/退流水 + 住院资金账户（sql/140）
 
     @Override
     public PageResult<BizPaymentTxnVO> selectPage(PaymentTxnPageQueryDTO query) {
@@ -874,13 +909,6 @@ public class PaymentServiceImpl extends ServiceImpl<BizPaymentTxnMapper, BizPaym
             lines.add(refundLineOf(feeId, null));
         }
         return lines;
-    }
-
-    private static BillRefundDTO.RefundLine refundLineOf(Long feeId, BigDecimal quantity) {
-        BillRefundDTO.RefundLine line = new BillRefundDTO.RefundLine();
-        line.setFeeId(feeId);
-        line.setQuantity(quantity);
-        return line;
     }
 
     private BizSettlementBill requirePayableBill(Long billId) {

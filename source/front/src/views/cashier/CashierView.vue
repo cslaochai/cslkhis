@@ -107,44 +107,44 @@
                 size="small"
                 @selection-change="onFeeSelectionChange"
             >
-            <el-table-column type="selection" width="42"/>
-            <el-table-column label="记账号" prop="feeNo" width="150"/>
-            <el-table-column label="项目名称" min-width="180" prop="itemName" show-overflow-tooltip/>
-            <el-table-column label="类别" width="90">
-              <template #default="{ row }">
-                <el-tag size="small">{{ itemTypeText(row.itemType) }}</el-tag>
-              </template>
-            </el-table-column>
-            <el-table-column label="来源" width="100">
-              <template #default="{ row }">
-                <span class="text-xs text-slate-500">{{ sourceTypeText(row.sourceType) }}</span>
-              </template>
-            </el-table-column>
-            <el-table-column label="来源单号" prop="sourceNo" show-overflow-tooltip width="160"/>
-            <el-table-column align="right" label="数量" width="70">
-              <template #default="{ row }">{{ row.quantity }}</template>
-            </el-table-column>
-            <el-table-column align="right" label="单价" width="80">
-              <template #default="{ row }">{{ money(row.price) }}</template>
-            </el-table-column>
-            <el-table-column align="right" label="金额" width="100">
-              <template #default="{ row }">
+              <el-table-column type="selection" width="42"/>
+              <el-table-column label="记账号" prop="feeNo" width="150"/>
+              <el-table-column label="项目名称" min-width="180" prop="itemName" show-overflow-tooltip/>
+              <el-table-column label="类别" width="90">
+                <template #default="{ row }">
+                  <el-tag size="small">{{ itemTypeText(row.itemType) }}</el-tag>
+                </template>
+              </el-table-column>
+              <el-table-column label="来源" width="100">
+                <template #default="{ row }">
+                  <span class="text-xs text-slate-500">{{ sourceTypeText(row.sourceType) }}</span>
+                </template>
+              </el-table-column>
+              <el-table-column label="来源单号" prop="sourceNo" show-overflow-tooltip width="160"/>
+              <el-table-column align="right" label="数量" width="70">
+                <template #default="{ row }">{{ row.quantity }}</template>
+              </el-table-column>
+              <el-table-column align="right" label="单价" width="80">
+                <template #default="{ row }">{{ money(row.price) }}</template>
+              </el-table-column>
+              <el-table-column align="right" label="金额" width="100">
+                <template #default="{ row }">
                 <span :class="Number(row.amount) < 0 ? 'text-emerald-600' : 'font-medium'">{{
                     money(row.amount)
                   }}</span>
-              </template>
-            </el-table-column>
-            <el-table-column label="状态" width="90">
-              <template #default="{ row }">
-                <el-tag :type="feeStatusTag(row.feeStatus)" size="small">{{ feeStatusText(row.feeStatus) }}</el-tag>
-              </template>
-            </el-table-column>
-            <el-table-column label="记账时间" prop="bookTime" width="160"/>
-            <template #empty>
+                </template>
+              </el-table-column>
+              <el-table-column label="状态" width="90">
+                <template #default="{ row }">
+                  <el-tag :type="feeStatusTag(row.feeStatus)" size="small">{{ feeStatusText(row.feeStatus) }}</el-tag>
+                </template>
+              </el-table-column>
+              <el-table-column label="记账时间" prop="bookTime" width="160"/>
+              <template #empty>
               <span class="text-sm text-slate-400">
                 该就诊没有待收费项目{{ bills.length ? '，费用已全部出账，请对下方收款单据收款' : '' }}
               </span>
-            </template>
+              </template>
             </el-table>
           </div>
         </div>
@@ -265,67 +265,69 @@
               }}</b></span>
           </div>
           <div class="rounded-lg border border-slate-200 p-3">
-          <el-table :data="bills" data-testid="cash-bill-table" max-height="220" size="small">
-            <el-table-column label="账单号" prop="billNo" width="160"/>
-            <el-table-column label="结算类型" width="120">
-              <template #default="{ row }">{{ billTypeText(row.billType) }}</template>
-            </el-table-column>
-            <el-table-column label="费用构成" min-width="220">
-              <template #default="{ row }">
-                <div v-if="row.feeComposition?.length" class="flex flex-wrap gap-1">
-                  <el-tag
-                      v-for="c in row.feeComposition"
-                      :key="c.itemType"
-                      size="small"
-                      type="info"
-                  >{{ itemTypeText(c.itemType) }} ¥{{ money(c.amount) }}</el-tag>
-                </div>
-                <span v-else class="text-slate-300">—</span>
-              </template>
-            </el-table-column>
-            <el-table-column label="状态" width="100">
-              <template #default="{ row }">
-                <el-tag :type="billStatusTag(row.billStatus)" size="small">{{ billStatusText(row.billStatus) }}</el-tag>
-              </template>
-            </el-table-column>
-            <el-table-column align="right" label="应收" width="100">
-              <template #default="{ row }">{{ money(row.totalAmount) }}</template>
-            </el-table-column>
-            <el-table-column align="right" label="优惠" width="90">
-              <template #default="{ row }">{{ money(row.discountAmount) }}</template>
-            </el-table-column>
-            <el-table-column align="right" label="统筹" width="90">
-              <template #default="{ row }">{{ money(row.poolAmount) }}</template>
-            </el-table-column>
-            <el-table-column align="right" label="应缴" width="100">
-              <template #default="{ row }"><b>{{ money(row.payableAmount) }}</b></template>
-            </el-table-column>
-            <el-table-column align="right" label="已收" width="100">
-              <template #default="{ row }">{{ money(row.paidAmount) }}</template>
-            </el-table-column>
-            <el-table-column align="right" label="尚需缴" width="100">
-              <template #default="{ row }">
+            <el-table :data="bills" data-testid="cash-bill-table" max-height="220" size="small">
+              <el-table-column label="账单号" prop="billNo" width="160"/>
+              <el-table-column label="结算类型" width="120">
+                <template #default="{ row }">{{ billTypeText(row.billType) }}</template>
+              </el-table-column>
+              <el-table-column label="费用构成" min-width="220">
+                <template #default="{ row }">
+                  <div v-if="row.feeComposition?.length" class="flex flex-wrap gap-1">
+                    <el-tag
+                        v-for="c in row.feeComposition"
+                        :key="c.itemType"
+                        size="small"
+                        type="info"
+                    >{{ itemTypeText(c.itemType) }} ¥{{ money(c.amount) }}
+                    </el-tag>
+                  </div>
+                  <span v-else class="text-slate-300">—</span>
+                </template>
+              </el-table-column>
+              <el-table-column label="状态" width="100">
+                <template #default="{ row }">
+                  <el-tag :type="billStatusTag(row.billStatus)" size="small">{{
+                      billStatusText(row.billStatus)
+                    }}
+                  </el-tag>
+                </template>
+              </el-table-column>
+              <el-table-column align="right" label="应收" width="100">
+                <template #default="{ row }">{{ money(row.totalAmount) }}</template>
+              </el-table-column>
+              <el-table-column align="right" label="优惠" width="90">
+                <template #default="{ row }">{{ money(row.discountAmount) }}</template>
+              </el-table-column>
+              <el-table-column align="right" label="统筹" width="90">
+                <template #default="{ row }">{{ money(row.poolAmount) }}</template>
+              </el-table-column>
+              <el-table-column align="right" label="应缴" width="100">
+                <template #default="{ row }"><b>{{ money(row.payableAmount) }}</b></template>
+              </el-table-column>
+              <el-table-column align="right" label="已收" width="100">
+                <template #default="{ row }">{{ money(row.paidAmount) }}</template>
+              </el-table-column>
+              <el-table-column align="right" label="尚需缴" width="100">
+                <template #default="{ row }">
                 <span :class="Number(row.unpaidAmount) > 0 ? 'font-medium text-red-600' : 'text-slate-400'">
                   {{ money(row.unpaidAmount) }}
                 </span>
-              </template>
-            </el-table-column>
-            <el-table-column label="出账人" prop="billByName" width="100"/>
-            <el-table-column label="出账时间" prop="billTime" width="160"/>
-            <el-table-column fixed="right" label="操作" width="90">
-              <template #default="{ row }">
-                <!-- 收费员动线只留一个口：未收齐点「收款」→ 复用预约收费弹层（默认现金，切扫码收款即出聚合码）；
-                     已结清给「出票」（L4）。退费/作废走退费管理与账单台账页，不在收费台铺开 -->
-                <el-button v-if="Number(row.unpaidAmount) > 0" data-testid="cash-btn-pay" link type="primary"
-                           @click="openPay(row)">收款
-                </el-button>
-                <el-button v-else-if="Number(row.billStatus) === 3" data-testid="cash-btn-issue" link type="success"
-                           @click="runIssue(row)">出票
-                </el-button>
-              </template>
-            </el-table-column>
-            <template #empty><span class="text-sm text-slate-400">该就诊还没有账单</span></template>
-          </el-table>
+                </template>
+              </el-table-column>
+              <el-table-column label="出账人" prop="billByName" width="100"/>
+              <el-table-column label="出账时间" prop="billTime" width="160"/>
+              <el-table-column fixed="right" label="操作" width="90">
+                <template #default="{ row }">
+                  <!-- 收费员动线只留一个口：未收齐点「收款」→ 复用预约收费弹层（默认现金，切扫码收款即出聚合码）；
+                       结清即自动出票、账单离开本段（厂商口径：收款与出票同一动作，不留待出票中间态）。
+                       退费/作废走退费管理与账单台账页，补票/重开在发票管理 -->
+                  <el-button v-if="Number(row.unpaidAmount) > 0" data-testid="cash-btn-pay" link type="primary"
+                             @click="openPay(row)">收款
+                  </el-button>
+                </template>
+              </el-table-column>
+              <template #empty><span class="text-sm text-slate-400">该就诊还没有账单</span></template>
+            </el-table>
           </div>
         </div>
       </div>
@@ -338,8 +340,8 @@
     <!-- ============ 收款 ============ -->
     <!-- 与预约收费同一弹层：默认现金档（窗口当场点钞记流水），切扫码收款即出一张聚合码（一码多平台）；
          金额取账单尚需缴，页面不改数。多渠道拆笔（余额+医保）由退费/台账侧的账单详情承接 -->
-    <QrPayDialog v-model="qrPayDialog" allow-cash :amount="qrPayBill?.unpaidAmount" :bill-id="qrPayBill?.id"
-                 :bill-no="qrPayBill?.billNo" :patient-name="qrPayBill?.patientName" @paid="onPaid"/>
+    <QrPayDialog v-model="qrPayDialog" :amount="qrPayBill?.unpaidAmount" :bill-id="qrPayBill?.id" :bill-no="qrPayBill?.billNo"
+                 :patient-name="qrPayBill?.patientName" allow-cash @paid="onPaid"/>
 
     <!-- ============ 交班（班结） ============ -->
     <!-- 与「财务日结」页同一个弹层：给本班收款流水定格 + 现金差异闸；
@@ -353,7 +355,7 @@
  * 收费结算窗口（四层：L1 记账 → L2 结算 → L3 支付 → L4 票据）
  *
  * 页面只走一条链，每一步都只碰自己那一层：
- *   待收费就诊榜 →（选记账行）出账单 → 收款（默认现金，可切扫码收款出聚合码）→ 出票
+ *   待收费就诊榜 →（选记账行）出账单 → 收款（默认现金，可切扫码收款出聚合码）→ 结清后端自动出票
  *
  * 三条前端必须守住的口径：
  * 1. **应收金额不由本页传入**：settle 只提交「哪些记账行 + 优惠多少 + 结算方式」，
@@ -375,7 +377,6 @@ import {
   settleBill,
   settlePreview,
 } from '@/api/settlementBill';
-import {issueInvoice} from '@/api/invoice';
 import QrPayDialog from '@/components/his/QrPayDialog.vue';
 import FinanceHandoverAdd from '@/components/his/FinanceHandoverAdd.vue';
 import {DICT_TYPE, loadDictDataMap} from '@/lib/dict-cache';
@@ -417,8 +418,8 @@ async function loadBoard() {
     });
     boardRows.value = res.data?.records || [];
     pagination.value.total = Number(res.data?.total || 0);
-  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
-    
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */ {
+
   } finally {
     boardLoading.value = false;
   }
@@ -479,6 +480,9 @@ async function loadWorkbench() {
       getBillListPage({
         encounterType: current.value.encounterType,
         encounterId: current.value.encounterId,
+        // 收费台只处理未收齐的（1-待支付 2-部分支付 6-挂账）；结清即自动出票、离开收费台，
+        // 作废/退费与已收讫凭证去账单台账和发票管理看
+        billStatusList: [1, 2, 6],
         pageNum: 1,
         pageSize: 50,
       }),
@@ -486,10 +490,9 @@ async function loadWorkbench() {
     fees.value = feeRes.data?.fees || [];
     feeTotal.value = Number(feeRes.data?.totalAmount || 0);
     unpaidBillAmount.value = Number(feeRes.data?.unpaidBillAmount || 0);
-    // 已作废的账单留在台账页看，收费台只关心还要处理的：待支付 / 部分支付 / 已支付（可退费出票）
-    bills.value = (billRes.data?.records || []).filter((b) => Number(b.billStatus) !== 4);
-  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
-    
+    bills.value = billRes.data?.records || [];
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */ {
+
   } finally {
     workLoading.value = false;
   }
@@ -529,7 +532,7 @@ async function runPreview() {
     preview.value = res.data || null;
   } catch (error) {
     preview.value = null;
-    
+
   } finally {
     previewLoading.value = false;
   }
@@ -552,8 +555,8 @@ async function runSettle() {
     if (Number(bill?.payableAmount || 0) > 0) {
       await openPay(bill);
     }
-  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
-    
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */ {
+
   } finally {
     settling.value = false;
   }
@@ -577,16 +580,6 @@ async function onPaid() {
   ElMessage.success('收款已入账');
   await loadWorkbench();
   await loadBoard();
-}
-
-// ==================== 出票（L4：账单结清后打发票） ====================
-async function runIssue(bill) {
-  try {
-    const res = await issueInvoice({billId: bill.id, invoiceType: 1});
-    ElMessage.success(`已出票 ${res.data?.invoiceNo || ''}`);
-    await loadWorkbench();
-  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
-  }
 }
 
 const billStatusTag = (status) => Number(status) === 3 ? 'success' : Number(status) === 2 ? 'warning' : Number(status) === 4 || Number(status) === 5 ? 'info' : '';

@@ -1,17 +1,14 @@
 package com.his.clinical.controller;
 
-import com.his.common.base.Result;
 import com.his.clinical.dto.MedicalRecordSaveDTO;
 import com.his.clinical.service.EmrService;
+import com.his.common.base.Result;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 /**
  * 医生工作站 - 病历保存控制器（临时保存 / 结诊）
@@ -47,5 +44,19 @@ public class MedicalRecordController {
     public Result<String> recordSubmitDirect(@RequestBody @Valid MedicalRecordSaveDTO recordSaveDTO) {
         Long recordId = emrService.saveMedicalRecord(recordSaveDTO, true);
         return Result.success("结诊成功", String.valueOf(recordId));
+    }
+
+    /**
+     * 医生撤回结诊：已提交 → 草稿，病历重新开放编辑。
+     * 仅本人当日已提交(2)、未缴费、未执行的病历允许撤回；已归档(3) 拒绝。
+     */
+    @PreAuthorize("hasAuthority('opd:doctorWorkstation:edit')")
+    @Operation(summary = "撤回结诊（已提交→草稿，本人当日未缴费未执行）")
+    @PostMapping("/recordRevoke")
+    public Result<Void> recordRevoke(@RequestParam Long recordId,
+                                     @RequestParam(required = false) Long queueId,
+                                     @RequestParam(required = false) String reason) {
+        emrService.revokeRecord(recordId, queueId, reason);
+        return Result.success("已撤回结诊，病历回到草稿", null);
     }
 }

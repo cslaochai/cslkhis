@@ -1,14 +1,14 @@
 package com.his.clinical.service;
 
-import com.his.spi.vo.MyMedicalRecordVO;
 import com.baomidou.mybatisplus.extension.service.IService;
-import com.his.common.base.PageResult;
 import com.his.clinical.dto.*;
 import com.his.clinical.entity.BizInspectionApply;
 import com.his.clinical.entity.BizLaboratoryApply;
 import com.his.clinical.entity.BizMedicalRecord;
 import com.his.clinical.entity.BizPrescription;
 import com.his.clinical.vo.*;
+import com.his.common.base.PageResult;
+import com.his.spi.vo.MyMedicalRecordVO;
 
 import java.util.List;
 
@@ -190,4 +190,23 @@ public interface EmrService extends IService<BizMedicalRecord> {
      * <p>每次都重画（患者可能中途加了检查/换了药），没有对应内容就对应字段为空。
      */
     VisitDocsPrintVO printVisitDocs(Long recordId);
+
+    /**
+     * 医生撤回结诊：已提交(2) → 草稿(1)，把病历重新开放编辑。
+     *
+     * <p>闸门（真实 HIS 口径，任一不满足即拒绝并给出可读原因）：
+     * <ul>
+     *   <li>病历状态必须是已提交(2)；已归档(3)/已作废(4) 不允许医生撤回（走病案修改申请）；</li>
+     *   <li>必须是本人开的病历（doctorId = 当前登录医生）；</li>
+     *   <li>当日就诊（visitDate = 今天），隔日不允许医生自助撤回；</li>
+     *   <li>未缴费：本次就诊没有已支付的账单（已支付走收费台退费，不在这里撤回）；</li>
+     *   <li>未执行：检查/检验未出报告、处方未发药。</li>
+     * </ul>
+     * 反向动作同事务：病历状态回退 + 签名作废 + L1 记账行红冲 + 队列/挂号回退就诊中 + 归档记录作废。
+     *
+     * @param recordId 病历ID
+     * @param queueId  患者队列行ID（前端当前患者带的 queueId；结诊回退队列用）
+     * @param reason   撤回原因（留痕）
+     */
+    void revokeRecord(Long recordId, Long queueId, String reason);
 }

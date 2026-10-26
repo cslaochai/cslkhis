@@ -39,4 +39,10 @@ public interface InvoiceService extends IService<BizInvoice> {
      * 作废发票（红冲换开的入口：作废后同一张账单可再开票，新票自动回指本票）
      */
     boolean voidInvoice(Long invoiceId, String reason);
+
+    /**
+     * 按账单作废其全部有效票：账单退费/整单撤销时票据同步冲销，没有有效票则直接放行。
+     * 用于收款链路内部，不弹「票不存在」提示。
+     */
+    void voidByBill(Long billId, String reason);
 }

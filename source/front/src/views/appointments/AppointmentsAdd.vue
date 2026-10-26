@@ -20,7 +20,7 @@
     <el-form :model="newAppointment" label-position="left" label-width="80px">
       <template v-if="addMode === 'existing'">
         <div class="flex items-start gap-4">
-          <el-form-item label="选择患者" required class="!w-1/2 shrink-0">
+          <el-form-item class="!w-1/2 shrink-0" label="选择患者" required>
             <AppointmentPatientSelect
                 v-model="newAppointment.patientId"
                 @select="handlePatientSelect"
@@ -31,7 +31,8 @@
             <span class="shrink-0 text-xs text-slate-500">已选患者：</span>
             <span class="shrink-0 font-medium text-slate-900">{{ newAppointment.patientName }}</span>
             <span class="shrink-0 text-xs text-slate-600">{{ patientGenderText(newAppointment.patientGender) }}</span>
-            <span v-if="newAppointment.patientIdCardMasked" class="shrink-0 text-xs text-slate-500">{{ newAppointment.patientIdCardMasked }}</span>
+            <span v-if="newAppointment.patientIdCardMasked"
+                  class="shrink-0 text-xs text-slate-500">{{ newAppointment.patientIdCardMasked }}</span>
             <span v-if="feeShortLabel(newAppointment.medicalInsuranceType)"
                   class="inline-flex shrink-0 items-center rounded border border-teal-200 bg-teal-50 px-1.5 text-xs text-teal-700">
               {{ feeShortLabel(newAppointment.medicalInsuranceType) }}
@@ -84,7 +85,7 @@
           </el-select>
         </el-form-item>
         <div class="grid grid-cols-2 gap-x-4">
-          <el-form-item label="费别" :required="addMode === 'new' || Number(newAppointment.settlementType) === 2">
+          <el-form-item :required="addMode === 'new' || Number(newAppointment.settlementType) === 2" label="费别">
             <el-select v-if="addMode === 'new'" v-model="newPatientForm.medicalInsuranceType" class="w-full" filterable
                        placeholder="选择费别">
               <el-option v-for="item in medicalInsuranceTypes" :key="item.dictValue" :label="item.dictLabel"
@@ -185,9 +186,9 @@
             </el-select>
             <p v-if="newAppointment.scheduleId && !slotRows.length && !slotLoading"
                class="w-full text-xs text-slate-400 mt-1">
-              {{ selectedSchedulePassed
-                  ? `该号源已过挂号截止时间（开诊前 ${REGIST_CUTOFF_MINUTES} 分钟截止），请重新选择`
-                  : '该号源暂无时间段明细，将按整班次号源挂号' }}
+              <!-- 【已屏蔽 2026-10-26】原三元式先判 selectedSchedulePassed 提示「该号源已过挂号截止时间」；
+                   时间闸屏蔽后该提示永不成立，只留无段排班的说明。 -->
+              该号源暂无时间段明细，将按整班次号源挂号
             </p>
           </el-form-item>
         </template>
@@ -202,11 +203,13 @@
             </span>
           </div>
           <div v-if="revisitPreview && !revisitPreviewLoading" class="mt-1 text-xs text-slate-500">
-            门诊诊查费 ¥{{ Number(revisitPreview.diagnosisFee || 0).toFixed(2) }}<template
-              v-if="revisitPreview.childSurcharged">
+            门诊诊查费 ¥{{ Number(revisitPreview.diagnosisFee || 0).toFixed(2) }}
+            <template
+                v-if="revisitPreview.childSurcharged">
               <span class="text-amber-600">（原价 ¥{{ Number(revisitPreview.baseDiagnosisFee || 0).toFixed(2) }}，含儿童加收
                 ¥{{ Number(revisitPreview.childSurchargeAmount || 0).toFixed(2) }}）</span>
-            </template> ·
+            </template>
+            ·
             {{ revisitPreview.policyName ? `命中策略「${revisitPreview.policyName}」` : '未命中策略，按全额收费' }}
           </div>
           <p v-if="revisitPreview?.reason && !revisitPreviewLoading" class="mt-1 text-xs text-slate-400">
@@ -241,9 +244,6 @@ import {DICT_TYPE} from '@/lib/dict-cache';
 import {VISIT_TYPE} from '@/lib/dict';
 import {
   birthDateFromIdCard,
-  isIdCardBirthDateLegal,
-  isIdCardChecksumLegal,
-  isIdCardFormatLegal,
   isPatientGenderCollected,
   isPhoneLegal,
   PATIENT_GENDER_OPTIONS,
@@ -363,8 +363,10 @@ const loadSlotRows = async (scheduleId) => {
   slotLoading.value = true;
   try {
     const res = await getScheduleSlots(id);
-    // 段级同口径：当天已过截止（开诊前 10 分钟）的段不放进候选（日期取所选就诊日）
-    slotRows.value = (res.data || []).filter((s) => !cutoffPassed(newAppointment.value.visitDate, s.startTime));
+    // 【已屏蔽 2026-10-26】原此处按 cutoffPassed 滤掉「当天已过开诊前 10 分钟截止」的段，
+    // 导致下午挂不上上午的时段。屏蔽原因与恢复方式见 script 里 REGIST_CUTOFF_MINUTES 的注释。
+    // 原写法：(res.data || []).filter((s) => !cutoffPassed(newAppointment.value.visitDate, s.startTime))
+    slotRows.value = res.data || [];
   } catch (error) {
     console.error('加载时间段失败:', error);
   } finally {
@@ -376,11 +378,15 @@ const handleScheduleChange = (scheduleId) => {
   newAppointment.value.slotId = null;
   loadSlotRows(scheduleId);
 };
-/** 所选号源本身是否已过截止（无段历史排班的判据；有段时段的截止由段级校验管，不在这里拦） */
-const selectedSchedulePassed = computed(() => {
-  const s = availableSchedules.value.find((x) => (x.id ?? x.doctorName) === newAppointment.value.scheduleId);
-  return !!s && cutoffPassed(s.scheduleDate, s.startTime);
-});
+/**
+ * 【已屏蔽 2026-10-26】所选号源本身是否已过截止（无段历史排班的判据）。
+ * 原实现：`return !!s && cutoffPassed(s.scheduleDate, s.startTime)` —— 时间闸屏蔽后恒不成立，
+ * 整个 computed 与模板里引用它的提示文案一并注释（见 template「时间段」表单项）。
+ */
+// const selectedSchedulePassed = computed(() => {
+//   const s = availableSchedules.value.find((x) => (x.id ?? x.doctorName) === newAppointment.value.scheduleId);
+//   return !!s && cutoffPassed(s.scheduleDate, s.startTime);
+// });
 // 医保类型字典（原来在主页面 onMounted 预加载，拆出后改为打开时懒加载，同一接口同一口径）
 const medicalInsuranceTypes = ref([]);
 const loadMedicalInsuranceTypes = async () => {
@@ -550,19 +556,21 @@ const validateNewPatientForm = () => {
     ElMessage.warning('请输入身份证号');
     return false;
   }
-  if (!isIdCardFormatLegal(newPatientForm.value.idCard)) {
-    ElMessage.warning('身份证号格式不正确');
-    return false;
-  }
-  // 出生日期单独判：校验位对了不代表日期存在（19990230 这种），提示要指到点子上
-  if (!isIdCardBirthDateLegal(newPatientForm.value.idCard)) {
-    ElMessage.warning('身份证号中的出生日期不存在，请核对');
-    return false;
-  }
-  if (!isIdCardChecksumLegal(newPatientForm.value.idCard)) {
-    ElMessage.warning('身份证号校验位不正确，请核对');
-    return false;
-  }
+  // TODO 临时屏蔽身份证合法性校验（与「患者管理」新增、后端 PatientProfileValidator 同批注释），
+  //      测试期允许编造的号码建档；必填未动，测完随该 TODO 一起取消注释恢复。
+  // if (!isIdCardFormatLegal(newPatientForm.value.idCard)) {
+  //   ElMessage.warning('身份证号格式不正确');
+  //   return false;
+  // }
+  // // 出生日期单独判：校验位对了不代表日期存在（19990230 这种），提示要指到点子上
+  // if (!isIdCardBirthDateLegal(newPatientForm.value.idCard)) {
+  //   ElMessage.warning('身份证号中的出生日期不存在，请核对');
+  //   return false;
+  // }
+  // if (!isIdCardChecksumLegal(newPatientForm.value.idCard)) {
+  //   ElMessage.warning('身份证号校验位不正确，请核对');
+  //   return false;
+  // }
   // 联系电话改为必填：挂号窗口面对清醒患者，是补全主档（含联系方式）成本最低的时机
   if (!newPatientForm.value.phone) {
     ElMessage.warning('请输入联系电话');
@@ -602,37 +610,42 @@ const loadAvailableSchedules = async () => {
   }
 };
 /**
- * 分时段挂号截止提前量（分钟）：时段开始前 10 分钟之后不再放号（用户口径 2026-10-14）。
- * 与后端 BizAppointServiceImpl.REGIST_CUTOFF_MINUTES 同口径，改动必须两边同步。
+ * 【已屏蔽 2026-10-26】分时段挂号截止提前量（时段开始前 10 分钟之后不再放号）。
+ * 屏蔽原因：下午复测上午时段的挂号流程被这道闸拦住，走不下去。
+ * 恢复方式：解开本常量与下方 cutoffPassed 的注释，并还原三处调用点
+ * （loadSlotRows 的段候选过滤、selectedSchedulePassed、handleSubmit 的两段提交校验）。
  */
-const REGIST_CUTOFF_MINUTES = 10;
-/** 今天（YYYY-MM-DD，本地时区）—— cutoffPassed / dateIsPast 共用的基准 */
+// const REGIST_CUTOFF_MINUTES = 10;
+/** 今天（YYYY-MM-DD，本地时区）—— dateIsPast 的基准 */
 const todayStr = () => {
   const t = new Date();
   return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`;
 };
-/** 就诊日是否已是过去日期（与 cutoffPassed 同一个「今天」口径）。dateStr 形如 2026-10-14 */
+/** 就诊日是否已是过去日期。dateStr 形如 2026-10-14 */
 const dateIsPast = (dateStr) => {
   if (!dateStr)
     return false;
   return dateStr < todayStr();
 };
-/** 该号源/时间段是否已过挂号截止（开诊前 10 分钟）。dateStr 形如 2026-10-14 */
-const cutoffPassed = (dateStr, startTime) => {
-  if (!dateStr)
-    return false;
-  const today = todayStr();
-  if (dateStr < today)
-    return true;
-  if (dateStr > today)
-    return false;
-  const m = /^(\d{1,2}):(\d{2})/.exec(String(startTime ?? '').trim());
-  if (!m)
-    return false;
-  const now = new Date();
-  const nowMin = now.getHours() * 60 + now.getMinutes();
-  return Number(m[1]) * 60 + Number(m[2]) - REGIST_CUTOFF_MINUTES <= nowMin;
-};
+/**
+ * 【已屏蔽 2026-10-26，原因见上方常量注释】
+ * 原口径：该号源/时间段是否已过挂号截止（开诊前 10 分钟）。dateStr 形如 2026-10-14
+ */
+// const cutoffPassed = (dateStr, startTime) => {
+//   if (!dateStr)
+//     return false;
+//   const today = todayStr();
+//   if (dateStr < today)
+//     return true;
+//   if (dateStr > today)
+//     return false;
+//   const m = /^(\d{1,2}):(\d{2})/.exec(String(startTime ?? '').trim());
+//   if (!m)
+//     return false;
+//   const now = new Date();
+//   const nowMin = now.getHours() * 60 + now.getMinutes();
+//   return Number(m[1]) * 60 + Number(m[2]) - REGIST_CUTOFF_MINUTES <= nowMin;
+// };
 const handleSubmit = async () => {
   // ① 患者：按 tab 分支校验
   if (addMode.value === 'existing') {
@@ -668,24 +681,28 @@ const handleSubmit = async () => {
       ElMessage.warning('请选择号源');
       return;
     }
-    // 时间闸兜底：弹窗开着不关（选完号源等半天），号源/段到点失效 —— 提交时再验一次。
-    // 无段（历史排班）才按班次开始时间判；有段时段的截止由下面段级校验管，
-    // 不能用班次开始时间（08:00 的班次 11:30 的段）误杀还开放的段。
-    const schedSel = availableSchedules.value.find((x) => (x.id ?? x.doctorName) === newAppointment.value.scheduleId);
-    if (schedSel && !slotRows.value.length && cutoffPassed(schedSel.scheduleDate, schedSel.startTime)) {
-      ElMessage.warning(`该号源已过挂号截止时间（开诊前 ${REGIST_CUTOFF_MINUTES} 分钟截止），请重新选择`);
-      return;
-    }
+    // 【已屏蔽 2026-10-26】时间闸兜底（弹窗开着不关，提交时再验一次号源/段是否已过
+    // 开诊前 10 分钟截止）。屏蔽原因：下午复测上午时段的挂号流程被拦住，走不下去；
+    // 恢复方式见 script 里 REGIST_CUTOFF_MINUTES 的注释。原两段判据：
+    //   ① 无段（历史排班）按班次开始时间判：
+    //      const schedSel = availableSchedules.value.find((x) => (x.id ?? x.doctorName) === newAppointment.value.scheduleId);
+    //      if (schedSel && !slotRows.value.length && cutoffPassed(schedSel.scheduleDate, schedSel.startTime)) {
+    //        ElMessage.warning(`该号源已过挂号截止时间（开诊前 ${REGIST_CUTOFF_MINUTES} 分钟截止），请重新选择`);
+    //        return;
+    //      }
+    //   ② 有段时段的截止由段级判据管（不能用班次开始时间误杀还开放的段）：见下面 if (slotId) 块内注释。
     // 号源事实在段上：有段可选时必须选段（后端按段扣号源），不选段会退化为只扣主表的旧路径
     if (slotRows.value.length && !newAppointment.value.slotId) {
       ElMessage.warning('请选择时间段');
       return;
     }
-    // 段也过了截止（或已被过滤掉）→ 强制重选，不能让 stale 的 slotId 一路提交到后端
+    // 段已被过滤掉（换号源/重新加载后 stale）→ 强制重选，不能让旧 slotId 一路提交到后端
     if (newAppointment.value.slotId) {
       const slotSel = slotRows.value.find((x) => String(x.id) === String(newAppointment.value.slotId));
-      if (!slotSel || cutoffPassed(newAppointment.value.visitDate, slotSel.startTime)) {
-        ElMessage.warning('所选时间段已过挂号截止时间，请重新选择');
+      // 【已屏蔽 2026-10-26】原条件还带 `|| cutoffPassed(newAppointment.value.visitDate, slotSel.startTime)`
+      // —— 段过了截止也强制重选，与上面同一道时间闸一起注释掉。
+      if (!slotSel) {
+        ElMessage.warning('所选时间段已失效，请重新选择');
         return;
       }
     }

@@ -73,6 +73,18 @@
             >
               作废
             </el-button>
+            <!-- 收款即出票后，收费台不再手工出票；作废票重开（含历史已支付未出票账单的补票）只在这里 -->
+            <el-button
+                v-if="row.invoiceStatus === 3 && row.billId"
+                v-perm="'finance:invoice:add'"
+                :icon="Refresh"
+                link
+                size="small"
+                type="primary"
+                @click="handleReissue(row)"
+            >
+              重开
+            </el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -92,7 +104,7 @@
       </div>
     </el-card>
 
-    <InvoiceDetail v-model="detailVisible" :id="detailRow?.id" :row="detailRow"/>
+    <InvoiceDetail :id="detailRow?.id" v-model="detailVisible" :row="detailRow"/>
   </div>
 </template>
 
@@ -100,7 +112,7 @@
 import {onMounted, reactive, ref} from 'vue';
 import {CircleClose, Printer, Refresh, Search, View} from '@element-plus/icons-vue';
 import {ElMessage, ElMessageBox} from 'element-plus';
-import {getInvoiceList, printInvoice, voidInvoice} from '@/api/invoice';
+import {getInvoiceList, issueInvoice, printInvoice, voidInvoice} from '@/api/invoice';
 import {INVOICE_STATUS_OPTIONS, invoiceStatusTagClass, invoiceStatusText, invoiceTypeText,} from '@/lib/invoiceStatus';
 import {formatMoney} from '@/lib/utils';
 import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination';
@@ -134,7 +146,7 @@ async function loadList() {
   } catch (e) {
     rows.value = [];
     pagination.total = 0;
-    
+
   } finally {
     loading.value = false;
   }
@@ -181,8 +193,8 @@ async function handlePrint(row) {
     await printInvoice(row.id);
     ElMessage.success('打印已记录');
     loadList();
-  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
-    
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */ {
+
   }
 }
 
@@ -204,8 +216,18 @@ async function handleVoid(row) {
     await voidInvoice(row.id, reason);
     ElMessage.success('发票已作废');
     loadList();
-  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
-    
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */ {
+
+  }
+}
+
+async function handleReissue(row) {
+  try {
+    const res = await issueInvoice({billId: row.billId, invoiceType: row.invoiceType});
+    ElMessage.success(`已重开出票 ${res.data?.invoiceNo || ''}`);
+    loadList();
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */ {
+
   }
 }
 

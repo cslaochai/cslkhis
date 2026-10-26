@@ -313,8 +313,11 @@
                                   data-testid="desk-cell-avail"
                                   title="查看这位医生当天的每个班次：时段 / 余号 / 门诊诊查费"
                                   @click.stop="openCellDialog(col.date, row.key)">余号</button>
+                            <!-- 【已屏蔽 2026-10-26】原条件还带 `!isCellTimePassed(col, row.key) &&`
+                                 （开诊前 10 分钟截止不再放号）。屏蔽原因：下午复测上午时段的号被拦在看板外，
+                                 挂号流程走不下去。恢复时把该条件加回，并解开 script 里同名函数与常量的注释。 -->
                           <button
-                              v-if="!isCellTimePassed(col, row.key) && deskAvail(deskCell(col.key, row.key).schedules) > 0"
+                              v-if="deskAvail(deskCell(col.key, row.key).schedules) > 0"
                               class="shrink-0 cursor-pointer rounded border border-blue-200 bg-white px-1 text-xs font-bold leading-4 text-blue-600 hover:bg-blue-50"
                               data-testid="desk-cell-add"
                               title="新增预约：带入该时段的排班、医生、诊室、科室"
@@ -375,9 +378,9 @@
                                       @click.stop="handleShowPayment(r)">收费
                               </button>
                               <button v-if="canCancelRegist(r)"
-                                  class="cursor-pointer rounded border border-red-200 bg-white px-2 py-0.5 text-xs font-medium text-red-500 hover:bg-red-50"
-                                  data-testid="desk-cancel"
-                                  @click.stop="handleDeskCancel(r)">退号
+                                      class="cursor-pointer rounded border border-red-200 bg-white px-2 py-0.5 text-xs font-medium text-red-500 hover:bg-red-50"
+                                      data-testid="desk-cancel"
+                                      @click.stop="handleDeskCancel(r)">退号
                               </button>
                             </div>
                           </div>
@@ -599,14 +602,14 @@
 
     <!-- 周视图格子的「医生号源明细」弹框：格子数据是看板事实，算好传入；「去挂号」回抛给本页开单 -->
     <AppointmentsCellDetail v-model="showCellDialog" :cell="selectedCell"
-                            :schedules="selectedCell ? cellSchedules(selectedCell.date, selectedCell.doctorId) : []"
                             :hidden-count="selectedCell ? cellHiddenCount(selectedCell.date, selectedCell.doctorId) : 0"
+                            :schedules="selectedCell ? cellSchedules(selectedCell.date, selectedCell.doctorId) : []"
                             @register="goRegister"/>
 
     <!-- 新增挂号弹窗：seed 为看板开单的预填（工具栏入口为空）；需要缴费时账单事实回抛给收费窗。
          只刷看板不刷挂号记录表：新号要先在格子上看见（已挂 N/余 M 跟着变），记录表是翻页查询，等下一次查询自然带上 -->
     <AppointmentsAdd v-model="showAddDialog" :departments="departments" :revisit-source-dict="revisitSourceDict"
-                     :seed="addSeed" @saved="loadDesk" @pay="onAddPay"/>
+                     :seed="addSeed" @pay="onAddPay" @saved="loadDesk"/>
 
     <!-- 编辑挂号弹窗（schedule 传原号源本体：已收费的号要比「同费用」才让选候选，弹窗自己算不出原价） -->
     <AppointmentsEdit v-model="showEditDialog" :departments="departments" :row="editRow"
@@ -614,8 +617,8 @@
                       @saved="reloadListAndStats"/>
 
     <!-- 门诊诊查费收费：默认现金档（窗口当场点钞记流水），切扫码收款即出一张聚合码（一码多平台） -->
-    <QrPayDialog v-model="showPaymentDialog" allow-cash :amount="paymentInfo.amount" :bill-id="paymentInfo.billId"
-                 :bill-no="paymentInfo.billNo" :patient-name="paymentInfo.patientName" @paid="onPaid"/>
+    <QrPayDialog v-model="showPaymentDialog" :amount="paymentInfo.amount" :bill-id="paymentInfo.billId" :bill-no="paymentInfo.billNo"
+                 :patient-name="paymentInfo.patientName" allow-cash @paid="onPaid"/>
   </div>
 </template>
 
@@ -808,8 +811,8 @@ const handleCheckIn = async (row) => {
     await checkInByRegist(row.id);
     ElMessage.success('签到成功，患者已进入候诊队列');
     reloadListAndStats();
-  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
-    
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */ {
+
   }
 };
 const handleCancel = async (row) => {
@@ -830,8 +833,8 @@ const handleCancel = async (row) => {
     await cancelRegistration(row.id, '患者主动取消');
     ElMessage.success('取消成功');
     reloadListAndStats();
-  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
-    
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */ {
+
   }
 };
 const handleEdit = (row) => {
@@ -1285,7 +1288,12 @@ const loadDesk = async () => {
     const [schedRes, regRes, doctorRes] = await Promise.all([
       getScheduleList(params),
       getBoardRegistList(params),
-      getEmployeeList({onlyScheduled: true, startDate: params.startDate, endDate: params.endDate, deptId: params.deptId}),
+      getEmployeeList({
+        onlyScheduled: true,
+        startDate: params.startDate,
+        endDate: params.endDate,
+        deptId: params.deptId
+      }),
     ]);
     const scheds = schedRes.data?.records || schedRes.data || [];
     deskSchedules.value = scheds;
@@ -1768,10 +1776,12 @@ const deskCell = (colKey, rowKey) => deskCellMap.value[`${colKey}|${rowKey}`] ||
   srcSchedules: []
 };
 /**
- * 分时段挂号截止提前量（分钟）：时段开始前 10 分钟之后不再放号（用户口径 2026-10-14）。
- * 与后端 BizAppointServiceImpl.REGIST_CUTOFF_MINUTES 同口径，改动必须两边同步。
+ * 【已屏蔽 2026-10-26】分时段挂号截止提前量（开诊前 10 分钟不再放号）。
+ * 屏蔽原因：挂号流程要在下午复测上午时段的号，时间闸把人拦在看板外，测试走不下去。
+ * 恢复方式：把本常量与下方 isCellTimePassed 的注释一起解掉，并还原模板「预约」按钮
+ * 的 `!isCellTimePassed(col, row.key) &&` 条件与 addFromCell 的入口拦截。
  */
-const REGIST_CUTOFF_MINUTES = 10;
+// const REGIST_CUTOFF_MINUTES = 10;
 /**
  * 这一格「没号可挂」= 压根**没有排班**（2026-09-22）。
  *
@@ -1788,31 +1798,32 @@ const REGIST_CUTOFF_MINUTES = 10;
  */
 const isCellUnavailable = (col, rowKey) => !deskCell(col.key, rowKey).srcSchedules.length;
 /**
- * 该格子是否已过挂号截止（开诊前 {@link #REGIST_CUTOFF_MINUTES} 分钟，用户口径 2026-10-14）：
- * 只用于**挂号动作时拦截**（addFromCell 入口 + 弹窗候选过滤 + 提交校验），不参与格子置灰。
+ * 【已屏蔽 2026-10-26，原因见上方常量注释】
+ * 原口径：该格子是否已过挂号截止（开诊前 10 分钟），只用于挂号动作时拦截
+ * （addFromCell 入口 + 弹窗候选过滤 + 提交校验），不参与格子置灰。
  *   · 就诊日 < 今天 → 整格不可挂（历史日期）
  *   · 就诊日 = 今天：
  *       日视图格子（rowKey 是 "HH:mm" 半小时档）→ 档开始-10min ≤ 现在即不可挂；
  *       周视图格子（rowKey 是医生）→ 该格**所有**班次开始-10min 都已过才整格拦截，
  *         只要还有一个未截止班次，放行进弹窗 —— 弹窗里（AppointmentsAdd）再滤掉已过班次。
  */
-const isCellTimePassed = (col, rowKey) => {
-  const date = String(col.date || '');
-  const today = fmtDate(new Date());
-  if (!date || date > today) return false;
-  if (date < today) return true;
-  const nowMin = new Date().getHours() * 60 + new Date().getMinutes();
-  if (deskViewMode.value === 'day') {
-    const m = toMin(rowKey);
-    return m !== null && m - REGIST_CUTOFF_MINUTES <= nowMin;
-  }
-  const scheds = deskCell(col.key, rowKey).srcSchedules;
-  if (!scheds.length) return false; // 无排班由 isCellUnavailable 原有分支管
-  return scheds.every((s) => {
-    const m = toMin(s.startTime);
-    return m !== null && m - REGIST_CUTOFF_MINUTES <= nowMin;
-  });
-};
+// const isCellTimePassed = (col, rowKey) => {
+//   const date = String(col.date || '');
+//   const today = fmtDate(new Date());
+//   if (!date || date > today) return false;
+//   if (date < today) return true;
+//   const nowMin = new Date().getHours() * 60 + new Date().getMinutes();
+//   if (deskViewMode.value === 'day') {
+//     const m = toMin(rowKey);
+//     return m !== null && m - REGIST_CUTOFF_MINUTES <= nowMin;
+//   }
+//   const scheds = deskCell(col.key, rowKey).srcSchedules;
+//   if (!scheds.length) return false; // 无排班由 isCellUnavailable 原有分支管
+//   return scheds.every((s) => {
+//     const m = toMin(s.startTime);
+//     return m !== null && m - REGIST_CUTOFF_MINUTES <= nowMin;
+//   });
+// };
 const showRescheduleDialog = ref(false);
 // 打开改约弹窗前由本页写好：被改约的卡片 + 它当前挂的排班（组件用它回显「当前号源」）
 const rescheduleRow = ref(null);
@@ -2058,8 +2069,8 @@ const handleDeskCancel = async (r) => {
     await cancelRegistration(r.id, '看板退号');
     ElMessage.success('退号成功');
     loadDesk();
-  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
-    
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */ {
+
   }
 };
 const handleTabChange = (tab) => {
@@ -2183,11 +2194,13 @@ const goRegister = (s) => {
   });
 };
 const addFromCell = (col, rowKey) => {
-  // 兜底：模板里不可用格已置灰无按钮，但直连/键盘触发时给一句人话，别静默进弹窗选不到时段
-  if (isCellTimePassed(col, rowKey)) {
-    ElMessage.info(`该时段已过挂号截止时间（开诊前 ${REGIST_CUTOFF_MINUTES} 分钟截止），无法挂号`);
-    return;
-  }
+  // 【已屏蔽 2026-10-26】原兜底：已过挂号截止（开诊前 10 分钟）的格子给一句人话再拦下。
+  // 屏蔽原因：下午复测上午时段的号被这道闸拦住，挂号流程走不下去（同文件顶部常量与
+  // isCellTimePassed 一并注释）。恢复时解开下面 5 行。
+  // if (isCellTimePassed(col, rowKey)) {
+  //   ElMessage.info(`该时段已过挂号截止时间（开诊前 ${REGIST_CUTOFF_MINUTES} 分钟截止），无法挂号`);
+  //   return;
+  // }
   const cellScheds = cellSchedulesFor(col, rowKey);
   if (!cellScheds.length) {
     // 分清两种"没号源"：本来就没排班 vs 被「隐藏已满/停诊」开关藏掉了

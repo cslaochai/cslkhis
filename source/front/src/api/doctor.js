@@ -75,6 +75,13 @@ export function submitMedicalRecord(data) {
     return request.post('/medicalRecord/recordSubmitDirect', data)
 }
 
+// 医生撤回结诊（已提交→草稿，本人当日未缴费未执行；已归档拒绝）
+export function revokeMedicalRecord(recordId, queueId, reason) {
+    return request.post('/medicalRecord/recordRevoke', null, {
+        params: {recordId, queueId, reason}
+    })
+}
+
 // ========== 个人模板 ==========
 
 // 查询常用诊断模板

@@ -9,8 +9,8 @@ import com.his.charge.entity.BizInvoice;
 import com.his.charge.entity.BizPaymentTxn;
 import com.his.charge.entity.BizSettlementBill;
 import com.his.charge.mapper.BizInvoiceMapper;
+import com.his.charge.mapper.BizPaymentTxnMapper;
 import com.his.charge.service.InvoiceService;
-import com.his.charge.service.PaymentService;
 import com.his.charge.service.SettlementBillService;
 import com.his.charge.vo.BizInvoiceVO;
 import com.his.common.base.PageResult;
@@ -19,10 +19,10 @@ import com.his.common.enums.InvoiceStatusEnum;
 import com.his.common.enums.PayDirectionEnum;
 import com.his.common.enums.PayTxnStatusEnum;
 import com.his.common.exception.BusinessException;
-import com.his.spi.service.RedisSequenceService;
 import com.his.common.util.NumUtil;
 import com.his.common.util.TextUtil;
 import com.his.common.utils.UserUtils;
+import com.his.spi.service.RedisSequenceService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
@@ -52,7 +52,8 @@ public class InvoiceServiceImpl extends ServiceImpl<BizInvoiceMapper, BizInvoice
     private static final int W_REMARK = 500;
 
     private final SettlementBillService settlementBillService;
-    private final PaymentService paymentService;
+    // 收款结清即出票后，PaymentServiceImpl 反向依赖本服务，这里只读流水不再走 PaymentService（解 Bean 环）
+    private final BizPaymentTxnMapper bizPaymentTxnMapper;
     private final RedisSequenceService redisSequenceService;
 
     private static List<BizInvoiceVO> toVOList(List<BizInvoice> entities) {
@@ -208,13 +209,24 @@ public class InvoiceServiceImpl extends ServiceImpl<BizInvoiceMapper, BizInvoice
         return true;
     }
 
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void voidByBill(Long billId, String reason) {
+        List<BizInvoice> live = this.list(new LambdaQueryWrapper<BizInvoice>()
+                .eq(BizInvoice::getBillId, billId)
+                .in(BizInvoice::getInvoiceStatus, InvoiceStatusEnum.ISSUED.getCode(), InvoiceStatusEnum.PRINTED.getCode()));
+        for (BizInvoice invoice : live) {
+            voidInvoice(invoice.getId(), reason);
+        }
+    }
+
     /**
      * 净实收：Σ 成功收款 − Σ 成功退款。取流水不取账单的 paid/refund 镜像列 ——
      * 镜像列本身就是从流水算出来的，票面再信镜像等于把同一个数当两个独立证据。
      */
     private BigDecimal netReceived(Long billId) {
         BigDecimal net = BigDecimal.ZERO;
-        for (BizPaymentTxn txn : paymentService.listByBill(billId)) {
+        for (BizPaymentTxn txn : bizPaymentTxnMapper.selectByBill(billId)) {
             if (!PayTxnStatusEnum.SUCCESS.getCode().equals(txn.getTxnStatus()) || txn.getAmount() == null) {
                 continue;
             }

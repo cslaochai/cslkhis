@@ -1,5 +1,5 @@
 <template>
-  <el-dialog v-model="visible" destroy-on-close :title="isAdd ? '新增患者' : '编辑患者'" width="880px">
+  <el-dialog v-model="visible" :title="isAdd ? '新增患者' : '编辑患者'" destroy-on-close width="880px">
     <el-form :model="form" class="patient-edit-form" label-position="left" label-width="90px">
       <h4 class="form-section-title">基本信息</h4>
       <div class="grid grid-cols-3 gap-4">
@@ -113,15 +113,7 @@ import {ElMessage} from 'element-plus';
 import {createPatient, getPatientDetail, updatePatient} from '@/api/patient';
 import {getDictDataList} from '@/api/system';
 import {DICT_TYPE} from '@/lib/dict-cache';
-import {
-  birthDateFromIdCard,
-  isIdCardBirthDateLegal,
-  isIdCardChecksumLegal,
-  isIdCardFormatLegal,
-  isPatientGenderCollected,
-  isPhoneLegal,
-  PATIENT_GENDER_OPTIONS
-} from '@/lib/patientGender';
+import {birthDateFromIdCard, isPatientGenderCollected, isPhoneLegal, PATIENT_GENDER_OPTIONS} from '@/lib/patientGender';
 
 const props = defineProps({
   // v-model 控制显隐
@@ -209,12 +201,14 @@ const validate = () => {
   if (!f.patientName) return '请输入患者姓名';
   if (!isPatientGenderCollected(f.gender)) return '请选择性别（确实没问到请选「未知」；历史脏值 0 请顺手修正）';
   if (!f.idCard) return '请输入身份证号';
-  if (!isIdCardFormatLegal(f.idCard)) return '身份证号格式不正确';
-  if (isAdd.value) {
-    // 出生日期单独判：校验位对了不代表日期存在（19990230 这种），提示要指到点子上
-    if (!isIdCardBirthDateLegal(f.idCard)) return '身份证号中的出生日期不存在，请核对';
-    if (!isIdCardChecksumLegal(f.idCard)) return '身份证号校验位不正确，请核对';
-  }
+  // TODO 临时屏蔽身份证合法性校验（后端 PatientProfileValidator 同步注释），测试期允许编造的号码建档。
+  //      测完随「身份证号不能为空」之外的校验一起取消注释恢复；必填与后端查重未动。
+  // if (!isIdCardFormatLegal(f.idCard)) return '身份证号格式不正确';
+  // if (isAdd.value) {
+  //   // 出生日期单独判：校验位对了不代表日期存在（19990230 这种），提示要指到点子上
+  //   if (!isIdCardBirthDateLegal(f.idCard)) return '身份证号中的出生日期不存在，请核对';
+  //   if (!isIdCardChecksumLegal(f.idCard)) return '身份证号校验位不正确，请核对';
+  // }
   // 联系电话必填：预约提醒、报告推送、随访都要能打到人
   if (!f.phone) return '请输入联系电话';
   if (!isPhoneLegal(f.phone)) return '手机号格式不正确：应为 11 位手机号';
@@ -243,8 +237,8 @@ const handleSubmit = async () => {
     }
     visible.value = false;
     emit('saved');
-  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
-    
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */ {
+
   } finally {
     submitting.value = false;
   }

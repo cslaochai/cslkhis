@@ -4,9 +4,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.his.charge.config.InsuranceProperties;
 import com.his.charge.service.InsuranceChannelService;
-import com.his.charge.service.InsuranceChannelService.FeeItem;
-import com.his.charge.service.InsuranceChannelService.SettleRequest;
-import com.his.charge.service.InsuranceChannelService.SettleSplit;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.TextUtil;
 import lombok.extern.slf4j.Slf4j;
@@ -36,7 +33,9 @@ import java.util.Map;
 @ConditionalOnProperty(name = "his.insurance.channel.mode", havingValue = "remote")
 public class RemoteInsuranceChannelServiceImpl implements InsuranceChannelService {
 
-    /** 2304/2305 报文含中文（患者姓名、诊断、科室），String 报文必须显式 UTF-8，避免按默认字符集发成乱码 */
+    /**
+     * 2304/2305 报文含中文（患者姓名、诊断、科室），String 报文必须显式 UTF-8，避免按默认字符集发成乱码
+     */
     private static final MediaType JSON_UTF8 = new MediaType(MediaType.APPLICATION_JSON, StandardCharsets.UTF_8);
 
     private final ObjectMapper objectMapper;
@@ -166,9 +165,9 @@ public class RemoteInsuranceChannelServiceImpl implements InsuranceChannelServic
             if (data.isMissingNode() || data.isNull()) {
                 return byIdCard
                         ? new InsuredStatus(false, false, null, null,
-                                "按身份证未查询到参保记录（未参保登记），请核对身份证/医保卡号或改按自费结算")
+                        "按身份证未查询到参保记录（未参保登记），请核对身份证/医保卡号或改按自费结算")
                         : new InsuredStatus(false, false, null, null,
-                                "参保库查无此卡号（" + insuranceNo + "），未参保登记");
+                        "参保库查无此卡号（" + insuranceNo + "），未参保登记");
             }
             // 按卡号查询时做姓名比对，防止冒用他人医保卡号
             if (!byIdCard && TextUtil.hasText(name) && !name.equals(text(data, "name"))) {
@@ -229,6 +228,7 @@ public class RemoteInsuranceChannelServiceImpl implements InsuranceChannelServic
         }
         String response;
         try {
+            log.info("[医保通道] 调用 {} 请求报文：{}", path, body);
             response = restClient.post()
                     .uri(path)
                     .contentType(JSON_UTF8)
@@ -236,6 +236,7 @@ public class RemoteInsuranceChannelServiceImpl implements InsuranceChannelServic
                     .body(body)
                     .retrieve()
                     .body(String.class);
+            log.info("[医保通道] 调用 {} 响应报文：{}", path, response);
         } catch (RestClientException e) {
             log.error("[医保通道] 实时结算调用失败 path={} tradeNo={}：{}", path, request.getTradeNo(), e.getMessage());
             SettleSplit err = new SettleSplit();
