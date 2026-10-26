@@ -216,7 +216,7 @@ const credRows = [
     accounts: ['tanyiming ( 谭一鸣 )'],
     role: '医务科',
     dept: '医务科',
-    ability: '员工排班（全院，含审核发布）、急诊排班（含审核发布）、人力配置标准、排班总览、门诊排班审核、排班字典管理、急诊值班；无临床业务页面'
+    ability: '员工排班（全院，含审核发布）、急诊排班审核发布（2026-10-26 起科主任排班、医务科备案审核）、人力配置标准、排班总览、门诊排班审核、排班字典管理、急诊值班；无临床业务页面'
   },
 
   // 三个治疗科室（推荐账号）
@@ -261,6 +261,13 @@ const credRows = [
   {accounts: ['helicheng ( 何立诚  )'], role: '急诊医生', dept: '急诊儿科', ability: ER_ABILITY},
   {accounts: ['jiangbailu ( 江白露  )'], role: '急诊医生', dept: '肠道门诊', ability: ER_ABILITY},
   {accounts: ['mojingwen ( 莫静文  )'], role: '急诊医生', dept: '发热门诊', ability: ER_ABILITY},
+  // 急诊排班链路（2026-10-26 下放科主任）：科主任切岗排班 → 医务科(tanyiming)审核发布
+  {
+    accounts: ['zhouyuan ( 周远 )', 'linxiaozhou ( 林小舟 )', 'wutong ( 吴桐 )'],
+    role: '急诊医生 / 科主任',
+    dept: '急诊内科 / 急诊外科 / 急诊儿科',
+    ability: ER_ABILITY + '；切「科主任」岗 = 本科室急诊排班（排班/修改/删除），提交后由医务科谭一鸣审核发布'
+  },
   {
     accounts: ['longyuebai ( 龙月白  )'],
     role: '护士长',
