@@ -35,7 +35,11 @@ public interface ExternalCaChannelService {
 
     /**
      * CA 签发结果
+     *
+     * @param certPem   证书链 PEM（叶子 + 签发CA）
+     * @param caSerial  CA 证书序列号
+     * @param caIssuer  签发 CA 名称（issuer）
      */
-    public record IssuedCert(String certPem, String caSerial, String caName) {
+    public record IssuedCert(String certPem, String caSerial, String caIssuer) {
     }
 }

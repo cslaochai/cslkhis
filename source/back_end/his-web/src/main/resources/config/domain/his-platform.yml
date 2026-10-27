@@ -7,8 +7,16 @@ his:
     iterations: 120000
     # 证书默认有效期（天）
     default-valid-days: 365
-    # 缺证书时是否自动签发（首次签名按需补发院内托管证书，避免把业务堵死）
+    # 缺证书时是否自动签发（首次签名按需向 CA 申请证书，避免把业务堵死）
     auto-issue-cert: true
     # 默认时间来源：1-本机时钟 2-院内授时服务器 3-第三方TSA
     # 本期未接入 2/3，即使这里填 2 或 3 也会被运行期降级成 1 并在日志里告警（不谎报可信时间）
     time-source: 1
+    # 证书签发模式：internal-院内自签（默认）；external-外部CA（csssl，RA公钥签发，私钥本地托管）
+    # external 模式下 csssl 未返回证书即中断签发，绝不静默回退院内自签
+    ca-mode: internal
+    # 外部CA（csssl）对接：地址与服务账号由 profile / 环境变量覆盖（见 application-pro.yml）
+    ca-base-url: ""
+    ca-username: ""
+    ca-password: ""
+    ca-timeout-ms: 5000

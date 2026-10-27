@@ -126,11 +126,11 @@ public class SignCertServiceImpl extends ServiceImpl<SysSignCertMapper, SysSignC
         // 没有主口令就不签发：宁可不发证，也不让私钥明文落库
         keyProtectorUtil.requireSecret();
 
-        // 外部 CA 模式：本地先生成密钥对（私钥不出本地），把 Subject+公钥交给 CA 适配器提交 CSR。
+        // 外部 CA 模式：本地先生成密钥对（私钥不出本地、受主口令保护落库），把 Subject+公钥交给 CA 适配器签发。
         // 适配器未返回证书必须中断签发，绝不静默回退院内自签（那等于伪造信任根）；
         // 返回后直接结束，保证不会落到下方院内自签分支。
         if (externalCaChannelService.available()) {
-            return issueViaExternalCa(empName, deptName, validDays);
+            return issueViaExternalCa(empId, empName, deptId, deptName, validDays, mode);
         }
 
         KeyPairFactory.KeyPairPem pair = KeyPairFactory.generate();
@@ -180,28 +180,70 @@ public class SignCertServiceImpl extends ServiceImpl<SysSignCertMapper, SysSignC
     // 查询
 
     /**
-     * 外部 CA 签发路径：本地生成密钥对（私钥不出本地）→ 组 Subject+公钥提交 CSR。
+     * 外部 CA 签发路径：本地生成密钥对（私钥不出本地、主口令加密落库）→ 组 Subject+公钥提交 CA 签发。
      *
-     * <p>当前适配器未对接真 CA、返回 null，签发在此中断，绝不回退院内自签。
-     * 真 CA 到位后只需补两处：① {@code ExternalCaChannelServiceImpl#issueCert} 写厂商
-     * SDK/REST 外发与回执解析；② 本方法拿到 {@code issued} 后校验证书链，按现有
-     * 证书行口径落库（公钥/指纹/私钥托管/有效期/状态沿用，CA 回执的序列号/机构/证书 PEM
-     * 需先给 sys_sign_cert 补列）。默认 {@code his.sign.ca-mode=internal} 走院内自签，不受影响。
+     * <p>csssl 适配器返回证书链后：公钥/指纹/受保护私钥沿用院内口径落库，CA 回执的
+     * 序列号/签发CA/证书链写入新增列（cert_pem / ca_serial / ca_issuer），有效期以
+     * CA 回执证书为准（CSSSL 证书 valid_from/valid_to 由 CA 生成）。
      */
-    private SysSignCert issueViaExternalCa(String empName, String deptName,
-                                           int validDays) {
+    private SysSignCert issueViaExternalCa(Long empId, String empName, Long deptId, String deptName,
+                                           int validDays, CertIssuedModeEnum mode) {
         KeyPairFactory.KeyPairPem pair = KeyPairFactory.generate();
-        String subjectDn = "CN=" + (TextUtil.hasText(empName) ? empName : "unknown")
-                + ", O=长沙市麓康医院"
-                + (TextUtil.hasText(deptName) ? ", OU=" + deptName : "");
+        StringBuilder dn = new StringBuilder("CN=").append(TextUtil.hasText(empName) ? empName : "unknown")
+                .append(", O=长沙市麓康医院");
+        if (TextUtil.hasText(deptName)) {
+            dn.append(", OU=").append(deptName);
+        }
         ExternalCaChannelService.IssuedCert issued = externalCaChannelService.issueCert(
-                new ExternalCaChannelService.IssueRequest(subjectDn, pair.publicPem(), validDays));
+                new ExternalCaChannelService.IssueRequest(dn.toString(), pair.publicPem(), validDays));
         if (issued == null) {
             throw new BusinessException("外部 CA（" + externalCaChannelService.name() + "）未返回证书，签发已中断；"
                     + "未接入真 CA 前请将 his.sign.ca-mode 改回 internal 使用院内自签");
         }
-        // 真 CA 到位后在此补证书链校验与落库（见方法 javadoc）；当前适配器恒返回 null，不可达
-        throw new BusinessException("外部 CA 签发落库尚未接入：拿到 CA 证书后在 issueViaExternalCa 补齐校验与落库");
+
+        String salt = keyProtectorUtil.newSalt();
+        String protectedKey = keyProtectorUtil.protect(pair.privatePem(), salt, signProperties.getIterations());
+        LocalDateTime now = TimeUtil.nowSeconds();
+        LocalDateTime to = now.plusDays(validDays);
+
+        for (int attempt = 1; attempt <= 3; attempt++) {
+            SysSignCert cert = new SysSignCert();
+            cert.setCertNo(nextCertNo());
+            cert.setEmpId(empId);
+            cert.setEmpName(empName);
+            cert.setDeptId(deptId);
+            cert.setDeptName(deptName);
+            cert.setKeyAlgo("RSA" + KeyPairFactory.KEY_SIZE);
+            cert.setDigestAlgo(SignCryptoUtil.DIGEST_ALGO);
+            cert.setSignAlgo(SignCryptoUtil.SIGN_ALGO);
+            cert.setPublicKey(pair.publicPem());
+            cert.setKeyFingerprint(SignCryptoUtil.fingerprint(pair.publicPem()));
+            cert.setProtectedPrivateKey(protectedKey);
+            cert.setKeySalt(salt);
+            cert.setKeyIterations(signProperties.getIterations());
+            cert.setIssuedMode(mode.getCode());
+            cert.setCertStatus(CertStatusEnum.ACTIVE.getCode());
+            cert.setValidFrom(now);
+            cert.setValidTo(to);
+            cert.setCertPem(issued.certPem());
+            cert.setCaSerial(issued.caSerial());
+            cert.setCaIssuer(issued.caIssuer());
+            cert.setSignCount(0);
+            cert.setRemark("CSSSL院内CA公钥签发（私钥本地托管、证书由CA签发）");
+            try {
+                sysSignCertMapper.insert(cert);
+                log.info("签发签名证书 certNo={} empId={} caSerial={} 有效期至={}",
+                        cert.getCertNo(), empId, issued.caSerial(), to);
+                return cert;
+            } catch (DuplicateKeyException e) {
+                if (attempt == 3) {
+                    throw new BusinessException("证书编号连续冲突 3 次（" + cert.getCertNo()
+                            + "），请稍后重试；若持续出现请检查是否有脚本在批量造证");
+                }
+                log.warn("证书编号冲突，重试第 {} 次：{}", attempt, cert.getCertNo());
+            }
+        }
+        throw new BusinessException("证书签发失败");
     }
 
     @Override

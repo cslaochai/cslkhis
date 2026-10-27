@@ -40,11 +40,30 @@ public class SignProperties {
     private int timeSource = 1;
 
     /**
-     * 证书签发模式（M8 留口子）：internal-院内自签（默认，G6/G6b 形态）；
-     * external-外部 CA（走 {@code ExternalCaChannelService}，当前为控制台打印形态，
-     * 未接入真 CA 前签发会在提交 CSR 后中断 —— 绝不静默回退自签）。
+     * 证书签发模式：internal-院内自签（默认）；external-外部 CA（走 {@code ExternalCaChannelService}）。
+     * external 模式下适配器未返回证书即中断签发，绝不静默回退自签。
      */
     private String caMode = "internal";
+
+    /**
+     * 外部 CA 对接地址（csssl 根路径，如 http://localhost:8092/ssl）
+     */
+    private String caBaseUrl;
+
+    /**
+     * 外部 CA 服务账号（csssl 管理后台账号）
+     */
+    private String caUsername;
+
+    /**
+     * 外部 CA 服务账号口令（明文；生产经环境变量注入）
+     */
+    private String caPassword;
+
+    /**
+     * 外部 CA 请求超时（毫秒）
+     */
+    private int caTimeoutMs = 5000;
 
     /**
      * 概要：拿最终生效的口令（配置项为空时读环境变量）

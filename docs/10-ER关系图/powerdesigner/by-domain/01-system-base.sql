@@ -393,6 +393,9 @@ CREATE TABLE `sys_sign_cert`
     `update_time`           datetime    NOT NULL COMMENT '更新时间',
     `del_flag`              tinyint     NOT NULL DEFAULT 0 COMMENT '删除标志（0-正常 1-删除）',
     `remark`                varchar(500) COMMENT '备注',
+    `cert_pem`              text COMMENT 'CA签发的证书链PEM（外部CA模式）',
+    `ca_serial`             varchar(64) COMMENT 'CA证书序列号（外部CA模式回执）',
+    `ca_issuer`             varchar(128) COMMENT '签发CA名称（外部CA模式回执）',
     PRIMARY KEY (`id`),
     UNIQUE KEY `uk_cert_no` (`cert_no`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='电子签名证书';

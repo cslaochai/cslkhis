@@ -136,4 +136,19 @@ public class SysSignCert extends BaseEntity {
      * 备注
      */
     private String remark;
+
+    /**
+     * CA 签发的证书链 PEM（外部 CA 模式；院内自签为空）
+     */
+    private String certPem;
+
+    /**
+     * CA 证书序列号（外部 CA 模式回执）
+     */
+    private String caSerial;
+
+    /**
+     * 签发 CA 名称（issuer，外部 CA 模式回执）
+     */
+    private String caIssuer;
 }

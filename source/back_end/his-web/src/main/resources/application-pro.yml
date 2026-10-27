@@ -27,11 +27,18 @@ his:
   sign:
     # 签名主口令：不注入即拒绝签发证书（私钥绝不明文落库）
     master-secret: ${HIS_SIGN_SECRET:}
+    # 证书签发模式：internal-院内自签 / external-外部CA（csssl）
+    ca-mode: ${HIS_SIGN_CA_MODE:internal}
+    # 外部CA（csssl）对接：地址/服务账号，生产经环境变量注入
+    ca-base-url: ${HIS_SIGN_CA_BASE_URL:}
+    ca-username: ${HIS_SIGN_CA_USERNAME:}
+    ca-password: ${HIS_SIGN_CA_PASSWORD:}
+    ca-timeout-ms: ${HIS_SIGN_CA_TIMEOUT_MS:5000}
   insurance:
     channel:
-      # remote=调医保结算经办平台；生产必须给前置机地址，localhost 默认值只够本机联调
+      # remote=调医保前置系统(csmip)；生产必须给真实前置机地址，localhost 默认值只够本机联调
       mode: ${HIS_INSURANCE_MODE:remote}
-      base-url: ${HIS_INSURANCE_BASE_URL:http://localhost:8090/mss}
+      base-url: ${HIS_INSURANCE_BASE_URL:http://localhost:8091/mip}
   sms:
     code:
       # 测试开关：true=不走网关、验证码回显。漏配即失败关闭

@@ -3,13 +3,13 @@ package com.his.platform.service.impl;
 import com.his.common.util.TextUtil;
 import com.his.platform.config.SignProperties;
 import com.his.platform.service.ExternalCaChannelService;
-import com.his.platform.utils.SignCryptoUtil;
+import com.his.platform.support.CssslCaClient;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 /**
- * 外部 CA（证书颁发机构）通道 —— M8 留口子。
+ * 外部 CA（证书颁发机构）通道 —— 对接 csssl 院内 CA（RA 公钥签发）。
  */
 @Slf4j
 @Service
@@ -18,11 +18,13 @@ public class ExternalCaChannelServiceImpl implements ExternalCaChannelService {
 
     private final SignProperties signProperties;
 
+    private final CssslCaClient cssslCaClient;
+
     /**
      * 通道名称（状态接口展示）
      */
     public String name() {
-        return "外部CA（未接入真机构，当前为控制台打印桩）";
+        return "csssl院内CA（RA公钥签发）";
     }
 
     /**
@@ -33,20 +35,16 @@ public class ExternalCaChannelServiceImpl implements ExternalCaChannelService {
     }
 
     /**
-     * 向 CA 提交证书签名请求。
+     * 向 csssl 提交公钥签发请求，换回 CA 签发的证书链。
      *
-     * @param request Subject（CN=签名人 / O=机构）、本地生成的公钥 PEM、期望有效期
-     * @return CA 签发的证书；未接入真 CA 时返回 {@code null}（调用方据此中断签发）
+     * @param request Subject DN（CN=签名人 / O=机构 / OU=科室）、本地生成的公钥 PEM、期望有效期
+     * @return 签发结果；csssl 不可用/未返回证书时抛异常中断签发（绝不静默回退院内自签）
      */
     public IssuedCert issueCert(IssueRequest request) {
-        // —— M8 留口子：这一段打印就是"向外部 CA 提交 CSR"的占位，真 CA 接入后整块替换 ——
-        log.info("[M8真CA口子] ===== 模拟向外部CA提交证书签名请求 =====");
-        log.info("[M8真CA口子] Subject DN : {}", request.subjectDn());
-        log.info("[M8真CA口子] 公钥指纹   : {}（算法 RSA-2048，密钥对已在本地生成并等待托管）",
-                TextUtil.hasText(request.publicKeyPem()) ? SignCryptoUtil.fingerprint(request.publicKeyPem()) : "无");
-        log.info("[M8真CA口子] 申请有效期 : {} 天", request.validDays());
-        log.info("[M8真CA口子] （真实接入=在本方法内替换为对接 CA 厂商 SDK/REST 的外发与回执解析）");
-        // 不产证书：返回 null，调用方据此中断签发（绝不静默回退院内自签冒充真 CA）
-        return null;
+        log.info("[外部CA] 向 csssl 提交公钥签发：subject={} 有效天数={}",
+                request.subjectDn(), request.validDays());
+        CssslCaClient.IssuedCert issued = cssslCaClient.issue(
+                request.subjectDn(), request.publicKeyPem(), request.validDays());
+        return new IssuedCert(issued.certPem(), issued.caSerial(), issued.caIssuer());
     }
 }
