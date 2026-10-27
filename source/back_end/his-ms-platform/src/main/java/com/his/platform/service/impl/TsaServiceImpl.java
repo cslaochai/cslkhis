@@ -68,12 +68,17 @@ public class TsaServiceImpl extends ServiceImpl<SysTsaServerMapper, SysTsaServer
         if (readyName != null) {
             vo.setTsaName(readyName);
         }
-        SysTsaServer server = sysTsaServerMapper.selectOne(new LambdaQueryWrapper<SysTsaServer>()
-                .eq(SysTsaServer::getTsaCode, "LOCAL"));
-        if (server != null) {
-            vo.setKeyFingerprintGroups(SignCryptoUtil.fingerprintGroups(server.getKeyFingerprint()));
-            if (vo.getTsaName() == null) {
-                vo.setTsaName(server.getTsaName());
+        // external（csssl TSA）模式下不展示本地内置 TSA 的 LOCAL 行指纹，避免把「本地自举公钥」
+        // 当成 TSA 信任根展示给运维（TSA 名称已由通道就绪名称给出）
+        SysTsaServer server = null;
+        if (!"external".equalsIgnoreCase(signProperties.getTsaMode())) {
+            server = sysTsaServerMapper.selectOne(new LambdaQueryWrapper<SysTsaServer>()
+                    .eq(SysTsaServer::getTsaCode, "LOCAL"));
+            if (server != null) {
+                vo.setKeyFingerprintGroups(SignCryptoUtil.fingerprintGroups(server.getKeyFingerprint()));
+                if (vo.getTsaName() == null) {
+                    vo.setTsaName(server.getTsaName());
+                }
             }
         }
 
@@ -91,12 +96,19 @@ public class TsaServiceImpl extends ServiceImpl<SysTsaServerMapper, SysTsaServer
         vo.setLastTokenTime(last == null ? null : last.getTsaTime());
 
         if (available && effective == TimeSourceEnum.TSA.getCode()) {
-            vo.setTrustNote("已接入" + (vo.getTsaName() == null ? "TSA" : vo.getTsaName())
-                    + "：令牌用 TSA 独立密钥签发，可对抗本机时钟篡改。注意：信任根为院内（本地内置 TSA，"
-                    + "非第三方 CA/TSA），不对外声称法律效力；换真 TSA 只需替换适配器实现。");
+            String name = vo.getTsaName() == null ? "TSA" : vo.getTsaName();
+            if ("external".equalsIgnoreCase(signProperties.getTsaMode())) {
+                vo.setTrustNote("已接入" + name
+                        + "：令牌用 TSA 独立 SM2 密钥（SM3withSM2）签发，可对抗本机时钟篡改；"
+                        + "信任源为院内 CA 的 TSA 服务，令牌规范化串与盖章时刻以 csssl 回执为准。");
+            } else {
+                vo.setTrustNote("已接入" + name
+                        + "：令牌用 TSA 独立密钥签发，可对抗本机时钟篡改。注意：信任根为院内（本地内置 TSA，"
+                        + "非第三方 CA/TSA），不对外声称法律效力；换真 TSA 只需替换适配器实现。");
+            }
         } else if (cfg != null && cfg == TimeSourceEnum.TSA.getCode() && !available) {
             vo.setTrustNote("配置 sign.time_source=3 但 TSA 适配器不在线，实际生效的是「本机时钟」"
-                    + "（宁可承认不可信，也不谎报可信）。请排查 sys_tsa_server 行状态与主口令配置。");
+                    + "（宁可承认不可信，也不谎报可信）。请排查 TSA 通道状态与主口令配置。");
         } else if (available) {
             vo.setTrustNote("TSA 适配器在线，但 sign.time_source 未配为 3 —— 新签名时间仍取本机时钟，"
                     + "不具备对抗系统时间篡改的效力。接入方式：将 sys_config 的 sign.time_source 配为 3。");
@@ -162,7 +174,7 @@ public class TsaServiceImpl extends ServiceImpl<SysTsaServerMapper, SysTsaServer
                     + "2（院内授时服务器）尚未接入实现，禁止配置");
         }
         String text = timeSource == TimeSourceEnum.TSA.getCode()
-                ? "3（第三方可信时间戳，经本地内置TSA适配）"
+                ? "3（可信时间戳）"
                 : "1（本机时钟）";
         if (signConfigMapper.updateValue(SystemConfigKeyConst.SIGN_TIME_SOURCE, String.valueOf(timeSource)) == 0) {
             try {

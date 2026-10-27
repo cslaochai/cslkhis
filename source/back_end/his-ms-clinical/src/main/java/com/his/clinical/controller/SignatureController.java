@@ -2,6 +2,14 @@ package com.his.clinical.controller;
 
 import com.his.spi.vo.SignVerifyVO;
 import com.his.spi.vo.SignatureVO;
+import com.his.spi.service.TsaStampFacadeService;
+import com.his.spi.dto.TsaStatusUpsertDTO;
+import com.his.spi.dto.TsaTimeSourceDTO;
+import com.his.spi.dto.TsaTokenPageQueryDTO;
+import com.his.spi.dto.TsaTokenVerifyDTO;
+import com.his.spi.vo.TsaStatusVO;
+import com.his.spi.vo.TsaTokenVO;
+import com.his.spi.vo.TsaTokenVerifyVO;
 import com.his.common.base.PageResult;
 import com.his.common.base.Result;
 import com.his.clinical.dto.*;
@@ -28,6 +36,7 @@ public class SignatureController {
 
     private final EmrSignatureService emrSignatureService;
     private final SignatureCenterService signatureCenterService;
+    private final TsaStampFacadeService tsaStampFacadeService;
 
     // 签名记录
 
@@ -130,5 +139,59 @@ public class SignatureController {
     @PostMapping("/emr/signature/invalidate")
     public Result<SignatureVO> invalidate(@Valid @RequestBody SignatureInvalidateDTO dto) {
         return Result.success(signatureCenterService.invalidate(dto));
+    }
+
+    // ---------- 可信时间戳运维（TSA 状态 / 令牌台账 / 启停 / 时间来源 / 复验） ----------
+
+    /**
+     * TSA 状态聚合：通道在线与否、配置与生效的时间来源、令牌台账计数与信任说明。
+     * 用于签名中心首页「可信时间戳」状态卡片。
+     */
+    @Operation(summary = "TSA 状态（通道在线 / 时间来源配置与生效 / 令牌台账计数 / 信任说明）")
+    @GetMapping("/emr/tsa/status")
+    public Result<TsaStatusVO> tsaStatus() {
+        return Result.success(tsaStampFacadeService.status());
+    }
+
+    /**
+     * 时间戳令牌台账分页（只增不改的签发流水，可按序列号/摘要关键字过滤）。
+     */
+    @Operation(summary = "时间戳令牌台账分页")
+    @GetMapping("/emr/tsa/tokenListPage")
+    public Result<PageResult<TsaTokenVO>> tsaTokenListPage(@Valid TsaTokenPageQueryDTO query) {
+        var page = tsaStampFacadeService.listTokenPage(query);
+        return Result.success(PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(),
+                page.getPages(), page.getRecords()));
+    }
+
+    /**
+     * 启停 TSA：停用后签名侧立即降级本机时钟；历史令牌凭公钥仍可验证。
+     */
+    @PreAuthorize("hasAuthority('sign:center:edit')")
+    @Operation(summary = "启停 TSA 服务")
+    @PostMapping("/emr/tsa/updateStatus")
+    public Result<TsaStatusVO> tsaUpdateStatus(@Valid @RequestBody TsaStatusUpsertDTO dto) {
+        tsaStampFacadeService.updateStatus(dto);
+        return Result.success(tsaStampFacadeService.status());
+    }
+
+    /**
+     * 切换签名时间来源：只允许 1（本机时钟）/ 3（可信时间戳）；2（院内授时）未实现，拒绝。
+     */
+    @PreAuthorize("hasAuthority('sign:center:edit')")
+    @Operation(summary = "切换签名时间来源（1 本机时钟 / 3 可信时间戳）")
+    @PostMapping("/emr/tsa/timeSource")
+    public Result<TsaStatusVO> tsaTimeSource(@Valid @RequestBody TsaTimeSourceDTO dto) {
+        tsaStampFacadeService.updateTimeSource(dto);
+        return Result.success(tsaStampFacadeService.status());
+    }
+
+    /**
+     * 按台账 ID 复验一枚令牌：签名值 / 摘要 / 时刻三要素重新对一遍，只读不落库。
+     */
+    @Operation(summary = "复验时间戳令牌（三要素重对，只读不落库）")
+    @PostMapping("/emr/tsa/verifyToken")
+    public Result<TsaTokenVerifyVO> tsaVerifyToken(@Valid @RequestBody TsaTokenVerifyDTO dto) {
+        return Result.success(tsaStampFacadeService.verifyTokenById(dto));
     }
 }

@@ -118,7 +118,7 @@ his:
 
 1. ~~**SM2 医生签名证书**（合规项，WS/T 847—2024 强制 SM2/SM3、私钥不可导出）~~ **已完成**：见下方「六、SM2 国密升级」，医生签名证书已切换为 SM2/SM3withSM2 并真实联调验签通过。
 2. **双证书 + KMC 密钥托管**（GM/T 0034）：加密证书托管恢复，医疗场景可先只做签名证书，架构已预留。
-3. **时间戳 TSA**：医疗文书要求“权威时间源+签名同时打戳”，当前 time_source=1（本机时钟），下一步接院内授时/第三方 TSA。
+3. **时间戳 TSA** ~~（医疗文书要求“权威时间源+签名同时打戳”，当前 time_source=1（本机时钟），下一步接院内授时/第三方 TSA）~~ **已完成**：见下方「七、TSA 可信时间戳」，已接入 csssl 院内 TSA（外部通道，SM2/SM3withSM2 令牌）并真实联调验签通过（tsaValid=true）。
 4. **生产部署**：csssl 根私钥已 SM4 加密落盘 + 根可封存（P0）；对接生产环境前按密评要求复核“根离线、私钥不出密码机、三权分立”。
 5. **医保链路**：cslk→csmig→医保，接口层 SM2 签名+SM4 加密双向验签，与院内 PKI 是两条线；csssl 可承载院内证书体系，医保凭证仍由国家医保平台签发（XJ-D01-2019），不混用。
 
@@ -170,3 +170,64 @@ his:
 ```
 
 > 切换回 RSA：设 `HIS_SIGN_KEY_ALGO=RSA2048` 重启；已签发的 SM2 证书与历史签名记录不受影响（各自按行内算法工作）。
+
+---
+
+## 七、TSA 可信时间戳（csssl 外部 TSA，已完成并真实联调）
+
+> 目标：病历签名授时从「本机时钟」升级为「院内可信时间戳」——签名时刻由 csssl TSA 用独立 SM2 密钥签发 SM3withSM2 令牌绑定，可对抗本机时钟篡改（对齐 WS/T 847「权威时间源 + 签名同时打戳」）。
+
+### 7.1 csssl 侧（新增 TSA 服务）
+
+| 文件 | 内容 |
+|---|---|
+| `TsaService`（新增） | 独立 SM2 密钥对（与根/SUB_CA 分离）：私钥 KeyVault SM4 加密落盘（vault key `tsa/key`），公钥 PEM 一并落盘（`tsa/pub`）供业务系统下载验签；令牌规范化串 `CSSSL-TSA-V1\|serial\|digestHex\|tsaTime`；授时时刻秒级（`withNano(0)`，保证落库回读后令牌串逐字对齐）；**序列号 `TSA+yyyyMMddHHmmss+2字节随机hex`**（时间+随机，进程重启序列归零也不撞号，业务侧台账 serial 唯一键可安全落库）；盖章写审计 `TSA_STAMP` |
+| `TsaController`（新增） | `POST /ssl/tsa/stamp`（body `{"digestHex":"64位hex"}`，返回 serial/tsaTime/tokenValue/algo/publicKeyFingerprint）、`GET /ssl/tsa/publicKey`（PEM+SM3指纹，匿名可取供验签）；TSA 接口匿名（令牌自证），审计留痕记录客户端 IP |
+| `TsaStampRequest`（新增） | 盖章入参 DTO |
+
+### 7.2 HIS 侧（TSA 通道外部化）
+
+| 文件 | 改造内容 |
+|---|---|
+| `SignProperties` | 新增 `tsaMode`（`tsa-mode`）：internal-本地内置 / external-外部 TSA（csssl） |
+| `CssslCaClient` | 新增 `stampTsa(digestHex)`、`tsaPublicKey()`（复用登录无关的匿名 TSA 接口） |
+| `TsaChannelServiceImpl` | 双通道：external 模式调 csssl 盖章 → 落本地 `biz_tsa_token` 台账（令牌与时刻以 csssl 回执为准）→ 验签用 csssl TSA 公钥（进程内缓存）+ 台账断言；internal 模式保持本地内置（令牌格式 `HIS-TSA-V1` 不变，历史令牌兼容）；两套 canonical 各自独立、互不混用 |
+| `TsaServiceImpl.status()` | external 模式不再展示误自举的 LOCAL 行指纹（避免把本地公钥当 TSA 信任根展示），trustNote 文案按通道模式区分 |
+| `EmrSignatureServiceImpl.buildSignature` | 盖章失败（网络/序列号冲突/服务异常）一律落「本机时钟」并清空令牌字段——**绝不留下「标称 TSA 却无令牌」的脏记录**（修复了联调中发现的脏状态问题） |
+| `SignatureController` | 补齐 TSA 运维端点（前端早已调用、后端缺失）：`GET /emr/tsa/status`、`GET /emr/tsa/tokenListPage`、`POST /emr/tsa/updateStatus`、`POST /emr/tsa/timeSource`、`POST /emr/tsa/verifyToken` |
+| 配置 `his-platform.yml` | 新增 `tsa-mode: ${HIS_SIGN_TSA_MODE:external}`（dev/pro 默认 external；external 不可用则时间来源降级本机时钟，不谎报） |
+
+### 7.3 端到端验证结果（2026-10-27，真实进程联调）
+
+| 环节 | 结果 | 凭证 |
+|---|---|---|
+| csssl TSA 公钥 | 通过 | `GET /ssl/tsa/publicKey` → SM2 公钥 PEM + SM3 指纹 `5f30265ffc6713cd6fa6b20f4d70593af3df4a987bb448e399bb59122c708460` |
+| csssl 盖章 | 通过 | `POST /ssl/tsa/stamp` → serial=`TSA20261027122351bc44`（时间+随机），tsaTime=`2026-10-27T12:23:51`（秒级），tokenValue=SM3withSM2 签名 DER |
+| HIS 补签走 TSA | 通过 | SIG20261027000007：`timeSource=3`（第三方可信时间戳），tsaSerial=`TSA20261027122351bc44`，tsaTime 落库 |
+| HIS 落台账 | 通过 | `biz_tsa_token` 新行：serial/digest/tsa_time/token_value/algo（SM3withSM2）齐备 |
+| **验签** | **通过** | `signatureValid=true, contentMatched=true, tsaValid=true`，结论「验签通过：签名值有效，且内容自签名后未发生变更」 |
+| TSA 复验 | 通过 | `POST /emr/tsa/verifyToken` → valid=true |
+| TSA 状态 | 通过 | `GET /emr/tsa/status` → available=true，tsaName=「CSSSL院内TSA（国密时间戳）」，配置与生效时间来源均为 3 |
+| csssl 审计 | 通过 | `ssl_audit_log`：TSA_STAMP 逐次留痕（序列号+摘要前缀+IP） |
+
+### 7.4 联调中修复的问题（已沉淀进代码，勿重踩）
+
+| # | 问题 | 修复 |
+|---|---|---|
+| 1 | HIS 侧模块改动后只对 his-web 单模块 compile，依赖模块（his-ms-platform 等）旧 jar 未重编，TSA 外部化一直未生效 | **HIS 全量构建必须 `mvn -q install -DskipTests`（back_end 根）再重启**；单模块 compile 只编译 his-web 自身 |
+| 2 | csssl 序列号用进程序列（重启归零），跨重启与历史令牌撞号 → HIS 台账落库 DuplicateKey 被吞 → 签名记录与台账不一致，验签失败 | csssl 序列号改为「秒级时间+随机hex」全局唯一；HIS 侧落台账冲突不再吞，直接让本次签名降级本机时钟 |
+| 3 | csssl 盖章时刻含纳秒 → HIS datetime 列舍入后 canonical 串对不上 → tsaValid=false | csssl 盖章时刻 `withNano(0)`（秒级） |
+| 4 | 盖章失败时签名记录落 `time_source=3` 但无令牌（脏记录，验签报「标称TSA却缺令牌」） | `buildSignature` 盖章失败一律落本机时钟（1）+ 清空令牌字段 |
+| 5 | external 模式下 status 展示误自举 LOCAL 行指纹，误导运维 | external 模式不展示 LOCAL 行指纹，trustNote 按通道模式区分 |
+
+### 7.5 配置说明
+
+```yaml
+his:
+  sign:
+    # 可信时间戳通道：external-外部TSA（csssl，默认）；internal-本地内置TSA（演示信任根）
+    # external 模式下 csssl 不可用则时间来源降级本机时钟（不谎报可信时间）
+    tsa-mode: ${HIS_SIGN_TSA_MODE:external}
+```
+
+> 时间来源切换：`sys_config.sign.time_source` 配 3（可信时间戳，需 TSA 在线）或 1（本机时钟）；运维可在签名中心「可信时间戳」卡片直接切换。外部 TSA 令牌的权威时刻以 csssl 回执为准，本地台账仅做留痕与验真断言。

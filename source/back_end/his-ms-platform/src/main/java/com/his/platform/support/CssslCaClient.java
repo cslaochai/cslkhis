@@ -44,6 +44,10 @@ public class CssslCaClient {
     public record IssuedCert(String certPem, String caSerial, String caIssuer) {
     }
 
+    /** csssl 时间戳盖章结果（对齐 csssl /tsa/stamp 回执） */
+    public record TsaStamp(String serial, String tsaTime, String tokenValue, String algo, String fingerprint) {
+    }
+
     /** 向 csssl 提交公钥签发申请并取回证书链 */
     public IssuedCert issue(String subjectDn, String publicKeyPem, int validDays) {
         String baseUrl = baseUrl();
@@ -71,6 +75,35 @@ public class CssslCaClient {
         }
         log.info("[csssl CA] 签发成功 serial={} issuer={} cn={}", serialHex, issuerCn, subjectDn);
         return new IssuedCert(certPem, serialHex, issuerCn);
+    }
+
+    /** 向 csssl TSA 盖一枚时间戳令牌（摘要 → 序列号+时刻+令牌；TSA 接口匿名，无需登录） */
+    public TsaStamp stampTsa(String digestHex) {
+        JsonNode resp = post(baseUrl() + "/tsa/stamp", null,
+                Map.of("digestHex", digestHex));
+        JsonNode data = resp.path("data");
+        if (!data.isObject() || !data.hasNonNull("serial") || !data.hasNonNull("tokenValue")) {
+            throw new BusinessException("外部 TSA 盖章回执异常：" + brief(resp));
+        }
+        return new TsaStamp(data.get("serial").asText(),
+                data.get("tsaTime") == null ? "" : data.get("tsaTime").asText(),
+                data.get("tokenValue").asText(),
+                data.get("algo") == null ? "" : data.get("algo").asText(),
+                data.get("publicKeyFingerprint") == null ? "" : data.get("publicKeyFingerprint").asText());
+    }
+
+    /** 取 csssl TSA 公钥（PEM + SM3 指纹），用于本地验签令牌 */
+    public Map<String, String> tsaPublicKey() {
+        JsonNode resp = get(baseUrl() + "/tsa/publicKey");
+        JsonNode data = resp.path("data");
+        if (!data.isObject() || !data.hasNonNull("publicKeyPem")) {
+            throw new BusinessException("外部 TSA 公钥获取失败：" + brief(resp));
+        }
+        Map<String, String> out = new java.util.LinkedHashMap<>();
+        out.put("publicKeyPem", data.get("publicKeyPem").asText());
+        out.put("fingerprint", data.get("fingerprint") == null ? "" : data.get("fingerprint").asText());
+        out.put("algorithm", data.get("algorithm") == null ? "" : data.get("algorithm").asText());
+        return out;
     }
 
     /** 登录令牌（缓存复用，过期或 401 时重新登录） */

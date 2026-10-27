@@ -72,6 +72,12 @@ public class SignProperties {
     private String keyAlgorithm = "RSA2048";
 
     /**
+     * 可信时间戳通道模式：internal-本地内置 TSA（院内自签信任根）；external-外部 TSA（csssl 院内 TSA，
+     * 复用 ca-base-url 地址，独立 SM2 时间戳密钥签发令牌）。external 模式下 csssl 不可用则时间来源降级本机时钟。
+     */
+    private String tsaMode = "internal";
+
+    /**
      * 概要：拿最终生效的口令（配置项为空时读环境变量）
      */
     public String effectiveSecret() {

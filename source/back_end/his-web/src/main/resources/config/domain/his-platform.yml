@@ -22,3 +22,6 @@ his:
     ca-username: ""
     ca-password: ""
     ca-timeout-ms: 5000
+    # 可信时间戳通道：internal-本地内置TSA（演示信任根）；external-外部TSA（csssl 院内TSA，独立SM2密钥签发）
+    # external 模式下 csssl 不可用则时间来源降级本机时钟（不谎报可信时间）
+    tsa-mode: ${HIS_SIGN_TSA_MODE:external}

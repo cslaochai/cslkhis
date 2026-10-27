@@ -172,7 +172,8 @@ public class EmrSignatureServiceImpl extends ServiceImpl<BizEmrSignatureMapper, 
         e.setSignedTime(now);
 
         // 可信时间戳（G6）：配置了 TSA 且适配器在线，就在签名时刻之后盖一枚令牌。
-        // 盖章失败（网络/服务异常）不允许签名失败：TSA 通道已收敛成 null，这里降级本机时钟。
+        // 盖章失败（网络/服务异常/序列号冲突）不允许签名失败：TSA 通道已收敛成 null，
+        // 此时落「本机时钟」并清空令牌字段——绝不留下"标称 TSA 却无令牌"的脏记录。
         int effectiveTs = tsaStampFacadeService.effectiveTimeSource();
         TsaStampVO stamp = effectiveTs == TimeSourceEnum.TSA.getCode() ? tsaStampFacadeService.stamp(digest) : null;
         if (stamp != null) {
@@ -181,7 +182,7 @@ public class EmrSignatureServiceImpl extends ServiceImpl<BizEmrSignatureMapper, 
             e.setTsaTime(stamp.getTsaTime());
             e.setTsaToken(stamp.getTokenValue());
         } else {
-            e.setTimeSource(effectiveTs);
+            e.setTimeSource(TimeSourceEnum.LOCAL.getCode());
             e.setTsaSerial(null);
             e.setTsaTime(null);
             e.setTsaToken(null);
