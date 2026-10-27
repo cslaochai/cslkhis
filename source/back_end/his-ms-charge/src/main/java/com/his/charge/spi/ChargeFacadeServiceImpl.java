@@ -391,6 +391,10 @@ public class ChargeFacadeServiceImpl implements ChargeFacadeService {
                 bill.setAccountAmount(BigDecimal.ZERO);
                 bill.setSelfAmount(net);
                 bill.setPayableAmount(net);
+                // 降级标记：医保补结算（InsuranceRealTimeSettleService#supplement）只认带此标记的单
+                String marker = InsuranceRealTimeSettleService.DEGRADE_MARKER + "医保实时结算失败自动降级（"
+                        + TextUtil.cut(lastErr.getMessage(), 120) + "）";
+                bill.setRemark(TextUtil.cut(bill.getRemark() == null ? marker : bill.getRemark() + "；" + marker, 490));
                 bizSettlementBillMapper.updateById(bill);
                 // 行级 splits 同步清零
                 List<BizSettlementBillItem> items = bizSettlementBillItemMapper.selectList(
@@ -403,6 +407,12 @@ public class ChargeFacadeServiceImpl implements ChargeFacadeService {
                 }
                 insuranceWarning = "医保实时结算失败，已按自费出账收费，后续可到收费窗口补医保统筹报销";
             }
+        }
+        // 另一条降级路径：出账时参保核验/平台连通失败，settle() 内已直接按自费出账并打标记——
+        // 这条路不走上面的 formalSettle 重试，但操作员同样要被告知"此单可补医保"
+        if (insuranceWarning == null && bill.getRemark() != null
+                && bill.getRemark().contains(InsuranceRealTimeSettleService.DEGRADE_MARKER)) {
+            insuranceWarning = "医保联网核验未通过，已按自费出账收费，后续可到收费窗口补医保统筹报销";
         }
 
         BillBriefVO vo = toBrief(bill);

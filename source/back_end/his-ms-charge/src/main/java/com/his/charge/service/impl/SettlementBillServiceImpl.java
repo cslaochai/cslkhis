@@ -141,7 +141,13 @@ public class SettlementBillServiceImpl extends ServiceImpl<BizSettlementBillMapp
         bill.setBillTime(LocalDateTime.now());
         bill.setBillById(UserUtils.getCurrentUser().getEmployeeId());
         bill.setBillByName(TextUtil.cut(UserUtils.getCurrentUser().getRealName(), W_BILL_BY_NAME));
-        bill.setRemark(TextUtil.cut(dto.getRemark(), W_REMARK));
+        // 出账时按自费降级（参保核验未过/平台不可用等）：remark 追加医保降级标记，补结算（supplement）只认带标记的单
+        String remarkBase = dto.getRemark();
+        if (insurance.downgradeReason() != null) {
+            String marker = InsuranceRealTimeSettleService.DEGRADE_MARKER + insurance.downgradeReason();
+            remarkBase = remarkBase == null || remarkBase.isEmpty() ? marker : remarkBase + "；" + marker;
+        }
+        bill.setRemark(TextUtil.cut(remarkBase, W_REMARK));
         this.save(bill);
 
         for (BizSettlementBillItem item : items) {
@@ -736,19 +742,19 @@ public class SettlementBillServiceImpl extends ServiceImpl<BizSettlementBillMapp
             throw new BusinessException("缺少结算方式");
         }
         if (mode != SettlementModeEnum.INSURANCE) {
-            return new PatientInsurance(SettlementModeEnum.SELF_PAY, null, BigDecimal.ZERO, BigDecimal.ZERO);
+            return new PatientInsurance(SettlementModeEnum.SELF_PAY, null, BigDecimal.ZERO, BigDecimal.ZERO,  null);
         }
         // 医保联网结算总开关：关闭时不支持医保结算，不查医保，直接按自费原价走
         if (!insuranceProperties.isEnabled()) {
             log.info("[结算] 医保联网结算未启用，本单按自费原价：patientId={}", patientId);
-            return new PatientInsurance(SettlementModeEnum.SELF_PAY, null, BigDecimal.ZERO, BigDecimal.ZERO);
+            return new PatientInsurance(SettlementModeEnum.SELF_PAY, null, BigDecimal.ZERO, BigDecimal.ZERO,  "医保联网结算未启用");
         }
         PatientBriefVO patient = patientId == null ? null : patientFacadeService.findPatient(patientId);
         boolean hasInsurance = patient != null && TextUtil.hasText(patient.getMedicalInsuranceNo());
         if (!hasInsurance) {
             // 主档没有医保号就没有可查的凭据，等同于查无参保：按原价，不拦单
             log.info("[结算] 患者无医保号，本单按自费原价：patientId={}", patientId);
-            return new PatientInsurance(SettlementModeEnum.SELF_PAY, null, BigDecimal.ZERO, BigDecimal.ZERO);
+            return new PatientInsurance(SettlementModeEnum.SELF_PAY, null, BigDecimal.ZERO, BigDecimal.ZERO,  "患者主档无医保号（补结算可按身份证再核）");
         }
         InsuranceChannelService.InsuredStatus insured = insuranceChannelService.checkInsured(
                 patient.getMedicalInsuranceNo(), patient.getIdCard(), patient.getPatientName());
@@ -756,12 +762,12 @@ public class SettlementBillServiceImpl extends ServiceImpl<BizSettlementBillMapp
             // 未参保登记 / 身份不符 / 平台不可用：都是「这单按原价收」，不抛异常挡住收费
             log.info("[结算] 参保核验未通过（{}），本单按自费原价：insuranceNo={} patientId={}",
                     insured.getErrMsg(), patient.getMedicalInsuranceNo(), patientId);
-            return new PatientInsurance(SettlementModeEnum.SELF_PAY, null, BigDecimal.ZERO, BigDecimal.ZERO);
+            return new PatientInsurance(SettlementModeEnum.SELF_PAY, null, BigDecimal.ZERO, BigDecimal.ZERO,  "参保核验未通过：" + insured.getErrMsg());
         }
         if (!insured.isActive()) {
             log.info("[结算] 参保状态为停保（{}），本单按自费原价：patientId={}",
                     insured.getErrMsg(), patientId);
-            return new PatientInsurance(SettlementModeEnum.SELF_PAY, null, BigDecimal.ZERO, BigDecimal.ZERO);
+            return new PatientInsurance(SettlementModeEnum.SELF_PAY, null, BigDecimal.ZERO, BigDecimal.ZERO,  "参保状态停保：" + insured.getErrMsg());
         }
         String insuranceType = patient.getMedicalInsuranceType();
         MedicalInsuranceTypeEnum typeEnum = MedicalInsuranceTypeEnum.fromCode(insuranceType);
@@ -774,7 +780,7 @@ public class SettlementBillServiceImpl extends ServiceImpl<BizSettlementBillMapp
                 selfPay = NumUtil.orZero(insurancePolicyService.getSelfPayRatio(settlementType, insuranceType));
             }
         }
-        return new PatientInsurance(SettlementModeEnum.INSURANCE, insuranceType, coverage, selfPay);
+        return new PatientInsurance(SettlementModeEnum.INSURANCE, insuranceType, coverage, selfPay, null);
     }
 
     private BillTypeEnum resolveBillType(Integer billType) {
@@ -854,7 +860,8 @@ public class SettlementBillServiceImpl extends ServiceImpl<BizSettlementBillMapp
      * 医保口径快照：结算方式 + 险种 + 报销比例 + 乙类先行自付比例（百分比数值，70 表示 70%）
      */
     private record PatientInsurance(SettlementModeEnum mode, String type,
-                                    BigDecimal coverageRatio, BigDecimal selfPayRatio) {
+                                    BigDecimal coverageRatio, BigDecimal selfPayRatio,
+                                    String downgradeReason) {
 
         boolean covered() {
             return mode == SettlementModeEnum.INSURANCE;

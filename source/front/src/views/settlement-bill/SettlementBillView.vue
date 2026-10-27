@@ -64,7 +64,7 @@
           </template>
         </el-table-column>
         <el-table-column class-name="font-mono" label="出账时间" min-width="150" prop="createTime"/>
-        <el-table-column fixed="right" label="操作" width="140">
+        <el-table-column fixed="right" label="操作" width="210">
           <template #default="{ row }">
             <el-button :icon="View" data-testid="bill-detail" link type="primary" @click="openDetail(row)">详情
             </el-button>
@@ -76,6 +76,14 @@
                 type="danger"
                 @click="runVoid(row)"
             >作废
+            </el-button>
+            <el-button
+                v-if="isSupplementable(row)"
+                data-testid="bill-supplement"
+                link
+                type="warning"
+                @click="openSupplement(row)"
+            >补结算
             </el-button>
           </template>
         </el-table-column>
@@ -94,6 +102,7 @@
     </el-card>
 
     <SettlementBillDetail v-model="detailVisible" :id="detailId" :dicts="dicts"/>
+    <SettlementBillSupplement v-model="supplementVisible" :bill="supplementBill" @saved="loadList"/>
   </div>
 </template>
 
@@ -115,6 +124,7 @@ import {dictLabelText, formatMoney} from '@/lib/utils';
 import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination';
 import {useTableMaxHeight} from '@/lib/useTableMaxHeight';
 import SettlementBillDetail from './SettlementBillDetail.vue';
+import SettlementBillSupplement from './SettlementBillSupplement.vue';
 
 const dicts = ref({});
 const dictOptions = (type) => dicts.value[type] || [];
@@ -205,6 +215,20 @@ async function runVoid(row) {
   } finally {
     voidSaving.value = false;
   }
+}
+
+// ==================== 医保补结算（降级自费账单补报销） ====================
+// 只对「已付清 + 自费方式 + remark 带降级标记」的账单显示入口；能否真补由后端 supplementCheck 把关
+const supplementVisible = ref(false);
+const supplementBill = ref(null);
+
+const isSupplementable = (row) => Number(row.billStatus) === 3
+    && Number(row.settlementMode) === 1
+    && String(row.remark || '').includes('[医保降级]');
+
+function openSupplement(row) {
+  supplementBill.value = row;
+  supplementVisible.value = true;
 }
 
 onMounted(async () => {

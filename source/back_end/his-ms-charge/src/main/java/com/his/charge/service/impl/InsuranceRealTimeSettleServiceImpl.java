@@ -9,12 +9,14 @@ import com.his.charge.mapper.BizSettlementBillItemMapper;
 import com.his.charge.mapper.BizSettlementBillMapper;
 import com.his.charge.service.InsuranceChannelService;
 import com.his.charge.service.InsuranceRealTimeSettleService;
+import com.his.charge.service.PaymentService;
 import com.his.charge.service.SettlementBillService;
 import com.his.common.enums.BillStatusEnum;
 import com.his.common.enums.FeeCatalogTypeEnum;
 import com.his.common.enums.PayDirectionEnum;
 import com.his.common.enums.PayTxnStatusEnum;
 import com.his.common.enums.PaymentMethodEnum;
+import com.his.common.enums.TxnSourceEnum;
 import com.his.common.enums.TxnSourceEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.NumUtil;
@@ -50,6 +52,7 @@ public class InsuranceRealTimeSettleServiceImpl implements InsuranceRealTimeSett
     private final BizPaymentTxnMapper txnMapper;
     private final InsuranceChannelService insuranceChannelService;
     private final SettlementBillService settlementBillService;
+    private final PaymentService paymentService;
     private final PatientFacadeService patientFacadeService;
     private final RedisSequenceService redisSequenceService;
 
@@ -90,6 +93,11 @@ public class InsuranceRealTimeSettleServiceImpl implements InsuranceRealTimeSett
         InsuranceChannelService.SettleRequest req = buildRequest(bill, items, patient, bill.getBillNo() + "-2301");
         InsuranceChannelService.SettleSplit split = insuranceChannelService.formalSettle(req);
         if (split == null || split.getInfcode() == null || split.getInfcode() != 0) {
+            // 防双收：超时等不确定失败时请求可能已到医保侧扣了个账，必须先 2305 冲正确认，
+            // 确认「无单/已冲正」才允许调用方降自费；冲正通道也不通则抛「状态未知」禁止降级
+            if (split != null && Boolean.TRUE.equals(split.getUncertain())) {
+                confirmNotSettledOrThrow(bill.getBillNo(), req.getTradeNo());
+            }
             throw new BusinessException("医保正式结算失败：" + TextUtil.cut(split == null ? "无响应" : split.getErrMsg(), 200));
         }
         if (NumUtil.orZero(split.getPersonalAccount()).signum() <= 0) {
@@ -230,6 +238,147 @@ public class InsuranceRealTimeSettleServiceImpl implements InsuranceRealTimeSett
         bill.setSelfAmount(NumUtil.orZero(split.getSelfPay()));
         bill.setPayableAmount(NumUtil.scale(total.subtract(discount).subtract(pool).subtract(account), AMOUNT_SCALE));
         billMapper.updateById(bill);
+    }
+
+    /**
+     * 不确定态冲正确认：发 2305 撤销原 2301。回执成功 = 医保侧有单已冲正（个账已退）；回执「不存在」
+     * = 医保侧没扣过；两者都允许调用方安全降自费。冲正通道也不通 → 抛「状态未知」，禁止降级。
+     */
+    private void confirmNotSettledOrThrow(String billNo, String tradeNo) {
+        InsuranceChannelService.Receipt rev = insuranceChannelService.cancelRealtimeSettle(
+                tradeNo, tradeNo + "-REV", "HIS 结算超时不确定态自动冲正（账单 " + billNo + "）");
+        if (rev.isSuccess()) {
+            log.warn("[医保防双收] 不确定态已冲正 billNo={} tradeNo={} 医保单号={}，按失败处理", billNo, tradeNo, rev.getReceiptNo());
+            return;
+        }
+        String msg = rev.getErrMsg() == null ? "" : rev.getErrMsg();
+        if (msg.contains("不存在") || msg.contains("查无")) {
+            log.info("[医保防双收] 医保侧查无此单（确定未扣账）billNo={} tradeNo={}", billNo, tradeNo);
+            return;
+        }
+        throw new BusinessException("医保侧结算状态未知且自动冲正失败（tradeNo=" + tradeNo + "）："
+                + TextUtil.cut(msg, 160)
+                + "。为防止医保扣费与自费双收，本单保持待核实，请先在医保端确认该笔交易状态后再操作");
+    }
+
+    @Override
+    public InsuranceChannelService.SettleSplit supplementCheck(Long billId) {
+        BizSettlementBill bill = requireSupplementBill(billId);
+        List<BizSettlementBillItem> items = billItemMapper.selectByBill(billId);
+        PatientBriefVO patient = patientFacadeService.findPatient(bill.getPatientId());
+        // 先过本地参保核验口径（与结算一致）：查无参保/停保直接给出不可补原因
+        InsuranceChannelService.InsuredStatus insured = insuranceChannelService.checkInsured(
+                patient == null ? null : patient.getMedicalInsuranceNo(),
+                patient == null ? null : patient.getIdCard(),
+                bill.getPatientName());
+        if (!insured.isActive()) {
+            InsuranceChannelService.SettleSplit err = new InsuranceChannelService.SettleSplit();
+            err.setInfcode(-1);
+            err.setErrMsg("参保核验未通过：" + TextUtil.cut(insured.getErrMsg(), 200));
+            return err;
+        }
+        InsuranceChannelService.SettleSplit split = insuranceChannelService.preSettle(
+                buildRequest(bill, items, patient, bill.getBillNo() + "-2201S"));
+        if (split == null || split.getInfcode() == null || split.getInfcode() != 0) {
+            InsuranceChannelService.SettleSplit err = split == null ? new InsuranceChannelService.SettleSplit() : split;
+            err.setInfcode(-1);
+            if (!TextUtil.hasText(err.getErrMsg())) {
+                err.setErrMsg("医保预结算失败");
+            }
+            return err;
+        }
+        return split;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public InsuranceChannelService.SettleSplit supplement(Long billId, String reason) {
+        BizSettlementBill bill = requireSupplementBill(billId);
+        List<BizSettlementBillItem> items = billItemMapper.selectByBill(billId);
+        PatientBriefVO patient = patientFacadeService.findPatient(bill.getPatientId());
+        InsuranceChannelService.SettleRequest req = buildRequest(bill, items, patient, bill.getBillNo() + "-2301S");
+        InsuranceChannelService.SettleSplit split = insuranceChannelService.formalSettle(req);
+        if (split == null || split.getInfcode() == null || split.getInfcode() != 0) {
+            if (split != null && Boolean.TRUE.equals(split.getUncertain())) {
+                confirmNotSettledOrThrow(bill.getBillNo(), req.getTradeNo());
+            }
+            throw new BusinessException("医保补结算失败：" + TextUtil.cut(split == null ? "无响应" : split.getErrMsg(), 200));
+        }
+        try {
+            if (NumUtil.orZero(split.getPersonalAccount()).signum() > 0) {
+                insertAccountTxn(bill, split);
+            }
+            writeBackBill(bill, items, split);
+            // 患者当初按全自费付了现金，补结算后统筹+个账改由医保出，多付的差额原路退回
+            BigDecimal refund = NumUtil.scale(NumUtil.orZero(split.getInsurancePay())
+                    .add(NumUtil.orZero(split.getPersonalAccount())), AMOUNT_SCALE);
+            if (refund.signum() > 0) {
+                paymentService.refundByAmount(bill.getId(), refund, TxnSourceEnum.DIRECT_REFUND.getCode(),
+                        "医保补结算差额退款（医保单号 " + split.getReceiptNo() + "）"
+                                + (TextUtil.hasText(reason) ? "：" + reason : ""));
+            }
+            bill.setSettlementMode(2);
+            bill.setRemark(appendRemark(bill.getRemark(), "医保补结算（医保单号 " + split.getReceiptNo()
+                    + "），降级自费差额 ¥" + NumUtil.plain(refund) + " 已原路退回"));
+            billMapper.updateById(bill);
+            settlementBillService.refreshFromTxns(bill.getId());
+        } catch (Exception e) {
+            // 本地落库失败：医保侧 2301 已经扣了账，事务回滚后必须立刻冲正，不留两边不一致
+            InsuranceChannelService.Receipt rev = insuranceChannelService.cancelRealtimeSettle(
+                    req.getTradeNo(), req.getTradeNo() + "-REV", "HIS 补结算本地落库失败自动冲正：" + e.getMessage());
+            log.error("[医保补结算] 本地落库失败，医保侧冲正{} billNo={} tradeNo={}：{}",
+                    rev != null && rev.isSuccess() ? "成功" : "失败（需人工核实）",
+                    bill.getBillNo(), req.getTradeNo(), e.getMessage(), e);
+            throw e;
+        }
+        log.info("[医保补结算] 账单 {} 完成：统筹 ¥{} 个账 ¥{} 自付 ¥{} 退现金 ¥{} 医保单号 {}",
+                bill.getBillNo(), NumUtil.plain(split.getInsurancePay()), NumUtil.plain(split.getPersonalAccount()),
+                NumUtil.plain(split.getSelfPay()), NumUtil.plain(NumUtil.orZero(split.getInsurancePay())
+                        .add(NumUtil.orZero(split.getPersonalAccount()))), split.getReceiptNo());
+        return split;
+    }
+
+    /**
+     * 补结算前置校验：已付清 + 自费结算方式 + 带医保降级标记 + 没做过医保结算（幂等）。
+     */
+    private BizSettlementBill requireSupplementBill(Long billId) {
+        if (billId == null) {
+            throw new BusinessException("缺少账单ID");
+        }
+        BizSettlementBill bill = billMapper.selectById(billId);
+        if (bill == null) {
+            throw new BusinessException("结算账单不存在");
+        }
+        if (BillStatusEnum.VOIDED.getCode().equals(bill.getBillStatus())) {
+            throw new BusinessException("账单 " + bill.getBillNo() + " 已作废，不能补结算");
+        }
+        if (!BillStatusEnum.PAID.getCode().equals(bill.getBillStatus())) {
+            throw new BusinessException("账单 " + bill.getBillNo() + " 尚未付清（当前状态 "
+                    + bill.getBillStatus() + "），补结算只针对已付清的医保降级账单");
+        }
+        if (bill.getSettlementMode() == null || bill.getSettlementMode() != 1) {
+            throw new BusinessException("账单 " + bill.getBillNo() + " 不是自费结算方式，无需补结算");
+        }
+        if (bill.getRemark() == null || !bill.getRemark().contains(DEGRADE_MARKER)) {
+            throw new BusinessException("账单 " + bill.getBillNo() + " 没有医保降级标记，不是降级自费单，不能补结算");
+        }
+        BizPaymentTxn existing = txnMapper.selectOne(new LambdaQueryWrapper<BizPaymentTxn>()
+                .eq(BizPaymentTxn::getBillId, billId)
+                .eq(BizPaymentTxn::getPayMethod, PaymentMethodEnum.INSURANCE_ACCOUNT.getCode())
+                .eq(BizPaymentTxn::getTxnStatus, PayTxnStatusEnum.SUCCESS.getCode())
+                .eq(BizPaymentTxn::getDirection, PayDirectionEnum.CHARGE.getCode())
+                .last("LIMIT 1"));
+        if (existing != null) {
+            throw new BusinessException("账单 " + bill.getBillNo() + " 已完成医保结算（个账流水号 "
+                    + existing.getTxnNo() + "），请勿重复补结算");
+        }
+        return bill;
+    }
+
+    private String appendRemark(String remark, String addition) {
+        String line = TextUtil.cut(addition, 200);
+        String merged = TextUtil.hasText(remark) ? remark + "；" + line : line;
+        return TextUtil.cut(merged, 490);
     }
 
     private BizSettlementBill requireBill(Long billId) {

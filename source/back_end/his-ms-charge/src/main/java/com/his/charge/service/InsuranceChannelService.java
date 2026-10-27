@@ -49,6 +49,19 @@ public interface InsuranceChannelService {
      */
     SettleSplit formalSettle(SettleRequest request);
 
+    /**
+     * 撤销医保侧实时结算（2305 冲正）：不确定态确认专用。
+     *
+     * <p>2301 超时等不确定失败后，请求可能已到医保侧扣了个账，HIS 不能无条件按失败降自费
+     * （否则医保扣了 + 患者又付现金 = 双收）。发 2305 按 origTradeNo 冲正：
+     * <ul>
+     *   <li>回执成功 = 医保侧有单已冲正（个账已退回），此后降自费安全；</li>
+     *   <li>回执「原上传流水不存在」= 医保侧根本没扣，降自费安全（按 errMsg 识别）；</li>
+     *   <li>通道失败 = 医保侧状态仍未知，调用方必须保持不确定、禁止降级。</li>
+     * </ul>
+     */
+    Receipt cancelRealtimeSettle(String origTradeNo, String tradeNo, String reason);
+
     @Data
     @NoArgsConstructor
     @AllArgsConstructor
@@ -201,5 +214,10 @@ public interface InsuranceChannelService {
         private BigDecimal accountBalanceAfter;
         private String warnMsg;
         private String errMsg;
+        /**
+         * 失败是否「不确定」：true = 请求可能已到医保侧并扣账（超时/连接中断），调用方必须先冲正确认再降级；
+         * false/null = 确定失败（请求未达或医保明确拒绝），可直接按失败处理。
+         */
+        private Boolean uncertain;
     }
 }

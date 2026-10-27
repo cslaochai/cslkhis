@@ -47,4 +47,27 @@ public class InsuranceRealTimeSettleController {
     public Result<InsuranceChannelService.SettleSplit> formalSettle(@RequestParam Long billId) {
         return Result.success(insuranceRealTimeSettleService.formalSettle(billId));
     }
+
+    /**
+     * 医保补结算预检：校验降级账单能否补 + 2201 试算拿 splits 预览（不落库）。
+     * 供前端弹确认框展示「能退多少现金」，校验不过返回 infcode=-1 + 原因。
+     */
+    @Operation(summary = "医保补结算预检（不落库）")
+    @PreAuthorize("isAuthenticated()")
+    @PostMapping("/supplementCheck")
+    public Result<InsuranceChannelService.SettleSplit> supplementCheck(@RequestParam Long billId) {
+        return Result.success(insuranceRealTimeSettleService.supplementCheck(billId));
+    }
+
+    /**
+     * 医保补结算：对降级自费且已付清的账单补走 2301（扣个账），差额（统筹+个账）原路退回患者，
+     * 账单回写医保结算方式与 splits。只认带医保降级标记的账单，重复调用按幂等拒绝。
+     */
+    @Operation(summary = "医保补结算（补扣个账 + 差额退回）")
+    @PreAuthorize("isAuthenticated()")
+    @PostMapping("/supplement")
+    public Result<InsuranceChannelService.SettleSplit> supplement(@RequestParam Long billId,
+                                                                  @RequestParam(required = false) String reason) {
+        return Result.success(insuranceRealTimeSettleService.supplement(billId, reason));
+    }
 }

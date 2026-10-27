@@ -97,3 +97,19 @@ export function preSettleInsurance(billId) {
 export function formalSettleInsurance(billId) {
     return request.post('/charge/insurance/formalSettle', null, {params: {billId}})
 }
+
+// ==================== 医保补结算（医保恢复后补报销降级自费账单） ====================
+//
+// 时序：supplementCheck（校验 + 2201 试算，不落库，展示拟退差额）→ 收费员核对 → supplement（补扣个账
+// → 账单回写医保 splits → 患者多付的差额按原收款流水原路退回 → 票据作废待重开）。
+// 只认带 [医保降级] 标记的已付清自费账单，重复调用按幂等拒绝。
+
+// 补结算预检：返回 splits 预览；infcode=-1 时 errMsg 带不可补原因
+export function checkSupplementInsurance(billId) {
+    return request.post('/charge/insurance/supplementCheck', null, {params: {billId}})
+}
+
+// 补结算执行
+export function supplementInsurance(billId, reason) {
+    return request.post('/charge/insurance/supplement', null, {params: {billId, reason}})
+}

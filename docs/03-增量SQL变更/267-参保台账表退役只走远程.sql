@@ -1,6 +1,6 @@
 -- 267-参保台账表退役（医保参保只走远程）
 -- 背景：biz_insured_person 是医保局参保库在院内的镜像台账，只被 mock 通道的 checkInsured 读。
---       真实参保状态只有一个权威来源 = 医保结算经办平台（back_end_mss /insure/person/query）；
+--       真实参保状态只有一个权威来源 = 医保局端（HIS → csmip前置(8091) → csmis医保局端(8090)，/insure/person/query）；
 --       院内台账必然与医保局漂移（停保、销户、异地参保都不会回写），拿它判"能不能报销"
 --       迟早和医保清算对不上。口径改为：结算那一刻远程查一次，查不到参保就按自费原价收，不拦单。
 -- 影响面：BizInsuredPerson 实体与 BizInsuredPersonMapper 已删除；

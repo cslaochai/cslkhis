@@ -34,6 +34,21 @@ public interface PaymentService extends IService<BizPaymentTxn> {
     List<BizPaymentTxnVO> refund(BillRefundDTO dto);
 
     /**
+     * 按金额退差（医保补结算专用）：不动记账行、不回退业务来源，只把患者多付的现金
+     * 按原收款流水逐笔原路退回，并按「钱票同真」口径作废本账单有效票据（待重开）。
+     *
+     * <p>与 {@link #refund} 的区别：补结算是「同一批费用换个人掏钱」（医保出统筹/个账），
+     * 费用行本身一红冲就把药/项目也连带退了，口径完全不对。这里只动资金侧：
+     * 跳过医保个账流水（医保的钱不走现金退），退完后调 refreshFromTxns 让账单镜像跟上。
+     *
+     * @param billId    账单
+     * @param amount    退款总额（= 补结算 splits 的统筹 + 个账）
+     * @param sourceType 退费类来源（{@code TxnSourceEnum} refundKind 必须为 true）
+     * @param reason    退费原因（落流水 remark 与票据作废说明）
+     */
+    List<BizPaymentTxnVO> refundByAmount(Long billId, BigDecimal amount, Integer sourceType, String reason);
+
+    /**
      * 整单撤销（退号、取消一次结算）：钱全额原路退回 + 本账单记账行全额红冲 + 账单作废。
      *
      * <p>与 {@link #refund} 的区别：退费是「按项退钱」，冲多少应收退多少钱，账单还开着；

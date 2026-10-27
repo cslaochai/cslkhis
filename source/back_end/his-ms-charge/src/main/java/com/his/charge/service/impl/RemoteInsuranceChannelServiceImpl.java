@@ -2,6 +2,7 @@ package com.his.charge.service.impl;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.his.charge.config.InsuranceProperties;
 import com.his.charge.service.InsuranceChannelService;
 import com.his.charge.support.InsuranceMessageCrypto;
@@ -283,11 +284,16 @@ public class RemoteInsuranceChannelServiceImpl implements InsuranceChannelServic
                     .body(String.class);
             log.info("[医保通道] 调用 {} 响应报文：{}", path, response);
         } catch (RestClientException e) {
-            log.error("[医保通道] 实时结算调用失败 path={} tradeNo={}：{}", path, request.getTradeNo(), e.getMessage());
+            boolean uncertain = isUncertainTransport(e);
+            log.error("[医保通道] 实时结算调用失败 path={} tradeNo={} uncertain={}：{}",
+                    path, request.getTradeNo(), uncertain, e.getMessage());
             SettleSplit err = new SettleSplit();
             err.setInfcode(-1);
             err.setTradeNo(request.getTradeNo());
-            err.setErrMsg("医保平台连接失败：" + e.getMessage());
+            err.setUncertain(uncertain);
+            err.setErrMsg(uncertain
+                    ? "医保平台响应超时/连接中断（结果不确定，须先冲正确认再降级）：" + e.getMessage()
+                    : "医保平台连接失败：" + e.getMessage());
             return err;
         }
         try {
@@ -333,6 +339,70 @@ public class RemoteInsuranceChannelServiceImpl implements InsuranceChannelServic
             err.setTradeNo(request.getTradeNo());
             err.setErrMsg("医保平台响应解析失败");
             return err;
+        }
+    }
+
+    /**
+     * 传输层失败分类：只有「请求发出后没有得到任何响应」的失败才算不确定（超时/连接被重置——
+     * 医保侧可能已扣账）；ConnectException/UnknownHostException = 请求根本没出去；拿到 HTTP 状态码
+     * （RestClientResponseException）= 前置机已响应，业务失败是确定的。
+     */
+    private boolean isUncertainTransport(RestClientException e) {
+        if (e instanceof org.springframework.web.client.RestClientResponseException) {
+            return false;
+        }
+        Throwable c = e.getCause();
+        while (c != null) {
+            if (c instanceof java.net.ConnectException || c instanceof java.net.UnknownHostException) {
+                return false;
+            }
+            if (c instanceof java.net.SocketTimeoutException || c instanceof java.net.SocketException) {
+                return true;
+            }
+            c = c.getCause();
+        }
+        return false;
+    }
+
+    @Override
+    public Receipt cancelRealtimeSettle(String origTradeNo, String tradeNo, String reason) {
+        ObjectNode payload = objectMapper.createObjectNode();
+        payload.put("msgType", "2305");
+        payload.put("tradeNo", tradeNo);
+        payload.put("origTradeNo", origTradeNo);
+        payload.put("cancelReason", reason == null ? "HIS 不确定态自动冲正" : reason);
+        payload.put("sendTime", java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
+        String response;
+        try {
+            response = restClient.post()
+                    .uri("/gateway/2305")
+                    .contentType(JSON_UTF8)
+                    .accept(MediaType.APPLICATION_JSON)
+                    .body(sendBody(payload.toString()))
+                    .retrieve()
+                    .body(String.class);
+        } catch (RestClientException e) {
+            log.error("[医保通道] 2305 冲正发送失败 origTradeNo={} tradeNo={}：{}", origTradeNo, tradeNo, e.getMessage());
+            return new Receipt(false, null, null, "医保平台连接失败：" + e.getMessage());
+        }
+        try {
+            String business = receiveBody(response);
+            JsonNode root = objectMapper.readTree(business);
+            int code = root.path("code").asInt(-1);
+            JsonNode data = root.path("data");
+            int infcode = data.path("infcode").asInt(-1);
+            String errMsg = text(data, "errMsg");
+            if (errMsg == null) {
+                errMsg = root.path("message").asText(null);
+            }
+            if (code == 200 && infcode == 0) {
+                return new Receipt(true, text(data, "receiptNo"), business, null);
+            }
+            return new Receipt(false, text(data, "receiptNo"), business,
+                    TextUtil.hasText(errMsg) ? errMsg : "医保平台冲正失败（infcode=" + infcode + "）");
+        } catch (Exception e) {
+            log.error("[医保通道] 2305 冲正回执解析失败 origTradeNo={} body={}", origTradeNo, response, e);
+            return new Receipt(false, null, response, "医保平台冲正回执解析失败：" + e.getMessage());
         }
     }
 }

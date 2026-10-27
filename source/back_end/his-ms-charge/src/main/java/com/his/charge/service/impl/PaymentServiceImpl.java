@@ -331,6 +331,79 @@ public class PaymentServiceImpl extends ServiceImpl<BizPaymentTxnMapper, BizPaym
         return toVOList(refunds);
     }
 
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public List<BizPaymentTxnVO> refundByAmount(Long billId, BigDecimal amount, Integer sourceType, String reason) {
+        if (billId == null) {
+            throw new BusinessException("缺少账单");
+        }
+        if (amount == null || amount.signum() <= 0) {
+            throw new BusinessException("退款金额必须大于 0");
+        }
+        if (!TextUtil.hasText(reason)) {
+            throw new BusinessException("缺少退费原因");
+        }
+        BizSettlementBill bill = settlementBillService.getById(billId);
+        if (bill == null) {
+            throw new BusinessException("账单不存在");
+        }
+        if (BillStatusEnum.VOIDED.getCode().equals(bill.getBillStatus())) {
+            throw new BusinessException("账单已作废，没有可退的收款");
+        }
+        TxnSourceEnum source = TxnSourceEnum.fromCode(sourceType);
+        if (source == null || !source.refundKind()) {
+            throw new BusinessException("退费流水的来源必须是退费类（退费申请执行/收费处直退/退号联动/出院结算退差）");
+        }
+        BigDecimal net = NumUtil.scale(NumUtil.orZero(bill.getPaidAmount()).subtract(NumUtil.orZero(bill.getRefundAmount())), AMOUNT_SCALE);
+        if (amount.compareTo(net) > 0) {
+            throw new BusinessException("退款金额 " + amount.toPlainString() + " 超过该账单净已收 " + net.toPlainString());
+        }
+        BillRefundDTO dto = new BillRefundDTO();
+        dto.setBillId(billId);
+        dto.setReason(reason);
+        List<BizPaymentTxn> refunds = payBackCashTxns(bill, NumUtil.scale(amount, AMOUNT_SCALE), source, dto);
+        settlementBillService.refreshFromTxns(bill.getId());
+        // 钱票同真：补结算后应缴变了（统筹/个账改由医保出），原票面与实收不符，票据同步作废待重开
+        invoiceService.voidByBill(bill.getId(), "医保补结算差额退款，票据同步作废：" + reason);
+        log.info("[补结算退款] 账单 {} 退现金 ¥{} 分 {} 笔原路退回，来源={} 原因：{}",
+                bill.getBillNo(), amount.toPlainString(), refunds.size(), source.getDesc(), reason);
+        return toVOList(refunds);
+    }
+
+    /**
+     * 与 {@link #payBackEachOrigTxn} 同一套「按原收款流水逐笔原路退回」机器，差别只有一条铁律：
+     * <b>跳过医保个账流水</b>——个账是医保账户里的钱（补结算刚划扣的那笔），差额退款只能退
+     * 患者当场掏的现金/扫码部分，把个账流水也退了，医保账户和柜面两边就都对不上了。
+     */
+    private List<BizPaymentTxn> payBackCashTxns(BizSettlementBill bill, BigDecimal refundTotal,
+                                                TxnSourceEnum source, BillRefundDTO dto) {
+        BigDecimal left = refundTotal;
+        List<BizPaymentTxn> refunds = new ArrayList<>();
+        for (BizPaymentTxn orig : baseMapper.selectByBill(bill.getId())) {
+            if (left.signum() <= 0) {
+                break;
+            }
+            if (!PayDirectionEnum.CHARGE.getCode().equals(orig.getDirection())
+                    || !PayTxnStatusEnum.SUCCESS.getCode().equals(orig.getTxnStatus())) {
+                continue;
+            }
+            if (PaymentMethodEnum.INSURANCE_ACCOUNT.getCode().equals(orig.getPayMethod())) {
+                continue;
+            }
+            BigDecimal refundable = NumUtil.scale(NumUtil.orZero(baseMapper.sumRefundableByTxn(orig.getId())), AMOUNT_SCALE);
+            if (refundable.signum() <= 0) {
+                continue;
+            }
+            BigDecimal part = refundable.compareTo(left) >= 0 ? left : refundable;
+            refunds.add(refundOne(bill, orig, part, source, dto));
+            left = NumUtil.scale(left.subtract(part), AMOUNT_SCALE);
+        }
+        if (left.signum() > 0) {
+            throw new BusinessException("可退的收款流水不足，尚差 " + left.toPlainString() + "，请先核对支付流水");
+        }
+        return refunds;
+    }
+
     // 住院预交金：bill_id 为空的收/退流水 + 住院资金账户（sql/140）
 
     @Override
