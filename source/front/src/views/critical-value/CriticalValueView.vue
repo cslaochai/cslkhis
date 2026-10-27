@@ -2,12 +2,6 @@
   <div>
     <!-- 页头 -->
     <div class="mb-3 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-      <div>
-        <h1 class="text-xl font-semibold text-slate-900">危急值管理</h1>
-        <p class="mt-1 text-sm text-slate-500">
-          检验结果录入时自动识别并通知开单医生，上报 → 接收 → 处置 → 记录全闭环，超时在列表实时标记
-        </p>
-      </div>
       <div class="flex items-center gap-3">
         <el-tag v-if="stats.timelyRate != null" effect="plain" type="success">
           及时处置率 {{ stats.timelyRate }}%

@@ -261,6 +261,13 @@ const credRows = [
   {accounts: ['helicheng ( 何立诚  )'], role: '急诊医生', dept: '急诊儿科', ability: ER_ABILITY},
   {accounts: ['jiangbailu ( 江白露  )'], role: '急诊医生', dept: '肠道门诊', ability: ER_ABILITY},
   {accounts: ['mojingwen ( 莫静文  )'], role: '急诊医生', dept: '发热门诊', ability: ER_ABILITY},
+  // 急诊挂号链路（2026-10-27 新增夹具）：汤晓岚急诊登记 → 急诊医生工作站接诊
+  {
+    accounts: ['tangxiaolan ( 汤晓岚  )'],
+    role: '分诊护士',
+    dept: '急诊内科',
+    ability: '急诊护士工作站：急诊登记（选急诊科室单元 + 四级分级 MEWS 辅助 + 在岗值班医生）、批量登记、转归、复评、交班清零；不进门诊分诊台'
+  },
   // 急诊排班链路（2026-10-26 下放科主任）：科主任切岗排班 → 医务科(tanyiming)审核发布
   {
     accounts: ['zhouyuan ( 周远 )', 'linxiaozhou ( 林小舟 )', 'wutong ( 吴桐 )'],

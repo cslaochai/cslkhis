@@ -136,7 +136,7 @@
           </div>
           <div ref="panelTableWrap" v-loading="panelLoading" class="mt-3 min-h-0 flex-1 overflow-x-auto">
             <el-table :data="doctorRows" :max-height="panelTableMaxHeight" border min-width="980"
-                      style="width: 100%">
+                      class="panel-table" style="width: 100%">
               <el-table-column fixed="left" width="170">
                 <template #header><span class="text-base font-semibold text-slate-800">{{
                     staffTypeText(panelStaffType)
@@ -1852,5 +1852,11 @@ onUnmounted(() => {
 
 :deep(.tpl-op-col .el-button + .el-button) {
   margin-left: 6px;
+}
+
+/* 排班面板单元格内容靠上对齐：行高由该行最高的卡片格撑高，单行卡片默认 vertical-align:middle 会上下留白、
+   卡片飘在格子中间；靠上后与左侧医生名顶部齐平，符合排班表阅读习惯（只动 body，表头日期仍居中） */
+:deep(.panel-table .el-table__body td.el-table__cell) {
+  vertical-align: top;
 }
 </style>

@@ -207,6 +207,6 @@ public class AiExecutionServiceImpl implements AiExecutionService {
         if (TextUtil.hasText(lastFailure)) {
             return "模型调用未成功：" + lastFailure;
         }
-        return "模型调用未成功（超时、限流，或返回内容无法解析为约定 JSON）";
+        return "模型调用未成功（超时、限流）";
     }
 }

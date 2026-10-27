@@ -9,7 +9,7 @@
         </div>
       </template>
       <div v-loading="onDutyLoading">
-        <el-empty v-if="onDutyList.length === 0" :image-size="60" description="此刻没有人在班（夜班跨零点归昨天的班）"/>
+        <el-empty v-if="onDutyList.length === 0" :image-size="60" description="此刻没有人在班"/>
         <div v-else class="flex flex-wrap gap-2" data-testid="on-duty-list">
           <el-tag
               v-for="p in onDutyList"

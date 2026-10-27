@@ -107,7 +107,7 @@
       </div>
 
       <el-empty v-if="!loading && filteredRows.length === 0" :image-size="60"
-                description="没有待你审核的排班（科主任提交审核后会出现在这里）"/>
+                description="没有待你审核的排班"/>
       <div ref="footerRef" class="list-footer flex items-center justify-end">
         <el-pagination
             v-model:current-page="pagination.pageNum"

@@ -1,5 +1,4 @@
 <template>
-  <!-- 电话外呼（G-15）：mock 通道=登记待呼，护士按明文电话拨打后回填结果 -->
   <el-dialog v-model="visible" title="电话外呼" width="560px">
     <div v-if="callTask" class="space-y-3">
       <div class="rounded-lg border border-sky-200 bg-sky-50 px-3 py-2 text-xs text-sky-800">
@@ -32,7 +31,7 @@
 
 <script setup>
 /**
- * 电话外呼弹框（G-15，mock 通道=人工登记待呼）。
+ * 电话外呼弹框
  *
  * 两种进法由 resume 区分：
  * - resume=false 首次外呼：登记待外呼，返回明文电话供护士拨打；
@@ -73,7 +72,7 @@ watch(visible, async (open) => {
         ElMessage.error(res.message || '加载任务失败');
     } catch (e) {
       console.error(e);
-      
+
     }
     return;
   }
@@ -87,7 +86,7 @@ watch(visible, async (open) => {
       ElMessage.error(res.message || '外呼登记失败');
   } catch (e) {
     console.error(e);
-    
+
   }
 });
 
@@ -114,7 +113,7 @@ const composeCallScript = async () => {
       ElMessage.error(res.message || 'AI 未生成话术');
   } catch (e) {
     console.error(e);
-    
+
   }
 };
 const submitCallResult = async (connected) => {
@@ -129,10 +128,10 @@ const submitCallResult = async (connected) => {
       ElMessage.success(connected ? '已接通，任务已转随访中' : '已登记未接通，可稍后再次外呼');
       visible.value = false;
       emit('saved');
-    } 
+    }
   } catch (e) {
     console.error(e);
-    
+
   } finally {
     callResultLoading.value = false;
   }

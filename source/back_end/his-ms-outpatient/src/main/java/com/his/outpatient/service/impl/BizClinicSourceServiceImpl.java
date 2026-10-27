@@ -801,7 +801,7 @@ public class BizClinicSourceServiceImpl extends ServiceImpl<BizClinicSourceMappe
     /**
      * 校验同一诊室同一天同一时段只排一名医师。
      *
-     * <p>行业口径（卫宁等主流 HIS +「一医一患一诊室」）：诊室是参与冲突检测的资源，
+     * <p>行业口径（主流 HIS +「一医一患一诊室」）：诊室是参与冲突检测的资源，
      * 一个出诊单元内一间诊室只能分给一名出诊医师。医生维度的冲突由 {@link #checkScheduleOverlap} 管
      * （不同医生不拦），这里是空间维度：全天班(08:00-17:00) 与上午班(08:00-12:00) 时间交叉即判占用。
      * 停诊的班不占诊室（自己停诊或撞上停诊行都放行）。

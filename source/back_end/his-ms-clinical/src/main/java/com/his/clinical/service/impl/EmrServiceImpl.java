@@ -2480,7 +2480,7 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
     }
 
     // ========== 医生撤回结诊 ==========
-    // 真实 HIS（东软/卫宁）门诊病历撤回口径：医生刚结诊发现开错，在当前患者身上直接撤回，
+    // 真实 HIS 门诊病历撤回口径：医生刚结诊发现开错，在当前患者身上直接撤回，
     // 不是单独开菜单（那是病案修改申请流程，走审批）。闸门与反向动作见 EmrService.revokeRecord。
     @Override
     @Transactional(rollbackFor = Exception.class)

@@ -762,8 +762,8 @@ const handleSubmit = async () => {
     });
     emit('saved');
     resetForm();
-  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */ {
-
+  } catch (error) {
+    // 错误已由全局拦截器统一提示（医保失败时后端已自动降级自费，账单正常出着，无需操作员干预）
   } finally {
     addSubmitLoading.value = false;
   }

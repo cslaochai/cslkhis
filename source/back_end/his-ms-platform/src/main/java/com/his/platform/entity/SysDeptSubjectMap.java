@@ -8,7 +8,7 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 /**
- * 科室 → 诊疗科目 映射（卫宁 THIS4 里叫「病案科室对应设置」）。
+ * 科室 → 诊疗科目 映射（主流 HIS 里叫「病案科室对应设置」）。
  *
  * <p>只做对照，不替换：病案首页 biz_inpatient_summary 仍然存院内 dept_id（历史数据与数据权限
  * 都依赖它），上报时才用本表折算标准科目代码。
