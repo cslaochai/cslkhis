@@ -116,8 +116,57 @@ his:
 
 ## 五、遗留与后续建议（按优先级）
 
-1. **SM2 医生签名证书**（合规项，WS/T 847—2024 强制 SM2/SM3、私钥不可导出）：csssl 已支持 SM2 公钥签发；HIS 侧需扩展 `KeyPairFactory`/`SignCryptoUtil` 支持 SM2/SM3withSM2 后再切换，当前联调用 RSA2048 先行打通。
+1. ~~**SM2 医生签名证书**（合规项，WS/T 847—2024 强制 SM2/SM3、私钥不可导出）~~ **已完成**：见下方「六、SM2 国密升级」，医生签名证书已切换为 SM2/SM3withSM2 并真实联调验签通过。
 2. **双证书 + KMC 密钥托管**（GM/T 0034）：加密证书托管恢复，医疗场景可先只做签名证书，架构已预留。
 3. **时间戳 TSA**：医疗文书要求“权威时间源+签名同时打戳”，当前 time_source=1（本机时钟），下一步接院内授时/第三方 TSA。
 4. **生产部署**：csssl 根私钥已 SM4 加密落盘 + 根可封存（P0）；对接生产环境前按密评要求复核“根离线、私钥不出密码机、三权分立”。
 5. **医保链路**：cslk→csmig→医保，接口层 SM2 签名+SM4 加密双向验签，与院内 PKI 是两条线；csssl 可承载院内证书体系，医保凭证仍由国家医保平台签发（XJ-D01-2019），不混用。
+
+---
+
+## 六、SM2 国密升级（已完成并真实联调）
+
+> 目标：医生签名证书从 RSA2048/SHA256withRSA 升级为 **SM2/SM3withSM2**（WS/T 847—2024 医学电子文档签名强制国密），HIS 侧改造、csssl 侧零改动（公钥签发已按公钥算法自动推断为 SM2，主体证书签名算法跟随 SUB_CA 的 RSA 私钥，PKIX 跨算法签发合法）。
+
+### 6.1 改造清单（HIS 侧，his-ms-platform / his-core-spi / his-ms-clinical）
+
+| 文件 | 改造内容 |
+|---|---|
+| `PemCodecUtil` | 支持 SM2/EC 密钥解析：按 SPKI/PKCS#8 算法 OID 选择通道，EC 走 BC provider（识别 sm2p256v1 国密曲线 OID）；静态幂等注册 BC provider |
+| `KeyPairFactory` | 新增 `generate(String)`：RSA2048 或 SM2（`EC` + `sm2p256v1`，BC）；无参 `generate()` 保持 RSA 兼容 |
+| `SignCryptoUtil` | 签名/验签/指纹按密钥算法自动路由（EC→`SM3withSM2`+SM3 指纹，RSA→SHA256withRSA+SHA-256）；新增 `signAlgoFor/digestAlgoFor`；内容摘要 `sha256Hex` 保持 SHA-256（证据链锚点，SM3 由 SM3withSM2 内部完成） |
+| `SignProperties` | 新增 `keyAlgorithm`（默认 RSA2048，配置 `key-algorithm`） |
+| `SignCertServiceImpl` | 院内自签/外部 CA 两处签发统一按 `signProperties.getKeyAlgorithm()` 生成密钥对并落库 key_algo/digest_algo/sign_algo/指纹 |
+| `SignCertBriefVO` | 新增 `digestAlgo`/`signAlgo` 字段（签名记录按证书行内算法留痕） |
+| `SignCertFacadeServiceImpl` | brief 填充证书行算法；`digestAlgo()/signAlgo()` 返回当前配置算法对应值 |
+| `EmrSignatureServiceImpl` | 签名记录 `digest_algo`/`sign_algo` 从证书行取值（不再用全局默认） |
+| 配置 `his-platform.yml` / `application-pro.yml` | 新增 `key-algorithm: ${HIS_SIGN_KEY_ALGO:SM2}`（dev/pro 默认 SM2） |
+
+> 关键设计：验签按签名记录对应证书的**公钥算法**自动路由——历史 RSA 签名记录仍走 SHA256withRSA，新 SM2 记录走 SM3withSM2，老数据不失效（已实测）。
+
+### 6.2 端到端验证结果（2026-10-27，真实进程联调）
+
+| 环节 | 结果 | 凭证 |
+|---|---|---|
+| HIS 生成 SM2 密钥对 | 通过 | `EC` + sm2p256v1（BC provider），私钥主口令加密落库 |
+| HIS → csssl 公钥签发（SM2） | 通过 | csssl 侧证书 id=5，`algorithm=SM2`，serial=`29a67d979502c6c621e84413ac3d4a5b`，issuer=`CSSSL SubCA - Server Signing` |
+| HIS 证书落库 | 通过 | CERT202610270003：`key_algo=SM2 / sign_algo=SM3withSM2 / digest_algo=SM3`，status=active |
+| 病历签名 | 通过 | SIG20261027000003（bizNo=MR202609141211260002，chainNo=3，签名人 admin） |
+| **验签** | **通过** | `signatureValid=true, contentMatched=true`，结论「验签通过：签名值有效，且内容自签名后未发生变更」 |
+| 历史 RSA 记录兼容 | 通过 | SIG20261027000001/000002（SHA256withRSA）验签 `signatureValid=true, contentMatched=true`（算法路由） |
+| csssl 吊销一致性 | 通过 | 误签/遗留 RSA 证书（csssl id=3、4）已吊销，HIS 侧对应行 cert_status=2 |
+
+### 6.3 信任链现状与可选增强
+
+- 现状：csssl 根/SUB_CA 仍为 RSA2048；医生主体证书为 SM2（证书自身签名算法跟随 SUB_CA 私钥，即 SHA256withRSA 签 SM2 主体，PKIX 合法）。**医生侧密钥/签名/摘要已全部国密**，满足 WS/T 847 对签名算法的强制要求。
+- 可选：整链国密化需重置 csssl（`SSL_ROOT_ALGORITHM=SM2` + 清空 ssl_ca 库与 store-dir 重新初始化根与二级 CA），HIS 需重新信任新根；影响面大，当前不必要（标准约束的是签名算法而非 CA 证书算法）。
+
+### 6.4 配置说明
+
+```yaml
+his:
+  sign:
+    key-algorithm: ${HIS_SIGN_KEY_ALGO:SM2}   # SM2-国密（默认）/ RSA2048-兼容既有链路
+```
+
+> 切换回 RSA：设 `HIS_SIGN_KEY_ALGO=RSA2048` 重启；已签发的 SM2 证书与历史签名记录不受影响（各自按行内算法工作）。

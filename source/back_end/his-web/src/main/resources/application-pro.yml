@@ -29,6 +29,8 @@ his:
     master-secret: ${HIS_SIGN_SECRET:}
     # 证书签发模式：internal-院内自签 / external-外部CA（csssl）
     ca-mode: ${HIS_SIGN_CA_MODE:internal}
+    # 新签发证书的密钥算法：SM2（国密）或 RSA2048
+    key-algorithm: ${HIS_SIGN_KEY_ALGO:SM2}
     # 外部CA（csssl）对接：地址/服务账号，生产经环境变量注入
     ca-base-url: ${HIS_SIGN_CA_BASE_URL:}
     ca-username: ${HIS_SIGN_CA_USERNAME:}

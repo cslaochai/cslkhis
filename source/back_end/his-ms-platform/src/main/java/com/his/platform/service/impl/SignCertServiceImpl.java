@@ -133,7 +133,8 @@ public class SignCertServiceImpl extends ServiceImpl<SysSignCertMapper, SysSignC
             return issueViaExternalCa(empId, empName, deptId, deptName, validDays, mode);
         }
 
-        KeyPairFactory.KeyPairPem pair = KeyPairFactory.generate();
+        KeyPairFactory.KeyPairPem pair = KeyPairFactory.generate(signProperties.getKeyAlgorithm());
+        String keyAlgo = signProperties.getKeyAlgorithm();
         String salt = keyProtectorUtil.newSalt();
         String protectedKey = keyProtectorUtil.protect(pair.privatePem(), salt, signProperties.getIterations());
 
@@ -147,9 +148,9 @@ public class SignCertServiceImpl extends ServiceImpl<SysSignCertMapper, SysSignC
             cert.setEmpName(empName);
             cert.setDeptId(deptId);
             cert.setDeptName(deptName);
-            cert.setKeyAlgo("RSA" + KeyPairFactory.KEY_SIZE);
-            cert.setDigestAlgo(SignCryptoUtil.DIGEST_ALGO);
-            cert.setSignAlgo(SignCryptoUtil.SIGN_ALGO);
+            cert.setKeyAlgo(keyAlgo);
+            cert.setDigestAlgo(SignCryptoUtil.digestAlgoFor(keyAlgo));
+            cert.setSignAlgo(SignCryptoUtil.signAlgoFor(keyAlgo));
             cert.setPublicKey(pair.publicPem());
             cert.setKeyFingerprint(SignCryptoUtil.fingerprint(pair.publicPem()));
             cert.setProtectedPrivateKey(protectedKey);
@@ -163,8 +164,8 @@ public class SignCertServiceImpl extends ServiceImpl<SysSignCertMapper, SysSignC
             cert.setRemark(remark);
             try {
                 sysSignCertMapper.insert(cert);
-                log.info("签发签名证书 certNo={} empId={} 有效期至={} 方式={}",
-                        cert.getCertNo(), empId, to, mode.getLabel());
+                log.info("签发签名证书 certNo={} empId={} 算法={} 有效期至={} 方式={}",
+                        cert.getCertNo(), empId, keyAlgo, to, mode.getLabel());
                 return cert;
             } catch (DuplicateKeyException e) {
                 if (attempt == 3) {
@@ -188,7 +189,8 @@ public class SignCertServiceImpl extends ServiceImpl<SysSignCertMapper, SysSignC
      */
     private SysSignCert issueViaExternalCa(Long empId, String empName, Long deptId, String deptName,
                                            int validDays, CertIssuedModeEnum mode) {
-        KeyPairFactory.KeyPairPem pair = KeyPairFactory.generate();
+        KeyPairFactory.KeyPairPem pair = KeyPairFactory.generate(signProperties.getKeyAlgorithm());
+        String keyAlgo = signProperties.getKeyAlgorithm();
         StringBuilder dn = new StringBuilder("CN=").append(TextUtil.hasText(empName) ? empName : "unknown")
                 .append(", O=长沙市麓康医院");
         if (TextUtil.hasText(deptName)) {
@@ -213,9 +215,9 @@ public class SignCertServiceImpl extends ServiceImpl<SysSignCertMapper, SysSignC
             cert.setEmpName(empName);
             cert.setDeptId(deptId);
             cert.setDeptName(deptName);
-            cert.setKeyAlgo("RSA" + KeyPairFactory.KEY_SIZE);
-            cert.setDigestAlgo(SignCryptoUtil.DIGEST_ALGO);
-            cert.setSignAlgo(SignCryptoUtil.SIGN_ALGO);
+            cert.setKeyAlgo(keyAlgo);
+            cert.setDigestAlgo(SignCryptoUtil.digestAlgoFor(keyAlgo));
+            cert.setSignAlgo(SignCryptoUtil.signAlgoFor(keyAlgo));
             cert.setPublicKey(pair.publicPem());
             cert.setKeyFingerprint(SignCryptoUtil.fingerprint(pair.publicPem()));
             cert.setProtectedPrivateKey(protectedKey);
@@ -232,8 +234,8 @@ public class SignCertServiceImpl extends ServiceImpl<SysSignCertMapper, SysSignC
             cert.setRemark("CSSSL院内CA公钥签发（私钥本地托管、证书由CA签发）");
             try {
                 sysSignCertMapper.insert(cert);
-                log.info("签发签名证书 certNo={} empId={} caSerial={} 有效期至={}",
-                        cert.getCertNo(), empId, issued.caSerial(), to);
+                log.info("签发签名证书 certNo={} empId={} 算法={} caSerial={} 有效期至={}",
+                        cert.getCertNo(), empId, keyAlgo, issued.caSerial(), to);
                 return cert;
             } catch (DuplicateKeyException e) {
                 if (attempt == 3) {

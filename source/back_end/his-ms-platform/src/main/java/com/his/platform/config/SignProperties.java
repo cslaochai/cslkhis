@@ -66,6 +66,12 @@ public class SignProperties {
     private int caTimeoutMs = 5000;
 
     /**
+     * 新签发证书的密钥算法：RSA2048（默认，兼容既有链路）或 SM2（国密，对齐 WS/T 847 医学电子签名要求）。
+     * 影响密钥生成、签名算法（SHA256withRSA / SM3withSM2）与指纹摘要；历史证书按各自行内算法继续工作。
+     */
+    private String keyAlgorithm = "RSA2048";
+
+    /**
      * 概要：拿最终生效的口令（配置项为空时读环境变量）
      */
     public String effectiveSecret() {

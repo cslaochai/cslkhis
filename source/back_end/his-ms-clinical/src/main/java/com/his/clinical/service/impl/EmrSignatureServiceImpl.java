@@ -164,8 +164,8 @@ public class EmrSignatureServiceImpl extends ServiceImpl<BizEmrSignatureMapper, 
         e.setSignerTitle(cmd.getSignerTitle());
         e.setCertId(cert.getId());
         e.setCertNo(cert.getCertNo());
-        e.setDigestAlgo(signCertFacadeService.digestAlgo());
-        e.setSignAlgo(signCertFacadeService.signAlgo());
+        e.setDigestAlgo(cert.getDigestAlgo());
+        e.setSignAlgo(cert.getSignAlgo());
         e.setContentDigest(digest);
         e.setSignValue(signValue);
         e.setContentSnapshot(content);

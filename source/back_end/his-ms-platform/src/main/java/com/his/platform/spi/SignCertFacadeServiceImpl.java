@@ -50,23 +50,22 @@ public class SignCertFacadeServiceImpl implements SignCertFacadeService {
     @Override
     public SignCertBriefVO ensureActiveCert(Long empId, String empName, Long deptId, String deptName) {
         SysSignCert cert = signCertService.ensureActiveCert(empId, empName, deptId, deptName);
-        SignCertBriefVO brief = new SignCertBriefVO();
-        brief.setId(cert.getId());
-        brief.setCertNo(cert.getCertNo());
-        brief.setPublicKey(cert.getPublicKey());
-        return brief;
+        return briefOf(cert);
     }
 
     @Override
     public SignCertBriefVO getCertById(Long certId) {
         SysSignCert cert = certId == null ? null : sysSignCertMapper.selectById(certId);
-        if (cert == null) {
-            return null;
-        }
+        return cert == null ? null : briefOf(cert);
+    }
+
+    private SignCertBriefVO briefOf(SysSignCert cert) {
         SignCertBriefVO brief = new SignCertBriefVO();
         brief.setId(cert.getId());
         brief.setCertNo(cert.getCertNo());
         brief.setPublicKey(cert.getPublicKey());
+        brief.setDigestAlgo(cert.getDigestAlgo());
+        brief.setSignAlgo(cert.getSignAlgo());
         return brief;
     }
 
@@ -124,12 +123,13 @@ public class SignCertFacadeServiceImpl implements SignCertFacadeService {
 
     @Override
     public String digestAlgo() {
-        return SignCryptoUtil.DIGEST_ALGO;
+        // 当前配置算法的摘要（新证书落库口径；签名记录行按各自证书行内算法留痕）
+        return SignCryptoUtil.digestAlgoFor(signProperties.getKeyAlgorithm());
     }
 
     @Override
     public String signAlgo() {
-        return SignCryptoUtil.SIGN_ALGO;
+        return SignCryptoUtil.signAlgoFor(signProperties.getKeyAlgorithm());
     }
 
     // ---------- 证书台账运维 ----------

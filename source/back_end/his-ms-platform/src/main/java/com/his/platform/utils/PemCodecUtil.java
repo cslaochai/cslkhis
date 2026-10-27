@@ -9,15 +9,35 @@ import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.X509EncodedKeySpec;
 import java.util.Base64;
 
+import org.bouncycastle.asn1.pkcs.PrivateKeyInfo;
+import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo;
+
 /**
- * PEM 编解码。只支持 JDK 原生生成的两种格式：
+ * PEM 编解码。支持 RSA（JDK）与 SM2/EC（BC provider，识别 sm2p256v1 国密曲线 OID）。
+ * 按 SPKI / PKCS#8 里的算法 OID 选择解析通道：RSA 走 JDK，EC（含 SM2）走 BC。
  */
 public final class PemCodecUtil {
+
+    static {
+        // SM2/EC 解析依赖 BC provider（sm2p256v1 命名曲线不在 JDK SunEC 注册表）；
+        // 幂等注册，防止与 hutool 等其它组件的注册冲突
+        if (java.security.Security.getProvider("BC") == null) {
+            java.security.Security.addProvider(new org.bouncycastle.jce.provider.BouncyCastleProvider());
+        }
+    }
 
     private static final String PUBLIC_HEADER = "-----BEGIN PUBLIC KEY-----";
     private static final String PUBLIC_FOOTER = "-----END PUBLIC KEY-----";
     private static final String PRIVATE_HEADER = "-----BEGIN PRIVATE KEY-----";
     private static final String PRIVATE_FOOTER = "-----END PRIVATE KEY-----";
+
+    /** RSA 算法 OID（1.2.840.113549.1.1.1） */
+    private static final String OID_RSA = "1.2.840.113549.1.1.1";
+    /** EC 算法 OID（1.2.840.10045.2.1），SM2 推荐曲线（1.2.156.10197.1.301）是其曲线参数 */
+    private static final String OID_EC = "1.2.840.10045.2.1";
+
+    private PemCodecUtil() {
+    }
 
     public static String toPem(PublicKey key) {
         return wrap(PUBLIC_HEADER, PUBLIC_FOOTER, key.getEncoded());
@@ -30,7 +50,18 @@ public final class PemCodecUtil {
     public static PublicKey parsePublicKey(String pem) {
         try {
             byte[] der = unwrap(pem);
-            return KeyFactory.getInstance("RSA").generatePublic(new X509EncodedKeySpec(der));
+            SubjectPublicKeyInfo spki = SubjectPublicKeyInfo.getInstance(der);
+            String oid = spki.getAlgorithm().getAlgorithm().getId();
+            if (OID_RSA.equals(oid)) {
+                return KeyFactory.getInstance("RSA").generatePublic(new X509EncodedKeySpec(der));
+            }
+            if (OID_EC.equals(oid)) {
+                // SM2 曲线 OID 不在 JDK SunEC 注册表，必须走 BC（bcprov 已含 sm2p256v1 命名曲线）
+                return KeyFactory.getInstance("EC", "BC").generatePublic(new X509EncodedKeySpec(der));
+            }
+            throw new IllegalArgumentException("公钥 PEM 解析失败：不支持的算法 OID " + oid + "（仅支持 RSA / SM2）");
+        } catch (IllegalArgumentException e) {
+            throw e;
         } catch (Exception e) {
             throw new IllegalArgumentException("公钥 PEM 解析失败：" + e.getMessage(), e);
         }
@@ -39,10 +70,25 @@ public final class PemCodecUtil {
     public static PrivateKey parsePrivateKey(String pem) {
         try {
             byte[] der = unwrap(pem);
-            return KeyFactory.getInstance("RSA").generatePrivate(new PKCS8EncodedKeySpec(der));
+            PrivateKeyInfo pki = PrivateKeyInfo.getInstance(der);
+            String oid = pki.getPrivateKeyAlgorithm().getAlgorithm().getId();
+            if (OID_RSA.equals(oid)) {
+                return KeyFactory.getInstance("RSA").generatePrivate(new PKCS8EncodedKeySpec(der));
+            }
+            if (OID_EC.equals(oid)) {
+                return KeyFactory.getInstance("EC", "BC").generatePrivate(new PKCS8EncodedKeySpec(der));
+            }
+            throw new IllegalArgumentException("私钥 PEM 解析失败：不支持的算法 OID " + oid + "（仅支持 RSA / SM2）");
+        } catch (IllegalArgumentException e) {
+            throw e;
         } catch (Exception e) {
             throw new IllegalArgumentException("私钥 PEM 解析失败：" + e.getMessage(), e);
         }
+    }
+
+    /** 由密钥对象推断算法标识：EC（含 SM2）→ "EC"，RSA → "RSA" */
+    public static String keyAlgorithm(java.security.Key key) {
+        return key == null ? null : key.getAlgorithm();
     }
 
     private static String wrap(String header, String footer, byte[] der) {

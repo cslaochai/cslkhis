@@ -25,4 +25,14 @@ public class SignCertBriefVO {
      * 公钥（PEM），验签用
      */
     private String publicKey;
+
+    /**
+     * 证书摘要算法（SHA256 / SM3），签名记录按证书实际算法留痕
+     */
+    private String digestAlgo;
+
+    /**
+     * 证书签名算法（SHA256withRSA / SM3withSM2），签名记录按证书实际算法留痕
+     */
+    private String signAlgo;
 }
