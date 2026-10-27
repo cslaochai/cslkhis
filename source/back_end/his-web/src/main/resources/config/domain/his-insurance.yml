@@ -8,6 +8,16 @@ his:
     channel:
       connect-timeout-ms: 5000
       read-timeout-ms: 15000
+    # 报文国密（SM2 签名 + SM4 加密 + csssl 证书链）：院内段 SM4 密钥与前置机 mip.crypto.sm4-key-his 一致；
+    # 生产用环境变量 HIS_INS_SM4_KEY / HIS_INS_CRYPTO_ENABLED 覆盖
+    crypto:
+      enabled: ${HIS_INS_CRYPTO_ENABLED:true}
+      sm4-key: ${HIS_INS_SM4_KEY:d4ed4bcc79219747db32bd6fbcd97fe8}
+      private-key: classpath:crypto/hisins-private.pem
+      cert-chain: classpath:crypto/hisins-cert.pem
+      root-ca: classpath:crypto/root-ca.pem
+      sub-ca: classpath:crypto/sub-ca.pem
+      clock-skew-seconds: 300
     compliance:
       # 总开关。false 时审核接口直接报错拒绝，不会给出误导性的「全部通过」
       enabled: true

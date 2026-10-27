@@ -41,6 +41,12 @@
             <groupId>com.github.librepdf</groupId>
             <artifactId>openpdf</artifactId>
         </dependency>
+        <!-- ===== 医保链路国密（SM2 签名 + SM4 加密 + csssl 证书链校验） ===== -->
+        <dependency>
+            <groupId>org.bouncycastle</groupId>
+            <artifactId>bcprov-jdk18on</artifactId>
+            <version>1.78.1</version>
+        </dependency>
     </dependencies>
 
     <build>

@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.his.charge.config.InsuranceProperties;
 import com.his.charge.service.InsuranceChannelService;
+import com.his.charge.support.InsuranceMessageCrypto;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.TextUtil;
 import lombok.extern.slf4j.Slf4j;
@@ -22,11 +23,14 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 医保前置机出口（HTTP 实现）：把 2304/2305 报文通过 HTTP 发到独立的医保结算经办平台（back_end_mss，
- * 默认 http://localhost:8090/mss），并按账期拉取平台侧“对方账”。
+ * 医保前置系统出口（HTTP 实现）：HIS → csmip前置(8091/mip) → csmis医保局端(8090/mss)。
+ *
+ * <p>报文安全（his.insurance.crypto.enabled=true）：HIS 用 csssl 签发的服务证书（SM2）对报文签名，
+ * SM4 加密后发前置；前置回执同样验签解密后再解析业务字段。密钥与前置机 mip.crypto.sm4-key-his 一致，
+ * 院内段密钥不出前置机。
  *
  * <p>与本地 mock 实现二选一，由配置 {@code his.insurance.channel.mode=remote} 激活。
- * 平台对端契约见 back_end_mss 的 GatewayController（/gateway/2304、/gateway/2305、/gateway/dayBill）。
+ * 上游契约见 csmip 的 GatewayController（/gateway/{msgType}），csmip 透传到 csmis。
  */
 @Slf4j
 @Service
@@ -41,6 +45,7 @@ public class RemoteInsuranceChannelServiceImpl implements InsuranceChannelServic
     private final ObjectMapper objectMapper;
     private final RestClient restClient;
     private final InsuranceProperties properties;
+    private volatile InsuranceMessageCrypto crypto;
 
     public RemoteInsuranceChannelServiceImpl(
             ObjectMapper objectMapper,
@@ -52,7 +57,38 @@ public class RemoteInsuranceChannelServiceImpl implements InsuranceChannelServic
         factory.setConnectTimeout(channel.getConnectTimeoutMs());
         factory.setReadTimeout(channel.getReadTimeoutMs());
         this.restClient = RestClient.builder().baseUrl(channel.getBaseUrl()).requestFactory(factory).build();
-        log.info("[医保通道] 已启用远程医保结算经办平台 HTTP 通道：{}", channel.getBaseUrl());
+        log.info("[医保通道] 已启用远程医保结算经办平台 HTTP 通道：{}，报文国密：{}",
+                channel.getBaseUrl(),
+                properties.getCrypto().isEnabled() ? "SM2签名+SM4加密（csssl证书）" : "明文（开发期）");
+    }
+
+    private InsuranceMessageCrypto crypto() {
+        if (crypto == null) {
+            synchronized (this) {
+                if (crypto == null) {
+                    crypto = new InsuranceMessageCrypto(properties.getCrypto());
+                    log.info("[医保通道] 报文安全通道就绪（SM4 会话密钥/证书链已加载），时间窗 {}s",
+                            properties.getCrypto().getClockSkewSeconds());
+                }
+            }
+        }
+        return crypto;
+    }
+
+    /** 国密开启时发出安全信封；关闭时原样发业务 JSON */
+    private String sendBody(String businessJson) {
+        if (properties.getCrypto().isEnabled()) {
+            return crypto().buildEnvelope(businessJson);
+        }
+        return businessJson;
+    }
+
+    /** 国密开启时解安全信封；关闭时原样返回 */
+    private String receiveBody(String rawResponse) {
+        if (properties.getCrypto().isEnabled()) {
+            return crypto().unpackEnvelope(rawResponse);
+        }
+        return rawResponse;
     }
 
     @Override
@@ -65,7 +101,7 @@ public class RemoteInsuranceChannelServiceImpl implements InsuranceChannelServic
                     .uri(path)
                     .contentType(JSON_UTF8)
                     .accept(MediaType.APPLICATION_JSON)
-                    .body(payload)
+                    .body(sendBody(payload))
                     .retrieve()
                     .body(String.class);
         } catch (RestClientException e) {
@@ -74,7 +110,8 @@ public class RemoteInsuranceChannelServiceImpl implements InsuranceChannelServic
             return new Receipt(false, null, null, "医保平台连接失败：" + e.getMessage());
         }
         try {
-            JsonNode data = objectMapper.readTree(response).path("data");
+            String business = receiveBody(response);
+            JsonNode data = objectMapper.readTree(business).path("data");
             int infcode = data.path("infcode").asInt(-1);
             String receiptNo = text(data, "receiptNo");
             String reply = objectMapper.writeValueAsString(data);
@@ -84,6 +121,10 @@ public class RemoteInsuranceChannelServiceImpl implements InsuranceChannelServic
             String errMsg = text(data, "errMsg");
             return new Receipt(false, receiptNo, reply,
                     TextUtil.hasText(errMsg) ? errMsg : "医保平台返回失败（infcode=" + infcode + "）");
+        } catch (IllegalStateException e) {
+            log.error("[医保通道] 回执安全校验失败 msgType={} tradeNo={}：{}",
+                    message.getMsgType(), message.getTradeNo(), e.getMessage());
+            return new Receipt(false, null, response, "医保平台回执安全校验失败：" + e.getMessage());
         } catch (Exception e) {
             log.error("[医保通道] 回执解析失败 msgType={} tradeNo={} body={}",
                     message.getMsgType(), message.getTradeNo(), response, e);
@@ -142,7 +183,7 @@ public class RemoteInsuranceChannelServiceImpl implements InsuranceChannelServic
                     .uri("/insure/person/query")
                     .contentType(JSON_UTF8)
                     .accept(MediaType.APPLICATION_JSON)
-                    .body(body)
+                    .body(sendBody(body))
                     .retrieve()
                     .body(String.class);
         } catch (RestClientException e) {
@@ -154,7 +195,8 @@ public class RemoteInsuranceChannelServiceImpl implements InsuranceChannelServic
             return new InsuredStatus(false, false, null, null, "医保平台参保查询请求构造失败：" + e.getMessage());
         }
         try {
-            JsonNode root = objectMapper.readTree(response);
+            String business = receiveBody(response);
+            JsonNode root = objectMapper.readTree(business);
             int code = root.path("code").asInt(-1);
             if (code != 200) {
                 String msg = root.path("message").asText(null);
@@ -185,6 +227,9 @@ public class RemoteInsuranceChannelServiceImpl implements InsuranceChannelServic
             return new InsuredStatus(true, active,
                     text(data, "insuranceType"), text(data, "name"),
                     active ? null : "参保状态为停保（" + (TextUtil.hasText(insuredNo) ? insuredNo : insuranceNo) + "）");
+        } catch (IllegalStateException e) {
+            log.error("[医保通道] 参保查询回执安全校验失败 insuranceNo={} idCard={}：{}", insuranceNo, idCard, e.getMessage());
+            return new InsuredStatus(false, false, null, null, "医保平台回执安全校验失败：" + e.getMessage());
         } catch (Exception e) {
             log.error("[医保通道] 参保查询结果解析失败 insuranceNo={} idCard={} body={}", insuranceNo, idCard, response, e);
             return new InsuredStatus(false, false, null, null, "医保平台参保查询结果解析失败：" + e.getMessage());
@@ -212,7 +257,7 @@ public class RemoteInsuranceChannelServiceImpl implements InsuranceChannelServic
     }
 
     /**
-     * 实时结算（2201/2301 共用）：把 SettleRequest JSON POST 到 mss，解析 {@code data} 段。
+     * 实时结算（2201/2301 共用）：把 SettleRequest JSON 加签加密后 POST 到 mss，解信封后解析 {@code data} 段。
      * 平台连不上/返回非 200 时，返回 infcode=-1 且带 errMsg，由调用方降级为「自费收」。
      */
     private SettleSplit callSettle(String path, SettleRequest request) {
@@ -233,7 +278,7 @@ public class RemoteInsuranceChannelServiceImpl implements InsuranceChannelServic
                     .uri(path)
                     .contentType(JSON_UTF8)
                     .accept(MediaType.APPLICATION_JSON)
-                    .body(body)
+                    .body(sendBody(body))
                     .retrieve()
                     .body(String.class);
             log.info("[医保通道] 调用 {} 响应报文：{}", path, response);
@@ -246,7 +291,8 @@ public class RemoteInsuranceChannelServiceImpl implements InsuranceChannelServic
             return err;
         }
         try {
-            JsonNode root = objectMapper.readTree(response);
+            String business = receiveBody(response);
+            JsonNode root = objectMapper.readTree(business);
             int code = root.path("code").asInt(-1);
             if (code != 200) {
                 String msg = root.path("message").asText("医保平台返回失败");
@@ -273,6 +319,13 @@ public class RemoteInsuranceChannelServiceImpl implements InsuranceChannelServic
             split.setWarnMsg(text(d, "warnMsg"));
             split.setErrMsg(text(d, "errMsg"));
             return split;
+        } catch (IllegalStateException e) {
+            log.error("[医保通道] 实时结算回执安全校验失败 path={} tradeNo={}：{}", path, request.getTradeNo(), e.getMessage());
+            SettleSplit err = new SettleSplit();
+            err.setInfcode(-1);
+            err.setTradeNo(request.getTradeNo());
+            err.setErrMsg("医保平台回执安全校验失败：" + e.getMessage());
+            return err;
         } catch (Exception e) {
             log.error("[医保通道] 实时结算响应解析失败 path={} body={}", path, response, e);
             SettleSplit err = new SettleSplit();
