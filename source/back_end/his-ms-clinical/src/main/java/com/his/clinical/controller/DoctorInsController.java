@@ -21,7 +21,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/inspection")
 @RequiredArgsConstructor
-@PreAuthorize("hasAuthority('opd:doctorWorkstation:list')")
+@PreAuthorize("hasAnyAuthority('opd:doctorWorkstation:list', 'opd:emergencyDoctor:list')")
 public class DoctorInsController {
 
     private final EmrService emrService;
@@ -43,7 +43,7 @@ public class DoctorInsController {
      * 检查开单：挂到本次挂号上，选好项目与检查目的后直接落成申请单。
      * 用于医生工作站检查开单弹框确认时提交，不等病历保存。
      */
-    @PreAuthorize("hasAuthority('opd:doctorWorkstation:add')")
+    @PreAuthorize("hasAnyAuthority('opd:doctorWorkstation:add', 'opd:emergencyDoctor:edit')")
     @Operation(summary = "检查开单（开单即落库）")
     @PostMapping("/applyUpsert")
     public Result<BizInspectionApplyVO> applyUpsert(@Valid @RequestBody InspectionApplyUpsertDTO dto) {
@@ -54,7 +54,7 @@ public class DoctorInsController {
      * 撤销检查申请单：钱没交、医技那边也没留下执行记录时才允许删。
      * 用于医生工作站本次就诊的检查列表行删除，开错项目时收回。
      */
-    @PreAuthorize("hasAuthority('opd:doctorWorkstation:delete')")
+    @PreAuthorize("hasAnyAuthority('opd:doctorWorkstation:delete', 'opd:emergencyDoctor:edit')")
     @Operation(summary = "删除检查申请单（仅未缴费且无执行记录）")
     @DeleteMapping("/deleteById")
     public Result<Void> deleteById(@RequestParam Long id) {

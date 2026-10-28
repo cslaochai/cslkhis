@@ -25,7 +25,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/medicaltech/laboratory")
 // G5：类级兜底（方法级已有注解的保持不变）。
-@PreAuthorize("hasAnyAuthority('opd:doctorWorkstation:list', 'medtech:laboratoryWorkstation:list')")
+@PreAuthorize("hasAnyAuthority('opd:doctorWorkstation:list', 'medtech:laboratoryWorkstation:list', 'opd:emergencyDoctor:list')")
 @RequiredArgsConstructor
 public class BizLaboratoryController {
 
@@ -58,7 +58,7 @@ public class BizLaboratoryController {
     // 临床侧走 emr:records:list，技师侧走 medtech:laboratoryWorkstation:list。
     @Operation(summary = "根据ID获取检验记录详情（含结果明细与报告）")
     @GetMapping("/getDetailById")
-    @PreAuthorize("hasAnyAuthority('opd:doctorWorkstation:list', 'medtech:laboratoryWorkstation:list')")
+    @PreAuthorize("hasAnyAuthority('opd:doctorWorkstation:list', 'medtech:laboratoryWorkstation:list', 'opd:emergencyDoctor:list')")
     public Result<LaboratoryDetailVO> getLaboratoryDetail(@RequestParam Long recordId) {
         return Result.success(medicalTechService.getLaboratoryDetail(recordId));
     }

@@ -25,7 +25,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/pharmacy")
 @RequiredArgsConstructor
-@PreAuthorize("hasAnyAuthority('opd:doctorWorkstation:list', 'pharmacy:stock:list', 'asset:supplies:list')")
+@PreAuthorize("hasAnyAuthority('opd:doctorWorkstation:list', 'pharmacy:stock:list', 'asset:supplies:list', 'opd:emergencyDoctor:list')")
 public class PharmacyController {
 
     private final PharmacyService pharmacyService;

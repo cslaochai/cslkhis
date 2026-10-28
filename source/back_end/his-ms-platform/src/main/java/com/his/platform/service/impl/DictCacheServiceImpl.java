@@ -12,7 +12,6 @@ import com.his.spi.vo.DictItemVO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
-import org.springframework.boot.CommandLineRunner;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
@@ -27,7 +26,7 @@ import java.util.concurrent.TimeUnit;
 @Service
 @RequiredArgsConstructor
 public class DictCacheServiceImpl extends ServiceImpl<SysDictDataMapper, SysDictData>
-        implements CommandLineRunner, DictCacheService, com.his.spi.service.DictCacheService {
+        implements DictCacheService, com.his.spi.service.DictCacheService {
 
     private static final String DICT_CACHE_PREFIX = "sys:dict:";
 
@@ -40,16 +39,7 @@ public class DictCacheServiceImpl extends ServiceImpl<SysDictDataMapper, SysDict
     private final ObjectMapper objectMapper;
 
     /**
-     * 系统启动时加载所有字典数据到Redis
-     */
-    @Override
-    public void run(String... args) {
-        log.info("开始加载数据字典到Redis缓存...");
-        refreshAllDictCache();
-    }
-
-    /**
-     * 刷新所有字典缓存
+     * 刷新所有字典缓存（懒加载模式：不再于启动时全量预热，仅保留手动触发入口）。
      */
     public void refreshAllDictCache() {
         try {

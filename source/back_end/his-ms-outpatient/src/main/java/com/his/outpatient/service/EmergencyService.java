@@ -130,4 +130,10 @@ public interface EmergencyService extends IService<Emergency> {
      * @return 本次实际发出的待办条数
      */
     int escalateReeval();
+
+    /**
+     * 医生站一键设置绿色通道（胸痛中心/卒中中心/创伤中心/无）。
+     * 已结束（emergencyStatus>=4）的急诊不允许再变更。
+     */
+    void updateGreenChannel(EmergencyGreenChannelDTO dto);
 }

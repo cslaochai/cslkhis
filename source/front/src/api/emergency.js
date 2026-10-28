@@ -75,3 +75,8 @@ export function reevaluateEmergency(data) {
 export function getEmergencyReevalList(emergencyId) {
   return request.get('/emergency/reevalList', { params: { emergencyId } })
 }
+
+/** 医生站一键设置绿色通道（胸痛中心/卒中中心/创伤中心/无） */
+export function updateEmergencyGreenChannel(data) {
+  return request.post('/emergency/updateGreenChannel', data)
+}

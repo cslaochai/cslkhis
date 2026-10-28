@@ -31,7 +31,7 @@ public class EmergencyController {
 
     @Operation(summary = "分页查询急诊记录（出参含候诊时长/超时档位/派单方式）")
     @PostMapping("/list")
-    @PreAuthorize("hasAuthority('opd:emergency:list')")
+    @PreAuthorize("hasAnyAuthority('opd:emergency:list', 'opd:emergencyDoctor:list')")
     public Result<PageResult<BizEmergencyVO>> list(@Valid @RequestBody EmergencyQueryDTO queryDTO) {
         return Result.success(emergencyService.listPage(queryDTO));
     }
@@ -50,6 +50,14 @@ public class EmergencyController {
     public Result<Void> updateStatus(@RequestBody @Valid EmergencyStatusUpsertDTO statusDTO) {
         boolean success = emergencyService.updateStatus(statusDTO);
         return success ? Result.success("更新成功", null) : Result.error("更新失败");
+    }
+
+    @PreAuthorize("hasAnyAuthority('opd:emergency:edit','opd:emergencyDoctor:edit')")
+    @Operation(summary = "医生站一键设置绿色通道（胸痛中心/卒中中心/创伤中心/无）")
+    @PostMapping("/updateGreenChannel")
+    public Result<Void> updateGreenChannel(@RequestBody @Valid EmergencyGreenChannelDTO dto) {
+        emergencyService.updateGreenChannel(dto);
+        return Result.success("绿色通道已更新", null);
     }
 
     @PreAuthorize("hasAnyAuthority('opd:emergency:edit','opd:emergencyDoctor:edit')")
@@ -106,7 +114,7 @@ public class EmergencyController {
 
     @Operation(summary = "待交班清单（本科室未闭环中「无人指派」+「挂我名下」的行，交班弹框数据源）")
     @GetMapping("/handoverPendingList")
-    @PreAuthorize("hasAuthority('opd:emergency:list')")
+    @PreAuthorize("hasAnyAuthority('opd:emergency:list', 'opd:emergencyDoctor:list')")
     public Result<List<EmergencyHandoverPendingVO>> handoverPendingList(@RequestParam(required = false) Long deptId) {
         return Result.success(emergencyService.handoverPendingList(deptId));
     }
@@ -169,7 +177,7 @@ public class EmergencyController {
      */
     @Operation(summary = "复评流水（这个人的级别为什么改过，在这里查）")
     @GetMapping("/reevalList")
-    @PreAuthorize("hasAuthority('opd:emergency:list')")
+    @PreAuthorize("hasAnyAuthority('opd:emergency:list', 'opd:emergencyDoctor:list')")
     public Result<List<EmergencyReevalVO>> reevalList(@RequestParam Long emergencyId) {
         return Result.success(emergencyService.reevalList(emergencyId));
     }

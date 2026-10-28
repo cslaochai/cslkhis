@@ -21,7 +21,7 @@ import org.springframework.web.bind.annotation.*;
  */
 @Tag(name = "患者管理")
 @RestController
-@PreAuthorize("hasAnyAuthority('opd:appointments:list', 'opd:doctorWorkstation:list', 'patient:list', 'opd:triage:list', 'opd:emergency:list', 'patient:empi:list', 'patient:profile:list', 'ipd:inpatient:list')")
+@PreAuthorize("hasAnyAuthority('opd:appointments:list', 'opd:doctorWorkstation:list', 'patient:list', 'opd:triage:list', 'opd:emergency:list', 'opd:emergencyDoctor:list', 'patient:empi:list', 'patient:profile:list', 'ipd:inpatient:list')")
 @RequestMapping("/patient")
 @RequiredArgsConstructor
 public class PatientController {

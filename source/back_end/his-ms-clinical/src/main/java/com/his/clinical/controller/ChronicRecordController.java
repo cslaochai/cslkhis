@@ -23,7 +23,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/chronic")
 @RequiredArgsConstructor
-@PreAuthorize("hasAuthority('opd:chronicRecord:list')")
+@PreAuthorize("hasAnyAuthority('opd:chronicRecord:list', 'opd:emergencyDoctor:list')")
 public class ChronicRecordController {
 
     private final ChronicRecordService chronicRecordService;

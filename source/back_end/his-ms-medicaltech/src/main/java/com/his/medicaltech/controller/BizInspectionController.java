@@ -24,7 +24,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/medicaltech/inspection")
 // G5：类级兜底（方法级已有注解的保持不变）。
-@PreAuthorize("hasAnyAuthority('opd:doctorWorkstation:list', 'medtech:inspectionWorkstation:list')")
+@PreAuthorize("hasAnyAuthority('opd:doctorWorkstation:list', 'medtech:inspectionWorkstation:list', 'opd:emergencyDoctor:list')")
 @RequiredArgsConstructor
 public class BizInspectionController {
 
@@ -59,7 +59,7 @@ public class BizInspectionController {
     // 所以用 hasAnyAuthority 而不是只判医生那个码（只判医生码会把技师站打 403）。
     @Operation(summary = "根据ID获取检查记录详情（含报告）")
     @GetMapping("/getDetailById")
-    @PreAuthorize("hasAnyAuthority('opd:doctorWorkstation:list', 'medtech:inspectionWorkstation:list')")
+    @PreAuthorize("hasAnyAuthority('opd:doctorWorkstation:list', 'medtech:inspectionWorkstation:list', 'opd:emergencyDoctor:list')")
     public Result<InspectionDetailVO> getInspectionDetail(@RequestParam Long recordId) {
         return Result.success(medicalTechService.getInspectionDetail(recordId));
     }

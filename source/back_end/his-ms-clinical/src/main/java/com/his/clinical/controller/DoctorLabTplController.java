@@ -20,7 +20,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/doctor/laboratory/template")
 @RequiredArgsConstructor
-@PreAuthorize("hasAuthority('opd:doctorWorkstation:list')")
+@PreAuthorize("hasAnyAuthority('opd:doctorWorkstation:list', 'opd:emergencyDoctor:list')")
 public class DoctorLabTplController {
 
     private final InspectionTemplService inspectionTemplService;

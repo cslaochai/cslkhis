@@ -30,7 +30,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/prescription")
 @RequiredArgsConstructor
-@PreAuthorize("hasAnyAuthority('opd:doctorWorkstation:list', 'pharmacy:prescriptionAudit:list')")
+@PreAuthorize("hasAnyAuthority('opd:doctorWorkstation:list', 'pharmacy:prescriptionAudit:list', 'opd:emergencyDoctor:list')")
 public class PrescriptionController {
 
     private final PrescriptionService prescriptionService;

@@ -91,6 +91,14 @@
             <div class="font-mono text-slate-400">{{ row.patientNo }}</div>
           </template>
         </el-table-column>
+        <el-table-column align="center" label="排队号" width="100">
+          <template #default="{ row }">
+            <span v-if="row.queueNo" class="rounded bg-blue-50 px-1.5 py-0.5 font-mono text-blue-700">{{
+                shortQueueNo(row.queueNo)
+              }}</span>
+            <span v-else class="text-slate-300">未签到</span>
+          </template>
+        </el-table-column>
         <el-table-column label="科室" prop="deptName" show-overflow-tooltip width="120"/>
         <el-table-column label="接诊医生" prop="doctorName" show-overflow-tooltip width="130"/>
         <el-table-column align="center" label="号别" width="86">
@@ -119,14 +127,7 @@
         <el-table-column align="center" label="就诊日期" width="104">
           <template #default="{ row }"><span class="text-slate-600">{{ row.visitDate || '-' }}</span></template>
         </el-table-column>
-        <el-table-column align="center" label="排队号" width="84">
-          <template #default="{ row }">
-            <span v-if="row.queueNo" class="rounded bg-blue-50 px-1.5 py-0.5 font-mono text-blue-700">{{
-                shortQueueNo(row.queueNo)
-              }}</span>
-            <span v-else class="text-slate-300">未签到</span>
-          </template>
-        </el-table-column>
+
         <el-table-column label="签到到达" width="132">
           <template #default="{ row }"><span class="text-slate-600">{{ fmt(row.arriveTime) }}</span></template>
         </el-table-column>

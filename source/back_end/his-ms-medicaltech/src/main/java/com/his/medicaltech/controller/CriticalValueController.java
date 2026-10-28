@@ -32,6 +32,7 @@ public class CriticalValueController {
      * 用于危急值管理页的查询表格。
      */
     @Operation(summary = "分页查询危急值")
+    @PreAuthorize("hasAnyAuthority('medtech:criticalValue:list', 'opd:emergencyDoctor:list')")
     @PostMapping("/listPage")
     public Result<PageResult<BizCriticalValueVO>> listPage(@Valid @RequestBody CriticalValuePageQueryDTO queryDTO) {
         return Result.success(criticalValueService.listPage(queryDTO));

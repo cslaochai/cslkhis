@@ -21,7 +21,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/laboratory")
 @RequiredArgsConstructor
-@PreAuthorize("hasAuthority('opd:doctorWorkstation:list')")
+@PreAuthorize("hasAnyAuthority('opd:doctorWorkstation:list', 'opd:emergencyDoctor:list')")
 public class DoctorLabController {
 
     private final EmrService emrService;
@@ -40,7 +40,7 @@ public class DoctorLabController {
      * 开立或更新一张检验申请，保存即落库并参与收费。
      * 用于医生工作站「检验申请」子卡的开单提交，不再等病历结诊。
      */
-    @PreAuthorize("hasAuthority('opd:doctorWorkstation:add')")
+    @PreAuthorize("hasAnyAuthority('opd:doctorWorkstation:add', 'opd:emergencyDoctor:edit')")
     @Operation(summary = "检验开单（开单即落库）")
     @PostMapping("/applyUpsert")
     public Result<BizLaboratoryApplyVO> applyUpsert(@Valid @RequestBody LaboratoryApplyUpsertDTO dto) {
@@ -51,7 +51,7 @@ public class DoctorLabController {
      * 作废并删除一张检验申请单。
      * 用于医生工作站「检验申请」子卡行内删除；已缴费或已有执行记录的由服务层拒绝。
      */
-    @PreAuthorize("hasAuthority('opd:doctorWorkstation:delete')")
+    @PreAuthorize("hasAnyAuthority('opd:doctorWorkstation:delete', 'opd:emergencyDoctor:edit')")
     @Operation(summary = "删除检验申请单（仅未缴费且无执行记录）")
     @DeleteMapping("/deleteById")
     public Result<Void> deleteById(@RequestParam Long id) {

@@ -1662,6 +1662,24 @@ public class EmergencyServiceImpl extends ServiceImpl<EmergencyMapper, Emergency
         return sent;
     }
 
+    @Override
+    public void updateGreenChannel(EmergencyGreenChannelDTO dto) {
+        Emergency emergency = this.getById(dto.getId());
+        if (emergency == null) {
+            throw new BusinessException("急诊记录不存在");
+        }
+        deptScopeService.assertDeptAccessible(emergency.getDeptId());
+        int current = emergency.getEmergencyStatus() == null ? 1 : emergency.getEmergencyStatus();
+        if (current >= 4) {
+            throw new BusinessException("该急诊记录已结束（转住院/离院/死亡），不能再变更绿色通道");
+        }
+        String before = emergency.getGreenChannel();
+        emergency.setGreenChannel(dto.getGreenChannel());
+        this.updateById(emergency);
+        log.info("[急诊绿色通道] {} {}：{} -> {}（操作人随 update_by 落库）",
+                emergency.getEmergencyNo(), emergency.getPatientName(), before, dto.getGreenChannel());
+    }
+
     private int escalateReevalOne(Emergency emergency) {
         long waitMinutes = emergency.getAdmissionTime() == null ? 0
                 : Duration.between(emergency.getAdmissionTime(), LocalDateTime.now()).toMinutes();

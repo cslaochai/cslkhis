@@ -24,7 +24,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/emr")
 @RequiredArgsConstructor
-@PreAuthorize("hasAnyAuthority('opd:doctorWorkstation:list', 'emr:medicalRecord:list', 'emr:medicalReview:list', 'opd:todayVisits:list')")
+@PreAuthorize("hasAnyAuthority('opd:doctorWorkstation:list', 'emr:medicalRecord:list', 'emr:medicalReview:list', 'opd:todayVisits:list', 'opd:emergencyDoctor:list')")
 public class EmrController {
 
     private final EmrService emrService;

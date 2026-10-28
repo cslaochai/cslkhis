@@ -99,7 +99,14 @@
         top="6vh"
     >
       <div class="cred-body">
-        <el-table :data="credRows" border size="small">
+        <el-input
+            v-model="credKeyword"
+            class="cred-filter"
+            clearable
+            placeholder="按角色 / 科室 / 姓名 / 账号筛选（模糊匹配）"
+            prefix-icon="Search"
+        />
+        <el-table :data="sortedCredRows" border max-height="62vh" size="small" :span-method="credSpanMethod">
           <el-table-column label="角色" min-width="150" prop="role"/>
           <el-table-column label="科室" min-width="110" prop="dept"/>
           <el-table-column label="账号（姓名）" min-width="220">
@@ -120,7 +127,7 @@
 </template>
 
 <script lang="js" setup>
-import {onMounted, reactive, ref} from 'vue'
+import {computed, onMounted, reactive, ref} from 'vue'
 import {useRouter} from 'vue-router'
 import {ElMessage} from 'element-plus'
 import {CircleCheck, CopyDocument, Lock, User} from '@element-plus/icons-vue'
@@ -234,13 +241,13 @@ const credRows = [
   },
   {
     accounts: ['fengruchu ( 冯如初  )', 'yuanchenxi ( 袁晨曦  )'],
-    role: '收费员收费员',
+    role: '收费员',
     dept: '财务科',
     ability: '窗口收费、退费申请、发票管理、财务日结、费用记账、账单与支付流水查询（全院，可跨科室结账单）、住院结算（收预交金、办出院结算——自费与医保同一入口）'
   },
   {
     accounts: ['hanlei ( 韩蕾  )'],
-    role: '收费员收费员 / 医保结算员',
+    role: '收费员 / 医保结算员',
     dept: '医保科 / 财务科',
     ability: '切「收费员」= 收费全部 + 住院结算；切「医保结算员」加做医保结算清单、慢特病备案、目录对照、政策配置、合规审核、扣款飞检、渠道对账、资金账户、欠费管控、医保住院结算与2304/2305报盘'
   },
@@ -256,6 +263,7 @@ const credRows = [
     dept: '医学检验科',
     ability: '检验工作站、标本管理、检验项目字典、输血管理、危急值处置（限本科室）'
   },
+  {accounts: ['shiruotong ( 石若彤  )'], role: '急诊医生', dept: '急诊内科', ability: ER_ABILITY},
   {accounts: ['chengruotong ( 程若彤  )'], role: '急诊医生', dept: '急诊外科', ability: ER_ABILITY},
   {accounts: ['donghanmei ( 董寒梅  )'], role: '急诊医生', dept: '急诊内科', ability: ER_ABILITY},
   {accounts: ['helicheng ( 何立诚  )'], role: '急诊医生', dept: '急诊儿科', ability: ER_ABILITY},
@@ -318,6 +326,60 @@ const credRows = [
     ability: '患者常见问题维护、工单受理'
   },
 ]
+
+// 凭据关键词筛选（纯前端）：角色 / 科室 / 账号列（含姓名与登录名）模糊匹配，不查后端
+const credKeyword = ref('')
+const filteredCredRows = computed(() => {
+  const kw = credKeyword.value.trim().toLowerCase()
+  if (!kw) {
+    return credRows
+  }
+  return credRows.filter((row) => {
+    const hay = [row.role, row.dept, ...row.accounts].join(' ').toLowerCase()
+    return hay.includes(kw)
+  })
+})
+
+// 按「角色 → 科室」两级分组展示：中文序排序把同角色同科室的行排到相邻，再用 span-method 合并单元格
+const sortedCredRows = computed(() => {
+  const list = filteredCredRows.value.slice()
+  list.sort((a, b) =>
+      a.role.localeCompare(b.role, 'zh-Hans-CN') || a.dept.localeCompare(b.dept, 'zh-Hans-CN'))
+  return list
+})
+
+// 预算好每行角色列 / 科室列的跨行数：同组首行 rowspan=组内行数，后续行 rowspan=0（被合并）
+const credSpans = computed(() => {
+  const list = sortedCredRows.value
+  const roleSpan = []
+  const deptSpan = []
+  for (let i = 0; i < list.length; i++) {
+    if (i > 0 && list[i].role === list[i - 1].role) {
+      roleSpan.push(0)
+    } else {
+      let n = 1
+      while (i + n < list.length && list[i + n].role === list[i].role) n++
+      roleSpan.push(n)
+    }
+    const inSameRole = i > 0 && list[i].role === list[i - 1].role
+    if (inSameRole && list[i].dept === list[i - 1].dept) {
+      deptSpan.push(0)
+    } else {
+      let n = 1
+      while (i + n < list.length && list[i + n].role === list[i].role && list[i + n].dept === list[i].dept) n++
+      deptSpan.push(n)
+    }
+  }
+  return [roleSpan, deptSpan]
+})
+
+const credSpanMethod = ({ columnIndex, rowIndex }) => {
+  const spans = credSpans.value[columnIndex]
+  if (!spans || spans[rowIndex] === undefined) {
+    return { rowspan: 1, colspan: 1 }
+  }
+  return { rowspan: spans[rowIndex], colspan: 1 }
+}
 
 // 列表文案是「账号 ( 姓名 )」，登录只需要账号本身 → 复制时取括号前的部分
 const handleCopyAccount = async (item) => {
@@ -593,9 +655,12 @@ const handleLogin = async () => {
 }
 
 .cred-body {
-  max-height: 68vh;
-  overflow-y: auto;
   padding-right: 4px;
+}
+
+/* 滚动条收进表格体内（el-table max-height + 固定表头），外层不再整体滚动 */
+.cred-filter {
+  margin-bottom: 10px;
 }
 
 .cred-account {
