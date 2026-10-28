@@ -47,8 +47,8 @@ his:
       mock: ${HIS_SMS_MOCK:false}
   security:
     sm2:
-      # 登录口令传输加密 SM2 私钥（64 位十六进制）；不填则每次启动临时生成，重启后前端缓存的公钥失效
-      private-key: ${HIS_SM2_PRIVATE_KEY:}
+      # 登录口令传输加密 SM2 私钥（64 位十六进制）：写死固定值，重启不失效（前端缓存公钥不失效）
+      private-key: 4d6bbacc8ed26115af889aa117e43050e1da940f8e6d33a1c22611da6b2f80b8
   followup:
     channel:
       aliyun-vms:
