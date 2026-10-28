@@ -61,8 +61,8 @@ public class SettlementBillController {
     @Operation(summary = "结算出账：把待结算记账行锁成一张账单")
     @PreAuthorize("hasAuthority('finance:bill:edit')")
     @PostMapping("/settle")
-    public Result<BizSettlementBillVO> settle(@Valid @RequestBody BillSettleUpsertDTO dto) {
-        return Result.success(settlementBillService.settleVO(dto));
+    public Result<BizSettlementBillVO> settle(@Valid @RequestBody BillSettleUpsertDTO settleUpsertDTO) {
+        return Result.success(settlementBillService.settleVO(settleUpsertDTO));
     }
 
     /**

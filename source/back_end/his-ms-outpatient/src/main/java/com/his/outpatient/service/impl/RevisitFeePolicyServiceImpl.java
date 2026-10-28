@@ -17,6 +17,9 @@ import com.his.common.exception.BusinessException;
 import com.his.common.util.NumUtil;
 import com.his.common.util.TextUtil;
 import com.his.common.support.PediatricSurchargePolicy;
+import com.his.spi.service.ChargeFacadeService;
+import com.his.spi.vo.PolicyPriceVO;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
@@ -32,7 +35,10 @@ import java.util.stream.Collectors;
  */
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class RevisitFeePolicyServiceImpl extends ServiceImpl<RevisitFeePolicyMapper, RevisitFeePolicy> implements RevisitFeePolicyService {
+
+    private final ChargeFacadeService chargeFacadeService;
 
     @Override
     public RevisitFeeDecision decide(RevisitFeeContext context) {
@@ -58,14 +64,22 @@ public class RevisitFeePolicyServiceImpl extends ServiceImpl<RevisitFeePolicyMap
         decision.setDiagnosisFee(diagnosisFee);
         // 🔑 拆 base + 加收项（湘医保发〔2025〕58号价表结构：主项目 + 加收项子码）：
         //   普通档只出主项门诊诊查费(011102020010000)，副主任/主任/知名专家在主项之上加收对应子码(001/002/003)。
-        //   base = 普通档全额(9)；加收 = 本档加收额(13/22/61)；儿童加收 30% 对两行各自乘，
+        //   base = 普通档全额；加收 = 本档加收额；儿童加收 30% 对两行各自乘，
         //   保证 base + 加收 = 儿童总价（与 decision.diagnosisFee 完全一致，不破坏历史金额口径）。
+        //   🔑 金额权威在价表（sys_charge_policy_price，政策 OPD_CONSULT，价格管理页「政策价」可调），
+        //   实时查价表；价表缺行/停用回退枚举兜底价并留 error 痕——挂号是主流程不能因价表空挂死，
+        //   但必须能从日志发现「价表没配」。
         ClinicDiagnosisTierEnum tier = ClinicDiagnosisTierEnum.ofCode(
                 context == null ? null : context.getDiagnosisTier());
-        BigDecimal baseUnit = new BigDecimal(ClinicDiagnosisTierEnum.GENERAL.getAmount());
-        BigDecimal surchargeUnit = (tier != null && tier != ClinicDiagnosisTierEnum.GENERAL
-                && tier.getSurcharge() != null) ? new BigDecimal(tier.getSurcharge()) : BigDecimal.ZERO;
-        // 主项目恒为普通门诊(011102020010000)=9；加收项=本档加收额(13/22/61)。两行各自乘儿童系数。
+        BigDecimal baseUnit = policyAmountOrFallback(ClinicDiagnosisTierEnum.GENERAL);
+        BigDecimal surchargeUnit = BigDecimal.ZERO;
+        if (tier != null && tier != ClinicDiagnosisTierEnum.GENERAL) {
+            BigDecimal fromPrice = policySurchargeOrFallback(tier);
+            if (fromPrice != null) {
+                surchargeUnit = fromPrice;
+            }
+        }
+        // 主项目恒为普通门诊主项价；加收项=本档加收额。两行各自乘儿童系数。
         // 变量名 mainItemFee 区别于上文 baseFee（号源快照总价，含加收），避免同一方法内重复声明。
         BigDecimal mainItemFee = child ? baseUnit.add(PediatricSurchargePolicy.surchargeOf(baseUnit)) : baseUnit;
         BigDecimal surchargeFee = child
@@ -261,6 +275,34 @@ public class RevisitFeePolicyServiceImpl extends ServiceImpl<RevisitFeePolicyMap
         RevisitFeePolicyVO vo = new RevisitFeePolicyVO();
         BeanUtils.copyProperties(entity, vo);
         return vo;
+    }
+
+    /**
+     * 价表取门诊诊查费档位全额（政策 OPD_CONSULT），缺行/停用回退枚举兜底价并留 error 痕。
+     */
+    private BigDecimal policyAmountOrFallback(ClinicDiagnosisTierEnum tier) {
+        PolicyPriceVO price = chargeFacadeService.policyPrice(
+                ChargeFacadeService.POLICY_OPD_CONSULT, tier.getCode());
+        if (price != null && price.getAmount() != null) {
+            return price.getAmount();
+        }
+        log.error("[门诊诊查费] 价表缺行或停用 policy=OPD_CONSULT tier={}({})，回退枚举兜底价 {} 元，"
+                + "请在价格管理页「政策价」补配置", tier.getCode(), tier.getLabel(), tier.getAmount());
+        return new BigDecimal(tier.getAmount());
+    }
+
+    /**
+     * 价表取门诊诊查费档位加收额，缺行/停用回退枚举兜底加收额并留 error 痕；无加收结构返回 null。
+     */
+    private BigDecimal policySurchargeOrFallback(ClinicDiagnosisTierEnum tier) {
+        PolicyPriceVO price = chargeFacadeService.policyPrice(
+                ChargeFacadeService.POLICY_OPD_CONSULT, tier.getCode());
+        if (price != null) {
+            return price.getSurcharge();
+        }
+        log.error("[门诊诊查费] 价表缺行或停用 policy=OPD_CONSULT tier={}({})，加收额回退枚举兜底 {} 元，"
+                + "请在价格管理页「政策价」补配置", tier.getCode(), tier.getLabel(), tier.getSurcharge());
+        return tier.getSurcharge() == null ? null : new BigDecimal(tier.getSurcharge());
     }
 
 }

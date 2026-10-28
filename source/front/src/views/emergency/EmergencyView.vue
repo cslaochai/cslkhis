@@ -181,7 +181,9 @@
                    @click="openHandover">交班清零
         </el-button>
         <el-button v-perm="'opd:emergency:add'" :icon="Plus" type="danger" @click="handleAdd">急诊登记</el-button>
-        <el-button v-perm="'opd:emergency:add'" :icon="CopyDocument" type="warning" data-testid="emg-btn-batch-add" @click="openBatch">批量登记</el-button>
+        <el-button v-perm="'opd:emergency:add'" :icon="CopyDocument" type="warning" data-testid="emg-btn-batch-add"
+                   @click="openBatch">批量登记
+        </el-button>
       </div>
     </div>
 
@@ -214,7 +216,8 @@
             <!-- 头部：患者 + 急诊号 + 状态 -->
             <div class="flex items-start justify-between gap-2">
               <div class="flex items-center gap-2">
-                <span :class="['inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white', GENDER_DOT[patientAvatarTone(row.gender)]]">
+                <span
+                    :class="['inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white', GENDER_DOT[patientAvatarTone(row.gender)]]">
                   {{ patientGenderSymbol(row.gender) }}
                 </span>
                 <div>
@@ -223,13 +226,15 @@
                   <div class="font-mono text-xs text-slate-400">{{ row.emergencyNo }}</div>
                 </div>
               </div>
-              <span :class="['inline-block rounded px-1.5 py-0.5 text-xs font-bold', statusMap[row.emergencyStatus]?.color || '']">
+              <span
+                  :class="['inline-block rounded px-1.5 py-0.5 text-xs font-bold', statusMap[row.emergencyStatus]?.color || '']">
                 {{ statusMap[row.emergencyStatus]?.label || '未知' }}
               </span>
             </div>
             <!-- 分级 + MEWS + 待复评 + 绿通 -->
             <div class="mt-2 flex flex-wrap items-center gap-1">
-              <span :class="['inline-block rounded border px-1.5 py-0.5 text-xs font-medium', triageLevelMap[row.triageLevel]?.color || '']">
+              <span
+                  :class="['inline-block rounded border px-1.5 py-0.5 text-xs font-medium', triageLevelMap[row.triageLevel]?.color || '']">
                 {{ triageLevelMap[row.triageLevel]?.label }}
               </span>
               <span v-if="row.mewsScore != null" data-testid="emg-mews-badge"
@@ -237,43 +242,63 @@
                              row.mewsScore >= 9 ? 'bg-red-100 text-red-700' : row.mewsScore >= 5 ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-500']">
                 MEWS {{ row.mewsScore }}
               </span>
-              <span v-if="row.reevalDue" data-testid="emg-reeval-badge" class="inline-block rounded border border-orange-300 bg-orange-50 px-1.5 py-0.5 text-xs font-bold text-orange-600">
+              <span v-if="row.reevalDue" data-testid="emg-reeval-badge"
+                    class="inline-block rounded border border-orange-300 bg-orange-50 px-1.5 py-0.5 text-xs font-bold text-orange-600">
                 待复评
               </span>
-              <span v-if="row.greenChannel" class="rounded border border-emerald-200 bg-emerald-50 px-1.5 py-0.5 text-xs font-medium text-emerald-600">
+              <span v-if="row.greenChannel"
+                    class="rounded border border-emerald-200 bg-emerald-50 px-1.5 py-0.5 text-xs font-medium text-emerald-600">
                 {{ row.greenChannel }}
               </span>
             </div>
             <!-- 主诉 -->
-            <div class="mt-2 truncate text-xs text-slate-600" :title="row.chiefComplaint">{{ row.chiefComplaint || '—' }}</div>
+            <div class="mt-2 truncate text-xs text-slate-600" :title="row.chiefComplaint">{{
+                row.chiefComplaint || '—'
+              }}
+            </div>
             <!-- 底部：等候 + 医生 + 操作 -->
             <div class="mt-2 flex items-center justify-between gap-2 border-t border-slate-100 pt-2">
               <div class="text-xs">
-                <span :class="['font-medium', row.overdueLevel === 2 ? 'text-red-600' : row.overdueLevel === 1 ? 'text-red-500' : 'text-slate-500']">
+                <span
+                    :class="['font-medium', row.overdueLevel === 2 ? 'text-red-600' : row.overdueLevel === 1 ? 'text-red-500' : 'text-slate-500']">
                   {{ waitText(row) }}
                 </span>
                 <span v-if="row.doctorName" class="ml-1 text-slate-400">{{ row.doctorName }}</span>
                 <span v-else class="ml-1 text-amber-600">待派单</span>
               </div>
               <div class="flex flex-wrap justify-end gap-1">
-                <el-button v-if="row.emergencyStatus === 1" v-perm="'opd:emergency:reeval'" link size="small" type="warning"
-                           data-testid="emg-btn-reeval" @click="openReeval(row)">复评</el-button>
-                <el-button v-if="row.emergencyStatus === 1" v-perm="'opd:emergency:edit'" link size="small" type="primary"
-                           @click="handleStatusChange(row, 2)">接诊</el-button>
-                <el-button v-if="row.emergencyStatus === 2" v-perm="'opd:emergency:edit'" link size="small" type="warning"
-                           @click="openObs(row)">留观</el-button>
-                <el-button v-if="row.emergencyStatus === 2 || row.emergencyStatus === 3" v-perm="'opd:emergency:edit'" link size="small" type="success"
-                           @click="openAdmit(row)">转住院</el-button>
+                <el-button v-if="row.emergencyStatus === 1" v-perm="'opd:emergency:reeval'" link size="small"
+                           type="warning"
+                           data-testid="emg-btn-reeval" @click="openReeval(row)">复评
+                </el-button>
+                <el-button v-if="row.emergencyStatus === 1" v-perm="'opd:emergency:edit'" link size="small"
+                           type="primary"
+                           @click="handleStatusChange(row, 2)">接诊
+                </el-button>
+                <el-button v-if="row.emergencyStatus === 2" v-perm="'opd:emergency:edit'" link size="small"
+                           type="warning"
+                           @click="openObs(row)">留观
+                </el-button>
+                <el-button v-if="row.emergencyStatus === 2 || row.emergencyStatus === 3" v-perm="'opd:emergency:edit'"
+                           link size="small" type="success"
+                           @click="openAdmit(row)">转住院
+                </el-button>
                 <el-button v-if="row.emergencyStatus <= 3" v-perm="'opd:emergency:edit'" link size="small" type="info"
-                           @click="handleStatusChange(row, 5)">离院</el-button>
+                           @click="handleStatusChange(row, 5)">离院
+                </el-button>
                 <el-button v-if="row.emergencyStatus <= 3" v-perm="'opd:emergency:edit'" link size="small" type="danger"
-                           @click="handleStatusChange(row, 6)">死亡</el-button>
+                           @click="handleStatusChange(row, 6)">死亡
+                </el-button>
                 <el-button link size="small" type="default" data-testid="emg-btn-detail"
-                           @click="toggleExpand(row)">{{ expandedId === row.id ? '收起' : '详情' }}</el-button>
+                           @click="toggleExpand(row)">{{ expandedId === row.id ? '收起' : '详情' }}
+                </el-button>
                 <el-button v-perm="'opd:emergency:edit'" link size="small" type="primary" data-testid="emg-btn-transfer"
-                           @click="openTransfer(row)">转归</el-button>
-                <el-button v-perm="'opd:emergency:edit'" link size="small" type="default" data-testid="emg-btn-wristband"
-                           @click="openWristband(row)">腕带</el-button>
+                           @click="openTransfer(row)">转归
+                </el-button>
+                <el-button v-perm="'opd:emergency:edit'" link size="small" type="default"
+                           data-testid="emg-btn-wristband"
+                           @click="openWristband(row)">腕带
+                </el-button>
               </div>
               <!-- 展开区：就诊时间轴 + MEWS 趋势（真实 HIS 急诊患者详情面板标配） -->
               <div v-if="expandedId === row.id" class="mt-2 space-y-2 border-t border-slate-100 pt-2">
@@ -287,7 +312,8 @@
     </div>
 
     <!-- 急诊列表（明细台账，可切换查看） -->
-    <div v-if="viewMode === 'list'" class="rounded-lg border border-slate-200 bg-white shadow-sm" data-testid="emg-table">
+    <div v-if="viewMode === 'list'" class="rounded-lg border border-slate-200 bg-white shadow-sm"
+         data-testid="emg-table">
       <el-table v-loading="loading" :data="emergencyList" style="width: 100%">
         <el-table-column class-name="font-mono text-sm" label="急诊号" width="170">
           <template #default="{ row }">
@@ -324,9 +350,11 @@
               MEWS {{ row.mewsScore }}
             </span>
             <!-- 待复评徽章：分诊规范要求候诊超时须再次评估分级 -->
-            <el-tooltip v-if="row.reevalDue" content="候诊已超应接诊时限且又超一个时限未复评，请重新评估分级" placement="top">
-              <span class="ml-1 inline-block rounded border border-orange-300 bg-orange-50 px-1.5 py-0.5 text-xs font-bold text-orange-600"
-                    data-testid="emg-reeval-badge">
+            <el-tooltip v-if="row.reevalDue" content="候诊已超应接诊时限且又超一个时限未复评，请重新评估分级"
+                        placement="top">
+              <span
+                  class="ml-1 inline-block rounded border border-orange-300 bg-orange-50 px-1.5 py-0.5 text-xs font-bold text-orange-600"
+                  data-testid="emg-reeval-badge">
                 待复评
               </span>
             </el-tooltip>
@@ -445,8 +473,10 @@
                        @click="handleStatusChange(row, 6)">
               死亡
             </el-button>
-            <el-button v-perm="'opd:emergency:edit'" link size="small" type="default" data-testid="emg-btn-wristband-list"
-                       @click="openWristband(row)">腕带</el-button>
+            <el-button v-perm="'opd:emergency:edit'" link size="small" type="default"
+                       data-testid="emg-btn-wristband-list"
+                       @click="openWristband(row)">腕带
+            </el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -595,7 +625,20 @@
 
 <script setup>
 import {computed, onMounted, ref} from 'vue';
-import {AlarmClock, Bell, Check, Clock, CopyDocument, Plus, Refresh, RefreshRight, Search, Switch, User, Warning} from '@element-plus/icons-vue';
+import {
+  AlarmClock,
+  Bell,
+  Check,
+  Clock,
+  CopyDocument,
+  Plus,
+  Refresh,
+  RefreshRight,
+  Search,
+  Switch,
+  User,
+  Warning
+} from '@element-plus/icons-vue';
 import {ElMessage, ElMessageBox} from 'element-plus';
 import {
   getEmergencyHandoverListPage,
@@ -636,9 +679,30 @@ const boardZones = computed(() => {
     groups[z].push(r);
   }
   const defs = [
-    {key: '红区', label: '红区 · 抢救', border: 'border-red-200', dot: 'bg-red-500', text: 'text-red-700', hint: 'I/II 级，立即处置'},
-    {key: '黄区', label: '黄区 · 急症', border: 'border-amber-200', dot: 'bg-amber-500', text: 'text-amber-700', hint: 'III 级，优先候诊'},
-    {key: '绿区', label: '绿区 · 非急症', border: 'border-emerald-200', dot: 'bg-emerald-500', text: 'text-emerald-700', hint: 'IV 级，常规候诊'},
+    {
+      key: '红区',
+      label: '红区 · 抢救',
+      border: 'border-red-200',
+      dot: 'bg-red-500',
+      text: 'text-red-700',
+      hint: 'I/II 级，立即处置'
+    },
+    {
+      key: '黄区',
+      label: '黄区 · 急症',
+      border: 'border-amber-200',
+      dot: 'bg-amber-500',
+      text: 'text-amber-700',
+      hint: 'III 级，优先候诊'
+    },
+    {
+      key: '绿区',
+      label: '绿区 · 非急症',
+      border: 'border-emerald-200',
+      dot: 'bg-emerald-500',
+      text: 'text-emerald-700',
+      hint: 'IV 级，常规候诊'
+    },
   ];
   return defs.map(d => {
     const items = (groups[d.key] || []).slice().sort((a, b) => {
@@ -651,7 +715,7 @@ const boardZones = computed(() => {
 });
 /** 卡片描边与分区同色 */
 const cardBorder = (row) => row.zone === '红区' ? 'border-red-200'
-  : row.zone === '黄区' ? 'border-amber-200' : 'border-emerald-200';
+    : row.zone === '黄区' ? 'border-amber-200' : 'border-emerald-200';
 const searchForm = ref({
   keyword: '',
   triageLevel: null,
@@ -866,8 +930,8 @@ const handleStatusChange = async (row, newStatus) => {
     ElMessage.success('状态更新成功');
     loadData();
     loadStats();
-  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
-    
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */ {
+
   }
 };
 // 病区名册由页面加载一次，传给留观与转住院两个弹框
@@ -936,8 +1000,8 @@ const loadHoLedger = async () => {
     const res = await getEmergencyHandoverListPage(params);
     hoLedgerList.value = res.data?.records || [];
     hoLedgerPage.value.total = res.data?.total || 0;
-  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
-    
+  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */ {
+
   } finally {
     hoLedgerLoading.value = false;
   }

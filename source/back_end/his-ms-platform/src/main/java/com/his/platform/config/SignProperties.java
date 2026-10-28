@@ -78,6 +78,48 @@ public class SignProperties {
     private String tsaMode = "internal";
 
     /**
+     * 外部 CA（csssl）接口路径（his.sign.ca-paths.*），相对 ca-base-url
+     */
+    private CaPaths caPaths = new CaPaths();
+
+    /**
+     * csssl 各能力的接口路径：与 CA 侧 REST 路由契约一一对应
+     */
+    @Data
+    public static class CaPaths {
+
+        /**
+         * 登录口令加密用的 SM2 公钥获取路径
+         */
+        private String loginPublicKey = "/auth/publicKey";
+
+        /**
+         * 服务账号登录路径
+         */
+        private String login = "/auth/login";
+
+        /**
+         * 公钥签发申请路径
+         */
+        private String certIssue = "/admin/certs/public-key";
+
+        /**
+         * 证书链下载路径，{certId} 由签发回执里的证书主键替换
+         */
+        private String certDownload = "/admin/certs/{certId}/cert.pem";
+
+        /**
+         * 可信时间戳盖章路径
+         */
+        private String tsaStamp = "/tsa/stamp";
+
+        /**
+         * 可信时间戳验签公钥获取路径
+         */
+        private String tsaPublicKey = "/tsa/publicKey";
+    }
+
+    /**
      * 概要：拿最终生效的口令（配置项为空时读环境变量）
      */
     public String effectiveSecret() {

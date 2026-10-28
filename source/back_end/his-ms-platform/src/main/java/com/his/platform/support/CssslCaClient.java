@@ -34,6 +34,11 @@ public class CssslCaClient {
     /** token 缓存提前过期（秒），避免临界窗口用废 token */
     private static final long TOKEN_REUSE_SECONDS = 23 * 3600;
 
+    /**
+     * 证书下载路径配置里的证书主键占位符，发出前替换为签发回执返回的 id
+     */
+    private static final String CERT_ID_PLACEHOLDER = "{certId}";
+
     private final SignProperties signProperties;
     private final ObjectMapper objectMapper;
 
@@ -44,13 +49,12 @@ public class CssslCaClient {
     public record IssuedCert(String certPem, String caSerial, String caIssuer) {
     }
 
-    /** csssl 时间戳盖章结果（对齐 csssl /tsa/stamp 回执） */
+    /** csssl 时间戳盖章结果（对齐外部 TSA 盖章回执） */
     public record TsaStamp(String serial, String tsaTime, String tokenValue, String algo, String fingerprint) {
     }
 
     /** 向 csssl 提交公钥签发申请并取回证书链 */
     public IssuedCert issue(String subjectDn, String publicKeyPem, int validDays) {
-        String baseUrl = baseUrl();
         String token = token();
 
         // 1) 提交公钥签发
@@ -59,7 +63,7 @@ public class CssslCaClient {
         req.put("publicKeyPem", publicKeyPem);
         req.put("certType", CERT_TYPE_SIGN);
         req.put("validityDays", validDays);
-        JsonNode issueResp = post(baseUrl + "/admin/certs/public-key", token, req);
+        JsonNode issueResp = post(caPath(signProperties.getCaPaths().getCertIssue()), token, req);
         JsonNode cert = issueResp.path("data");
         if (!cert.isObject() || !cert.hasNonNull("id")) {
             throw new BusinessException("外部 CA 签发回执异常：未返回证书信息（" + brief(issueResp) + "）");
@@ -69,7 +73,8 @@ public class CssslCaClient {
         String issuerCn = cert.get("issuerCn") == null ? "" : cert.get("issuerCn").asText();
 
         // 2) 取证书链 PEM（CertVo 不带证书内容，单独走下载接口）
-        String certPem = getText(baseUrl + "/admin/certs/" + certId + "/cert.pem", token);
+        String certPem = getText(caPath(signProperties.getCaPaths().getCertDownload())
+                .replace(CERT_ID_PLACEHOLDER, String.valueOf(certId)), token);
         if (certPem == null || !certPem.startsWith("-----BEGIN CERTIFICATE-----")) {
             throw new BusinessException("外部 CA 返回的证书内容异常（下载证书接口未返回 PEM）");
         }
@@ -79,7 +84,7 @@ public class CssslCaClient {
 
     /** 向 csssl TSA 盖一枚时间戳令牌（摘要 → 序列号+时刻+令牌；TSA 接口匿名，无需登录） */
     public TsaStamp stampTsa(String digestHex) {
-        JsonNode resp = post(baseUrl() + "/tsa/stamp", null,
+        JsonNode resp = post(caPath(signProperties.getCaPaths().getTsaStamp()), null,
                 Map.of("digestHex", digestHex));
         JsonNode data = resp.path("data");
         if (!data.isObject() || !data.hasNonNull("serial") || !data.hasNonNull("tokenValue")) {
@@ -94,7 +99,7 @@ public class CssslCaClient {
 
     /** 取 csssl TSA 公钥（PEM + SM3 指纹），用于本地验签令牌 */
     public Map<String, String> tsaPublicKey() {
-        JsonNode resp = get(baseUrl() + "/tsa/publicKey");
+        JsonNode resp = get(caPath(signProperties.getCaPaths().getTsaPublicKey()));
         JsonNode data = resp.path("data");
         if (!data.isObject() || !data.hasNonNull("publicKeyPem")) {
             throw new BusinessException("外部 TSA 公钥获取失败：" + brief(resp));
@@ -125,19 +130,18 @@ public class CssslCaClient {
 
     /** 服务账号登录：SM2 口令加密（C1C3C2，不带 04 前缀，协议对齐 csssl 登录） */
     private String login() {
-        String baseUrl = baseUrl();
         String username = signProperties.getCaUsername();
         String password = signProperties.getCaPassword();
         if (!hasText(username) || !hasText(password)) {
             throw new BusinessException("外部 CA 服务账号未配置（his.sign.ca-username / ca-password）");
         }
-        JsonNode pkResp = get(baseUrl + "/auth/publicKey");
+        JsonNode pkResp = get(caPath(signProperties.getCaPaths().getLoginPublicKey()));
         String publicKeyHex = pkResp.path("data").path("publicKey").asText("");
         if (!hasText(publicKeyHex)) {
             throw new BusinessException("外部 CA 公钥获取失败：" + brief(pkResp));
         }
         String cipherHex = sm2Encrypt(publicKeyHex, password);
-        JsonNode loginResp = post(baseUrl + "/auth/login", null,
+        JsonNode loginResp = post(caPath(signProperties.getCaPaths().getLogin()), null,
                 Map.of("username", username, "passwordCipher", cipherHex));
         String token = loginResp.path("data").path("token").asText("");
         if (!hasText(token)) {
@@ -167,6 +171,11 @@ public class CssslCaClient {
             throw new BusinessException("外部 CA 地址未配置（his.sign.ca-base-url，如 http://localhost:8092/ssl）");
         }
         return url.endsWith("/") ? url.substring(0, url.length() - 1) : url;
+    }
+
+    /** 配置的接口路径拼上 CA 根地址 */
+    private String caPath(String path) {
+        return baseUrl() + path;
     }
 
     private HttpClient client() {

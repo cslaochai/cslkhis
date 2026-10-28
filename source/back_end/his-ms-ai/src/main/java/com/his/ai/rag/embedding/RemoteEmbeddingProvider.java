@@ -40,16 +40,13 @@ public class RemoteEmbeddingProvider implements EmbeddingProvider {
     @Override
     public float[] embed(String text) {
         AiProperties.Rag rag = properties.getRag();
-        String base = TextUtil.hasText(rag.getEmbedBaseUrl()) ? rag.getEmbedBaseUrl() : properties.getBaseUrl();
+        String url = rag.getEmbedUrl();
         String key = TextUtil.hasText(rag.getEmbedApiKey()) ? rag.getEmbedApiKey() : properties.getApiKey();
         String model = TextUtil.hasText(rag.getEmbedModel()) ? rag.getEmbedModel() : properties.getModel();
-        if (!TextUtil.hasText(base) || !TextUtil.hasText(key) || !TextUtil.hasText(model)) {
+        if (!TextUtil.hasText(url) || !TextUtil.hasText(key) || !TextUtil.hasText(model)) {
             throw new IllegalStateException(
-                    "remote embedding 未配置（ai.rag.embedding-base-url / embedding-api-key / embedding-model，或回落 ai.base-url/api-key/model）");
+                    "remote embedding 未配置（his.ai.rag.embed-url / embed-api-key / embed-model，后两项可回落 his.ai.api-key/model）");
         }
-        String normalized = base.replaceAll("/+$", "");
-        // 与 RestClientLlmClientImpl.chatPath 同口径：base 已以 /v1 结尾时不再重复拼，否则 /v1/v1/embeddings 必 404
-        String url = normalized.endsWith("/v1") ? normalized + "/embeddings" : normalized + "/v1/embeddings";
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);

@@ -60,23 +60,8 @@ public final class TitleTierMapping {
         return ClinicDiagnosisTierEnum.GENERAL;
     }
 
-    /**
-     * 该职称是否<b>可能</b>适用专家档（知名专家）。
-     *
-     * <p>只作提示用：前端在主任医师档时把「知名专家」这个选项放出来，
-     * 但不自动勾选——知名专家是名单制认定，不能由职称推导。
-     */
-    public static boolean mayBeExpert(String employeeTitle) {
-        return TITLE_CHIEF.equals(employeeTitle);
-    }
-
-    /**
-     * 该档位的全额价格（普通 9 / 副主任 22 / 主任 31 / 知名专家 70）。
-     *
-     * <p>给号源新增/编辑页做默认值用。<b>仅为默认值，最终价仍落在号源的 {@code diagnosisFee}</b>：
-     * 医生升职称后已排出的号源价格不变（价格是号源快照，不是实时推导）。
-     */
-    public static BigDecimal defaultAmountOf(String employeeTitle) {
-        return new BigDecimal(tierOf(employeeTitle).getAmount());
-    }
+    // 🔑 「该职称是否可能适用专家档 mayBeExpert」「档位全额 defaultAmountOf」已删：
+    //    后端/前端/docs 三处核实均零引用。号源编辑页的诊查费默认价权威在价表
+    //    （sys_charge_policy_price，政策 OPD_CONSULT），价格管理页「政策价」页签可查可调，
+    //    不再由代码常量推导——代码推导价与价表并存必然漂移。
 }

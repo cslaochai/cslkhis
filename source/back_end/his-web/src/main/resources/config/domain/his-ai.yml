@@ -3,6 +3,7 @@ his:
   ai:
     enabled: true
     provider: openai-compatible
+    # chat 端点全 URL（不是根地址：代码不做路径推断，配什么就打什么）
     base-url: http://192.168.0.101:11434/v1/chat/completions
     # 模型访问密钥随环境变，不在这里声明：dev 落内联真值，生产用环境变量 HIS_AI_API_KEY 注入
     model: qwen2.5:7b-instruct
@@ -97,6 +98,8 @@ his:
       emr_draft: deepseek-v4.1-flash
     # 语音识别（ASR）：与 chat 端点同域但模型隔离；不单独配密钥则取 his.ai.api-key
     asr:
+      # ASR 端点全 URL；留空则取上面的 base-url 原样（代码不做路径推断）
+      url: http://192.168.0.101:11434/v1/chat/completions
       model: qwen3-asr-flash
       max-audio-mb: 15
 
@@ -111,6 +114,7 @@ his:
       milvus:
         collection-name: his_knowledge_chunk
         vector-dim: 1024
-      embed-base-url: https://dashscope.aliyuncs.com/compatible-mode/v1
+      # 远程 embedding 端点全 URL（配了才走 remote，否则本地 local-tf 向量）
+      embed-url: https://dashscope.aliyuncs.com/compatible-mode/v1/embeddings
       # 不单独配 embedding 密钥则取 his.ai.api-key
       embed-model: text-embedding-v3

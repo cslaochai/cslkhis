@@ -9,7 +9,8 @@
       </el-button>
     </div>
 
-    <div class="grid grid-cols-3 gap-3">
+    <!-- 2026-10-28 改版：面板移入医生站 420px 右辅助列常驻，三块评分纵向堆叠（3 列会把 REMS 内层输入框挤成 0 宽） -->
+    <div class="grid grid-cols-1 gap-3">
       <!-- ===== GCS ===== -->
       <div class="rounded border border-slate-100 p-2">
         <div class="mb-1.5 flex items-baseline gap-2">

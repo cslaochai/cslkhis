@@ -264,6 +264,7 @@ const credRows = [
     ability: '检验工作站、标本管理、检验项目字典、输血管理、危急值处置（限本科室）'
   },
   {accounts: ['shiruotong ( 石若彤  )'], role: '急诊医生', dept: '急诊内科', ability: ER_ABILITY},
+  {accounts: ['zhouyuan ( 周远 )'], role: '急诊医生', dept: '急诊内科', ability: ER_ABILITY},
   {accounts: ['chengruotong ( 程若彤  )'], role: '急诊医生', dept: '急诊外科', ability: ER_ABILITY},
   {accounts: ['donghanmei ( 董寒梅  )'], role: '急诊医生', dept: '急诊内科', ability: ER_ABILITY},
   {accounts: ['helicheng ( 何立诚  )'], role: '急诊医生', dept: '急诊儿科', ability: ER_ABILITY},

@@ -104,11 +104,14 @@ public class PriceServiceImpl extends ServiceImpl<SysPriceChangeHistoryMapper, S
         return before;
     }
 
+    /** 历史查询额外放行的类型：政策价（ChargePolicyPriceServiceImpl 调价也写本历史表） */
+    private static final List<String> HISTORY_EXTRA_TYPES = List.of("POLICY");
+
     @Override
     public PageResult<PriceChangeHistoryVO> historyListPage(PriceHistoryPageQueryDTO queryDTO) {
         LambdaQueryWrapper<SysPriceChangeHistory> wrapper = new LambdaQueryWrapper<>();
         if (TextUtil.hasText(queryDTO.getItemType())) {
-            wrapper.eq(SysPriceChangeHistory::getItemType, normalizeType(queryDTO.getItemType()));
+            wrapper.eq(SysPriceChangeHistory::getItemType, normalizeHistoryType(queryDTO.getItemType()));
         }
         if (TextUtil.hasText(queryDTO.getKeyword())) {
             String kw = queryDTO.getKeyword();
@@ -181,5 +184,20 @@ public class PriceServiceImpl extends ServiceImpl<SysPriceChangeHistoryMapper, S
                     + "，可选：" + String.join("/", SUPPORTED_TYPES));
         }
         return normalized;
+    }
+
+    /**
+     * 调价历史的类型归一化：比列表接口多放行 POLICY（政策价）。
+     * 历史表里政策价与五类价表同表存，前端「政策价」页签按 POLICY 过滤历史。
+     */
+    private String normalizeHistoryType(String itemType) {
+        if (!TextUtil.hasText(itemType)) {
+            throw new BusinessException("项目类型不能为空");
+        }
+        String normalized = itemType.trim().toUpperCase(Locale.ROOT);
+        if (HISTORY_EXTRA_TYPES.contains(normalized)) {
+            return normalized;
+        }
+        return normalizeType(normalized);
     }
 }

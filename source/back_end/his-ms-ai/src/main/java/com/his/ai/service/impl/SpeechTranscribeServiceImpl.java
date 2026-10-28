@@ -113,17 +113,13 @@ public class SpeechTranscribeServiceImpl implements SpeechTranscribeService {
 
     private String callAsr(byte[] bytes, String format, String model, int timeoutMs) {
         AiConfigProvider cfg = aiConfigProvider;
-        if (!TextUtil.hasText(cfg.get().getBaseUrl())) {
-            throw new BusinessException("AI 服务地址未配置（application.yml: ai.base-url）");
+        String url = cfg.asrUrl();
+        if (!TextUtil.hasText(url)) {
+            throw new BusinessException("语音转写地址未配置（his.ai.asr.url 或 his.ai.base-url）");
         }
         if (!TextUtil.hasText(cfg.asrApiKey())) {
             throw new BusinessException("语音转写密钥未配置（环境变量 " + AiConfigProvider.ENV_API_KEY + "）");
         }
-        String baseUrl = cfg.get().getBaseUrl().trim();
-        while (baseUrl.endsWith("/")) {
-            baseUrl = baseUrl.substring(0, baseUrl.length() - 1);
-        }
-        String path = baseUrl.endsWith("/v1") ? "/chat/completions" : "/v1/chat/completions";
 
         OpenAiAsrRequestDTO body = OpenAiAsrRequestDTO.builder()
                 .model(model)
@@ -143,11 +139,11 @@ public class SpeechTranscribeServiceImpl implements SpeechTranscribeService {
                 .build();
 
         try {
-            RestClient client = clientOf(baseUrl, timeoutMs);
+            RestClient client = clientOf(url, timeoutMs);
             // retrieve() 会正确读错误流：非 2xx 抛 RestClientResponseException 且携带上游响应体，
             // exchange + SimpleClientHttpRequestFactory 会把它包成 I/O error 丢掉 400 的真实原因
             String raw = client.post()
-                    .uri(path)
+                    .uri(url)
                     .header(HttpHeaders.AUTHORIZATION, "Bearer " + cfg.asrApiKey())
                     .contentType(MediaType.APPLICATION_JSON)
                     .accept(MediaType.APPLICATION_JSON)

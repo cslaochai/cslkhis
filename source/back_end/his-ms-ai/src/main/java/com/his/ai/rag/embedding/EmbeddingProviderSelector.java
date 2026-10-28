@@ -27,10 +27,10 @@ public class EmbeddingProviderSelector {
     }
 
     /**
-     * 选择实现：配了 embed-base-url 用 remote，否则 local-tf。
+     * 选择实现：配了 embed-url 用 remote，否则 local-tf。
      */
     public EmbeddingProvider select() {
-        String name = TextUtil.hasText(aiProperties.getRag().getEmbedBaseUrl()) ? "remote" : "local-tf";
+        String name = TextUtil.hasText(aiProperties.getRag().getEmbedUrl()) ? "remote" : "local-tf";
         EmbeddingProvider p = registry.get(name);
         if (p == null) {
             p = registry.get("local-tf");

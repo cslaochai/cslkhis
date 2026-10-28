@@ -9,7 +9,7 @@
       {{ visitStyle.label }}
     </el-tag>
     <span class="rounded bg-slate-100 px-1.5 py-0.5 text-xs text-slate-600">{{
-        shortQueueNo(patient?.queueNo) || '-'
+        shortQueueNo(patient?.queueNo) || ''
       }}</span>
     <span v-if="hasAllergy"
           class="rounded bg-red-50 px-1.5 py-0.5 text-xs font-medium text-red-600">
@@ -44,7 +44,8 @@ const props = defineProps({
   patient: {type: null, required: true},
   detail: {type: null, required: false},
   record: {type: null, required: false},
-  arriveText: {type: String, required: false}
+  arriveText: {type: String, required: false},
+  visitBadge: {type: null, required: false}
 });
 const emit = defineEmits();
 const hasAllergy = computed(() => {
@@ -56,6 +57,6 @@ const hasAllergy = computed(() => {
  * 其余按 visit_type 1 初诊 / 2 复诊；队列行没挂到挂号（visitType 为 null）时显「未标注」，
  * 不许回落到「初诊」。
  */
-const visitStyle = computed(() => queueVisitBadgeOf(props.patient));
+const visitStyle = computed(() => props.visitBadge || queueVisitBadgeOf(props.patient));
 const insuranceLabel = computed(() => props.detail?.medicalInsuranceType || '');
 </script>

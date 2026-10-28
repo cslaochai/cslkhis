@@ -15,12 +15,14 @@ import java.util.List;
 
 /**
  * 医生工作站 - 药品/耗材套餐（URL 契约沿用 /doctor/template/package*）。
+ * 套餐按医生归属、属医生个人参照数据：门诊/急诊两个医生站都可维护与套用
+ * （招标条款「急诊医生工作站：维护医嘱套和医嘱模板快捷入口」），故各口放行急诊医生编辑权。
  */
 @Tag(name = "医生个人模板-药品套餐")
 @RestController
 @RequestMapping("/doctor/template")
 @RequiredArgsConstructor
-@PreAuthorize("hasAuthority('opd:doctorWorkstation:list')")
+@PreAuthorize("hasAnyAuthority('opd:doctorWorkstation:list', 'opd:emergencyDoctor:edit')")
 public class DrugPackageController {
 
     private final DrugPackageService drugPackageService;
@@ -46,7 +48,7 @@ public class DrugPackageController {
     /**
      * 把当前就诊已开的处方等项目保存为一份套餐。用于「保存为套餐」弹框的提交。
      */
-    @PreAuthorize("hasAuthority('opd:doctorWorkstation:add')")
+    @PreAuthorize("hasAnyAuthority('opd:doctorWorkstation:add', 'opd:emergencyDoctor:edit')")
     @Operation(summary = "保存药品套餐")
     @PostMapping("/savePackage")
     public Result<Void> saveDrugPackage(@Valid @RequestBody BizDrugPackageUpsertDTO upsertDTO) {
@@ -57,7 +59,7 @@ public class DrugPackageController {
     /**
      * 按套餐主键删除一份套餐。用于「药品/耗材套餐」弹框列表行的删除。
      */
-    @PreAuthorize("hasAuthority('opd:doctorWorkstation:delete')")
+    @PreAuthorize("hasAnyAuthority('opd:doctorWorkstation:delete', 'opd:emergencyDoctor:edit')")
     @Operation(summary = "根据ID删除药品套餐")
     @DeleteMapping("/deletePackageById")
     public Result<Void> deleteDrugPackage(@RequestParam Long id) {

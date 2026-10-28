@@ -70,6 +70,19 @@ public class BizEmergencyVO {
     private Long queueId;
 
     /**
+     * 关联队列行状态（biz_queue.queue_status 快照：2-候诊中 3-就诊中 4-已就诊 6-已过号）。
+     * 急诊的临床态以 emergencyStatus 为准；queue_status 只供医生站叫号操作显按钮
+     * （过号行显「回队」、候诊行显「呼叫/过号」），两套状态不能混用
+     */
+    private Integer queueStatus;
+
+    /**
+     * 关联队列行过号标记（biz_queue.is_overdue）：1=已过号待回队。
+     * 过号只落在队列行上，不改急诊记录的临床态——候诊中过号的患者临床上仍在候诊
+     */
+    private Integer isOverdue;
+
+    /**
      * 患者ID
      */
     @JsonSerialize(using = ToStringSerializer.class)
@@ -289,6 +302,17 @@ public class BizEmergencyVO {
      */
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime diagnosisTime;
+
+    /**
+     * 患者名下有挂账/欠费账单（bill_status=6）时为 true（医生站患者行欠费标；
+     * 先救治后付费口径下诊治期间的待缴账单不打扰，只有挂账欠费才亮标）
+     */
+    private Boolean hasArrears;
+
+    /**
+     * 本次就诊已出报告的检查/检验申请单数（apply_status=5 合计；医生站患者行「有新报告」提醒）
+     */
+    private Integer reportReadyCount;
 
     /**
      * 结束时间

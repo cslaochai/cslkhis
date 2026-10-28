@@ -6,6 +6,8 @@ import com.his.spi.vo.InspectionApplyBriefVO;
 import com.his.spi.vo.LaboratoryApplyBriefVO;
 
 import java.time.LocalDateTime;
+import java.util.Collection;
+import java.util.Map;
 
 /**
  * 申请单事实端口：检查申请单与检验申请单的跨域读取口，供医技域开单建记录、预约与影像登记取数。
@@ -92,4 +94,13 @@ public interface EmrApplyFacadeService {
      * @return 命中行数（1 成功，0 未推进）
      */
     int revertInspectionBooked(Long applyId, Integer prevStatus, String operator);
+
+    /**
+     * 批量统计各挂号单名下「已出报告」的检查+检验申请单数（apply_status=5）。
+     * 供医生工作站患者列表出「有新报告」提醒：报告落地即亮标，30 秒轮询自动刷新。
+     *
+     * @param registIds 挂号单ID集合（可空；空集合返回空 Map）
+     * @return registId → 已出报告的申请单数（检查+检验合计；无报告的不出现在 Map 里）
+     */
+    Map<Long, Integer> mapReportReadyCountByRegistIds(Collection<Long> registIds);
 }

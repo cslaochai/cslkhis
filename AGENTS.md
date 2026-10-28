@@ -89,6 +89,7 @@
 - **401 与 403 两条路**：401 = 清 token 回登录；403 = 只弹提示，**绝不清 token**。
 - 主题只动 `src/style.css` + `src/components/his/` 三骨架，60 个业务页面不动；主色 `#1269B5`、辅色 `#0E9488`，基调稳重克制。
 - 前端验证用 playwright-core + Edge 真浏览器，**必须断言真实接口数据**，禁止靠 ModulePage 假数据通过验收；控制台零报错。
+- **变量必须先声明后使用；就地 `catch (e) {}` 只允许吞「后端已提示」的接口异常**：写进 `catch` 的本地异常（TDZ `ReferenceError` 等）零报错，功能整段静默失效——挂号收款弹框就因 `if (data.insuranceWarning)` 写在 `const data = res.data` 之前炸了两天，页面照旧提示「挂号成功」但不弹缴费窗。catch 里必须留 `console.error`。判据：`node workspace/_scan_tdz_use_before_decl.mjs` → `TDZ 命中 = 0`（覆盖 `.vue` 的 `<script setup>` 与 miniapp；脚本自带 self-test，改完拿历史坏版本回跑一次才算数）。
 
 ## 3. 数据与 SQL 铁律
 

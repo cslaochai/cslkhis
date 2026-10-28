@@ -56,6 +56,48 @@ public class InsuranceProperties {
          * 读取超时（毫秒）
          */
         private int readTimeoutMs = 15000;
+
+        /**
+         * 前置系统接口路径（his.insurance.channel.paths.*），相对 base-url
+         */
+        private Paths paths = new Paths();
+    }
+
+    /**
+     * 医保前置系统各能力的接口路径：与前置机 GatewayController 的路由契约一一对应
+     */
+    @Data
+    public static class Paths {
+
+        /**
+         * 通用报文上送路径，{msgType} 由业务报文类型替换
+         */
+        private String send = "/gateway/{msgType}";
+
+        /**
+         * 日对账账单拉取路径
+         */
+        private String dayBill = "/gateway/dayBill";
+
+        /**
+         * 参保人信息查询路径
+         */
+        private String personQuery = "/insure/person/query";
+
+        /**
+         * 预结算（2201）路径
+         */
+        private String preSettle = "/gateway/2201";
+
+        /**
+         * 正式结算（2301）路径
+         */
+        private String formalSettle = "/gateway/2301";
+
+        /**
+         * 实时结算冲正（2305）路径
+         */
+        private String cancel = "/gateway/2305";
     }
 
     @Data

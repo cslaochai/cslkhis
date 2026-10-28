@@ -1,10 +1,11 @@
 package com.his.charge.support;
 
 import cn.hutool.core.util.HexUtil;
-import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.his.charge.config.InsuranceProperties;
+import com.his.common.util.TextUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.springframework.core.io.Resource;
@@ -70,40 +71,35 @@ public class InsuranceMessageCrypto {
         String timeStamp = Instant.now().toString();
         String canonical = canonical(encData, timeStamp, localCertSerial);
         String signHex = HexUtil.encodeHexStr(sm2Sign(canonical));
-        ObjectNode node = objectMapper.createObjectNode();
-        node.put("version", VERSION);
-        node.put("encData", encData);
-        node.put("sign", signHex);
-        node.put("certSerial", localCertSerial);
-        node.put("timeStamp", timeStamp);
-        node.put("certPem", Base64.getEncoder().encodeToString(chainPemBytes()));
-        return node.toString();
+        SecEnvelope envelope = new SecEnvelope(VERSION, encData, signHex, localCertSerial, timeStamp,
+                Base64.getEncoder().encodeToString(chainPemBytes()));
+        try {
+            return objectMapper.writeValueAsString(envelope);
+        } catch (JsonProcessingException e) {
+            throw new IllegalStateException("安全信封序列化失败：" + e.getMessage(), e);
+        }
     }
 
     /** 安全信封 JSON → 业务报文明文；失败抛 IllegalStateException（携带可读原因） */
     public String unpackEnvelope(String envelopeJson) {
         try {
-            JsonNode env = objectMapper.readTree(envelopeJson);
-            if (!VERSION.equals(env.path("version").asText())) {
-                throw new IllegalStateException("不支持的报文安全版本：" + env.path("version").asText());
+            SecEnvelope envelope = objectMapper.readValue(envelopeJson, SecEnvelope.class);
+            if (!VERSION.equals(envelope.version())) {
+                throw new IllegalStateException("不支持的报文安全版本：" + envelope.version());
             }
-            String encData = env.path("encData").asText();
-            String signHex = env.path("sign").asText();
-            String certSerial = env.path("certSerial").asText();
-            String timeStamp = env.path("timeStamp").asText();
-            String certPemB64 = env.path("certPem").asText();
-            if (encData.isBlank() || signHex.isBlank() || certSerial.isBlank()
-                    || timeStamp.isBlank() || certPemB64.isBlank()) {
+            if (!TextUtil.hasText(envelope.encData()) || !TextUtil.hasText(envelope.sign())
+                    || !TextUtil.hasText(envelope.certSerial()) || !TextUtil.hasText(envelope.timeStamp())
+                    || !TextUtil.hasText(envelope.certPem())) {
                 throw new IllegalStateException("安全信封字段缺失（encData/sign/certSerial/timeStamp/certPem）");
             }
-            Instant ts = Instant.parse(timeStamp);
+            Instant ts = Instant.parse(envelope.timeStamp());
             long skew = Math.abs(Instant.now().getEpochSecond() - ts.getEpochSecond());
             if (skew > props.getClockSkewSeconds()) {
                 throw new IllegalStateException("报文时间戳超出时间窗（" + skew + "s > " + props.getClockSkewSeconds() + "s），疑似重放");
             }
-            List<X509Certificate> chain = parseCertChain(Base64.getDecoder().decode(certPemB64));
+            List<X509Certificate> chain = parseCertChain(Base64.getDecoder().decode(envelope.certPem()));
             X509Certificate leaf = chain.get(0);
-            if (!leaf.getSerialNumber().toString(16).equalsIgnoreCase(certSerial)) {
+            if (!leaf.getSerialNumber().toString(16).equalsIgnoreCase(envelope.certSerial())) {
                 throw new IllegalStateException("证书序列号与信封不一致");
             }
             leaf.checkValidity();
@@ -111,16 +107,31 @@ public class InsuranceMessageCrypto {
             trustRoot.checkValidity();
             leaf.verify(trustSubCa.getPublicKey());
             trustSubCa.verify(trustRoot.getPublicKey());
-            String canonical = canonical(encData, timeStamp, certSerial);
-            if (!sm2Verify(leaf.getPublicKey(), canonical, HexUtil.decodeHex(signHex))) {
+            String canonical = canonical(envelope.encData(), envelope.timeStamp(), envelope.certSerial());
+            if (!sm2Verify(leaf.getPublicKey(), canonical, HexUtil.decodeHex(envelope.sign()))) {
                 throw new IllegalStateException("SM2 验签失败：回执被篡改或签名值不符");
             }
-            return sm4Decrypt(encData);
+            return sm4Decrypt(envelope.encData());
         } catch (IllegalStateException e) {
             throw e;
         } catch (Exception e) {
             throw new IllegalStateException("报文安全信封解析失败：" + e.getMessage(), e);
         }
+    }
+
+    /**
+     * CSSSL-SEC-V1 安全信封：业务明文的 SM4 密文 + SM2 签名 + 本端证书链，随报文一起过前置机。
+     *
+     * @param version    信封协议版本，双侧必须一致
+     * @param encData    业务报文的 SM4 密文（Base64）
+     * @param sign       对 {@code encData|timeStamp|certSerial} 的 SM2 签名值（Hex）
+     * @param certSerial 签名证书序列号（Hex），与 {@code certPem} 首证必须一致
+     * @param timeStamp  签发时刻（ISO-8601 UTC），收侧按时间窗判重放
+     * @param certPem    证书链 PEM 的 Base64（叶子在前）
+     */
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public record SecEnvelope(String version, String encData, String sign, String certSerial,
+                              String timeStamp, String certPem) {
     }
 
     private String canonical(String encData, String timeStamp, String certSerial) {

@@ -17,6 +17,7 @@ import com.his.spi.vo.FeeRecordVO;
 import com.his.spi.vo.FeeTypeSumVO;
 import com.his.spi.vo.InsuranceBriefVO;
 import com.his.spi.vo.PendingBillVO;
+import com.his.spi.vo.PolicyPriceVO;
 import com.his.spi.vo.PrepayBalanceVO;
 import com.his.spi.vo.PrepayVO;
 import com.his.spi.vo.RegistChargeCommandVO;
@@ -38,6 +39,7 @@ import com.his.charge.service.InsuranceRealTimeSettleService;
 import com.his.charge.service.PaymentService;
 import com.his.charge.service.SettlementBillService;
 import com.his.charge.service.ArrearsControlGateService;
+import com.his.charge.service.ChargePolicyPriceService;
 import com.his.spi.vo.ArrearsControlCheckResultVO;
 import com.his.common.enums.*;
 import com.his.common.util.NumUtil;
@@ -80,6 +82,15 @@ public class ChargeFacadeServiceImpl implements ChargeFacadeService {
     private final BizInsuranceSettlementMapper bizInsuranceSettlementMapper;
 
     private final InsuranceRealTimeSettleService insuranceRealTimeSettleService;
+
+    private final ChargePolicyPriceService chargePolicyPriceService;
+
+    // ---------- 政策价 ----------
+
+    @Override
+    public PolicyPriceVO policyPrice(String policyCode, Integer tierCode) {
+        return chargePolicyPriceService.policyPrice(policyCode, tierCode);
+    }
 
     // ---------- L1 记账 ----------
 
@@ -200,15 +211,15 @@ public class ChargeFacadeServiceImpl implements ChargeFacadeService {
             log.info("[结诊出账] 就诊 type={} id={} 无待结算费用行，不生成账单", encounterType, encounterId);
             return null;
         }
-        BillSettleUpsertDTO dto = new BillSettleUpsertDTO();
-        dto.setEncounterType(encounterType);
-        dto.setEncounterId(encounterId);
+        BillSettleUpsertDTO settleUpsertDTO = new BillSettleUpsertDTO();
+        settleUpsertDTO.setEncounterType(encounterType);
+        settleUpsertDTO.setEncounterId(encounterId);
         // feeIds 留空：settle 内部按 encounterType+encounterId 捞全部待结算行
-        dto.setBillType(BillTypeEnum.OUTPATIENT.getCode());
+        settleUpsertDTO.setBillType(BillTypeEnum.OUTPATIENT.getCode());
         // 医生结诊时按自费出待缴账单；患者有医保的，收费台结算时再做医保 split
-        dto.setSettlementMode(1);
-        dto.setRemark("医生结诊自动出账");
-        BizSettlementBill bill = settlementBillService.settle(dto);
+        settleUpsertDTO.setSettlementMode(1);
+        settleUpsertDTO.setRemark("医生结诊自动出账");
+        BizSettlementBill bill = settlementBillService.settle(settleUpsertDTO);
         log.info("[结诊出账] 账单 {} 患者 {} 行 {} 应缴 ¥{}",
                 bill.getBillNo(), bill.getPatientName(), bill.getFeeCount(),
                 bill.getPayableAmount().toPlainString());
@@ -288,6 +299,26 @@ public class ChargeFacadeServiceImpl implements ChargeFacadeService {
             BizSettlementBillVO vo = new BizSettlementBillVO();
             BeanUtils.copyProperties(bill, vo);
             result.add(vo);
+        }
+        return result;
+    }
+
+    @Override
+    public Set<Long> patientsWithArrears(Collection<Long> patientIds) {
+        if (patientIds == null || patientIds.isEmpty()) {
+            return Set.of();
+        }
+        // 欠费口径：名下存在挂账/欠费账单（bill_status=6）即算；1/2 待缴是「先救治后付费」
+        // 的常态不打扰，只有挂账欠费才亮标。del_flag=0 由 @TableLogic 自动追加
+        List<BizSettlementBill> bills = bizSettlementBillMapper.selectList(
+                new LambdaQueryWrapper<BizSettlementBill>()
+                        .in(BizSettlementBill::getPatientId, patientIds)
+                        .eq(BizSettlementBill::getBillStatus, BillStatusEnum.ARREARS.getCode()));
+        Set<Long> result = new HashSet<>();
+        for (BizSettlementBill bill : bills) {
+            if (bill.getPatientId() != null) {
+                result.add(bill.getPatientId());
+            }
         }
         return result;
     }

@@ -30,6 +30,11 @@ import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
 import com.his.spi.dto.InpatientAdmitDTO;
 import com.his.spi.dto.EmergencyPatientCreateDTO;
+import com.his.spi.dto.FeeBookDTO;
+import com.his.spi.service.ChargeFacadeService;
+import com.his.common.support.EmergencyConsultFeePolicy;
+import com.his.common.support.TitleTierMapping;
+import com.his.spi.vo.PolicyPriceVO;
 import com.his.spi.service.PatientFacadeService;
 import com.his.spi.service.InpatientFacadeService;
 import com.his.spi.service.SystemFacadeService;
@@ -51,6 +56,7 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.*;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -115,6 +121,18 @@ public class EmergencyServiceImpl extends ServiceImpl<EmergencyMapper, Emergency
     private final com.his.spi.service.DutyRosterFacadeService dutyRosterFacadeService;
 
     private final com.his.spi.service.ClinicSourceFacadeService clinicSourceFacadeService;
+
+    /**
+     * 急诊诊查费记账/出账（先救治后付费：接诊记账、终态兜底出账，失败不拦流程）
+     */
+    private final ChargeFacadeService chargeFacadeService;
+
+    private final com.his.spi.service.EmrApplyFacadeService emrApplyFacadeService;
+
+    /**
+     * 接诊医生职称码只读窄口（定价档位推导用）
+     */
+    private final SysEmployeeTitleMapper sysEmployeeTitleMapper;
 
     @Override
     public PageResult<BizEmergencyVO> listPage(EmergencyQueryDTO queryDTO) {
@@ -212,8 +230,10 @@ public class EmergencyServiceImpl extends ServiceImpl<EmergencyMapper, Emergency
             // create_time 倒序，先见到的是最新一条，只放第一次
             registByPatient.putIfAbsent(a.getPatientId(), a.getId());
         }
-        // 队列按挂号单关联：一次 IN 查完这批挂号单的队列（老数据没有队列时不补，保持 null）
-        Map<Long, Long> queueByRegist = new HashMap<>();
+        // 队列按挂号单关联：一次 IN 查完这批挂号单的队列（老数据没有队列时不补，保持 null）。
+        // 连带带出 queue_status / is_overdue：医生站叫号区按钮（呼叫/过号/回队）靠它们显隐，
+        // 急诊临床态仍是 emergencyStatus，这两个只是队列行的叫号侧状态
+        Map<Long, Queue> queueByRegist = new HashMap<>();
         List<Long> registIds = registByPatient.values().stream()
                 .filter(Objects::nonNull).distinct().collect(Collectors.toList());
         if (!registIds.isEmpty()) {
@@ -221,13 +241,46 @@ public class EmergencyServiceImpl extends ServiceImpl<EmergencyMapper, Emergency
                     .in(Queue::getRegistId, registIds)
                     .orderByDesc(Queue::getCreateTime));
             for (Queue q : queues) {
-                queueByRegist.putIfAbsent(q.getRegistId(), q.getId());
+                queueByRegist.putIfAbsent(q.getRegistId(), q);
             }
         }
         for (BizEmergencyVO vo : records) {
             Long registId = registByPatient.get(vo.getPatientId());
             vo.setRegistId(registId);
-            vo.setQueueId(queueByRegist.get(registId));
+            Queue q = queueByRegist.get(registId);
+            if (q != null) {
+                vo.setQueueId(q.getId());
+                vo.setQueueStatus(q.getQueueStatus());
+                vo.setIsOverdue(q.getIsOverdue());
+            }
+        }
+        fillListBadges(records, patientIds, registIds);
+    }
+
+    /**
+     * 患者行标识补齐（真实 HIS 患者列表标配，2026-10-28 对齐）：欠费标 + 有新报告提醒。
+     * 标识是辅助信息，两个跨域读都 fail-open——查失败只 log，列表照常出，绝不因标识挂掉拖垮主查询。
+     */
+    private void fillListBadges(List<BizEmergencyVO> records, List<Long> patientIds, List<Long> registIds) {
+        try {
+            Set<Long> arrears = chargeFacadeService.patientsWithArrears(patientIds);
+            for (BizEmergencyVO vo : records) {
+                vo.setHasArrears(arrears.contains(vo.getPatientId()));
+            }
+        } catch (Exception e) {
+            log.warn("[急诊列表] 欠费标识查询失败，跳过（不影响列表）：{}", e.getMessage());
+        }
+        if (registIds.isEmpty()) {
+            return;
+        }
+        try {
+            Map<Long, Integer> reportCnt = emrApplyFacadeService.mapReportReadyCountByRegistIds(registIds);
+            for (BizEmergencyVO vo : records) {
+                Integer cnt = vo.getRegistId() == null ? null : reportCnt.get(vo.getRegistId());
+                vo.setReportReadyCount(cnt == null ? 0 : cnt);
+            }
+        } catch (Exception e) {
+            log.warn("[急诊列表] 新报告提醒查询失败，跳过（不影响列表）：{}", e.getMessage());
         }
     }
 
@@ -537,6 +590,12 @@ public class EmergencyServiceImpl extends ServiceImpl<EmergencyMapper, Emergency
             throw new BusinessException("该急诊记录已结束（转住院/离院/死亡），不能再变更状态");
         }
         syncAppointAndQueue(emergency, status);
+        // 先救治后付费：接诊时记诊查费账（不出账，随首张账单聚合）；终态时兜底出账
+        if (status == 2) {
+            chargeConsultFee(emergency, false);
+        } else if (status >= 5) {
+            chargeConsultFee(emergency, true);
+        }
         return true;
     }
 
@@ -606,6 +665,8 @@ public class EmergencyServiceImpl extends ServiceImpl<EmergencyMapper, Emergency
             throw new BusinessException("该急诊记录已结束，不能重复转住院");
         }
         syncAppointAndQueue(emergency, EmergencyStatusEnum.ADMITTED.getCode());
+        // 转住院也是终态：诊查费兜底出账（接诊时已记账的话这里幂等跳过，费用行已在账单里）
+        chargeConsultFee(emergency, true);
         return admissionId;
     }
 
@@ -674,15 +735,20 @@ public class EmergencyServiceImpl extends ServiceImpl<EmergencyMapper, Emergency
                 queue.setQueueStatus(QueueStatusEnum.COMPLETED.getCode());
                 queue.setEndTime(LocalDateTime.now());
             }
-            // 守卫下沉到 WHERE：队列仍须为流转前状态（接诊<-候诊中；终态<-候诊/就诊中），
-            // 并发流转时 0 行失败，避免用陈旧快照覆盖（如已离院又被并发写回就诊中）
+            // 守卫下沉到 WHERE：队列仍须为流转前状态，并发流转时 0 行失败，避免用陈旧快照覆盖。
+            // 放行 OVERDUE(6)：医生站叫号套件上线后，过号（只落在队列行上）的患者人回来照样要接诊——
+            // 原先只认候诊中，过号过的急诊患者一点「接诊」就 500「该队列状态已变更」，号白叫人卡死
             LambdaUpdateWrapper<Queue> queueGuard = new LambdaUpdateWrapper<Queue>()
                     .eq(Queue::getId, queue.getId());
             if (status == 2) {
-                queueGuard.eq(Queue::getQueueStatus, QueueStatusEnum.WAITING.getCode());
+                queueGuard.in(Queue::getQueueStatus,
+                        QueueStatusEnum.WAITING.getCode(), QueueStatusEnum.OVERDUE.getCode());
+                // 过号标记随接诊清掉：状态已是就诊中，is_overdue 留 1 会进分诊台的过号筛选统计
+                queue.setIsOverdue(0);
             } else {
                 queueGuard.in(Queue::getQueueStatus,
-                        QueueStatusEnum.WAITING.getCode(), QueueStatusEnum.CONSULTING.getCode());
+                        QueueStatusEnum.WAITING.getCode(), QueueStatusEnum.CONSULTING.getCode(),
+                        QueueStatusEnum.OVERDUE.getCode());
             }
             if (queueMapper.update(queue, queueGuard) == 0) {
                 throw new BusinessException("该队列状态已变更，请刷新后重试");
@@ -698,14 +764,20 @@ public class EmergencyServiceImpl extends ServiceImpl<EmergencyMapper, Emergency
             appointInfo.setRegistStatus(AppointStatusEnum.COMPLETED.getCode());
         }
         if (status == 2 || status >= 4) {
-            // 守卫下沉到 WHERE：挂号仍须为流转前状态（接诊<-已挂号；终态<-已挂号/已接诊），并发流转时 0 行失败
+            // 守卫下沉到 WHERE：挂号仍须为流转前状态，并发流转时 0 行失败。
+            // 放行 OVERDUE / CHECKED_IN：过号会把挂号单镜像置为已过号（QueueServiceImpl#overdueQueue），
+            // 过号回队（rejoinQueue）再把它恢复成已签到——接诊/终态流转必须能从这两个状态继续，
+            // 否则过号过的急诊单全部卡死（患者人已回来，一接诊就 500「该挂号状态已变更」）
             LambdaUpdateWrapper<AppointInfo> appointGuard = new LambdaUpdateWrapper<AppointInfo>()
                     .eq(AppointInfo::getId, appointInfo.getId());
             if (status == 2) {
-                appointGuard.eq(AppointInfo::getRegistStatus, AppointStatusEnum.REGISTERED.getCode());
+                appointGuard.in(AppointInfo::getRegistStatus,
+                        AppointStatusEnum.REGISTERED.getCode(), AppointStatusEnum.CHECKED_IN.getCode(),
+                        AppointStatusEnum.OVERDUE.getCode());
             } else {
                 appointGuard.in(AppointInfo::getRegistStatus,
-                        AppointStatusEnum.REGISTERED.getCode(), AppointStatusEnum.ACCEPTED.getCode());
+                        AppointStatusEnum.REGISTERED.getCode(), AppointStatusEnum.CHECKED_IN.getCode(),
+                        AppointStatusEnum.ACCEPTED.getCode(), AppointStatusEnum.OVERDUE.getCode());
             }
             if (appointInfoMapper.update(appointInfo, appointGuard) == 0) {
                 throw new BusinessException("该挂号状态已变更，请刷新后重试");
@@ -716,6 +788,95 @@ public class EmergencyServiceImpl extends ServiceImpl<EmergencyMapper, Emergency
     /**
      * 该患者最近一条急诊号挂号单（急诊直录产生，可能不存在——铺底数据没有挂号线索）
      */
+    /**
+     * 急诊诊查费记账（先救治后付费）。
+     *
+     * <p><b>时机与幂等</b>：接诊（status=2）时记账<b>不出账</b>——费用行必须在病历保存/开单
+     * 触发 {@code createVisitBill} 之前落库，才能被聚合进患者首张待缴账单；终态（离院/死亡/转住院）
+     * 时再兜底出账。{@code bookBatch} 按 sourceType+sourceId+itemCode 判重，两次钩子不会记双份。
+     *
+     * <p><b>为什么不拦流程</b>：急诊的铁律是先救治后付费，任何收费异常都不允许挡住接诊/结诊。
+     * 记账失败只留 ERROR 日志，收费台按待结算行兜底补记；患者没缴费时账单挂待缴，
+     * 长期未缴走挂账欠费口径（bill_status=6），不影响任何诊疗环节。
+     *
+     * <p><b>金额口径</b>：按接诊医生职称推档（普通10/副主任23/主任33，见
+     * {@link EmergencyConsultFeePolicy}），六周岁以内儿童加收30%；未接诊就终态的按普通档兜底。
+     * 留观按日的「留观诊查费」是另一个物价项目，此处不涉及。
+     */
+    /**
+     * 急诊诊查费记账（先救治后付费）。
+     *
+     * <p>价格权威在价表（sys_charge_policy / sys_charge_policy_price，价格管理页「政策价」页签维护）：
+     * 按「接诊医生职称 → 诊查费档位」实时查价表。价表缺行或停用 → 只 log 不记账不拦接诊，
+     * 请在价格管理页补配置（不再回退代码内常量——价表是唯一权威，回退会让调价静默失效）。
+     */
+    private void chargeConsultFee(Emergency emergency, boolean settleNow) {
+        try {
+            AppointInfo appoint = findEmergencyAppoint(emergency.getPatientId());
+            if (appoint == null || appoint.getId() == null) {
+                log.warn("[急诊诊查费] 急诊 {} 无关联挂号单（registType=3），费用行挂不上就诊，请收费台手工补记",
+                        emergency.getEmergencyNo());
+                return;
+            }
+            PatientMasterVO patient = patientFacadeService.getPatient(emergency.getPatientId());
+            String title = emergency.getDoctorId() == null
+                    ? null
+                    : sysEmployeeTitleMapper.selectTitleById(emergency.getDoctorId());
+            // 急诊没有号源快照、也没有「知名专家」名单制挂载点：401 主任医师按主任档收
+            ClinicDiagnosisTierEnum tier = TitleTierMapping.tierOf(title);
+            PolicyPriceVO price = chargeFacadeService.policyPrice(
+                    ChargeFacadeService.POLICY_EMG_CONSULT, tier.getCode());
+            if (price == null) {
+                log.warn("[急诊诊查费] 价表缺行或停用 policy=EMG_CONSULT tier={}({})，本次不记账（不拦接诊），"
+                                + "请在价格管理页「政策价」补配置 emergencyNo={}",
+                        tier.getCode(), tier.getLabel(), emergency.getEmergencyNo());
+                return;
+            }
+            LocalDate visitDate = LocalDate.now();
+            LocalDate birthDate = patient == null ? null : patient.getBirthDate();
+            BigDecimal fee = EmergencyConsultFeePolicy.payable(price.getAmount(), birthDate, visitDate);
+            if (fee.signum() <= 0) {
+                return;
+            }
+            FeeBookDTO dto = new FeeBookDTO();
+            dto.setPatientId(emergency.getPatientId());
+            dto.setPatientNo(emergency.getPatientNo());
+            dto.setPatientName(emergency.getPatientName());
+            dto.setEncounterType(EncounterTypeEnum.OUTPATIENT.getCode());
+            dto.setEncounterId(appoint.getId());
+            dto.setEncounterNo(appoint.getRegistNo());
+            dto.setDeptId(emergency.getDeptId());
+            dto.setDeptName(emergency.getDeptName());
+            dto.setDoctorId(emergency.getDoctorId());
+            dto.setDoctorName(emergency.getDoctorName());
+            dto.setItemType(PaymentItemTypeEnum.REGISTRATION_FEE.getCode());
+            dto.setItemCode(price.getItemCode());
+            dto.setItemName(price.getItemName());
+            dto.setUnit(price.getUnit());
+            dto.setPrice(fee);
+            dto.setQuantity(BigDecimal.ONE);
+            dto.setSourceType(FeeSourceTypeEnum.REGISTRATION.getCode());
+            dto.setSourceId(emergency.getId());
+            dto.setSourceNo(emergency.getEmergencyNo());
+            // 价表缺省（历史数据 catalog_type 为空）按丙类兜底：湘医保发〔2025〕58号诊查类全自费
+            dto.setCatalogType(price.getCatalogType() == null
+                    ? FeeCatalogTypeEnum.CLASS_C.getCode() : price.getCatalogType());
+            dto.setRemark(EmergencyConsultFeePolicy.remarkOf(price.getTierLabel(), price.getAmount(),
+                    birthDate, visitDate));
+            chargeFacadeService.bookBatch(List.of(dto));
+            if (settleNow) {
+                // 幂等：该就诊已有待缴账单则原样返回（诊查费行已在其中）；没有才出新账单
+                chargeFacadeService.createVisitBill(EncounterTypeEnum.OUTPATIENT.getCode(), appoint.getId());
+            }
+            log.info("[急诊诊查费] 记账成功 emergencyNo={} 挂号单={} 档位={} 金额 ¥{} 兜底出账={}",
+                    emergency.getEmergencyNo(), appoint.getRegistNo(), price.getTierLabel(),
+                    fee.toPlainString(), settleNow);
+        } catch (Exception e) {
+            log.error("[急诊诊查费] 记账失败 emergencyNo={}，不拦流程，请收费台按待结算行补记",
+                    emergency.getEmergencyNo(), e);
+        }
+    }
+
     private AppointInfo findEmergencyAppoint(Long patientId) {
         LambdaQueryWrapper<AppointInfo> appointWrapper = new LambdaQueryWrapper<>();
         appointWrapper.eq(AppointInfo::getPatientId, patientId)

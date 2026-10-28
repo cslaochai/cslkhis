@@ -718,12 +718,12 @@ const handleSubmit = async () => {
       medicalInsuranceType: newAppointment.value.medicalInsuranceType,
       medicalInsuranceNo: newAppointment.value.medicalInsuranceNo,
     });
+    const data = res.data || {};
     ElMessage.success(addMode.value === 'new' ? '患者建档并挂号成功' : '挂号成功');
     if (data.insuranceWarning) {
       ElMessage.warning(data.insuranceWarning);
     }
     visible.value = false;
-    const data = res.data || {};
     // 查询账单：金额用来弹缴费窗，状态用来决定**要不要**弹
     let amount = 0;
     let billStatus = null;
@@ -763,7 +763,9 @@ const handleSubmit = async () => {
     emit('saved');
     resetForm();
   } catch (error) {
-    // 错误已由全局拦截器统一提示（医保失败时后端已自动降级自费，账单正常出着，无需操作员干预）
+    // 接口异常已由全局拦截器统一提示（医保失败时后端已自动降级自费，账单正常出着，无需操作员干预）
+    // 本地异常（引用未声明变量等）不留栈就会静默吞掉整段收款弹框逻辑
+    console.error('挂号提交流程异常:', error);
   } finally {
     addSubmitLoading.value = false;
   }

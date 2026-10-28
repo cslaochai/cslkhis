@@ -238,10 +238,10 @@
         </div>
 
         <div class="relative flex min-h-0 flex-1 gap-3">
-          <!-- 次栏：病历（对调后的固定 520px 单列文书，真实 HIS 口径：模板化低频录入，不与医嘱抢宽度） -->
+          <div class="flex min-h-0 min-w-0 flex-1 flex-col gap-3">
+            <div class="flex min-h-0 flex-1 gap-3">
           <div :class="recordColCollapsed ? 'w-9' : 'w-[560px]'"
                class="relative flex min-w-0 shrink-0 flex-col overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm transition-all duration-200">
-            <!-- 标题行 = 折叠开关（只在 ≤1600px 可点，见脚本里的 COMPACT_BREAKPOINT）；宽屏退化为纯标题 -->
             <button v-if="compactViewport" :class="recordCollapsed ? 'flex-col px-1 py-2' : 'px-3 py-2'"
                     :title="recordCollapsed ? '展开病历' : '收起病历面板'"
                     class="flex w-full shrink-0 cursor-pointer items-center justify-between gap-1 border-b border-slate-200 bg-slate-50 text-left transition-colors hover:bg-slate-100"
@@ -260,11 +260,7 @@
               <span class="text-sm font-bold text-slate-700">病历</span>
               <span class="text-xs text-slate-400">主诉 / 查体 / 诊断</span>
             </div>
-            <!-- 病历：单列连续表单（真实 HIS 门诊病历是一张自上而下的文书：主诉→现病史→过敏史→既往/个人/家族/婚育史→体检→诊断→处置，
-                 医生一路往下写、不切换视图；左侧竖排定位导航点哪段滚到哪段，不用手动找） -->
             <div v-if="!recordColCollapsed" class="flex min-h-0 flex-1">
-              <!-- 左侧段落定位（tab 样式 + 滑动指示条）：点击平滑滚动到对应段；蓝色指示条随选中项上下滑动
-                   （模拟 el-tabs inkbar，医生能直接看出这里可点、当前在哪一段） -->
               <div class="relative flex w-10 shrink-0 flex-col border-r border-slate-200 bg-slate-50 px-1.5 py-3">
                 <span
                     :style="{ transform: `translateY(${activeTabIndex * 68}px)` }"
@@ -737,7 +733,7 @@
             </div>
           </div>
 
-          <div class="flex min-w-0 flex-1 flex-col gap-3 pb-3">
+          <div class="flex min-h-0 min-w-0 flex-1 flex-col gap-3 pb-3">
             <OrderPanel :count-text="prescriptionList.length + ' 张'" class="flex-[1.3] min-h-0" fill noCollapse
                         title="处方">
               <div class="flex min-h-0 flex-1 flex-col">
@@ -1375,6 +1371,54 @@
               </div>
             </OrderPanel>
           </div>
+            </div>
+          <!-- 底部动作条：占满「病历 + 处方/医嘱」两列总宽（主区块底部），不压第三栏决策支持 -->
+          <PageActionBar align="start" class="flex-wrap !h-auto shrink-0">
+            <!-- 结诊前：核心操作 -->
+            <div v-if="!isVisitCompleted" class="flex items-center gap-3">
+              <!-- 住院证记录查看/作废：排在临时保存前（用户要求），普通按钮样式（plain 白底边框） -->
+              <el-button v-if="currentPatient.queueStatus == 3" v-perm="'opd:doctorWorkstation:list'" plain
+                         @click="myAdmissionListVisible = true">我开的住院证
+              </el-button>
+              <!-- 模板维护（五类模板统一入口：常用诊断/处方模板/药品套餐/检查模板/检验模板，弹窗左侧分类、右侧列表套用） -->
+              <el-button v-if="currentPatient.queueStatus == 3" plain @click="openTemplateMaintain">模板维护
+              </el-button>
+              <el-button v-if="currentPatient.queueStatus == 3"
+                         v-perm="['opd:doctorWorkstation:add', 'opd:doctorWorkstation:edit']" type="primary"
+                         @click="handleSaveRecord">
+                临时保存
+              </el-button>
+              <el-button v-if="currentPatient.queueStatus == 3" v-perm="'opd:doctorWorkstation:add'" :icon="Tickets" plain
+                         type="success" @click="openOrderDialog">
+                开住院证
+              </el-button>
+              <el-button v-if="currentPatient.queueStatus == 3" v-perm="'opd:doctorWorkstation:add'" plain type="primary"
+                         @click="openRevisitAppoint">
+                预约复诊
+              </el-button>
+              <el-button v-if="currentPatient.queueStatus == 3" v-perm="'opd:doctorWorkstation:edit'" :loading="submitting"
+                         type="warning" @click="handleComplete">
+                结诊
+              </el-button>
+            </div>
+            <!-- 结诊后：打印指引 + 撤回结诊（已提交可撤，已归档后端拒） -->
+            <div v-else class="flex items-center gap-3">
+              <el-button v-if="isRecordSubmitted" v-perm="'opd:doctorWorkstation:edit'" :loading="revoking" plain
+                         type="danger" @click="handleRevokeRecord">
+                <el-icon class="mr-1">
+                  <RefreshLeft/>
+                </el-icon>
+                撤回结诊
+              </el-button>
+              <el-button :loading="printingDocs" type="success" @click="handlePrintVisitDocs">
+                <el-icon class="mr-1">
+                  <Printer/>
+                </el-icon>
+                打印就诊文书
+              </el-button>
+            </div>
+          </PageActionBar>
+          </div>
           <!--
             第三栏（决策支持栏）：辅助诊疗 + 用药安全审查。标准 HIS 门诊医生站常把 AI/CDSS 辅助
             放在主工作区一侧的窄栏，不挤占医嘱开单宽度；本栏 300px、独立滚动。
@@ -1524,52 +1568,6 @@
           </div>
         </div>
 
-        <!-- 底部固定动作条：靠左，与上方病历正文左对齐（医生视线从病历下来就落在第一个按钮上） -->
-        <PageActionBar align="start">
-          <!-- 结诊前：核心操作 -->
-          <div v-if="!isVisitCompleted" class="flex items-center gap-3">
-            <!-- 住院证记录查看/作废：排在临时保存前（用户要求），普通按钮样式（plain 白底边框） -->
-            <el-button v-if="currentPatient.queueStatus == 3" v-perm="'opd:doctorWorkstation:list'" plain
-                       @click="myAdmissionListVisible = true">我开的住院证
-            </el-button>
-            <!-- 模板维护（五类模板统一入口：常用诊断/处方模板/药品套餐/检查模板/检验模板，弹窗左侧分类、右侧列表套用） -->
-            <el-button v-if="currentPatient.queueStatus == 3" plain @click="openTemplateMaintain">模板维护
-            </el-button>
-            <el-button v-if="currentPatient.queueStatus == 3"
-                       v-perm="['opd:doctorWorkstation:add', 'opd:doctorWorkstation:edit']" type="primary"
-                       @click="handleSaveRecord">
-              临时保存
-            </el-button>
-            <el-button v-if="currentPatient.queueStatus == 3" v-perm="'opd:doctorWorkstation:add'" :icon="Tickets" plain
-                       type="success" @click="openOrderDialog">
-              开住院证
-            </el-button>
-            <el-button v-if="currentPatient.queueStatus == 3" v-perm="'opd:doctorWorkstation:add'" plain type="primary"
-                       @click="openRevisitAppoint">
-              预约复诊
-            </el-button>
-            <el-button v-if="currentPatient.queueStatus == 3" v-perm="'opd:doctorWorkstation:edit'" :loading="submitting"
-                       type="warning" @click="handleComplete">
-              结诊
-            </el-button>
-          </div>
-          <!-- 结诊后：打印指引 + 撤回结诊（已提交可撤，已归档后端拒） -->
-          <div v-else class="flex items-center gap-3">
-            <el-button v-if="isRecordSubmitted" v-perm="'opd:doctorWorkstation:edit'" :loading="revoking" plain
-                       type="danger" @click="handleRevokeRecord">
-              <el-icon class="mr-1">
-                <RefreshLeft/>
-              </el-icon>
-              撤回结诊
-            </el-button>
-            <el-button :loading="printingDocs" type="success" @click="handlePrintVisitDocs">
-              <el-icon class="mr-1">
-                <Printer/>
-              </el-icon>
-              打印就诊文书
-            </el-button>
-          </div>
-        </PageActionBar>
       </template>
     </div>
 

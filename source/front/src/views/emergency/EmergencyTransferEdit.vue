@@ -24,7 +24,7 @@
         <el-form-item label="留观床位" required>
           <el-select v-model="obsForm.bedId" :disabled="!obsForm.wardId" class="!w-full"
                      data-testid="emg-transfer-bed" placeholder="先选病区">
-            <el-option v-for="b in obsBeds" :key="b.bedId" :label="`${b.bedNo}（${b.bedType}）`" :value="String(b.bedId)"/>
+            <el-option v-for="b in obsBeds" :key="b.bedId" :label="`${b.bedNo}（${b.bedTypeText || b.bedType}）`" :value="String(b.bedId)"/>
           </el-select>
           <p v-if="obsForm.wardId && !obsBeds.length" class="mt-1 text-xs text-rose-500">该病区暂无空闲床位</p>
         </el-form-item>

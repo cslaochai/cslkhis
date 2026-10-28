@@ -26,6 +26,7 @@ import com.his.inpatient.dto.*;
 import com.his.spi.dto.InpatientAdmitDTO;
 import com.his.inpatient.entity.*;
 import com.his.common.enums.BedStatusEnum;
+import com.his.common.enums.BedTypeEnum;
 import com.his.common.enums.DischargeWayEnum;
 import com.his.common.enums.SummaryStatusEnum;
 import com.his.spi.service.PatientFacadeService;
@@ -721,6 +722,7 @@ public class InpatientServiceImpl extends ServiceImpl<BizInpatientSummaryMapper,
         List<BedVO> beds = sysBedMapper.selectBedList(wardId, deptId, bedStatus);
         for (BedVO b : beds) {
             b.setBedStatusText(BedStatusEnum.getLabel(b.getBedStatus()));
+            b.setBedTypeText(BedTypeEnum.getLabel(b.getBedType()));
         }
         return beds;
     }

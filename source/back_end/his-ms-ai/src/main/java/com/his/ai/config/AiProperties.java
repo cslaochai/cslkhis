@@ -28,7 +28,8 @@ public class AiProperties {
     private String provider = "openai-compatible";
 
     /**
-     * 服务地址，例如 https://api.deepseek.com 或内网 http://10.0.0.5:8000
+     * chat 端点全 URL（OpenAI 兼容形态），例如 https://api.deepseek.com/v1/chat/completions
+     * 或内网 http://10.0.0.5:8000/v1/chat/completions
      */
     private String baseUrl = "";
 
@@ -135,9 +136,10 @@ public class AiProperties {
          */
         private Milvus milvus = new Milvus();
         /**
-         * 远程 embedding 服务地址（OpenAI 兼容 /v1/embeddings），未配则回落 ai.base-url
+         * 远程 embedding 端点全 URL（OpenAI 兼容形态，如 https://host/compatible-mode/v1/embeddings）；
+         * 未配则不走 remote（由 EmbeddingProviderSelector 选择 local-tf）
          */
-        private String embedBaseUrl = "";
+        private String embedUrl = "";
         /**
          * 远程 embedding 访问密钥，未配则回落 ai.apiKey（环境变量 HIS_AI_API_KEY）
          */
@@ -170,6 +172,10 @@ public class AiProperties {
 
     @Data
     public static class Asr {
+        /**
+         * 语音转写端点全 URL（OpenAI 兼容形态）；留空则取 his.ai.base-url 原样，不再拼路径
+         */
+        private String url = "";
         /**
          * ASR 模型（同步转写）
          */

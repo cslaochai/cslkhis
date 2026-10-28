@@ -568,6 +568,8 @@ const applyLabTpl = (t) => {
 const reloadAll = () => { loadIns(); loadLab(); loadCritical(); };
 onMounted(() => { reloadAll(); loadTpls(); });
 watch(() => props.patient?.id, () => { insList.value = []; labList.value = []; criticalList.value = []; reloadAll(); });
+// 医嘱套套用后由父组件（EmergencyDoctorView）调用来刷新检查/检验列表
+defineExpose({reloadAll});
 </script>
 
 <style scoped>

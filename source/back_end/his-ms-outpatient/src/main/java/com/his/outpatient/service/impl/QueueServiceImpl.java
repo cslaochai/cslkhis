@@ -529,7 +529,18 @@ public class QueueServiceImpl extends ServiceImpl<QueueMapper, Queue> implements
     }
 
     /**
+     * 急诊队列行判定（regist_type=3）。急诊行的收口只走急诊状态流转
+     * （EmergencyServiceImpl#syncAppointAndQueue），叫号侧对它只做播报/排序类操作。
+     */
+    private boolean isEmergencyRow(Queue queue) {
+        return queue.getRegistType() != null
+                && queue.getRegistType() == RegistTypeEnum.EMERGENCY.getCode();
+    }
+
+    /**
      * 结束该医生所有还在「就诊中」的队列 —— 保证同一医生同一时刻只有一条就诊中。
+     * 急诊行除外：急诊医生同时诊治多名患者是常态，其队列行由急诊状态流转收口，
+     * 这里收掉会让还在「诊治中」的急诊患者在看板上提前变成已就诊。
      */
     private Queue closeConsultingOf(Long deptId, Long doctorId, Long excludeQueueId) {
         if (deptId == null || doctorId == null) {
@@ -541,7 +552,8 @@ public class QueueServiceImpl extends ServiceImpl<QueueMapper, Queue> implements
                 .eq(Queue::getQueueStatus, QueueStatusEnum.CONSULTING.getCode())
                 .ne(excludeQueueId != null, Queue::getId, excludeQueueId)
                 .orderByDesc(Queue::getCallTime)
-                .orderByDesc(Queue::getId));
+                .orderByDesc(Queue::getId))
+                .stream().filter(q -> !isEmergencyRow(q)).collect(Collectors.toList());
         if (consulting.isEmpty()) {
             return null;
         }
@@ -745,6 +757,27 @@ public class QueueServiceImpl extends ServiceImpl<QueueMapper, Queue> implements
             throw new BusinessException("排队记录不存在");
         }
         deptScopeService.assertDeptAccessible(queue.getDeptId());
+        // ===== 急诊行（regist_type=3）：呼叫=纯播报 =====
+        // 急诊的临床态权威在急诊记录（emergency_status），queue 只是同步的影子行：
+        // ① 呼叫只加叫号次数+刷新叫号时间（大屏/语音播报），状态保持候诊中——
+        //    若照门诊置就诊中，急诊接诊 syncAppointAndQueue 的守卫（期望候诊中）会 0 行，
+        //    医生点「接诊」直接 500；② 不 markRegistAccepted（挂号单被推成已接诊会撞同一守卫）；
+        //    ③ 不 closeConsultingOf——急诊医生同时管多个「诊治中」患者是常态，
+        //    呼叫下一位把上一位的队列行收成已就诊，急诊还在治的人在看板上凭空消失。
+        if (isEmergencyRow(queue)) {
+            if (queue.getQueueStatus() != QueueStatusEnum.WAITING.getCode()) {
+                throw new BusinessException("只能呼叫候诊中的患者");
+            }
+            int announced = baseMapper.update(null, new LambdaUpdateWrapper<Queue>()
+                    .eq(Queue::getId, queue.getId())
+                    .eq(Queue::getQueueStatus, QueueStatusEnum.WAITING.getCode())
+                    .set(Queue::getCallTime, LocalDateTime.now())
+                    .set(Queue::getCallCount, queue.getCallCount() != null ? queue.getCallCount() + 1 : 1));
+            if (announced == 0) {
+                throw new BusinessException("该患者状态已变更，请刷新后重试");
+            }
+            return buildCallNextVO(queue, null, LocalDateTime.now());
+        }
         // 呼叫的两个入口态：候诊中(2)=常规叫号；已就诊(4)=**回诊**。
         // 回诊是真实门诊的高频场景（A 抽血/影像没出，医生叫 B，结果回来后把 A 叫回来看第二眼）：
         // closeConsultingOf 在叫下一位时把上一位置 4，但病历只是草稿并未结诊提交，

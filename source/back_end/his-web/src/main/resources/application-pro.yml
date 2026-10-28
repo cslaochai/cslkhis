@@ -40,7 +40,7 @@ his:
     channel:
       # remote=调医保前置系统(csmip)；生产必须给真实前置机地址，localhost 默认值只够本机联调
       mode: ${HIS_INSURANCE_MODE:remote}
-      base-url: ${HIS_INSURANCE_BASE_URL:http://localhost:8091/mip}
+      base-url: ${HIS_INSURANCE_BASE_URL:http://localhost:8091/mig}
   sms:
     code:
       # 测试开关：true=不走网关、验证码回显。漏配即失败关闭

@@ -19,3 +19,18 @@ export function getPriceHistoryList(params) {
 export function getPriceSummary() {
   return request.get('/system/price/summary')
 }
+
+// 政策价列表（诊查费等政策类项目，政策×档位平铺）
+export function getPolicyPriceList() {
+  return request.get('/system/price/policyList')
+}
+
+// 政策价调价（写调价历史，itemType=POLICY）
+export function changePolicyPrice(data) {
+  return request.post('/system/price/policyChangePrice', data)
+}
+
+// 政策价档位启停（停用后运行时按「缺行」降级）
+export function changePolicyPriceStatus(data) {
+  return request.post('/system/price/policyChangeStatus', data)
+}

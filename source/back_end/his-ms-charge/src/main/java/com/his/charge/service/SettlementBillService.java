@@ -27,7 +27,7 @@ public interface SettlementBillService extends IService<BizSettlementBill> {
      * <p>账单金额一律服务端现算（应收=Σ记账行净额、split 按目录类别算），
      * 入参只能决定"哪些行进这张账单"和"优惠多少"。
      */
-    BizSettlementBill settle(BillSettleUpsertDTO dto);
+    BizSettlementBill settle(BillSettleUpsertDTO settleUpsertDTO);
 
     /**
      * 结算出账并回显账单：与 {@link #settle} 同一事务，只是出参换成 VO。
@@ -40,7 +40,7 @@ public interface SettlementBillService extends IService<BizSettlementBill> {
      * <p>开这个口子是为了消灭"住院结算自己再算一遍"：原先出院试算逐单调旧收费侧的试算再汇总，
      * 出账时 L2 又算一遍统筹/自付，两套数一漂移，小票就跟结算单对不上。
      */
-    BillPreviewVO previewSettlement(BillSettleUpsertDTO dto);
+    BillPreviewVO previewSettlement(BillSettleUpsertDTO settleUpsertDTO);
 
     /**
      * 取消结算：账单作废 + 记账行解锁。<b>已有收款的账单不许作废</b>，必须走退费。

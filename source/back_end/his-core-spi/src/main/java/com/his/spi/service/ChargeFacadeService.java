@@ -14,6 +14,7 @@ import com.his.spi.vo.FeeRecordVO;
 import com.his.spi.vo.FeeTypeSumVO;
 import com.his.spi.vo.InsuranceBriefVO;
 import com.his.spi.vo.PendingBillVO;
+import com.his.spi.vo.PolicyPriceVO;
 import com.his.spi.vo.PrepayBalanceVO;
 import com.his.spi.vo.PrepayVO;
 import com.his.spi.vo.RegistChargeCommandVO;
@@ -23,6 +24,7 @@ import java.math.BigDecimal;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * 收费域对外提供的端口（依赖倒置，实现落在 his-charge）：
@@ -32,6 +34,27 @@ import java.util.Map;
  * 需要"记账失败不拖垮主流程"的调用方自己用 {@code REQUIRES_NEW} 包一层。
  */
 public interface ChargeFacadeService {
+
+    // ---------- 政策价（价表权威，代码内不再存价格常量） ----------
+
+    /** 门诊诊查费(普通门诊)：湘医保发〔2025〕58号附件1，四档 9/22/31/70 */
+    String POLICY_OPD_CONSULT = "OPD_CONSULT";
+
+    /** 急诊诊查费：国家价格项目 110200003，三档 10/23/33，先救治后付费 */
+    String POLICY_EMG_CONSULT = "EMG_CONSULT";
+
+    /**
+     * 查政策价目（政策级 + 档位级属性一次拿齐）。
+     *
+     * <p>价格权威在价表（sys_charge_policy / sys_charge_policy_price），每次实时查库，
+     * 价格管理页调价即时生效。
+     *
+     * @param policyCode 政策编码（{@link #POLICY_OPD_CONSULT} / {@link #POLICY_EMG_CONSULT}）
+     * @param tierCode   档位码（对齐 ClinicDiagnosisTierEnum：1-普通 2-副主任 3-主任 4-知名专家）
+     * @return 价目单；<b>null = 价表缺行或政策/档位被停用</b>，调用方自行降级
+     *         （急诊只 log 不记账不拦人；门诊回退枚举兜底价并留痕）
+     */
+    PolicyPriceVO policyPrice(String policyCode, Integer tierCode);
 
     // ---------- L1 记账（应收唯一来源） ----------
 
@@ -114,6 +137,16 @@ public interface ChargeFacadeService {
      * @return 无账单或全部结清时返回空列表
      */
     List<BillBriefVO> pendingBillsOfEncounter(Integer encounterType, Long encounterId);
+
+    /**
+     * 批量判断哪些患者名下有「挂账/欠费」账单（bill_status=6，长期未缴挂账态）。
+     * 供医生工作站患者列表出欠费标识：真实 HIS 的患者行欠费标（先救治后付费口径下，
+     * 诊治期间的 1/2 待缴账单是常态不打扰，只有挂账欠费才亮标）。
+     *
+     * @param patientIds 患者ID集合（可空；空集合返回空集）
+     * @return 名下至少存在一张挂账/欠费账单的患者ID集合
+     */
+    Set<Long> patientsWithArrears(Collection<Long> patientIds);
 
     /**
      * 结诊时自动把本次就诊全部「1-待结算」L1 行锁成一张 L2 待缴账单（billType=2 门诊诊间结算）。

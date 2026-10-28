@@ -21,6 +21,7 @@ import com.his.common.base.PageResult;
 import com.his.common.entity.CurrentUser;
 import com.his.common.enums.*;
 import com.his.common.exception.BusinessException;
+import com.his.common.support.SystemOperatorContext;
 import com.his.common.support.TcmGramUnits;
 import com.his.common.util.DateFormats;
 import com.his.common.util.NumUtil;
@@ -2423,32 +2424,47 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
         if (recordId == null) {
             return;
         }
-        // 异步新事务里重新加载病历（内存对象在结诊事务提交后已不可用）
-        BizMedicalRecord record = this.getById(recordId);
-        if (record == null) {
-            log.warn("[结诊收尾] 病历不存在，跳过 recordId={}", recordId);
-            return;
+        // 收尾跑在 @Async 独立线程（AFTER_COMMIT），那里没有登录态——
+        // 出 L2 待缴账单走 settle 时需要操作人归因（billById/billByName），
+        // 否则 UserUtils.getCurrentUser() 返回 null → NPE。
+        // 用结诊时点快照的身份绑进上下文，finally 里还原；同步保底分支（有真实登录态）不绑不清除。
+        boolean bound = false;
+        if (UserUtils.getCurrentUser() == null && operator != null) {
+            SystemOperatorContext.bindEmployee(operator.getEmployeeId(), operator.getName());
+            bound = true;
         }
-
-        // ① L2 待缴账单：按就诊聚合所有待结算 L1 行出一张汇总账单（患者扫一个码付全部）。
-        //    放这里是为了不堵结诊事务；幂等，已有待缴账单直接返回。
         try {
-            chargeFacadeService.createVisitBill(EncounterTypeEnum.OUTPATIENT.getCode(), record.getRegistId());
-        } catch (Exception ex) {
-            log.error("[结诊收尾] L2 待缴账单生成失败 recordNo={}", record.getRecordNo(), ex);
-        }
+            // 异步新事务里重新加载病历（内存对象在结诊事务提交后已不可用）
+            BizMedicalRecord record = this.getById(recordId);
+            if (record == null) {
+                log.warn("[结诊收尾] 病历不存在，跳过 recordId={}", recordId);
+                return;
+            }
 
-        // ② 规则质控（事后提醒，失败只记日志）
-        try {
-            QcSystemExecuteDTO qcDto = new QcSystemExecuteDTO();
-            qcDto.setRecordSource(QcRecordSourceEnum.OUTPATIENT.getCode());
-            qcDto.setRecordId(recordId);
-            qcDto.setQcType(RecordQcTypeEnum.COMPREHENSIVE.getCode());
-            qcDto.setTriggerSource(QcTriggerSourceEnum.CLINIC_SUBMIT);
-            qcDto.setOperator(operator);
-            qualityControlService.executeQcBySystem(qcDto);
-        } catch (Exception ex) {
-            log.error("[结诊收尾] 规则质控失败 recordNo={}", record.getRecordNo(), ex);
+            // ① L2 待缴账单：按就诊聚合所有待结算 L1 行出一张汇总账单（患者扫一个码付全部）。
+            //    放这里是为了不堵结诊事务；幂等，已有待缴账单直接返回。
+            try {
+                chargeFacadeService.createVisitBill(EncounterTypeEnum.OUTPATIENT.getCode(), record.getRegistId());
+            } catch (Exception ex) {
+                log.error("[结诊收尾] L2 待缴账单生成失败 recordNo={}", record.getRecordNo(), ex);
+            }
+
+            // ② 规则质控（事后提醒，失败只记日志）
+            try {
+                QcSystemExecuteDTO qcDto = new QcSystemExecuteDTO();
+                qcDto.setRecordSource(QcRecordSourceEnum.OUTPATIENT.getCode());
+                qcDto.setRecordId(recordId);
+                qcDto.setQcType(RecordQcTypeEnum.COMPREHENSIVE.getCode());
+                qcDto.setTriggerSource(QcTriggerSourceEnum.CLINIC_SUBMIT);
+                qcDto.setOperator(operator);
+                qualityControlService.executeQcBySystem(qcDto);
+            } catch (Exception ex) {
+                log.error("[结诊收尾] 规则质控失败 recordNo={}", record.getRecordNo(), ex);
+            }
+        } finally {
+            if (bound) {
+                SystemOperatorContext.clear();
+            }
         }
     }
 

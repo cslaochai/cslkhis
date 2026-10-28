@@ -19,7 +19,10 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 申请单事实端口实现。
@@ -107,6 +110,36 @@ public class EmrApplyFacadeServiceImpl implements EmrApplyFacadeService {
                 .set(BizInspectionApply::getAppointmentTime, null)
                 .set(BizInspectionApply::getUpdateBy, operator)
                 .set(BizInspectionApply::getUpdateTime, LocalDateTime.now().withNano(0)));
+    }
+
+    @Override
+    public Map<Long, Integer> mapReportReadyCountByRegistIds(Collection<Long> registIds) {
+        if (registIds == null || registIds.isEmpty()) {
+            return Map.of();
+        }
+        // 「有新报告」= 检查/检验申请单已推进到 5-已出报告。检查、检验两张表同一套
+        // apply_status 枚举（CdrInspApplyStatusEnum），各一次 IN 查询后按 registId 合计。
+        // del_flag=0 由 @TableLogic 自动追加
+        Map<Long, Integer> result = new HashMap<>();
+        List<BizInspectionApply> insList = bizInspectionApplyMapper.selectList(
+                new LambdaQueryWrapper<BizInspectionApply>()
+                        .in(BizInspectionApply::getRegistId, registIds)
+                        .eq(BizInspectionApply::getApplyStatus, CdrInspApplyStatusEnum.REPORTED.getCode()));
+        for (BizInspectionApply apply : insList) {
+            if (apply.getRegistId() != null) {
+                result.merge(apply.getRegistId(), 1, Integer::sum);
+            }
+        }
+        List<BizLaboratoryApply> labList = bizLaboratoryApplyMapper.selectList(
+                new LambdaQueryWrapper<BizLaboratoryApply>()
+                        .in(BizLaboratoryApply::getRegistId, registIds)
+                        .eq(BizLaboratoryApply::getApplyStatus, CdrInspApplyStatusEnum.REPORTED.getCode()));
+        for (BizLaboratoryApply apply : labList) {
+            if (apply.getRegistId() != null) {
+                result.merge(apply.getRegistId(), 1, Integer::sum);
+            }
+        }
+        return result;
     }
 
     private LambdaQueryWrapper<BizInspectionApply> inspectionWrapper(InspectionApplyPageQueryDTO query) {

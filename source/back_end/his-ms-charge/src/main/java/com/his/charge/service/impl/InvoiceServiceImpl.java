@@ -131,8 +131,8 @@ public class InvoiceServiceImpl extends ServiceImpl<BizInvoiceMapper, BizInvoice
             this.updateById(lastVoided);
         }
         this.save(invoice);
-        log.info("[出票] 发票 {} 账单 {} 票面 ¥{}（净实收）换开自={}", invoice.getInvoiceNo(), bill.getBillNo(),
-                net.toPlainString(), invoice.getOrigInvoiceId());
+        log.info("[出票] 发票 {} 账单 {} 票面 ¥{}（净实收）{}", invoice.getInvoiceNo(), bill.getBillNo(),
+                net.toPlainString(), invoice.getOrigInvoiceId() != null ? "换开自=" + invoice.getOrigInvoiceId() : "首次出票");
         return toVO(invoice);
     }
 

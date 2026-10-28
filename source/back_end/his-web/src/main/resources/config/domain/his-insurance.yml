@@ -4,10 +4,24 @@ his:
     # 医保联网结算总开关：true=支持医保结算（按 channel.mode 远程查参保）；
     # false=不支持医保结算，结算时按自费原价走，不查医保
     enabled: true
-    # 通道实现（mode）与平台地址（base-url）随环境变，落 profile 文件；这里只管超时
+    # 通道实现（mode）与平台地址（base-url）随环境变，落 profile 文件；这里只管超时与接口路径
     channel:
       connect-timeout-ms: 5000
       read-timeout-ms: 15000
+      # 前置机接口路径（相对 base-url），与前置 GatewayController 的路由契约一致
+      paths:
+        # 通用报文上送：{msgType} 由业务报文类型现场替换
+        send: /gateway/{msgType}
+        # 日对账账单拉取
+        day-bill: /gateway/dayBill
+        # 参保人信息查询
+        person-query: /insure/person/query
+        # 预结算
+        pre-settle: /gateway/2201
+        # 正式结算
+        formal-settle: /gateway/2301
+        # 实时结算冲正
+        cancel: /gateway/2305
     # 报文国密（SM2 签名 + SM4 加密 + csssl 证书链）：院内段 SM4 密钥与前置机 mig.crypto.sm4-key-his 一致；
     # 生产用环境变量 HIS_INS_SM4_KEY / HIS_INS_CRYPTO_ENABLED 覆盖
     crypto:

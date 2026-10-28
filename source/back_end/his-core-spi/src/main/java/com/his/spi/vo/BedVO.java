@@ -49,6 +49,11 @@ public class BedVO {
     private String bedType;
 
     /**
+     * 床位类型文案（普通/重症/特需），由后端统一给，避免前端裸显英文码值
+     */
+    private String bedTypeText;
+
+    /**
      * 床位状态（0-维修 1-空闲 2-占用 3-锁定）
      */
     private Integer bedStatus;

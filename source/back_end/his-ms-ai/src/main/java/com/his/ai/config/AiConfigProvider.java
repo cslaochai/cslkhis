@@ -120,6 +120,14 @@ public class AiConfigProvider {
     }
 
     /**
+     * ASR 端点全 URL：单独配了 his.ai.asr.url 用之，否则取 chat 地址原样（两侧都是端点全 URL，不做路径推断）
+     */
+    public String asrUrl() {
+        String url = aiProperties.getAsr().getUrl();
+        return TextUtil.hasText(url) ? url : aiProperties.getBaseUrl();
+    }
+
+    /**
      * ASR 访问密钥：未单独配置时回落 chat 密钥（同一把 HIS_AI_API_KEY）
      */
     public String asrApiKey() {

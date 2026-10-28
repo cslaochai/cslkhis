@@ -97,8 +97,8 @@ public class SettlementBillServiceImpl extends ServiceImpl<BizSettlementBillMapp
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public BizSettlementBill settle(BillSettleUpsertDTO dto) {
-        Draft draft = draft(dto);
+    public BizSettlementBill settle(BillSettleUpsertDTO settleUpsertDTO) {
+        Draft draft = draft(settleUpsertDTO);
         List<BizFeeRecord> rows = draft.rows();
         List<BizSettlementBillItem> items = draft.items();
         PatientInsurance insurance = draft.insurance();
@@ -114,7 +114,7 @@ public class SettlementBillServiceImpl extends ServiceImpl<BizSettlementBillMapp
         bill.setEncounterType(first.getEncounterType());
         bill.setEncounterId(first.getEncounterId());
         bill.setEncounterNo(TextUtil.cut(first.getEncounterNo(), W_ENCOUNTER_NO));
-        bill.setBillType(resolveBillType(dto.getBillType()).getCode());
+        bill.setBillType(resolveBillType(settleUpsertDTO.getBillType()).getCode());
         bill.setFeeCount(items.size());
         bill.setTotalAmount(total);
         bill.setDiscountAmount(discount);
@@ -142,7 +142,7 @@ public class SettlementBillServiceImpl extends ServiceImpl<BizSettlementBillMapp
         bill.setBillById(UserUtils.getCurrentUser().getEmployeeId());
         bill.setBillByName(TextUtil.cut(UserUtils.getCurrentUser().getRealName(), W_BILL_BY_NAME));
         // 出账时按自费降级（参保核验未过/平台不可用等）：remark 追加医保降级标记，补结算（supplement）只认带标记的单
-        String remarkBase = dto.getRemark();
+        String remarkBase = settleUpsertDTO.getRemark();
         if (insurance.downgradeReason() != null) {
             String marker = InsuranceRealTimeSettleService.DEGRADE_MARKER + insurance.downgradeReason();
             remarkBase = remarkBase == null || remarkBase.isEmpty() ? marker : remarkBase + "；" + marker;
@@ -179,11 +179,11 @@ public class SettlementBillServiceImpl extends ServiceImpl<BizSettlementBillMapp
     }
 
     @Override
-    public BillPreviewVO previewSettlement(BillSettleUpsertDTO dto) {
-        Draft draft = draft(dto);
+    public BillPreviewVO previewSettlement(BillSettleUpsertDTO settleUpsertDTO) {
+        Draft draft = draft(settleUpsertDTO);
         BillPreviewVO vo = new BillPreviewVO();
-        vo.setEncounterType(dto.getEncounterType());
-        vo.setEncounterId(dto.getEncounterId());
+        vo.setEncounterType(settleUpsertDTO.getEncounterType());
+        vo.setEncounterId(settleUpsertDTO.getEncounterId());
         vo.setFeeCount(draft.rows().size());
         vo.setTotalAmount(draft.total());
         vo.setDiscountAmount(draft.discount());
@@ -361,8 +361,8 @@ public class SettlementBillServiceImpl extends ServiceImpl<BizSettlementBillMapp
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public BizSettlementBillVO settleVO(BillSettleUpsertDTO dto) {
-        return toVO(settle(dto));
+    public BizSettlementBillVO settleVO(BillSettleUpsertDTO settleUpsertDTO) {
+        return toVO(settle(settleUpsertDTO));
     }
 
     @Override

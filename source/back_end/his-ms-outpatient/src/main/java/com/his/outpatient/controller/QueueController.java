@@ -97,7 +97,7 @@ public class QueueController {
         return Result.success(queueService.callNextByOperator(queueCallNextDTO));
     }
 
-    @PreAuthorize("hasAuthority('opd:triage:edit')")
+    @PreAuthorize("hasAuthority('opd:triage:edit') or hasAuthority('opd:emergencyDoctor:edit')")
     @Operation(summary = "过号处理")
     @PostMapping("/overdueQueue")
     public Result<Void> overdueQueue(@Valid @RequestBody QueueOverdueDTO dto) {
@@ -112,14 +112,16 @@ public class QueueController {
         return Result.success(vo);
     }
 
-    @PreAuthorize("hasAuthority('opd:doctorWorkstation:edit')")
+    // 急诊医生站也用这套叫号接口（急诊医生角色只有 opd:emergencyDoctor:edit，没有门诊/分诊台权限）：
+    // 呼叫/重呼/过号/回队对 regist_type=3 的急诊队列行有专用分支（播报不翻态、不收上一位）
+    @PreAuthorize("hasAuthority('opd:doctorWorkstation:edit') or hasAuthority('opd:emergencyDoctor:edit')")
     @Operation(summary = "呼叫患者（返回接诊回执：叫到了谁）")
     @PostMapping("/callPatient")
     public Result<QueueCallNextVO> callPatient(@RequestParam Long queueId) {
         return Result.success(queueService.callPatient(queueId));
     }
 
-    @PreAuthorize("hasAuthority('opd:doctorWorkstation:edit')")
+    @PreAuthorize("hasAuthority('opd:doctorWorkstation:edit') or hasAuthority('opd:emergencyDoctor:edit')")
     @Operation(summary = "重呼患者")
     @PostMapping("/recallPatient")
     public Result<Void> recallPatient(@RequestParam Long queueId) {
@@ -127,7 +129,7 @@ public class QueueController {
         return success ? Result.success() : Result.error("重呼失败");
     }
 
-    @PreAuthorize("hasAuthority('opd:triage:edit')")
+    @PreAuthorize("hasAuthority('opd:triage:edit') or hasAuthority('opd:emergencyDoctor:edit')")
     @Operation(summary = "重新入队：mode=1 置为优先（候诊中插队首）/ mode=2 过号回队（排到队尾），返回新顺序号")
     @PostMapping("/rejoinQueue")
     public Result<Integer> rejoinQueue(@RequestParam Long queueId,
