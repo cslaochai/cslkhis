@@ -1,0 +1,10 @@
+# 离线环境覆盖（132 无公网，基础镜像拉不到，构建复用 his-*:local 本地镜像层）：
+# docker compose -f docker-compose.yml -f docker-compose.offline.yml up -d --build
+services:
+  his-backend:
+    build:
+      dockerfile: Dockerfile.local
+
+  his-front:
+    build:
+      dockerfile: Dockerfile.local

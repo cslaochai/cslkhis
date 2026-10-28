@@ -1,9 +1,10 @@
 package com.his.charge.service;
 
 import com.his.charge.vo.PayOrderVO;
+import com.his.charge.service.PayChannelResult.PayUnifiedResult;
+import com.his.charge.service.PayChannelResult.TradeState;
 
 import java.math.BigDecimal;
-import java.util.Map;
 
 public interface WxPayChannelService {
 
@@ -34,30 +35,4 @@ public interface WxPayChannelService {
      */
     void markMockPaid(String payNo, BigDecimal amount);
 
-    /**
-     * 渠道交易状态快照。
-     *
-     * @param tradeNo     微信支付订单号（原路退款要靠它）
-     * @param tradeStatus 渠道交易状态原文
-     * @param totalAmount 渠道侧订单金额，用于与本地支付单逐字比对
-     */
-    record TradeState(String tradeNo, String tradeStatus, BigDecimal totalAmount) {
-    }
-
-    /**
-     * 支付单下单结果。
-     *
-     * <p>没有「模拟支付成功」这一态：渠道模拟模式只可能给出一张<b>扫不实的占位码</b>（出码这一步放行），
-     * 到账与否仍由查单说话，而模拟查单只认显式登记过的模拟收款。
-     * 所以这里只有「拿到收银台参数」和「失败」两种结果，谁都不可能自己判成已收。
-     */
-    record PayUnifiedResult(Map<String, String> payParams, String errMsg) {
-        public static PayUnifiedResult cashier(Map<String, String> payParams) {
-            return new PayUnifiedResult(payParams, null);
-        }
-
-        public static PayUnifiedResult fail(String errMsg) {
-            return new PayUnifiedResult(null, errMsg);
-        }
-    }
 }

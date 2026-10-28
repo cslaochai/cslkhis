@@ -32,7 +32,7 @@ import java.util.regex.Pattern;
  * HIS 医保报文安全信封（CSSSL-SEC-V1）：HIS→医保前置 方向 SM4 加密 + SM2(SM3withSM2) 签名 + 证书链随报文携带。
  *
  * <p>canonical 待签串 {@code encData|timeStamp|certSerial}；验签侧（前置/医保局端）按 csssl 根链校验。
- * 协议与 csmig/csmis 同构，院内段 SM4 密钥与前置机 mip.crypto.sm4-key-his 一致。
+ * 协议与 csmig/csmis 同构，院内段 SM4 密钥与前置机 mig.crypto.sm4-key-his 一致。
  */
 @Slf4j
 public class InsuranceMessageCrypto {

@@ -24,6 +24,7 @@ import com.his.charge.service.PayNotifyLogService;
 import com.his.charge.service.PayOrderService;
 import com.his.charge.service.PayRateLimitService;
 import com.his.charge.service.WxPayChannelService;
+import com.his.charge.service.PayChannelResult.TradeState;
 import com.his.charge.support.AggregatedQrSupport;
 import com.his.charge.support.PayQrCodeCache;
 import com.his.charge.vo.PayOrderVO;
@@ -382,7 +383,7 @@ public class QrPayServiceImpl implements QrPayService {
         }
         if (Objects.equals(order.getChannel(), PayChannelEnum.ALIPAY.getCode())) {
             // 查单是网络调用，留在本事务里是为了让「翻转 + 记账」保持原子
-            AlipayChannelService.TradeState state = alipayChannelService.queryTrade(order.getPayNo());
+            TradeState state = alipayChannelService.queryTrade(order.getPayNo());
             if (state == null || !alipayChannelService.isPaidStatus(state.tradeStatus())) {
                 return;
             }
@@ -390,7 +391,7 @@ public class QrPayServiceImpl implements QrPayService {
             return;
         }
         if (Objects.equals(order.getChannel(), PayChannelEnum.WECHAT.getCode())) {
-            WxPayChannelService.TradeState state = wxPayChannelService.queryTrade(order.getPayNo());
+            TradeState state = wxPayChannelService.queryTrade(order.getPayNo());
             if (state == null || !wxPayChannelService.isPaidStatus(state.tradeStatus())) {
                 return;
             }

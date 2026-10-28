@@ -4,6 +4,8 @@ import com.his.common.exception.BusinessException;
 import com.his.common.util.TextUtil;
 import com.his.charge.config.WxPayProperties;
 import com.his.charge.service.WxPayChannelService;
+import com.his.charge.service.PayChannelResult.PayUnifiedResult;
+import com.his.charge.service.PayChannelResult.TradeState;
 import com.his.charge.vo.PayOrderVO;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

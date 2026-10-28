@@ -10,7 +10,7 @@ import org.springframework.stereotype.Component;
  * <ul>
  *   <li>enabled：医保联网结算总开关。false = 不支持医保结算，结算时直接按自费原价走，不查医保；</li>
  *   <li>channel：联网通道。参保状态只认 remote（医保结算经办平台），mock 通道永远查不到参保。</li>
- *   <li>crypto：报文国密（SM2 签名 + SM4 加密 + csssl 证书链）。院内段密钥与前置机 mip.crypto.sm4-key-his 一致。</li>
+ *   <li>crypto：报文国密（SM2 签名 + SM4 加密 + csssl 证书链）。院内段密钥与前置机 mig.crypto.sm4-key-his 一致。</li>
  * </ul>
  */
 @Data
@@ -43,9 +43,9 @@ public class InsuranceProperties {
         private String mode = "remote";
 
         /**
-         * 医保前置系统（csmip）根地址：HIS → csmip(8091) → csmis(8090, 医保局端mock)
+         * 医保前置系统（csmig）根地址：HIS → csmig(8091) → csmis(8090, 医保局端mock)
          */
-        private String baseUrl = "http://localhost:8091/mip";
+        private String baseUrl = "http://localhost:8091/mig";
 
         /**
          * 连接超时（毫秒）
@@ -67,7 +67,7 @@ public class InsuranceProperties {
         private boolean enabled = false;
 
         /**
-         * 院内段 SM4 会话密钥（32 位十六进制，与前置机 mip.crypto.sm4-key-his 一致；生产按会话协商）
+         * 院内段 SM4 会话密钥（32 位十六进制，与前置机 mig.crypto.sm4-key-his 一致；生产按会话协商）
          */
         private String sm4Key = "";
 

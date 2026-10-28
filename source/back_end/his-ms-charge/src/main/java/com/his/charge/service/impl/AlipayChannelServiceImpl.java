@@ -18,7 +18,8 @@ import com.his.common.util.TextUtil;
 import com.his.charge.config.AlipayProperties;
 import com.his.charge.vo.PayOrderVO;
 import com.his.charge.service.AlipayChannelService;
-import com.his.charge.service.WxPayChannelService;
+import com.his.charge.service.PayChannelResult.PayUnifiedResult;
+import com.his.charge.service.PayChannelResult.TradeState;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -51,7 +52,7 @@ public class AlipayChannelServiceImpl implements AlipayChannelService {
     }
 
     @Override
-    public WxPayChannelService.PayUnifiedResult unifiedOrder(PayOrderVO order) {
+    public PayUnifiedResult unifiedOrder(PayOrderVO order) {
         assertEnabled("下单");
         // 客户端在 try 外构造：私钥没配是要让调用方看见的配置错，不能被下面的兜底 catch 洗成「下单失败」
         AlipayClient client = alipayClient();
@@ -76,18 +77,18 @@ public class AlipayChannelServiceImpl implements AlipayChannelService {
             AlipayTradeAppPayResponse response = client.sdkExecute(request);
 
             if (!response.isSuccess()) {
-                return WxPayChannelService.PayUnifiedResult.fail(
+                return PayUnifiedResult.fail(
                         "支付宝下单失败: " + response.getSubMsg()
                 );
             }
 
             Map<String, String> payParams = Map.of("orderInfo", response.getBody());
             log.info("[支付宝支付] 下单成功 payNo={}", order.getPayNo());
-            return WxPayChannelService.PayUnifiedResult.cashier(payParams);
+            return PayUnifiedResult.cashier(payParams);
 
         } catch (Exception e) {
             log.error("[支付宝支付] 下单失败 payNo={} err={}", order.getPayNo(), e.getMessage(), e);
-            return WxPayChannelService.PayUnifiedResult.fail("支付宝下单失败：" + e.getMessage());
+            return PayUnifiedResult.fail("支付宝下单失败：" + e.getMessage());
         }
     }
 

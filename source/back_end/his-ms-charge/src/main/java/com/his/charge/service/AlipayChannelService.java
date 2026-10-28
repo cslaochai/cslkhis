@@ -1,6 +1,8 @@
 package com.his.charge.service;
 
 import com.his.charge.vo.PayOrderVO;
+import com.his.charge.service.PayChannelResult.PayUnifiedResult;
+import com.his.charge.service.PayChannelResult.TradeState;
 
 import java.math.BigDecimal;
 import java.util.Map;
@@ -10,7 +12,7 @@ import java.util.Map;
  */
 public interface AlipayChannelService {
 
-    WxPayChannelService.PayUnifiedResult unifiedOrder(PayOrderVO order);
+    PayUnifiedResult unifiedOrder(PayOrderVO order);
 
     /**
      * 关闭渠道侧交易（患者放弃付款、收银员换渠道出码时必须调）。
@@ -42,13 +44,5 @@ public interface AlipayChannelService {
      */
     boolean isPaidStatus(String tradeStatus);
 
-    /**
-     * 渠道侧交易状态快照。
-     *
-     * @param tradeNo     支付宝交易号（原路退款要靠它）
-     * @param tradeStatus 渠道交易状态原文
-     * @param totalAmount 渠道侧订单金额，用于与本地支付单逐字比对
-     */
-    record TradeState(String tradeNo, String tradeStatus, BigDecimal totalAmount) {
-    }
+
 }

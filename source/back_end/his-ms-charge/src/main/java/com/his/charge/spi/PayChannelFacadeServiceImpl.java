@@ -1,15 +1,12 @@
 package com.his.charge.spi;
 
+import com.his.charge.service.*;
 import com.his.common.enums.PayChannelEnum;
 import com.his.common.enums.PayNotifyResultEnum;
 import com.his.common.enums.PayNotifySceneEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.TextUtil;
-import com.his.charge.service.AlipayChannelService;
-import com.his.charge.service.ChargePayChannelService;
-import com.his.charge.service.PayNotifyLogService;
-import com.his.charge.service.PayOrderService;
-import com.his.charge.service.WxPayChannelService;
+import com.his.charge.service.PayChannelResult.TradeState;
 import com.his.charge.vo.PayOrderVO;
 import com.his.spi.dto.ChannelNotifyRecordDTO;
 import com.his.spi.service.PayChannelFacadeService;
@@ -101,10 +98,10 @@ public class PayChannelFacadeServiceImpl implements PayChannelFacadeService {
             return result;
         }
         try {
-            WxPayChannelService.PayUnifiedResult unified = switch (channelEnum) {
+            PayChannelResult.PayUnifiedResult unified = switch (channelEnum) {
                 case WECHAT -> wxPayChannelService.unifiedOrder(internal);
                 case ALIPAY -> alipayChannelService.unifiedOrder(internal);
-                case UNIONPAY -> WxPayChannelService.PayUnifiedResult.fail("云闪付暂不支持小程序支付");
+                case UNIONPAY -> PayChannelResult.PayUnifiedResult.fail("云闪付暂不支持小程序支付");
             };
             result.setPayParams(unified.payParams());
             result.setErrMsg(unified.errMsg());
@@ -115,18 +112,7 @@ public class PayChannelFacadeServiceImpl implements PayChannelFacadeService {
         return result;
     }
 
-    private ChannelTradeStateVO toTradeStateVO(AlipayChannelService.TradeState state) {
-        if (state == null) {
-            return null;
-        }
-        ChannelTradeStateVO vo = new ChannelTradeStateVO();
-        vo.setTradeNo(state.tradeNo());
-        vo.setTradeStatus(state.tradeStatus());
-        vo.setTotalAmount(state.totalAmount());
-        return vo;
-    }
-
-    private ChannelTradeStateVO toTradeStateVO(WxPayChannelService.TradeState state) {
+    private ChannelTradeStateVO toTradeStateVO(TradeState state) {
         if (state == null) {
             return null;
         }

@@ -24,14 +24,14 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 医保前置系统出口（HTTP 实现）：HIS → csmip前置(8091/mip) → csmis医保局端(8090/mss)。
+ * 医保前置系统出口（HTTP 实现）：HIS → csmig前置(8091/mig) → csmis医保局端(8090/mss)。
  *
  * <p>报文安全（his.insurance.crypto.enabled=true）：HIS 用 csssl 签发的服务证书（SM2）对报文签名，
- * SM4 加密后发前置；前置回执同样验签解密后再解析业务字段。密钥与前置机 mip.crypto.sm4-key-his 一致，
+ * SM4 加密后发前置；前置回执同样验签解密后再解析业务字段。密钥与前置机 mig.crypto.sm4-key-his 一致，
  * 院内段密钥不出前置机。
  *
  * <p>与本地 mock 实现二选一，由配置 {@code his.insurance.channel.mode=remote} 激活。
- * 上游契约见 csmip 的 GatewayController（/gateway/{msgType}），csmip 透传到 csmis。
+ * 上游契约见 csmig 的 GatewayController（/gateway/{msgType}），csmig 透传到 csmis。
  */
 @Slf4j
 @Service

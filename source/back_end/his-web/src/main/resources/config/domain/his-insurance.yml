@@ -8,7 +8,7 @@ his:
     channel:
       connect-timeout-ms: 5000
       read-timeout-ms: 15000
-    # 报文国密（SM2 签名 + SM4 加密 + csssl 证书链）：院内段 SM4 密钥与前置机 mip.crypto.sm4-key-his 一致；
+    # 报文国密（SM2 签名 + SM4 加密 + csssl 证书链）：院内段 SM4 密钥与前置机 mig.crypto.sm4-key-his 一致；
     # 生产用环境变量 HIS_INS_SM4_KEY / HIS_INS_CRYPTO_ENABLED 覆盖
     crypto:
       enabled: ${HIS_INS_CRYPTO_ENABLED:true}
