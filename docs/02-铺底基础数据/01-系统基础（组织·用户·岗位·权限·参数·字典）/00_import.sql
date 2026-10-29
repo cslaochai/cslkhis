@@ -14,5 +14,4 @@ SOURCE ./sys_menu.sql;
 SOURCE ./sys_role.sql;
 SOURCE ./sys_role_menu.sql;
 SOURCE ./sys_sign_cert.sql;
-SOURCE ./sys_tsa_server.sql;
 SOURCE ./sys_user.sql;

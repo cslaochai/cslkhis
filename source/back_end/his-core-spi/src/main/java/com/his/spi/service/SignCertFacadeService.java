@@ -132,7 +132,7 @@ public interface SignCertFacadeService {
     List<SignCertSelectListVO> listActiveCertOptions(String keyword);
 
     /**
-     * CA 模式状态：院内自签 / 外部 CA 的实时自检（模式、适配器名、是否就绪、行为提示）。
+     * CA 模式状态：演示模式 / 远程 CA 的实时自检（模式、适配器名、是否就绪、行为提示）。
      */
     SignCaStatusVO caStatus();
 

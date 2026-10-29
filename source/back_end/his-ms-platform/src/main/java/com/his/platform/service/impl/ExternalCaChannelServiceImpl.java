@@ -28,7 +28,7 @@ public class ExternalCaChannelServiceImpl implements ExternalCaChannelService {
     }
 
     /**
-     * 是否就绪（配置为 external）。未就绪时签发直接走院内自签，不降级冒充真 CA
+     * 是否就绪（配置为 external）。未就绪（演示模式）时签发只提示、不落证书
      */
     public boolean available() {
         return "external".equalsIgnoreCase(signProperties.getCaMode());
@@ -38,7 +38,7 @@ public class ExternalCaChannelServiceImpl implements ExternalCaChannelService {
      * 向 csssl 提交公钥签发请求，换回 CA 签发的证书链。
      *
      * @param request Subject DN（CN=签名人 / O=机构 / OU=科室）、本地生成的公钥 PEM、期望有效期
-     * @return 签发结果；csssl 不可用/未返回证书时抛异常中断签发（绝不静默回退院内自签）
+     * @return 签发结果；csssl 不可用/未返回证书时抛异常中断签发（绝不静默回退到本地自签）
      */
     public IssuedCert issueCert(IssueRequest request) {
         log.info("[外部CA] 向 csssl 提交公钥签发：subject={} 有效天数={}",

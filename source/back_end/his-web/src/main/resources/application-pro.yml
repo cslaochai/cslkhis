@@ -27,7 +27,7 @@ his:
   sign:
     # 签名主口令：不注入即拒绝签发证书（私钥绝不明文落库）
     master-secret: ${HIS_SIGN_SECRET:}
-    # 证书签发模式：internal-院内自签 / external-外部CA（csssl）
+    # 证书签发模式：internal-演示模式（不调用远程签名认证，签发只提示不落证书）/ external-远程CA（csssl）
     ca-mode: ${HIS_SIGN_CA_MODE:internal}
     # 新签发证书的密钥算法：SM2（国密）或 RSA2048
     key-algorithm: ${HIS_SIGN_KEY_ALGO:SM2}

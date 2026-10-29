@@ -22,7 +22,7 @@ public class TsaStatusVO {
     private String tsaName;
 
     /**
-     * TSA 公钥指纹（分组展示，人工核对用）
+     * TSA 公钥指纹（分组展示，人工核对用；取自 csssl 认证中心 TSA 公钥）
      */
     private String keyFingerprintGroups;
 
@@ -53,7 +53,7 @@ public class TsaStatusVO {
     private LocalDateTime lastTokenTime;
 
     /**
-     * 信任根说明（如实标注"本地内置信任根，非第三方"）
+     * 信任根说明（如实标注信任源与降级口径）
      */
     private String trustNote;
 }

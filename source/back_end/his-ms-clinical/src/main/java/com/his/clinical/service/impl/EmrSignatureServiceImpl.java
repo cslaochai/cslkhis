@@ -579,18 +579,23 @@ public class EmrSignatureServiceImpl extends ServiceImpl<BizEmrSignatureMapper, 
         TimeSourceEnum ts = TimeSourceEnum.fromCode(tsaStampFacadeService.effectiveTimeSource());
         if (ts != null && ts == TimeSourceEnum.TSA) {
             vo.setTimeSourceNote("签名时间来源：可信时间戳（" + (vo.getTsaName() == null ? "TSA" : vo.getTsaName())
-                    + " —— 本地内置信任根：令牌结构真实、可对抗本机时钟篡改；非外部 CA/TSA，不对外声称法律效力）");
+                    + " —— 令牌由 csssl 认证中心 TSA 独立 SM2 密钥签发，可对抗本机时钟篡改）");
         } else if (ts != null && ts.trusted()) {
             vo.setTimeSourceNote("签名时间来源：" + ts.getLabel());
         } else {
-            vo.setTimeSourceNote("签名时间来源：本机时钟（**未接入第三方可信时间戳 TSA**，签名时刻不具备对抗系统时间篡改的效力）");
+            vo.setTimeSourceNote("签名时间来源：本机时钟（**未接入可信时间戳 TSA**，签名时刻不具备对抗系统时间篡改的效力）");
         }
-        vo.setCertTrustNote("证书为院内生成并托管的 RSA-2048 证书（私钥经 PBKDF2+AES-GCM 加密存储），"
-                + "属于电子签名；**不是**第三方 CA 签发的可靠电子签名，系统管理员在技术上具备代签能力。");
+        vo.setCertTrustNote("签名证书由 csssl 认证中心 CA 签发，信任根为院内 CA；"
+                + "私钥在院内集中托管（经 PBKDF2+AES-GCM 加密存储，不出 HIS）。"
+                + "⚠️ 集中托管不满足《电子签名法》第十三条「签名制作数据属于签名人专有、签署时仅由签名人控制」——"
+                + "持有主口令的技术人员具备代签能力，故本方案属**一般电子签名**而非可靠电子签名；"
+                + "要取得可靠电子签名效力，须改为 UKey / 手机密码机等签名人专有设备持有私钥。");
         List<String> notes = new ArrayList<>();
         notes.add("签名是留痕动作：同一对象可以有多次签名，历史签名永不删除，作废只追加作废信息。");
         notes.add("「未签名」与「签名已失效」是两种不同的事实，页面分开统计，不互相回落。");
         notes.add("存量文书（签名能力上线前归档）一律记为未签名，**不补签**——补签等于伪造证据。");
+        notes.add("证书签发与可信时间戳由 CA 认证中心（csssl）承担，HIS 只做私钥托管与签名留痕；"
+                + "CA 只持有公钥与 CA 私钥，永远不接触医生私钥——签发方一旦能代签，证书即失去中立性。");
         vo.setNotes(notes);
         return vo;
     }

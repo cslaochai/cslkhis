@@ -40,13 +40,14 @@ public class SignProperties {
     private int timeSource = 1;
 
     /**
-     * 证书签发模式：internal-院内自签（默认）；external-外部 CA（走 {@code ExternalCaChannelService}）。
-     * external 模式下适配器未返回证书即中断签发，绝不静默回退自签。
+     * 证书签发模式：internal-演示模式（不调用远程签名认证）；external-远程 CA（csssl，RA 公钥签发，私钥本地托管）。
+     * internal 为演示环境用：签发不落证书，仅提示未开启远程签名认证；external 才真正调用 csssl 签发。
      */
     private String caMode = "internal";
 
     /**
-     * 外部 CA 对接地址（csssl 根路径，如 http://localhost:8092/ssl）
+     * 外部 CA 对接地址（csssl 根路径，如 http://localhost:8092/ssl）。
+     * 证书签发与可信时间戳（TSA）共用这一个地址：CA 走 /admin/certs/*，TSA 走 /tsa/*。
      */
     private String caBaseUrl;
 
@@ -70,12 +71,6 @@ public class SignProperties {
      * 影响密钥生成、签名算法（SHA256withRSA / SM3withSM2）与指纹摘要；历史证书按各自行内算法继续工作。
      */
     private String keyAlgorithm = "RSA2048";
-
-    /**
-     * 可信时间戳通道模式：internal-本地内置 TSA（院内自签信任根）；external-外部 TSA（csssl 院内 TSA，
-     * 复用 ca-base-url 地址，独立 SM2 时间戳密钥签发令牌）。external 模式下 csssl 不可用则时间来源降级本机时钟。
-     */
-    private String tsaMode = "internal";
 
     /**
      * 外部 CA（csssl）接口路径（his.sign.ca-paths.*），相对 ca-base-url

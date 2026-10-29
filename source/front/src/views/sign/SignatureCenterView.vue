@@ -147,17 +147,7 @@
               <el-radio-button :value="1">本机时钟</el-radio-button>
               <el-radio-button :value="3">可信时间戳</el-radio-button>
             </el-radio-group>
-            <el-button
-                v-perm="'sign:center:edit'"
-                :loading="tsaOpsLoading"
-                :plain="!!tsaStatus?.available"
-                :type="tsaStatus?.available ? 'danger' : 'primary'"
-                data-testid="g6b-tsa-toggle"
-                size="small"
-                @click="onToggleTsa"
-            >{{ tsaStatus?.available ? '停用 TSA' : '启用 TSA' }}
-            </el-button>
-            <span class="text-slate-500">停用=不再签发新令牌，历史令牌仍可验证</span>
+            <span class="text-slate-500">时间戳服务由 CA 认证中心（csssl）提供，此处仅切换签名取时来源</span>
           </div>
           <p>证书信任级别：{{ text(overview.certTrustNote) }}</p>
           <p v-for="(n, i) in overview.notes || []" :key="i" class="mt-0.5">{{ n }}</p>
@@ -586,7 +576,6 @@ import {
   getTsaStatus,
   getTsaTokenList,
   revokeSignCert,
-  updateTsaStatus,
   updateTsaTimeSource,
   verifyTsaToken,
 } from '@/api/signature';
@@ -707,29 +696,6 @@ const onTimeSourceChange = async (val) => {
   } catch (e) {
     
     syncSourceDraft();
-  } finally {
-    tsaOpsLoading.value = false;
-  }
-};
-const onToggleTsa = async () => {
-  const stop = !!tsaStatus.value?.available;
-  const msg = stop
-      ? '停用后 TSA 不再签发新令牌，新签名时间将降级为「本机时钟」；历史令牌凭已登记公钥仍可验证。确认停用？'
-      : '启用后，时间来源配为「可信时间戳」的新签名将重新由 TSA 盖章。确认启用？';
-  try {
-    await ElMessageBox.confirm(msg, stop ? '停用 TSA 服务' : '启用 TSA 服务', {
-      type: 'warning', confirmButtonText: '确认', cancelButtonText: '取消',
-    });
-  } catch {
-    return;
-  }
-  tsaOpsLoading.value = true;
-  try {
-    const res = await updateTsaStatus(stop ? 0 : 1);
-    tsaStatus.value = res.data;
-    ElMessage.success(stop ? 'TSA 已停用' : 'TSA 已启用');
-  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
-    
   } finally {
     tsaOpsLoading.value = false;
   }

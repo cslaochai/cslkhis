@@ -3,7 +3,6 @@ package com.his.clinical.controller;
 import com.his.spi.vo.SignVerifyVO;
 import com.his.spi.vo.SignatureVO;
 import com.his.spi.service.TsaStampFacadeService;
-import com.his.spi.dto.TsaStatusUpsertDTO;
 import com.his.spi.dto.TsaTimeSourceDTO;
 import com.his.spi.dto.TsaTokenPageQueryDTO;
 import com.his.spi.dto.TsaTokenVerifyDTO;
@@ -141,7 +140,7 @@ public class SignatureController {
         return Result.success(signatureCenterService.invalidate(dto));
     }
 
-    // ---------- 可信时间戳运维（TSA 状态 / 令牌台账 / 启停 / 时间来源 / 复验） ----------
+    // ---------- 可信时间戳运维（TSA 状态 / 令牌台账 / 时间来源 / 复验） ----------
 
     /**
      * TSA 状态聚合：通道在线与否、配置与生效的时间来源、令牌台账计数与信任说明。
@@ -162,17 +161,6 @@ public class SignatureController {
         var page = tsaStampFacadeService.listTokenPage(query);
         return Result.success(PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(),
                 page.getPages(), page.getRecords()));
-    }
-
-    /**
-     * 启停 TSA：停用后签名侧立即降级本机时钟；历史令牌凭公钥仍可验证。
-     */
-    @PreAuthorize("hasAuthority('sign:center:edit')")
-    @Operation(summary = "启停 TSA 服务")
-    @PostMapping("/emr/tsa/updateStatus")
-    public Result<TsaStatusVO> tsaUpdateStatus(@Valid @RequestBody TsaStatusUpsertDTO dto) {
-        tsaStampFacadeService.updateStatus(dto);
-        return Result.success(tsaStampFacadeService.status());
     }
 
     /**

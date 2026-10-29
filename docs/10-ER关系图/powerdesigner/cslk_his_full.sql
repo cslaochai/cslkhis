@@ -9961,28 +9961,6 @@ CREATE TABLE `sys_treatment_item` (
   UNIQUE KEY `uk_item_code` (`item_code`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='治疗项目字典';
 
--- sys_tsa_server  时间戳服务注册
-CREATE TABLE `sys_tsa_server` (
-  `id` bigint NOT NULL COMMENT '主键ID',
-  `tsa_code` varchar(32) NOT NULL COMMENT 'TSA服务编码',
-  `tsa_name` varchar(64) NOT NULL COMMENT 'TSA服务名称',
-  `public_pem` text NOT NULL COMMENT 'TSA公钥',
-  `key_fingerprint` varchar(64) NOT NULL COMMENT '公钥指纹',
-  `protected_private_key` text NOT NULL COMMENT '私钥密文',
-  `key_salt` varchar(64) NOT NULL COMMENT '私钥派生盐',
-  `key_iterations` int NOT NULL COMMENT '私钥派生迭代次数',
-  `tsa_status` tinyint NOT NULL COMMENT '状态（0-停用 1-启用）',
-  `create_by` varchar(64) NOT NULL COMMENT '创建人',
-  `create_by_id` bigint COMMENT '创建人ID',
-  `create_time` datetime NOT NULL COMMENT '创建时间',
-  `update_by` varchar(64) NOT NULL COMMENT '更新人',
-  `update_by_id` bigint COMMENT '更新人ID',
-  `update_time` datetime NOT NULL COMMENT '更新时间',
-  `del_flag` tinyint NOT NULL DEFAULT 0 COMMENT '删除标志（0-正常 1-删除）',
-  `remark` varchar(500) COMMENT '备注',
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `uk_tsa_code` (`tsa_code`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='时间戳服务注册';
 
 -- sys_user  用户
 CREATE TABLE `sys_user` (

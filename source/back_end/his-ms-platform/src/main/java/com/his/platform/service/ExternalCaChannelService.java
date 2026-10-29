@@ -2,7 +2,7 @@ package com.his.platform.service;
 
 
 /**
- * 外部证书机构签发通道：签名信任根来自院外 CA 时的外发能力出口。
+ * 外部证书机构签发通道：签名信任根来自 csssl 认证中心时的外发能力出口。
  */
 public interface ExternalCaChannelService {
 
@@ -14,7 +14,7 @@ public interface ExternalCaChannelService {
 
     /**
      * 外部 CA 通道当前是否启用（由签发模式配置决定）。
-     * 签发前先探这一句：启用则走外发证书、绝不回退院内自签；未启用走院内自签。
+     * 启用则走 csssl 真签发；未启用（演示模式）时签发只提示、不落证书。
      */
     boolean available();
 

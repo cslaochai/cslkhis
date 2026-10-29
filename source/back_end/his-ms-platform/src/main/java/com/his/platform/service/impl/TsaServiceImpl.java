@@ -1,7 +1,6 @@
 package com.his.platform.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -12,15 +11,12 @@ import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
 import com.his.platform.dto.TsaTokenPageQueryDTO;
 import com.his.platform.entity.BizTsaToken;
-import com.his.platform.entity.SysTsaServer;
 import com.his.platform.mapper.BizTsaTokenMapper;
 import com.his.platform.mapper.SignConfigMapper;
-import com.his.platform.mapper.SysTsaServerMapper;
 import com.his.platform.config.SignProperties;
 import com.his.platform.service.RedisSequenceService;
 import com.his.platform.service.TsaChannelService;
 import com.his.platform.service.TsaService;
-import com.his.platform.utils.SignCryptoUtil;
 import com.his.platform.vo.TsaStatusVO;
 import com.his.platform.vo.TsaTokenVO;
 import com.his.platform.vo.TsaTokenVerifyVO;
@@ -34,14 +30,16 @@ import java.util.List;
 
 /**
  * TSA 运维查询实现（两个 GET，不产生任何写操作）。
+ *
+ * <p>TSA 服务本身由 csssl 认证中心承担（独立时间戳密钥、令牌签发、验签、审计），
+ * 本类只负责 HIS 侧的令牌台账查询与时间来源配置。
  */
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class TsaServiceImpl extends ServiceImpl<SysTsaServerMapper, SysTsaServer> implements TsaService {
+public class TsaServiceImpl extends ServiceImpl<BizTsaTokenMapper, BizTsaToken> implements TsaService {
 
     private final TsaChannelService tsaChannelService;
-    private final SysTsaServerMapper sysTsaServerMapper;
     private final BizTsaTokenMapper bizTsaTokenMapper;
     private final SignConfigMapper signConfigMapper;
     private final SignProperties signProperties;
@@ -68,18 +66,10 @@ public class TsaServiceImpl extends ServiceImpl<SysTsaServerMapper, SysTsaServer
         if (readyName != null) {
             vo.setTsaName(readyName);
         }
-        // external（csssl TSA）模式下不展示本地内置 TSA 的 LOCAL 行指纹，避免把「本地自举公钥」
-        // 当成 TSA 信任根展示给运维（TSA 名称已由通道就绪名称给出）
-        SysTsaServer server = null;
-        if (!"external".equalsIgnoreCase(signProperties.getTsaMode())) {
-            server = sysTsaServerMapper.selectOne(new LambdaQueryWrapper<SysTsaServer>()
-                    .eq(SysTsaServer::getTsaCode, "LOCAL"));
-            if (server != null) {
-                vo.setKeyFingerprintGroups(SignCryptoUtil.fingerprintGroups(server.getKeyFingerprint()));
-                if (vo.getTsaName() == null) {
-                    vo.setTsaName(server.getTsaName());
-                }
-            }
+        // 信任根指纹取自 csssl TSA 公钥（与认证中心侧同一把密钥），供运维人工核对
+        String fingerprintGroups = tsaChannelService.fingerprintGroups();
+        if (fingerprintGroups != null) {
+            vo.setKeyFingerprintGroups(fingerprintGroups);
         }
 
         Integer cfg = parseCfg(signConfigMapper.selectValue(SystemConfigKeyConst.SIGN_TIME_SOURCE));
@@ -97,24 +87,18 @@ public class TsaServiceImpl extends ServiceImpl<SysTsaServerMapper, SysTsaServer
 
         if (available && effective == TimeSourceEnum.TSA.getCode()) {
             String name = vo.getTsaName() == null ? "TSA" : vo.getTsaName();
-            if ("external".equalsIgnoreCase(signProperties.getTsaMode())) {
-                vo.setTrustNote("已接入" + name
-                        + "：令牌用 TSA 独立 SM2 密钥（SM3withSM2）签发，可对抗本机时钟篡改；"
-                        + "信任源为院内 CA 的 TSA 服务，令牌规范化串与盖章时刻以 csssl 回执为准。");
-            } else {
-                vo.setTrustNote("已接入" + name
-                        + "：令牌用 TSA 独立密钥签发，可对抗本机时钟篡改。注意：信任根为院内（本地内置 TSA，"
-                        + "非第三方 CA/TSA），不对外声称法律效力；换真 TSA 只需替换适配器实现。");
-            }
+            vo.setTrustNote("已接入" + name
+                    + "：令牌用 TSA 独立 SM2 密钥（SM3withSM2）签发，可对抗本机时钟篡改；"
+                    + "信任源为院内 CA 认证中心（csssl）的 TSA 服务，令牌规范化串与盖章时刻以 csssl 回执为准。");
         } else if (cfg != null && cfg == TimeSourceEnum.TSA.getCode() && !available) {
-            vo.setTrustNote("配置 sign.time_source=3 但 TSA 适配器不在线，实际生效的是「本机时钟」"
-                    + "（宁可承认不可信，也不谎报可信）。请排查 TSA 通道状态与主口令配置。");
+            vo.setTrustNote("配置 sign.time_source=3 但 csssl TSA 服务不在线，实际生效的是「本机时钟」"
+                    + "（宁可承认不可信，也不谎报可信）。请排查 csssl 服务状态与 his.sign.ca-base-url 配置。");
         } else if (available) {
-            vo.setTrustNote("TSA 适配器在线，但 sign.time_source 未配为 3 —— 新签名时间仍取本机时钟，"
+            vo.setTrustNote("csssl TSA 服务在线，但 sign.time_source 未配为 3 —— 新签名时间仍取本机时钟，"
                     + "不具备对抗系统时间篡改的效力。接入方式：将 sys_config 的 sign.time_source 配为 3。");
         } else {
             vo.setTrustNote("未接入可信时间戳：签名时间取本机时钟，不具备对抗系统时间篡改的效力。"
-                    + "接入方式：将 sys_config 的 sign.time_source 配为 3（需 TSA 适配器在线）。");
+                    + "接入方式：将 sys_config 的 sign.time_source 配为 3（需 csssl TSA 服务在线）。");
         }
         return vo;
     }
@@ -149,23 +133,6 @@ public class TsaServiceImpl extends ServiceImpl<SysTsaServerMapper, SysTsaServer
     }
 
     @Override
-    public TsaStatusVO updateStatus(Integer tsaStatus) {
-        if (tsaStatus == null || (tsaStatus != 0 && tsaStatus != 1)) {
-            throw new BusinessException("目标状态只允许 0（停用）或 1（启用）");
-        }
-        int updated = sysTsaServerMapper.update(null, new LambdaUpdateWrapper<SysTsaServer>()
-                .eq(SysTsaServer::getTsaCode, "LOCAL")
-                .set(SysTsaServer::getTsaStatus, tsaStatus));
-        if (updated == 0) {
-            throw new BusinessException("本地 TSA 服务行不存在（尚未自举），无法直接启停");
-        }
-        // 失效实现方缓存：available()/盖章下一次调用重读库，操作即时生效
-        tsaChannelService.invalidate();
-        log.info("TSA服务{}（G6b 运维操作）", tsaStatus == 1 ? "启用" : "停用");
-        return status();
-    }
-
-    @Override
     public TsaStatusVO updateTimeSource(Integer timeSource) {
         if (timeSource == null
                 || (timeSource != TimeSourceEnum.LOCAL.getCode() && timeSource != TimeSourceEnum.TSA.getCode())) {
@@ -184,7 +151,7 @@ public class TsaServiceImpl extends ServiceImpl<SysTsaServerMapper, SysTsaServer
                 signConfigMapper.updateValue(SystemConfigKeyConst.SIGN_TIME_SOURCE, String.valueOf(timeSource));
             }
         }
-        log.info("签名时间来源切换为 {}（G6b 运维操作）", text);
+        log.info("签名时间来源切换为 {}（运维操作）", text);
         return status();
     }
 
@@ -207,7 +174,7 @@ public class TsaServiceImpl extends ServiceImpl<SysTsaServerMapper, SysTsaServer
         vo.setValid(ok);
         if (!ok) {
             vo.setFailReason("令牌验证不通过：签名值与「序列号+摘要+时刻」对不上，"
-                    + "或摘要与台账不一致，或 TSA 公钥未配置");
+                    + "或摘要与台账不一致，或无法获取 csssl TSA 公钥");
         }
         return vo;
     }
@@ -224,7 +191,7 @@ public class TsaServiceImpl extends ServiceImpl<SysTsaServerMapper, SysTsaServer
             if (tsaChannelService.available()) {
                 return TimeSourceEnum.TSA.getCode();
             }
-            log.warn("配置 sign.time_source=3（第三方 TSA），但当前部署未接入 TSA 服务，"
+            log.warn("配置 sign.time_source=3（可信时间戳），但 csssl TSA 服务未接入，"
                     + "签名时间来源已降级为「本机时钟」——宁可承认不可信，也不谎报可信");
             return TimeSourceEnum.LOCAL.getCode();
         }

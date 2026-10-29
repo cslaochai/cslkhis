@@ -57,7 +57,7 @@ public class SignCertServiceImpl extends ServiceImpl<SysSignCertMapper, SysSignC
 
     private final RedisSequenceService redisSequenceService;
     /**
-     * 外部 CA 适配器（M8 留口子）：无实现/未配置 external 时为 null，走院内自签
+     * 外部 CA 适配器（M8 留口子）：无实现/未配置 external 时为 null，签发只提示不落证书
      */
     private final ExternalCaChannelService externalCaChannelService;
 
@@ -94,7 +94,7 @@ public class SignCertServiceImpl extends ServiceImpl<SysSignCertMapper, SysSignC
         }
         log.info("自动签发签名证书：empId={} empName={}", empId, empName);
         return doIssue(empId, empName, deptId, deptName, effectiveValidDays(null),
-                CertIssuedModeEnum.AUTO, null, null, "首次签名时由系统按需自动签发（院内托管证书）");
+                CertIssuedModeEnum.AUTO, null, null, "首次签名时由系统按需自动签发（CA 签发、私钥本地托管）");
     }
 
     @Override
@@ -123,59 +123,15 @@ public class SignCertServiceImpl extends ServiceImpl<SysSignCertMapper, SysSignC
     private SysSignCert doIssue(Long empId, String empName, Long deptId, String deptName,
                                 int validDays, CertIssuedModeEnum mode,
                                 Long operatorId, String operatorName, String remark) {
-        // 没有主口令就不签发：宁可不发证，也不让私钥明文落库
-        keyProtectorUtil.requireSecret();
-
-        // 外部 CA 模式：本地先生成密钥对（私钥不出本地、受主口令保护落库），把 Subject+公钥交给 CA 适配器签发。
-        // 适配器未返回证书必须中断签发，绝不静默回退院内自签（那等于伪造信任根）；
-        // 返回后直接结束，保证不会落到下方院内自签分支。
-        if (externalCaChannelService.available()) {
-            return issueViaExternalCa(empId, empName, deptId, deptName, validDays, mode);
+        // 证书签发是 CA 认证中心（csssl）的职责，HIS 侧不自建 CA、不自签证书。
+        // internal = 演示模式：不调用远程签名认证，直接提示一句并中断签发（不落证书）。
+        // external = 真签发：本地生成密钥对（私钥不出本地、受主口令保护落库），把 Subject+公钥交给 csssl 签发；
+        //   适配器未返回证书即中断签发，绝不静默回退自签（那等于伪造信任根）。
+        if (!externalCaChannelService.available()) {
+            throw new BusinessException("未开启远程签名认证（his.sign.ca-mode=internal 演示模式），证书签发已跳过；"
+                    + "请将 his.sign.ca-mode 配置为 external 以调用 CA 认证中心签发");
         }
-
-        KeyPairFactory.KeyPairPem pair = KeyPairFactory.generate(signProperties.getKeyAlgorithm());
-        String keyAlgo = signProperties.getKeyAlgorithm();
-        String salt = keyProtectorUtil.newSalt();
-        String protectedKey = keyProtectorUtil.protect(pair.privatePem(), salt, signProperties.getIterations());
-
-        LocalDateTime now = TimeUtil.nowSeconds();
-        LocalDateTime to = now.plusDays(validDays);
-
-        for (int attempt = 1; attempt <= 3; attempt++) {
-            SysSignCert cert = new SysSignCert();
-            cert.setCertNo(nextCertNo());
-            cert.setEmpId(empId);
-            cert.setEmpName(empName);
-            cert.setDeptId(deptId);
-            cert.setDeptName(deptName);
-            cert.setKeyAlgo(keyAlgo);
-            cert.setDigestAlgo(SignCryptoUtil.digestAlgoFor(keyAlgo));
-            cert.setSignAlgo(SignCryptoUtil.signAlgoFor(keyAlgo));
-            cert.setPublicKey(pair.publicPem());
-            cert.setKeyFingerprint(SignCryptoUtil.fingerprint(pair.publicPem()));
-            cert.setProtectedPrivateKey(protectedKey);
-            cert.setKeySalt(salt);
-            cert.setKeyIterations(signProperties.getIterations());
-            cert.setIssuedMode(mode.getCode());
-            cert.setCertStatus(CertStatusEnum.ACTIVE.getCode());
-            cert.setValidFrom(now);
-            cert.setValidTo(to);
-            cert.setSignCount(0);
-            cert.setRemark(remark);
-            try {
-                sysSignCertMapper.insert(cert);
-                log.info("签发签名证书 certNo={} empId={} 算法={} 有效期至={} 方式={}",
-                        cert.getCertNo(), empId, keyAlgo, to, mode.getLabel());
-                return cert;
-            } catch (DuplicateKeyException e) {
-                if (attempt == 3) {
-                    throw new BusinessException("证书编号连续冲突 3 次（" + cert.getCertNo()
-                            + "），请稍后重试；若持续出现请检查是否有脚本在批量造证");
-                }
-                log.warn("证书编号冲突，重试第 {} 次：{}", attempt, cert.getCertNo());
-            }
-        }
-        throw new BusinessException("证书签发失败");
+        return issueViaExternalCa(empId, empName, deptId, deptName, validDays, mode);
     }
 
     // 查询
@@ -189,6 +145,9 @@ public class SignCertServiceImpl extends ServiceImpl<SysSignCertMapper, SysSignC
      */
     private SysSignCert issueViaExternalCa(Long empId, String empName, Long deptId, String deptName,
                                            int validDays, CertIssuedModeEnum mode) {
+        // 没有主口令就不签发：宁可不发证，也不让私钥明文落库
+        keyProtectorUtil.requireSecret();
+
         KeyPairFactory.KeyPairPem pair = KeyPairFactory.generate(signProperties.getKeyAlgorithm());
         String keyAlgo = signProperties.getKeyAlgorithm();
         StringBuilder dn = new StringBuilder("CN=").append(TextUtil.hasText(empName) ? empName : "unknown")
@@ -200,7 +159,7 @@ public class SignCertServiceImpl extends ServiceImpl<SysSignCertMapper, SysSignC
                 new ExternalCaChannelService.IssueRequest(dn.toString(), pair.publicPem(), validDays));
         if (issued == null) {
             throw new BusinessException("外部 CA（" + externalCaChannelService.name() + "）未返回证书，签发已中断；"
-                    + "未接入真 CA 前请将 his.sign.ca-mode 改回 internal 使用院内自签");
+                    + "不会回退到本地自签（那等于伪造信任根），请检查 csssl 服务状态与 his.sign.ca-base-url 配置");
         }
 
         String salt = keyProtectorUtil.newSalt();

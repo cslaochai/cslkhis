@@ -96,12 +96,6 @@ export function getTsaTokenList(params) {
 
 // ---------------- 可信时间戳 TSA 运维（G6b） ----------------
 
-// TSA 服务启停（0 停用 / 1 启用）。停用=不再签发新令牌，签名自动降级本机时钟；历史令牌仍可验。
-// 返回操作后的最新状态（available 立即反映）。
-export function updateTsaStatus(tsaStatus) {
-  return request.post('/emr/tsa/updateStatus', { tsaStatus })
-}
-
 // 切换签名时间来源（1 本机时钟 / 3 可信时间戳；2 院内授时未实现会被拒绝）。
 // 返回操作后的最新状态（configTimeSource / effectiveTimeSource 同屏）。
 export function updateTsaTimeSource(timeSource) {

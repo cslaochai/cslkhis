@@ -4851,14 +4851,8 @@ ALTER TABLE `sys_treatment_item` ALTER COLUMN `create_time` DROP DEFAULT;
 -- sys_treatment_item.update_time  (datetime, NO)  原 DEFAULT = 'CURRENT_TIMESTAMP'
 ALTER TABLE `sys_treatment_item` ALTER COLUMN `update_time` DROP DEFAULT;
 
--- sys_tsa_server.tsa_status  (tinyint, NO)  原 DEFAULT = '1'
-ALTER TABLE `sys_tsa_server` ALTER COLUMN `tsa_status` DROP DEFAULT;
 
--- sys_tsa_server.create_time  (datetime, NO)  原 DEFAULT = 'CURRENT_TIMESTAMP'
-ALTER TABLE `sys_tsa_server` ALTER COLUMN `create_time` DROP DEFAULT;
 
--- sys_tsa_server.update_time  (datetime, NO)  原 DEFAULT = 'CURRENT_TIMESTAMP'
-ALTER TABLE `sys_tsa_server` ALTER COLUMN `update_time` DROP DEFAULT;
 
 -- sys_user.user_type  (tinyint, YES)  原 DEFAULT = '1'
 ALTER TABLE `sys_user` ALTER COLUMN `user_type` DROP DEFAULT;

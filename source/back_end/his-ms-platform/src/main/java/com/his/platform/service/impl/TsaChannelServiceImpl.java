@@ -1,113 +1,75 @@
 package com.his.platform.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.his.common.util.DateFormats;
 import com.his.common.util.TimeUtil;
 import com.his.platform.config.SignProperties;
 import com.his.platform.entity.BizTsaToken;
-import com.his.platform.entity.SysTsaServer;
 import com.his.platform.mapper.BizTsaTokenMapper;
-import com.his.platform.mapper.SysTsaServerMapper;
-import com.his.platform.service.RedisSequenceService;
 import com.his.platform.service.TsaChannelService;
 import com.his.platform.support.CssslCaClient;
-import com.his.platform.utils.KeyPairFactory;
-import com.his.platform.utils.KeyProtectorUtil;
 import com.his.platform.utils.SignCryptoUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Map;
 
 /**
- * 可信时间戳通道：病历签名授时与令牌验真的时间来源出口。
- * <ul>
- *   <li><b>external</b>（默认建议）：csssl 院内 TSA —— 独立 SM2 密钥签发 SM3withSM2 令牌，
- *       令牌规范化串 {@code CSSSL-TSA-V1|serial|digestHex|tsaTime}（与 csssl 一致），本地落台账。</li>
- *   <li><b>internal</b>：本地内置 TSA（院内自签信任根，演示过渡），令牌结构真实、可对抗本机时钟篡改。</li>
- * </ul>
+ * 可信时间戳（TSA）通道：病历签名授时与令牌验真的时间来源出口。
+ *
+ * <p>TSA 服务（独立 SM2 时间戳密钥、令牌签发、验签、审计）由 CA 认证中心 csssl 承担，
+ * 本类只做两件事：向 csssl 申请盖章、把 csssl 回执的令牌落本地台账。
+ * HIS 侧不再自建 TSA（不生成时间戳密钥、不自行盖章），避免出现第二个信任根。
  */
 @Slf4j
 @Service
 public class TsaChannelServiceImpl implements TsaChannelService {
     /**
-     * 令牌规范化串版本前缀：external（csssl）与 internal（本地内置）各一套，互不混用
-     * —— 换格式必须换版本号，否则历史令牌验不过
+     * 令牌规范化串版本前缀：与 csssl 的 TsaService.canonical 逐字一致 —— 两边必须同步改，否则历史令牌验不过
      */
-    private static final String CANONICAL_PREFIX_EXTERNAL = "CSSSL-TSA-V1";
-    private static final String CANONICAL_PREFIX_INTERNAL = "HIS-TSA-V1";
-    private static final String SERIAL_PREFIX = "TSA";
-    private static final int MAX_RETRY = 3;
+    private static final String CANONICAL_PREFIX = "CSSSL-TSA-V1";
 
     private static final DateTimeFormatter ISO = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
 
-    private final SysTsaServerMapper serverMapper;
     private final BizTsaTokenMapper tokenMapper;
-    private final KeyProtectorUtil keyProtectorUtil;
-    private final RedisSequenceService sequenceService;
     private final CssslCaClient cssslCaClient;
     private final SignProperties signProperties;
 
     /**
-     * 就绪的服务行缓存（internal 模式：密钥轮换不在本期范围；重启进程即重读）
-     */
-    private volatile SysTsaServer cachedServer;
-    private volatile String cachedPrivatePem;
-
-    /**
-     * csssl TSA 公钥缓存（external 模式）
+     * csssl TSA 公钥缓存（验签用；csssl 不可达时无法验签，令牌校验一律按失败处理）
      */
     private volatile String cachedTsaPublicPem;
 
-    public TsaChannelServiceImpl(SysTsaServerMapper serverMapper, BizTsaTokenMapper tokenMapper,
-                                 KeyProtectorUtil keyProtectorUtil, RedisSequenceService sequenceService,
-                                 CssslCaClient cssslCaClient, SignProperties signProperties) {
-        this.serverMapper = serverMapper;
+    public TsaChannelServiceImpl(BizTsaTokenMapper tokenMapper,
+                                 CssslCaClient cssslCaClient,
+                                 SignProperties signProperties) {
         this.tokenMapper = tokenMapper;
-        this.keyProtectorUtil = keyProtectorUtil;
-        this.sequenceService = sequenceService;
         this.cssslCaClient = cssslCaClient;
         this.signProperties = signProperties;
-        log.info("[TSA通道] 初始化 tsaMode={} caBaseUrl={}", signProperties.getTsaMode(), signProperties.getCaBaseUrl());
-    }
-
-    private boolean external() {
-        return "external".equalsIgnoreCase(signProperties.getTsaMode());
+        log.info("[TSA通道] 初始化：统一走 csssl 认证中心 TSA，caBaseUrl={}", signProperties.getCaBaseUrl());
     }
 
     /** 外部（csssl）令牌规范化串——与 csssl 的 TsaService.canonical 同一实现，两处必须逐字一致 */
-    private static String canonicalExternal(String serial, String digestHex, LocalDateTime tsaTime) {
-        return CANONICAL_PREFIX_EXTERNAL + "|" + serial + "|" + digestHex.toLowerCase()
+    private static String canonical(String serial, String digestHex, LocalDateTime tsaTime) {
+        return CANONICAL_PREFIX + "|" + serial + "|" + digestHex.toLowerCase()
                 + "|" + ISO.format(tsaTime);
-    }
-
-    /** 本地内置令牌规范化串（保持历史令牌兼容，勿改格式） */
-    private static String canonicalInternal(String serial, String digestHex, LocalDateTime tsaTime) {
-        return CANONICAL_PREFIX_INTERNAL + "|" + serial + "|" + digestHex.toLowerCase()
-                + "|" + DateFormats.ISO_DATETIME.format(tsaTime);
     }
 
     /**
      * 通道名称（页面展示）
      */
     public String name() {
-        if (external()) {
-            return "CSSSL院内TSA（国密时间戳）";
-        }
-        SysTsaServer s = peekServer();
-        return s != null ? s.getTsaName() : "本地内置TSA";
+        return "CSSSL院内TSA（国密时间戳）";
     }
 
     public boolean available() {
         try {
-            return external() ? externalAvailable() : readyServer() != null;
+            tsaPublicPem();
+            return true;
         } catch (Exception e) {
-            log.warn("{}TSA未就绪（{}）——签名时间来源将按「本机时钟」处理",
-                    external() ? "外部" : "本地", e.getMessage());
+            log.warn("csssl TSA 未就绪（{}）——签名时间来源将按「本机时钟」处理", e.getMessage());
             return false;
         }
     }
@@ -117,6 +79,20 @@ public class TsaChannelServiceImpl implements TsaChannelService {
      */
     public String readyName() {
         return available() ? name() : null;
+    }
+
+    /**
+     * TSA 公钥指纹（每 4 位分组）：取自 csssl TSA 公钥接口，与认证中心侧同一把密钥
+     */
+    public String fingerprintGroups() {
+        try {
+            Map<String, String> info = cssslCaClient.tsaPublicKey();
+            String fingerprint = info.get("fingerprint");
+            return SignCryptoUtil.fingerprintGroups(fingerprint);
+        } catch (Exception e) {
+            log.warn("获取 csssl TSA 公钥指纹失败：{}", e.getMessage());
+            return null;
+        }
     }
 
     /**
@@ -130,7 +106,7 @@ public class TsaChannelServiceImpl implements TsaChannelService {
             if (!available()) {
                 return null;
             }
-            return external() ? externalStamp(digestHex) : doStamp(digestHex);
+            return externalStamp(digestHex);
         } catch (Exception e) {
             log.error("TSA盖章失败：{} —— 本次签名降级为本机时钟", e.getMessage());
             return null;
@@ -142,8 +118,7 @@ public class TsaChannelServiceImpl implements TsaChannelService {
      */
     public boolean verifyToken(String serial, String digestHex, LocalDateTime tsaTime, String tokenValue) {
         try {
-            return external() ? externalVerify(serial, digestHex, tsaTime, tokenValue)
-                    : doVerifyToken(serial, digestHex, tsaTime, tokenValue);
+            return externalVerify(serial, digestHex, tsaTime, tokenValue);
         } catch (Exception e) {
             log.warn("TSA令牌校验异常：{}", e.getMessage());
             return false;
@@ -151,22 +126,15 @@ public class TsaChannelServiceImpl implements TsaChannelService {
     }
 
     /**
-     * 失效内部缓存（运维接口启停/配置变更后调用，下次读取重新查库，操作即时生效）
+     * 失效内部缓存（运维接口启停/配置变更后调用，下次读取重新获取，操作即时生效）
      */
     public void invalidate() {
-        cachedServer = null;
-        cachedPrivatePem = null;
         cachedTsaPublicPem = null;
     }
 
-    // ---------- external（csssl 院内 TSA） ----------
+    // ---------- csssl（认证中心）TSA ----------
 
-    /** 探活：能取到 TSA 公钥即视为在线，并缓存公钥 */
-    private boolean externalAvailable() {
-        tsaPublicPem();
-        return true;
-    }
-
+    /** 取 TSA 公钥（PEM），并缓存；csssl 不可达时抛异常 */
     private String tsaPublicPem() {
         String pem = cachedTsaPublicPem;
         if (pem != null) {
@@ -197,10 +165,10 @@ public class TsaChannelServiceImpl implements TsaChannelService {
         } catch (DuplicateKeyException e) {
             // 台账唯一键冲突说明令牌序列号重复（外部 TSA 异常）——必须让本次签名降级，
             // 绝不能返回"盖章成功"却留下与台账对不上的签名记录
-            log.warn("TSA令牌序列号冲突（外部TSA）serial={}，本次签名降级本机时钟", remote.serial());
+            log.warn("TSA令牌序列号冲突（csssl TSA）serial={}，本次签名降级本机时钟", remote.serial());
             return null;
         }
-        log.info("TSA盖章成功（external）serial={} 时刻={} 算法={}", remote.serial(), tsaTime, row.getAlgo());
+        log.info("TSA盖章成功（csssl）serial={} 时刻={} 算法={}", remote.serial(), tsaTime, row.getAlgo());
         return new Stamp(remote.serial(), tsaTime, remote.tokenValue());
     }
 
@@ -218,142 +186,6 @@ public class TsaChannelServiceImpl implements TsaChannelService {
             return false;
         }
         return SignCryptoUtil.verify(tsaPublicPem(),
-                canonicalExternal(serial, digestHex, TimeUtil.toSeconds(tsaTime)), tokenValue);
-    }
-
-    // ---------- internal（本地内置 TSA，演示信任根） ----------
-
-    private Stamp doStamp(String digestHex) {
-        SysTsaServer server = readyServer();
-        String privatePem = privatePemOf(server);
-        String keyAlgo = signProperties.getKeyAlgorithm();
-
-        for (int attempt = 1; attempt <= MAX_RETRY; attempt++) {
-            LocalDateTime tsaTime = TimeUtil.nowSeconds();
-            String serial;
-            try {
-                long seq = sequenceService.next("TSA_TOKEN");
-                serial = SERIAL_PREFIX + LocalDate.now().format(DateFormats.COMPACT_DATE) + String.format("%06d", seq);
-            } catch (Exception e) {
-                serial = SERIAL_PREFIX + LocalDate.now().format(DateFormats.COMPACT_DATE)
-                        + String.format("%06d", tokenMapper.countBySerialPrefix(
-                        SERIAL_PREFIX + LocalDate.now().format(DateFormats.COMPACT_DATE)) + 1);
-            }
-            String token = SignCryptoUtil.sign(privatePem, canonicalInternal(serial, digestHex, tsaTime));
-
-            BizTsaToken row = new BizTsaToken();
-            row.setSerial(serial);
-            row.setDigestHex(digestHex);
-            row.setTsaTime(tsaTime);
-            row.setTokenValue(token);
-            row.setAlgo(SignCryptoUtil.signAlgoFor(keyAlgo));
-            try {
-                tokenMapper.insert(row);
-                return new Stamp(serial, tsaTime, token);
-            } catch (DuplicateKeyException e) {
-                if (attempt == MAX_RETRY) {
-                    throw new IllegalStateException("TSA令牌序列号连续冲突 " + MAX_RETRY + " 次（" + serial + "）", e);
-                }
-                log.warn("TSA令牌序列号冲突，重试第 {} 次：{}", attempt, serial);
-            }
-        }
-        throw new IllegalStateException("TSA盖章失败");
-    }
-
-    private boolean doVerifyToken(String serial, String digestHex, LocalDateTime tsaTime, String tokenValue) {
-        if (serial == null || digestHex == null || tsaTime == null || tokenValue == null) {
-            return false;
-        }
-        // 断言一：台账里有这枚序列号，且摘要一致（签名行摘要被改 → 与台账对不上）
-        BizTsaToken ledger = tokenMapper.selectOne(new LambdaQueryWrapper<BizTsaToken>()
-                .eq(BizTsaToken::getSerial, serial));
-        if (ledger == null) {
-            return false;
-        }
-        if (!digestHex.equalsIgnoreCase(ledger.getDigestHex())) {
-            return false;
-        }
-        SysTsaServer server = serverMapper.selectOne(new LambdaQueryWrapper<SysTsaServer>()
-                .eq(SysTsaServer::getTsaCode, TSA_CODE));
-        if (server == null) {
-            return false;
-        }
-        return SignCryptoUtil.verify(server.getPublicPem(),
-                canonicalInternal(serial, digestHex, TimeUtil.toSeconds(tsaTime)), tokenValue);
-    }
-
-    private SysTsaServer peekServer() {
-        SysTsaServer s = cachedServer;
-        if (s != null) {
-            return s;
-        }
-        try {
-            return readyServer();
-        } catch (Exception e) {
-            return null;
-        }
-    }
-
-    /**
-     * 取可用服务行：无则自举生成；停用视为未就绪
-     */
-    private synchronized SysTsaServer readyServer() {
-        SysTsaServer s = cachedServer;
-        if (s != null) {
-            return s;
-        }
-        s = serverMapper.selectOne(new LambdaQueryWrapper<SysTsaServer>()
-                .eq(SysTsaServer::getTsaCode, TSA_CODE));
-        if (s == null) {
-            s = bootstrap();
-            log.info("本地TSA密钥自举完成 tsaName={} 指纹={}", s.getTsaName(), s.getKeyFingerprint());
-        }
-        if (!Integer.valueOf(1).equals(s.getTsaStatus())) {
-            throw new IllegalStateException("TSA服务已停用（tsa_code=" + TSA_CODE + "）");
-        }
-        cachedServer = s;
-        cachedPrivatePem = null;
-        return s;
-    }
-
-    /** 自举本地 TSA：密钥算法跟随签名证书配置（SM2 或 RSA2048），私钥主口令加密落库 */
-    private SysTsaServer bootstrap() {
-        keyProtectorUtil.requireSecret();
-        KeyPairFactory.KeyPairPem kp = KeyPairFactory.generate(signProperties.getKeyAlgorithm());
-        String salt = keyProtectorUtil.newSalt();
-        int iterations = 120000;
-
-        SysTsaServer s = new SysTsaServer();
-        s.setTsaCode(TSA_CODE);
-        s.setTsaName("本地内置TSA（演示信任根，非第三方）");
-        s.setPublicPem(kp.publicPem());
-        s.setKeyFingerprint(SignCryptoUtil.fingerprint(kp.publicPem()));
-        s.setProtectedPrivateKey(keyProtectorUtil.protect(kp.privatePem(), salt, iterations));
-        s.setKeySalt(salt);
-        s.setKeyIterations(iterations);
-        s.setTsaStatus(1);
-        s.setRemark("G6 本地内置TSA：令牌结构真实、可对抗本机时钟篡改；信任根为院内，不对外声称法律效力");
-        try {
-            serverMapper.insert(s);
-        } catch (DuplicateKeyException e) {
-            // 并发自举：另一线程已插入，读它的
-            s = serverMapper.selectOne(new LambdaQueryWrapper<SysTsaServer>()
-                    .eq(SysTsaServer::getTsaCode, TSA_CODE));
-            if (s == null) {
-                throw new IllegalStateException("TSA服务行并发创建失败");
-            }
-        }
-        return s;
-    }
-
-    private String privatePemOf(SysTsaServer server) {
-        String pem = cachedPrivatePem;
-        if (pem != null) {
-            return pem;
-        }
-        pem = keyProtectorUtil.unprotect(server.getProtectedPrivateKey(), server.getKeySalt(),
-                server.getKeyIterations());
-        cachedPrivatePem = pem;
-        return pem;
+                canonical(serial, digestHex, TimeUtil.toSeconds(tsaTime)), tokenValue);
     }
 }

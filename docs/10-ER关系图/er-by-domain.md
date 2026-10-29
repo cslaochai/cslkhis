@@ -89,10 +89,6 @@ erDiagram
     bigint dept_id "所属科室ID（快照）"
     bigint revoke_by "吊销操作人员工ID"
   }
-  sys_tsa_server["时间戳服务注册 · sys_tsa_server"] {
-    bigint id "主键ID"
-    varchar tsa_code "TSA服务编码"
-  }
   sys_field_change_log["字段级修改日志 · sys_field_change_log"] {
     bigint id "主键ID"
     bigint operator_id "操作人ID"

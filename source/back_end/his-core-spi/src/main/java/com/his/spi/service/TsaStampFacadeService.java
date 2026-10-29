@@ -1,7 +1,6 @@
 package com.his.spi.service;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.his.spi.dto.TsaStatusUpsertDTO;
 import com.his.spi.dto.TsaTimeSourceDTO;
 import com.his.spi.dto.TsaTokenPageQueryDTO;
 import com.his.spi.dto.TsaTokenVerifyDTO;
@@ -64,11 +63,6 @@ public interface TsaStampFacadeService {
      * 令牌台账分页（只增不改的签发流水）。
      */
     IPage<TsaTokenVO> listTokenPage(TsaTokenPageQueryDTO query);
-
-    /**
-     * 启停本地 TSA 服务：停用 = 不再签发新令牌，签名侧立即降级本机时钟；历史令牌凭公钥仍可验证。
-     */
-    void updateStatus(TsaStatusUpsertDTO dto);
 
     /**
      * 切换签名时间来源：只允许 1（本机时钟）/ 3（可信时间戳）；2（院内授时）未实现，拒绝。

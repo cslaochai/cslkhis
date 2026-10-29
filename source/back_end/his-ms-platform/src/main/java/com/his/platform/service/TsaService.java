@@ -22,14 +22,6 @@ public interface TsaService {
     IPage<TsaTokenVO> listPage(TsaTokenPageQueryDTO query);
 
     /**
-     * 启停本地 TSA 服务（G6b）。
-     * 停用 = 不再签发新令牌，签名侧立即降级本机时钟；历史令牌凭公钥仍可验证。
-     *
-     * @return 操作后的最新状态（available 立即反映）
-     */
-    TsaStatusVO updateStatus(Integer tsaStatus);
-
-    /**
      * 切换签名时间来源 sign.time_source（G6b）。
      * 只允许 1（本机时钟）/ 3（可信时间戳）；2（院内授时）未实现，拒绝。
      * 配 3 而适配器不在线时**允许写入**——生效值会自动降为 1 并在 trustNote 说明，

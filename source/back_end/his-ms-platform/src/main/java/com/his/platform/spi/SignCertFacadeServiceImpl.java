@@ -200,10 +200,12 @@ public class SignCertFacadeServiceImpl implements SignCertFacadeService {
         vo.setAvailable(available);
         if (available) {
             vo.setProviderName(externalCaChannelService.name());
-            vo.setHint("外部 CA 模式：证书签发走外部机构；适配器未返回证书时中断签发，绝不静默回退院内自签");
+            vo.setHint("远程签名认证模式：证书由 CA 认证中心（csssl）签发，私钥本地托管；"
+                    + "适配器未返回证书时中断签发，绝不静默回退到本地自签");
         } else {
             vo.setProviderName(null);
-            vo.setHint("院内自签（internal）：密钥对本地生成、证书本地托管，信任根为院内，不对外声称法律效力");
+            vo.setHint("演示模式（internal）：未开启远程签名认证，证书签发不落证书，仅提示；"
+                    + "如需真实签发请将 his.sign.ca-mode 配置为 external");
         }
         return vo;
     }
@@ -215,7 +217,8 @@ public class SignCertFacadeServiceImpl implements SignCertFacadeService {
             vo.setProviderName(null);
             vo.setCsrPrinted(false);
             vo.setCertReturned(false);
-            vo.setConclusion("当前为院内自签（internal）模式，未向外部 CA 提交 CSR；切换 external 后可再探外发通道");
+            vo.setConclusion("当前为演示模式（internal），未开启远程签名认证、未向 CA 提交 CSR；"
+                    + "切换 external 后可再探外发通道");
             return vo;
         }
         // 本地生成密钥对，只把公钥交给适配器试跑一次，私钥不出本地、不落库
@@ -228,7 +231,7 @@ public class SignCertFacadeServiceImpl implements SignCertFacadeService {
         vo.setCertReturned(issued != null);
         vo.setConclusion(issued != null
                 ? "外部 CA 已返回证书，外发通道可用，可按真实机构流程接入"
-                : "CSR 已按适配器口径提交并打印到服务端控制台，适配器未返回证书（未接入真 CA）；签发在此中断，不回退院内自签");
+                : "CSR 已按适配器口径提交并打印到服务端控制台，适配器未返回证书（未接入真 CA）；签发在此中断，不回退到本地自签");
         return vo;
     }
 }

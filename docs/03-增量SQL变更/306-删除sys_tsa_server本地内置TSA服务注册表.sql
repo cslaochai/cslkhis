@@ -1,0 +1,37 @@
+-- =====================================================================
+-- 306 删除 sys_tsa_server（本地内置 TSA 服务注册表）
+-- ---------------------------------------------------------------------
+-- 背景：
+--   sys_tsa_server 是 HIS 侧「本地内置 TSA」的密钥与状态登记表：HIS 自己
+--   生成时间戳密钥对（私钥落 sys_tsa_server.protected_private_key），
+--   自己签时间戳令牌，令牌前缀 HIS-TSA-V1。
+--
+--   这套实现与 csssl 认证中心的 TSA 服务功能重叠：csssl 已有独立 SM2
+--   时间戳密钥（KeyVault SM4 加密落盘）、/tsa/stamp 盖章、/tsa/publicKey
+--   公钥分发与盖章审计。两侧并存等于存在第二个时间戳信任根——
+--   HIS 自签的时间戳只能证明「令牌结构真实」，满足不了证书到期后
+--   「签名那一刻证书仍有效」与「防抵赖」这两条法律效力要件。
+--
+--   按职责边界：CA 签发与可信时间戳归 csssl 认证中心，HIS 只负责
+--   业务侧私钥托管、签名留痕与令牌台账。
+--
+-- 改动：
+--   1. 后端删除 SysTsaServer 实体 / SysTsaServerMapper；
+--   2. TsaChannelServiceImpl 删除 internal 分支（bootstrap 自举密钥、
+--      doStamp 自行盖章、doVerifyToken 自行验签），统一走 csssl TSA；
+--   3. 删除 TSA 启停链路（TsaService.updateStatus、SPI 同名方法、
+--      TsaStatusUpsertDTO、/emr/tsa/updateStatus 接口与前端按钮）——
+--      csssl TSA 是无状态服务，没有本地启停概念；
+--   4. SignProperties 删除 tsaMode 配置项，配置文件删除 tsa-mode；
+--   5. 删除「时间戳服务注册」AI 元数据与铺底数据。
+--
+-- 保留：
+--   biz_tsa_token（令牌台账，HIS 侧签名留痕与复验依据）保留；
+--   sys_sign_cert（医生证书台账，私钥本地托管）保留。
+--
+-- 执行顺序：
+--   先发布已删代码的后端与前端，再执行本脚本；
+--   若库中仍有历史令牌数据，可先备份 sys_tsa_server 再执行 DROP。
+-- =====================================================================
+
+DROP TABLE IF EXISTS `sys_tsa_server`;

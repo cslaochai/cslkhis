@@ -5,13 +5,13 @@ import lombok.Data;
 import java.io.Serializable;
 
 /**
- * 签名 CA 通道状态：证书签发走院内自签还是外部 CA 的实时自检回参。
+ * 签名 CA 通道状态：证书签发走演示模式还是远程 CA（csssl）的实时自检回参。
  */
 @Data
 public class SignCaStatusVO implements Serializable {
 
     /**
-     * 证书签发模式（internal-院内自签 external-外部 CA）
+     * 证书签发模式（internal-演示模式 external-远程 CA）
      */
     private String caMode;
 
@@ -21,7 +21,7 @@ public class SignCaStatusVO implements Serializable {
     private String providerName;
 
     /**
-     * 外部 CA 通道是否就绪（仅配置为 external 模式时为真）
+     * 远程 CA 通道是否就绪（仅配置为 external 模式时为真）
      */
     private Boolean available;
 

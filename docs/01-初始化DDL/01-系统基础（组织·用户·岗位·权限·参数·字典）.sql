@@ -446,31 +446,6 @@ CREATE TABLE `sys_sign_cert` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='电子签名证书';
 
 -- ----------------------------
--- sys_tsa_server  时间戳服务注册
--- ----------------------------
-CREATE TABLE `sys_tsa_server` (
-  `id` bigint NOT NULL COMMENT '主键ID',
-  `tsa_code` varchar(32) NOT NULL COMMENT 'TSA服务编码',
-  `tsa_name` varchar(64) NOT NULL COMMENT 'TSA服务名称',
-  `public_pem` text NOT NULL COMMENT 'TSA公钥',
-  `key_fingerprint` varchar(64) NOT NULL DEFAULT '' COMMENT '公钥指纹',
-  `protected_private_key` text NOT NULL COMMENT '私钥密文',
-  `key_salt` varchar(64) NOT NULL DEFAULT '' COMMENT '私钥派生盐',
-  `key_iterations` int NOT NULL DEFAULT '0' COMMENT '私钥派生迭代次数',
-  `tsa_status` tinyint NOT NULL DEFAULT '1' COMMENT '状态（0-停用 1-启用）',
-  `create_by` varchar(64) NOT NULL COMMENT '创建人',
-  `create_time` datetime NOT NULL DEFAULT (now()) COMMENT '创建时间',
-  `update_by` varchar(64) NOT NULL COMMENT '更新人',
-  `update_time` datetime NOT NULL DEFAULT (now()) COMMENT '更新时间',
-  `del_flag` tinyint NOT NULL DEFAULT '0' COMMENT '删除标志（0-正常 1-删除）',
-  `remark` varchar(500) COMMENT '备注',
-  `create_by_id` bigint NOT NULL COMMENT '创建人ID',
-  `update_by_id` bigint NOT NULL COMMENT '更新人ID',
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `uk_tsa_code` (`tsa_code`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='时间戳服务注册';
-
--- ----------------------------
 -- sys_user  用户
 -- ----------------------------
 CREATE TABLE `sys_user` (

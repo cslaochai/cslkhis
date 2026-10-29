@@ -79,11 +79,6 @@ ALTER TABLE `sys_sign_cert` MODIFY COLUMN `create_by` varchar(64) NOT NULL COMME
 ALTER TABLE `sys_sign_cert` MODIFY COLUMN `update_by` varchar(64) NOT NULL COMMENT '更新人';
 ALTER TABLE `sys_sign_cert` MODIFY COLUMN `create_by_id` bigint NOT NULL COMMENT '创建人ID';
 ALTER TABLE `sys_sign_cert` MODIFY COLUMN `update_by_id` bigint NOT NULL COMMENT '更新人ID';
-ALTER TABLE `sys_tsa_server` MODIFY COLUMN `tsa_name` varchar(64) NOT NULL COMMENT 'TSA服务名称';
-ALTER TABLE `sys_tsa_server` MODIFY COLUMN `create_by` varchar(64) NOT NULL COMMENT '创建人';
-ALTER TABLE `sys_tsa_server` MODIFY COLUMN `update_by` varchar(64) NOT NULL COMMENT '更新人';
-ALTER TABLE `sys_tsa_server` MODIFY COLUMN `create_by_id` bigint NOT NULL COMMENT '创建人ID';
-ALTER TABLE `sys_tsa_server` MODIFY COLUMN `update_by_id` bigint NOT NULL COMMENT '更新人ID';
 ALTER TABLE `sys_user` MODIFY COLUMN `create_by` varchar(64) NOT NULL COMMENT '创建人';
 ALTER TABLE `sys_user` MODIFY COLUMN `update_by` varchar(64) NOT NULL COMMENT '更新人';
 ALTER TABLE `sys_user` MODIFY COLUMN `create_by_id` bigint NOT NULL COMMENT '创建人ID';

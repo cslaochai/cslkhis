@@ -5,7 +5,6 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.his.platform.mapper.BizTsaTokenMapper;
 import com.his.platform.service.TsaChannelService;
 import com.his.platform.service.TsaService;
-import com.his.spi.dto.TsaStatusUpsertDTO;
 import com.his.spi.dto.TsaTimeSourceDTO;
 import com.his.spi.dto.TsaTokenPageQueryDTO;
 import com.his.spi.dto.TsaTokenVerifyDTO;
@@ -25,7 +24,7 @@ import java.util.List;
 
 /**
  * TsaStampFacadeService 在 his-sign 侧的实现：盖章/验真代理通道，
- * 状态聚合、令牌台账分页、启停、切换时间来源与按台账ID复验转调内部运维服务。
+ * 状态聚合、令牌台账分页、切换时间来源与按台账ID复验转调内部运维服务。
  */
 @Slf4j
 @Service
@@ -98,11 +97,6 @@ public class TsaStampFacadeServiceImpl implements TsaStampFacadeService {
         }
         result.setRecords(rows);
         return result;
-    }
-
-    @Override
-    public void updateStatus(TsaStatusUpsertDTO dto) {
-        tsaService.updateStatus(dto.getTsaStatus());
     }
 
     @Override

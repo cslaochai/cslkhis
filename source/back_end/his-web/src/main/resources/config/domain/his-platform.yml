@@ -12,9 +12,9 @@ his:
     # 默认时间来源：1-本机时钟 2-院内授时服务器 3-第三方TSA
     # 本期未接入 2/3，即使这里填 2 或 3 也会被运行期降级成 1 并在日志里告警（不谎报可信时间）
     time-source: 1
-    # 证书签发模式：internal-院内自签（默认）；external-外部CA（csssl，RA公钥签发，私钥本地托管）
-    # external 模式下 csssl 未返回证书即中断签发，绝不静默回退院内自签
-    ca-mode: internal
+    # 证书签发模式：internal-演示模式（默认，不调用远程签名认证，签发只提示不落证书）；external-远程CA（csssl，RA公钥签发，私钥本地托管）
+    # external 模式下 csssl 未返回证书即中断签发，绝不静默回退到本地自签
+    ca-mode: ${HIS_SIGN_CA_MODE:internal}
     # 新签发证书的密钥算法：SM2（国密，默认，对齐 WS/T 847）或 RSA2048（兼容既有链路）
     key-algorithm: ${HIS_SIGN_KEY_ALGO:SM2}
     # 外部CA（csssl）对接：地址与服务账号由 profile / 环境变量覆盖（见 application-pro.yml）
@@ -31,6 +31,5 @@ his:
       cert-download: "/admin/certs/{certId}/cert.pem"
       tsa-stamp: /tsa/stamp
       tsa-public-key: /tsa/publicKey
-    # 可信时间戳通道：internal-本地内置TSA（演示信任根）；external-外部TSA（csssl 院内TSA，独立SM2密钥签发）
-    # external 模式下 csssl 不可用则时间来源降级本机时钟（不谎报可信时间）
-    tsa-mode: ${HIS_SIGN_TSA_MODE:external}
+    # 可信时间戳（TSA）统一由 csssl 认证中心提供：HIS 侧不自建 TSA、不自签时间戳令牌。
+    # csssl 不可用时签名时间来源降级本机时钟（不谎报可信时间）

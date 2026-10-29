@@ -2,10 +2,10 @@ package com.his.platform.service;
 
 import java.time.LocalDateTime;
 
-/** 可信时间戳通道：病历签名授时与令牌验真的时间来源出口，当前实现为院内本地内置 TSA（演示信任根）。 */
+/**
+ * 可信时间戳通道：病历签名授时与令牌验真的时间来源出口，当前实现为 csssl 认证中心 TSA。
+ */
 public interface TsaChannelService {
-
-    public static final String TSA_CODE = "LOCAL";
 
     /**
      * 通道展示名称：就绪时取服务配置的名称，未就绪回内置缺省名。
@@ -14,7 +14,7 @@ public interface TsaChannelService {
     String name();
 
     /**
-     * 通道是否可用（服务配置存在且启用、签发密钥可解出）；不可用时签名时间降级为本机时钟。
+     * 通道是否可用（csssl TSA 服务可达且公钥可取）；不可用时签名时间降级为本机时钟。
      * 用于签名中心状态卡与签名写入前决定时间来源。
      */
     boolean available();
@@ -26,7 +26,13 @@ public interface TsaChannelService {
     String readyName();
 
     /**
-     * 对内容摘要盖一枚可信时间戳：签发令牌并落台账，序列号冲突自动重试。
+     * TSA 公钥指纹（每 4 位分组，便于电话核对）；未就绪返回 null。
+     * 用于签名中心时间戳区块展示信任根指纹，人工核对 csssl 侧是否同一把密钥。
+     */
+    String fingerprintGroups();
+
+    /**
+     * 对内容摘要盖一枚可信时间戳：向 csssl 申请盖章并落台账。
      * 用于病历文书签名保存时确定签名时间来源（时间来源配为可信时间戳才走到这里）。
      *
      * @param digestHex 被盖时间戳的内容摘要（SHA-256 十六进制小写）
@@ -41,8 +47,8 @@ public interface TsaChannelService {
     boolean verifyToken(String serial, String digestHex, LocalDateTime tsaTime, String tokenValue);
 
     /**
-     * 失效通道内部的服务配置与密钥缓存，下一次调用重新读取。
-     * 用于 TSA 运维启停或配置变更后让操作即时生效。
+     * 失效通道内部的公钥缓存，下一次调用重新向 csssl 获取。
+     * 用于 TSA 配置变更后让操作即时生效。
      */
     void invalidate();
 
