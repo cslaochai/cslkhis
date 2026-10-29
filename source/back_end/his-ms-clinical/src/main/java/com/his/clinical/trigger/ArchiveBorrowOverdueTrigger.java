@@ -1,6 +1,7 @@
 package com.his.clinical.trigger;
 
 import com.his.clinical.service.ArchiveBorrowService;
+import com.his.common.support.SystemOperatorContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -19,10 +20,13 @@ public class ArchiveBorrowOverdueTrigger {
     @Scheduled(cron = "0 30 8 * * ?")
     public void scheduledNotifyOverdue() {
         try {
+            SystemOperatorContext.bindSystemTask();
             archiveBorrowService.notifyOverdue();
         } catch (Exception e) {
             // 定时任务失败只记日志：提醒是催办手段，不能影响任何业务线程
             log.error("[病案借阅] 超期提醒定时任务失败：{}", e.getMessage(), e);
+        } finally {
+            SystemOperatorContext.clear();
         }
     }
 }

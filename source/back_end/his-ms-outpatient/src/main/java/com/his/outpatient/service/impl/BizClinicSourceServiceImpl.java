@@ -7,6 +7,7 @@ import com.his.common.base.PageResult;
 import com.his.common.entity.CurrentUser;
 import com.his.common.enums.*;
 import com.his.common.exception.BusinessException;
+import com.his.common.support.TitleTierMapping;
 import com.his.common.util.NumUtil;
 import com.his.common.util.ShiftCoverUtil;
 import com.his.common.util.TextUtil;
@@ -185,8 +186,8 @@ public class BizClinicSourceServiceImpl extends ServiceImpl<BizClinicSourceMappe
         schedule.setDiagnosisFee(NumUtil.orZero(schedule.getDiagnosisFee()));
         // 档位为空时兜底普通档（9 元），不留 null：出账与医保对账都要读这一列，
         //    null 会让「这号适用哪档加收」在报表里变成空白，追责时说不清。
-        if (ClinicDiagnosisTierEnum.ofCode(schedule.getDiagnosisTier()) == null) {
-            schedule.setDiagnosisTier(ClinicDiagnosisTierEnum.GENERAL.getCode());
+        if (!TitleTierMapping.isValidTier(schedule.getDiagnosisTier())) {
+            schedule.setDiagnosisTier(TitleTierMapping.TIER_GENERAL);
         }
         schedule.setExpertFee(NumUtil.orZero(schedule.getExpertFee()));
     }
@@ -379,7 +380,7 @@ public class BizClinicSourceServiceImpl extends ServiceImpl<BizClinicSourceMappe
         schedule.setExpertFee(BigDecimal.ZERO);
         schedule.setRegistFee(BigDecimal.ZERO);
         schedule.setDiagnosisFee(BigDecimal.ZERO);
-        schedule.setDiagnosisTier(ClinicDiagnosisTierEnum.GENERAL.getCode());
+        schedule.setDiagnosisTier(TitleTierMapping.TIER_GENERAL);
         schedule.setRoomId(null);
         schedule.setRoomName(null);
     }

@@ -1,5 +1,6 @@
 package com.his.inpatient.trigger;
 
+import com.his.common.support.SystemOperatorContext;
 import com.his.inpatient.service.DeathCertificateService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -19,10 +20,13 @@ public class DeathCertOverdueTrigger {
     @Scheduled(cron = "0 0 9 * * ?")
     public void scheduledNotifyOverdue() {
         try {
+            SystemOperatorContext.bindSystemTask();
             deathCertificateService.notifyOverdue();
         } catch (Exception e) {
             // 催报是催办手段，失败只记日志，不能带崩任何业务线程
             log.error("[死亡证明] 逾期催报定时任务失败：{}", e.getMessage(), e);
+        } finally {
+            SystemOperatorContext.clear();
         }
     }
 }

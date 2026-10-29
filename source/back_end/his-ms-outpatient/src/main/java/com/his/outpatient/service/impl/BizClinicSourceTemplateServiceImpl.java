@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
 import com.his.common.enums.*;
 import com.his.common.exception.BusinessException;
+import com.his.common.support.TitleTierMapping;
 import com.his.common.util.TextUtil;
 import com.his.outpatient.dto.ScheduleTemplatePageQueryDTO;
 import com.his.outpatient.dto.ScheduleTemplateSlotItemDTO;
@@ -165,8 +166,8 @@ public class BizClinicSourceTemplateServiceImpl extends ServiceImpl<BizClinicSou
         t.setRoomName(dto.getRoomName());
         t.setRegistFee(dto.getRegistFee());
         t.setDiagnosisFee(dto.getDiagnosisFee());
-        if (ClinicDiagnosisTierEnum.ofCode(dto.getDiagnosisTier()) == null) {
-            t.setDiagnosisTier(ClinicDiagnosisTierEnum.GENERAL.getCode());
+        if (!TitleTierMapping.isValidTier(dto.getDiagnosisTier())) {
+            t.setDiagnosisTier(TitleTierMapping.TIER_GENERAL);
         } else {
             t.setDiagnosisTier(dto.getDiagnosisTier());
         }
@@ -273,7 +274,7 @@ public class BizClinicSourceTemplateServiceImpl extends ServiceImpl<BizClinicSou
         template.setExpertFee(BigDecimal.ZERO);
         template.setRegistFee(BigDecimal.ZERO);
         template.setDiagnosisFee(BigDecimal.ZERO);
-        template.setDiagnosisTier(ClinicDiagnosisTierEnum.GENERAL.getCode());
+        template.setDiagnosisTier(TitleTierMapping.TIER_GENERAL);
         template.setRoomId(null);
         template.setRoomName(null);
     }

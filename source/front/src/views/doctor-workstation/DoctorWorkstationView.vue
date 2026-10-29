@@ -2561,16 +2561,6 @@ const queueSearch = ref('');
 const queueFilter = ref('all');
 const userInfo = ref({});
 const stats = ref({waiting: 0, called: 0, inProgress: 0});
-// 今日待办
-const todoList = ref([]);
-const todoStats = ref({pendingReview: 0, pendingReport: 0, pendingFollowUp: 0, pendingConsult: 0});
-const todoSearch = ref('');
-const filteredTodoList = computed(() => {
-  if (!todoSearch.value)
-    return todoList.value;
-  const kw = todoSearch.value.toLowerCase();
-  return todoList.value.filter((item) => item.title?.toLowerCase().includes(kw) || item.content?.toLowerCase().includes(kw));
-});
 const currentCalledPatient = computed(() => {
   return pickQueueRow(queueList.value.filter((q) => q.queueStatus === 3));
 });
@@ -3867,23 +3857,6 @@ const loadUserInfo = () => {
   if (userInfo.value.deptId) {
     selectedDeptId.value = Number(userInfo.value.deptId);
   }
-};
-// ========== 加载今日待办 ==========
-const loadTodoList = async () => {
-  // 模拟待办数据，实际应从后端获取
-  todoList.value = [
-    {id: 1, type: 'review', title: '待审核病历', content: '张三的病历待审核', time: '10:30', urgent: false},
-    {id: 2, type: 'report', title: '待查看检验报告', content: '李四的血常规报告已出', time: '09:45', urgent: true},
-    {id: 3, type: 'report', title: '待查看检查报告', content: '王五的CT报告已出', time: '09:20', urgent: false},
-    {id: 4, type: 'followUp', title: '待回访患者', content: '赵六术后3天需电话回访', time: '14:00', urgent: false},
-    {id: 5, type: 'consult', title: '会诊申请', content: '内科申请联合会诊', time: '11:00', urgent: true},
-  ];
-  todoStats.value = {
-    pendingReview: 3,
-    pendingReport: 5,
-    pendingFollowUp: 2,
-    pendingConsult: 1,
-  };
 };
 // ========== ICD-10搜索 ==========
 const handleIcd10Search = async (query) => {
@@ -6022,7 +5995,6 @@ onMounted(() => {
   loadTcmDicts();
   loadDoctorStatus();
   loadData();
-  loadTodoList();
   loadDiagTemplates();
   loadRxTemplates();
   loadDrugPackages();

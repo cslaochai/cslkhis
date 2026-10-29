@@ -4,7 +4,9 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.his.common.base.PageResult;
 import com.his.common.base.Result;
 import com.his.inpatient.dto.*;
+import com.his.common.entity.CurrentUser;
 import com.his.common.enums.ConsultCategoryEnum;
+import com.his.common.utils.UserUtils;
 import com.his.inpatient.service.InpatientConsultationService;
 import com.his.inpatient.service.NutritionScreenService;
 import com.his.inpatient.service.NutritionStatsService;
@@ -89,11 +91,15 @@ public class NutritionController {
 
     // 营养会诊（复用住院会诊闭环，类别钉死为营养）
 
-    @Operation(summary = "营养会诊分页（只给 consultCategory=2，不接受前端改类别）")
+    @Operation(summary = "营养会诊分页（consultCategory=2 或会诊科室=本科室；不接受前端改类别）")
     @PreAuthorize("hasAuthority('ipd:nutrition:consult')")
     @PostMapping("/consultListPage")
     public Result<PageResult<ConsultationVO>> consultListPage(@Valid @RequestBody ConsultationPageQueryDTO query) {
         query.setConsultCategory(ConsultCategoryEnum.NUTRITION.getCode());
+        // 发到本科室的普通会诊也要进营养工作台：医生在会诊管理里选「营养科」时不会知道要先标类别，
+        // 只按类别过滤会让这单在营养科的工作台上凭空消失（谁来接诊都找不到）。
+        CurrentUser operator = UserUtils.getCurrentUser();
+        query.setOrToDeptId(operator == null ? null : operator.getDeptId());
         IPage<ConsultationVO> page = inpatientConsultationService.listPage(query);
         return Result.success(PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(),
                 page.getRecords()));
@@ -139,7 +145,7 @@ public class NutritionController {
      * 完成一张营养会诊并填写结论，结论同步回写该次住院病历。
      * 用于营养会诊页的完成会诊弹框提交。
      */
-    @Operation(summary = "完成营养会诊（必须带结论，完成即回写住院病历）")
+    @Operation(summary = "完成营养会诊（必须带结论，完成即回写住院病历，返回病历号）")
     @PreAuthorize("hasAuthority('ipd:nutrition:consultEdit')")
     @PostMapping("/consultFinish")
     public Result<String> consultFinish(@RequestBody @Valid ConsultationFinishDTO dto) {

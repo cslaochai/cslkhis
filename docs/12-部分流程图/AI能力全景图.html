@@ -1,0 +1,837 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<title>HIS AI 能力全景图</title>
+<style>
+  :root{
+    --primary:#1269B5;
+    --primary-ink:#0B4F8A;
+    --accent:#0E9488;
+    --ink:#0f172a;
+    --muted:#64748b;
+    --line:#cbd5e1;
+    --bg:#f5f7fa;
+    --card:#ffffff;
+    --entry:#e8f1fb;
+    --entry-bd:#b9d4ef;
+    --rule:#e6f6f3;
+    --rule-bd:#a9ddd4;
+    --llm:#f3ecfb;
+    --llm-bd:#d3bdf0;
+    --gate:#fdf3e3;
+    --gate-bd:#f0d3a4;
+    --degrade:#fdeaea;
+    --degrade-bd:#f2b8b8;
+    --store:#eef1f5;
+    --store-bd:#d3dae3;
+    --radius:10px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+    color:var(--ink);background:var(--bg);line-height:1.65;font-size:14px;
+  }
+  .page{max-width:1280px;margin:0 auto;padding:0 28px 72px}
+
+  /* ---------- hero ---------- */
+  .hero{
+    background:linear-gradient(135deg,#0B4F8A 0%,#1269B5 62%,#0E9488 140%);
+    color:#fff;margin:0 -28px 28px;padding:40px 28px 34px;
+  }
+  .hero h1{margin:0 0 8px;font-size:27px;letter-spacing:.5px;font-weight:700}
+  .hero p{margin:0;color:rgba(255,255,255,.86);font-size:13.5px;max-width:880px}
+  .hero .meta{margin-top:14px;font-size:12px;color:rgba(255,255,255,.7)}
+
+  /* ---------- stats ---------- */
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:22px 0 8px}
+  .stat{background:var(--card);border:1px solid #e3e9f0;border-radius:var(--radius);padding:16px 18px}
+  .stat b{display:block;font-size:26px;line-height:1.2;color:var(--primary-ink);font-variant-numeric:tabular-nums}
+  .stat span{display:block;font-size:12.5px;color:var(--muted);margin-top:4px}
+  .stat.warn b{color:#b45309}
+  .stat.bad b{color:#b91c1c}
+
+  /* ---------- sections ---------- */
+  section{margin:34px 0 0}
+  h2{
+    font-size:19px;margin:0 0 6px;padding-left:11px;border-left:4px solid var(--primary);
+    line-height:1.35;font-weight:700;
+  }
+  h2 .en{font-size:12px;color:var(--muted);font-weight:400;margin-left:8px;letter-spacing:.4px}
+  .lead{margin:0 0 16px;color:var(--muted);font-size:13px}
+  h3{font-size:15px;margin:22px 0 10px;color:var(--primary-ink)}
+  .card{
+    background:var(--card);border:1px solid #e3e9f0;border-radius:var(--radius);
+    padding:20px 22px;margin-top:12px;
+  }
+
+  /* ---------- legend ---------- */
+  .legend{display:flex;flex-wrap:wrap;gap:10px 22px;margin:6px 0 0;font-size:12.5px;color:#334155}
+  .legend i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:6px;vertical-align:-1px;border:1px solid}
+  .lg-entry{background:var(--entry);border-color:var(--entry-bd)}
+  .lg-rule{background:var(--rule);border-color:var(--rule-bd)}
+  .lg-llm{background:var(--llm);border-color:var(--llm-bd)}
+  .lg-gate{background:var(--gate);border-color:var(--gate-bd)}
+  .lg-degrade{background:var(--degrade);border-color:var(--degrade-bd)}
+  .lg-store{background:var(--store);border-color:var(--store-bd)}
+
+  /* ---------- flow primitives ---------- */
+  .flow{display:flex;flex-direction:column;align-items:center;padding:6px 0}
+  .node{
+    width:min(560px,100%);border-radius:8px;border:1px solid var(--line);
+    background:#fff;padding:10px 14px;text-align:left;position:relative;
+  }
+  .node h4{margin:0;font-size:13.5px;font-weight:600;line-height:1.4}
+  .node p{margin:3px 0 0;font-size:12px;color:#475569;line-height:1.55}
+  .node small{display:block;margin-top:3px;font-size:11px;color:#94a3b8}
+  .node.entry{background:var(--entry);border-color:var(--entry-bd)}
+  .node.rule{background:var(--rule);border-color:var(--rule-bd)}
+  .node.llm{background:var(--llm);border-color:var(--llm-bd)}
+  .node.gate{background:var(--gate);border-color:var(--gate-bd)}
+  .node.degrade{background:var(--degrade);border-color:var(--degrade-bd)}
+  .node.store{background:var(--store);border-color:var(--store-bd)}
+  .node.wide{width:min(760px,100%)}
+
+  .varrow{width:2px;height:24px;background:var(--line);position:relative;flex:none}
+  .varrow::after{
+    content:"";position:absolute;left:50%;bottom:-1px;transform:translateX(-50%);
+    border-left:5px solid transparent;border-right:5px solid transparent;border-top:7px solid #94a3b8;
+  }
+  .varrow.lbl::before{
+    content:attr(data-label);position:absolute;left:8px;top:50%;transform:translateY(-50%);
+    font-size:11px;color:var(--muted);white-space:nowrap;
+  }
+
+  .branch{display:grid;grid-template-columns:1fr 1fr;gap:18px;width:min(760px,100%);margin-top:0}
+  .branch-col{display:flex;flex-direction:column;align-items:center}
+  .branch-tag{
+    font-size:11.5px;font-weight:600;padding:2px 10px;border-radius:999px;margin-bottom:8px;
+    border:1px solid;white-space:nowrap;
+  }
+  .tag-ok{color:#0f766e;background:#ecfdf5;border-color:#a7f3d0}
+  .tag-bad{color:#b91c1c;background:#fef2f2;border-color:#fecaca}
+  .tag-cond{color:#92400e;background:#fffbeb;border-color:#fde68a}
+  .branch .node{width:100%}
+
+  .cols{display:grid;gap:14px;margin-top:12px}
+  .cols.c2{grid-template-columns:1fr 1fr}
+  .cols.c3{grid-template-columns:repeat(3,1fr)}
+  .cols.c4{grid-template-columns:repeat(4,1fr)}
+  .mini{
+    border:1px solid #e3e9f0;border-radius:8px;background:#fff;padding:12px 14px;
+  }
+  .mini b{display:block;font-size:13px;color:var(--primary-ink);margin-bottom:4px}
+  .mini p{margin:0;font-size:12px;color:#475569}
+  .mini code{font-size:11.5px;background:#f1f5f9;padding:1px 5px;border-radius:4px;color:#334155}
+
+  /* ---------- layers ---------- */
+  .layer{
+    border:1px solid #dbe3ec;border-radius:10px;background:#fff;padding:12px 16px;margin-top:10px;
+  }
+  .layer-h{display:flex;align-items:baseline;gap:10px;margin-bottom:8px}
+  .layer-h b{font-size:13.5px;color:var(--primary-ink)}
+  .layer-h span{font-size:11.5px;color:var(--muted)}
+  .chips{display:flex;flex-wrap:wrap;gap:8px}
+  .chip{
+    font-size:12px;padding:4px 10px;border-radius:6px;background:#f1f5f9;color:#334155;border:1px solid #e2e8f0;
+  }
+  .chip.blue{background:#e8f1fb;border-color:#b9d4ef;color:#0B4F8A}
+  .chip.teal{background:#e6f6f3;border-color:#a9ddd4;color:#0f766e}
+  .chip.gray{background:#eef1f5;border-color:#d3dae3;color:#475569}
+
+  /* ---------- table ---------- */
+  .table-wrap{overflow-x:auto;border:1px solid #e3e9f0;border-radius:10px;background:#fff}
+  table{border-collapse:collapse;width:100%;min-width:1040px;font-size:12.5px}
+  thead th{
+    background:#f1f5f9;color:#334155;text-align:left;font-weight:600;
+    padding:10px 12px;border-bottom:1px solid #e2e8f0;white-space:nowrap;position:sticky;top:0;
+  }
+  tbody td{padding:9px 12px;border-bottom:1px solid #f1f5f9;vertical-align:top;color:#334155}
+  tbody tr:last-child td{border-bottom:none}
+  tbody tr:hover td{background:#fafcff}
+  td.key code{font-size:11.5px;color:var(--primary-ink);background:#eff6ff;padding:2px 6px;border-radius:4px;white-space:nowrap}
+  .badge{display:inline-block;font-size:11px;padding:1px 8px;border-radius:999px;border:1px solid;white-space:nowrap}
+  .b-ok{color:#0f766e;background:#ecfdf5;border-color:#a7f3d0}
+  .b-gap{color:#b45309;background:#fffbeb;border-color:#fde68a}
+  .b-new{color:#475569;background:#f1f5f9;border-color:#e2e8f0}
+
+  /* ---------- notes ---------- */
+  .note{
+    border-left:3px solid var(--accent);background:#f0fbf9;padding:10px 14px;border-radius:0 6px 6px 0;
+    font-size:12.5px;color:#334155;margin-top:12px;
+  }
+  .note.warn{border-left-color:#d97706;background:#fffaf0}
+  .note.danger{border-left-color:#dc2626;background:#fef4f4}
+  .note b{color:#0f172a}
+  ul.tight{margin:8px 0 0;padding-left:20px}
+  ul.tight li{margin:4px 0;color:#334155;font-size:13px}
+  footer{margin-top:44px;padding-top:16px;border-top:1px solid #e2e8f0;color:#94a3b8;font-size:11.5px}
+  code.inline{background:#f1f5f9;padding:1px 5px;border-radius:4px;font-size:12px;color:#334155}
+
+  @media (max-width:960px){
+    .stats{grid-template-columns:repeat(2,1fr)}
+    .cols.c3,.cols.c4{grid-template-columns:1fr 1fr}
+    .branch{grid-template-columns:1fr;gap:10px}
+  }
+  @media print{
+    body{background:#fff}
+    .hero{margin:0 0 18px}
+    section{break-inside:avoid}
+    .card,.layer,.table-wrap{break-inside:avoid}
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header class="hero">
+    <h1>HIS AI 能力全景图</h1>
+    <p>按「入口 → 能力层 → 统一执行层 → 外部模型 → 观测」五段整理全系统 AI 使用点，并标出每条能力的确定性层、模型职责与失败兜底路径。依据 <code>his-ms-ai</code> 源码与前后端调用点实查。</p>
+    <div class="meta">生成日期 2026-10-29 · 代码基线 master · 18 个能力键 / 5 条调用形态</div>
+  </header>
+
+  <div class="stats">
+    <div class="stat"><b>18</b><span>AI 能力键（AiCapabilityKeys，不含健康检查）</span></div>
+    <div class="stat"><b>15</b><span>已接线（医生站/医技/护理 12 + 小程序 3）</span></div>
+    <div class="stat warn"><b>3</b><span>后端就绪、前端无入口（处方审核 / 病历质控 / 预问诊摘要）</span></div>
+    <div class="stat bad"><b>1</b><span>前端调用了不存在的接口（小程序 medicationGuide）</span></div>
+  </div>
+
+  <div class="card">
+    <div class="legend">
+      <span><i class="lg-entry"></i>入口 / 出入参</span>
+      <span><i class="lg-rule"></i>确定性规则（不依赖模型）</span>
+      <span><i class="lg-llm"></i>模型调用</span>
+      <span><i class="lg-gate"></i>校验闸门</span>
+      <span><i class="lg-degrade"></i>降级 / 回落</span>
+      <span><i class="lg-store"></i>存储 / 观测</span>
+    </div>
+    <div class="note" style="margin-top:14px">
+      <b>读图口径：</b>绿色块是「模型说了不算」的部分——它决定了医疗场景下最贵的错误（漏报、编造、越权查询）不会从模型这一侧发生；紫色块是模型唯一的职责范围；红色块是失败路径，<b>降级是设计的一部分，不是故障</b>。
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <section id="arch">
+    <h2>1. 全局分层 <span class="en">Layered Architecture</span></h2>
+    <p class="lead">所有模型调用（除语音转写外）都收敛到同一个执行器 <code class="inline">AiExecutionServiceImpl</code>，能力层只负责「取业务事实 + 拼提示词 + 决定降级成什么」。</p>
+
+    <div class="layer">
+      <div class="layer-h"><b>L1 入口层</b><span>页面 / 小程序 / 管理台</span></div>
+      <div class="chips">
+        <span class="chip blue">门诊医生站</span>
+        <span class="chip blue">住院病历工作台</span>
+        <span class="chip blue">检验工作站</span>
+        <span class="chip blue">急诊挂号/分诊</span>
+        <span class="chip blue">床位中心 · 护士站</span>
+        <span class="chip blue">护理交班</span>
+        <span class="chip blue">医保合规审核</span>
+        <span class="chip blue">随访编辑</span>
+        <span class="chip blue">AI 管理台（问数 / 知识库 / 调用日志）</span>
+        <span class="chip teal">小程序：报告详情 · 支付 · 导诊 · 预问诊</span>
+      </div>
+    </div>
+    <div class="varrow"></div>
+
+    <div class="layer">
+      <div class="layer-h"><b>L2 能力层</b><span>18 个 Capability，按域分组</span></div>
+      <div class="cols c4" style="margin-top:2px">
+        <div class="mini"><b>临床诊疗</b><p>ICD-10 编码 · 病历草稿 · 病历抽取 · 病历质控 · 处方审核 · 急诊分诊</p></div>
+        <div class="mini"><b>医技与护理</b><p>检验解读 · 病情恶化预警 · 护理交班</p></div>
+        <div class="mini"><b>患者服务</b><p>报告解读 · 影像解读 · 导诊归一 · 预问诊摘要 · 随访话术 · 费用解释（纯规则）</p></div>
+        <div class="mini"><b>数据智能</b><p>运营问数 · 知识库问答 · 医保依据 · 语音转写</p></div>
+      </div>
+    </div>
+    <div class="varrow"></div>
+
+    <div class="layer" style="border-color:#c7b3e8;background:#fbf8ff">
+      <div class="layer-h"><b>L3 统一执行层</b><span>全部 JSON 模型调用的唯一入口</span></div>
+      <div class="chips">
+        <span class="chip">能力开关</span>
+        <span class="chip">熔断守卫（5 次 / 300s）</span>
+        <span class="chip">提示词模板（版本化）</span>
+        <span class="chip">JSON 模式调用</span>
+        <span class="chip">强类型解析 + 一次自纠</span>
+        <span class="chip">调用审计</span>
+        <span class="chip">失败原因回传</span>
+      </div>
+    </div>
+    <div class="varrow"></div>
+
+    <div class="layer">
+      <div class="layer-h"><b>L4 外部依赖</b><span>可替换、可降级</span></div>
+      <div class="chips">
+        <span class="chip gray">OpenAI 兼容对话模型（按能力选模型 / lite 模型）</span>
+        <span class="chip gray">Embedding：本地 TF / 远程</span>
+        <span class="chip gray">向量库：Milvus / 内存</span>
+        <span class="chip gray">语音转写 STT（独立 multipart 通道）</span>
+      </div>
+    </div>
+    <div class="varrow"></div>
+
+    <div class="layer">
+      <div class="layer-h"><b>L5 观测与治理</b><span>回答「变差了没有、错在哪一环」</span></div>
+      <div class="chips">
+        <span class="chip gray"><code>sys_ai_call_log</code> 调用审计</span>
+        <span class="chip gray"><code>sys_knowledge_query_log</code> 问答观测</span>
+        <span class="chip gray"><code>sys_ai_prompt_template</code> 提示词版本</span>
+        <span class="chip gray">能力健康检查</span>
+        <span class="chip gray">知识库离线评测（recall@k / MRR）</span>
+      </div>
+    </div>
+
+    <div class="note warn">
+      <b>唯一例外：</b><code class="inline">voice_transcribe</code> 走 <code class="inline">SpeechTranscribeServiceImpl</code> 直连 STT（multipart），不经过 L3 的提示词/JSON 链路，但同样写 <code class="inline">sys_ai_call_log</code>。
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <section id="pipeline">
+    <h2>2. 统一执行链路 <span class="en">Common Pipeline</span></h2>
+    <p class="lead">每个能力把自己的业务事实渲染成提示词，然后只关心一件事：拿到强类型结果，或者拿不到时该回落成什么。</p>
+
+    <div class="card">
+      <div class="flow">
+        <div class="node entry">
+          <h4>能力层组装 AiCallDTO</h4>
+          <p>capabilityKey · templateName · 提示词变量 · bizType/bizId · 输入摘要（脱敏）</p>
+          <small>例：drug_audit 传处方+药品+过敏史；icd10 传病历四要素 + 召回候选集</small>
+        </div>
+        <div class="varrow"></div>
+
+        <div class="node gate">
+          <h4>闸一：能力开关</h4>
+          <p><code>aiConfigProvider.isCapabilityEnabled(key)</code> —— 关掉的能力直接不产生任何模型请求</p>
+        </div>
+        <div class="varrow" data-label="关闭" style="height:30px"></div>
+
+        <div class="node gate">
+          <h4>闸二：熔断守卫</h4>
+          <p>连续失败 5 次 → 该能力冷却 300 秒；冷却后半开放行一次试探</p>
+        </div>
+        <div class="varrow"></div>
+
+        <div class="node rule">
+          <h4>渲染提示词（取生效版本）</h4>
+          <p><code>PromptTemplate.render(templateName, variables)</code> —— 模板存库、带版本号，可回退</p>
+        </div>
+        <div class="varrow"></div>
+
+        <div class="node llm">
+          <h4>调用模型</h4>
+          <p>jsonMode=true · 按能力配模型 / lite 模型 · 独立超时 · maxTokens 上限</p>
+        </div>
+        <div class="varrow"></div>
+
+        <div class="node gate">
+          <h4>强类型解析</h4>
+          <p>抠 JSON（兼容代码块包裹）→ 反序列化到能力自己的 <code>XxxLlmOutputDTO</code></p>
+        </div>
+
+        <div class="branch" style="margin-top:10px">
+          <div class="branch-col">
+            <div class="branch-tag tag-ok">解析成功</div>
+            <div class="node store">
+              <h4>记成功 + 落审计</h4>
+              <p>清熔断计数 → <code>sys_ai_call_log</code>：模型 / 提示词版本 / 耗时 / prompt+completion tokens / 输出摘要</p>
+            </div>
+            <div class="varrow"></div>
+            <div class="node entry">
+              <h4>返回 Optional.of(result)</h4>
+              <p>能力层拿到强类型结果，继续做业务合并</p>
+            </div>
+          </div>
+
+          <div class="branch-col">
+            <div class="branch-tag tag-bad">解析失败</div>
+            <div class="node gate">
+              <h4>自纠重试一次</h4>
+              <p>把「你上次不是合法 JSON，报错是 X」回灌，要求只输出 JSON，再调一次</p>
+            </div>
+            <div class="varrow" data-label="仍失败" style="height:30px"></div>
+            <div class="node degrade">
+              <h4>降级：Optional.empty()</h4>
+              <p>记 FAILED / TIMEOUT + 失败原因 → 能力层回落成确定性结果，并把可运维的原因带回前端</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="note">
+        <b>为什么降级原因要一路带回前端：</b>「AI 不可用」对医生没有价值；「密钥未配置 / 已触发熔断 / 模型服务不可达」才能指向修配置或找运维。
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <section id="forms">
+    <h2>3. 五条调用形态 <span class="en">Five Shapes</span></h2>
+    <p class="lead">每个能力都属于下面五种形态之一。判断「AI 在哪一步说错话」时，先定位它属于哪种形态。</p>
+
+    <!-- 3.1 -->
+    <h3>3.1 规则优先 + 模型补位（临床判定类）</h3>
+    <div class="card">
+      <div class="flow">
+        <div class="node rule">
+          <h4>确定性层：取事实 + 算规则</h4>
+          <p>生命体征 / 处方明细 / 病历字段 / 检验结果 → 硬规则或评分</p>
+        </div>
+        <div class="varrow"></div>
+        <div class="node gate">
+          <h4>是否需要模型？</h4>
+          <p>按阈值判断：未达阈值不调模型（省成本，也避免模型把正常说成异常）</p>
+        </div>
+        <div class="varrow"></div>
+        <div class="node llm">
+          <h4>模型层：只补长尾</h4>
+          <p>模型输出必须落在确定性层能解释的范围内（候选集内 / 只升不降 / 只做建议）</p>
+        </div>
+        <div class="varrow"></div>
+        <div class="node entry">
+          <h4>合并输出（确定性结论优先）</h4>
+          <p>硬规则给出的「不通过 / 级别 / 分值」不可被模型改写</p>
+        </div>
+      </div>
+
+      <div class="cols c2" style="margin-top:16px">
+        <div class="mini">
+          <b>处方审核 drug_audit</b>
+          <p>硬规则先跑（剂量、重复、相互作用）→ 模型补 ≤5 条长尾 → 去重排序。<span class="badge b-ok">pass 只可能被硬规则 BLOCK 否决</span></p>
+        </div>
+        <div class="mini">
+          <b>急诊分诊 emergency_triage</b>
+          <p>生命体征红旗 + 主诉关键词定级 → 模型给建议级别/绿通/话术 → 合并<b>只升不降</b>；模型新报的红旗只展示、不参与定级。</p>
+        </div>
+        <div class="mini">
+          <b>检验解读 lab_interpret</b>
+          <p>规则层先出异常/危急值/未判定计数与趋势 → 异常项达阈值才调模型做连贯解读 → 否则规则结论（<b>这不算降级</b>）。</p>
+        </div>
+        <div class="mini">
+          <b>病情恶化预警 deterioration_alert</b>
+          <p>评分规则算分定级（近 24h 体征）→ 未达预警阈值不调模型 → 达阈值才请模型写处置建议。</p>
+        </div>
+        <div class="mini">
+          <b>病历质控 emr_qc</b>
+          <p>必填项 + 占位符判定（「无」「未见异常」不算已填）→ 模型查内涵问题 → 降级仍返回规则问题。</p>
+        </div>
+        <div class="mini">
+          <b>ICD-10 编码 icd10</b>
+          <p>先召回候选集 → 模型只能在候选集内挑选 → <b>模型给出的码不在候选集 = 幻觉被拦</b>，按召回分回落。</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3.2 -->
+    <h3>3.2 受控 SQL 问数（operation_qa）</h3>
+    <div class="card">
+      <div class="flow">
+        <div class="node gate">
+          <h4>表白名单（fail-closed）</h4>
+          <p>从「问数配置」查启用表；配置为空 = 什么都不让查，直接拒绝</p>
+        </div>
+        <div class="varrow"></div>
+        <div class="node rule">
+          <h4>选表 + 语义命中</h4>
+          <p>先按问题挑相关表，只把相关 schema / 语义 / 敏感规则 / 表关系注入生成段</p>
+        </div>
+        <div class="varrow"></div>
+        <div class="node llm">
+          <h4>模型生成单条 SELECT</h4>
+          <p>输出契约：标题 + SQL；非统计类问题返回空 SQL = 主动拒答</p>
+        </div>
+        <div class="varrow"></div>
+        <div class="node gate">
+          <h4>SQL 闸门（5 道）</h4>
+          <p>只读且单语句 · 禁注释 · 关键字黑名单 · 禁跨库 · 表名白名单 · 强制 LIMIT 200</p>
+        </div>
+        <div class="varrow"></div>
+        <div class="node gate">
+          <h4>敏感列第二道防线</h4>
+          <p>标记「禁止出库」的列出现在 SELECT 中 → 直接拒绝（提示词约束之外的硬校验）</p>
+        </div>
+        <div class="varrow"></div>
+        <div class="node rule">
+          <h4>执行 + 结果脱敏</h4>
+          <p>行数上限兜底；按「结果列 → 源列」映射在<b>后端</b>打码</p>
+        </div>
+        <div class="varrow"></div>
+        <div class="node llm">
+          <h4>可选：模型总结</h4>
+          <p>总结失败静默置空，表格照常返回</p>
+        </div>
+      </div>
+      <div class="note"><b>设计要点：</b>模型的产物是一段<b>文本 SQL</b>，所以它必须先经过与「人写 SQL」完全相同的安全闸门才能执行；拒绝路径给的是可读原因，而不是 500。</div>
+    </div>
+
+    <!-- 3.3 -->
+    <h3>3.3 检索增强问答（knowledge_qa）</h3>
+    <div class="card">
+      <div class="flow">
+        <div class="node entry"><h4>问题</h4><p>管理台知识库问答</p></div>
+        <div class="varrow"></div>
+        <div class="node rule"><h4>向量检索 topK</h4><p>Embedding（本地 TF / 远程）→ 向量库（Milvus / 内存）</p></div>
+        <div class="varrow"></div>
+        <div class="node gate"><h4>有命中吗？</h4><p>无命中 = 直接拒答，不调模型</p></div>
+        <div class="varrow"></div>
+        <div class="node llm"><h4>拼材料 → 模型作答</h4><p>提示词约束：只基于材料回答，不知道就说不知道；返回 sources 列表</p></div>
+        <div class="varrow"></div>
+        <div class="node store"><h4>在线观测落库</h4><p>问题 / 回答 / 命中文档 / 降级 / 耗时 / 顶踩</p></div>
+      </div>
+      <div class="branch" style="margin-top:14px">
+        <div class="branch-col">
+          <div class="branch-tag tag-ok">模型成功</div>
+          <div class="node entry"><h4>answer + sources</h4><p>degraded=false</p></div>
+        </div>
+        <div class="branch-col">
+          <div class="branch-tag tag-bad">模型失败 / 无命中</div>
+          <div class="node degrade"><h4>回落检索原文</h4><p>标注「以下为知识库检索到的相关原文，模型未参与」，degraded=true + 可运维原因</p></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3.4 -->
+    <h3>3.4 结构化抽取与草稿（病历域）</h3>
+    <div class="cols c2">
+      <div class="card" style="margin-top:0">
+        <div class="flow">
+          <div class="branch-tag tag-cond" style="margin-bottom:8px">emr_extract 抽取</div>
+          <div class="node rule"><h4>硬规则一：按字段标签逐字切分</h4><p>用<b>原文</b>切，规则命中即胜出</p></div>
+          <div class="varrow"></div>
+          <div class="node rule"><h4>硬规则二：体征正则</h4><p>体温/脉搏/呼吸/血压等结构化</p></div>
+          <div class="varrow"></div>
+          <div class="node llm"><h4>模型只补切不出的字段</h4><p>逐字原文优先于模型转述</p></div>
+        </div>
+      </div>
+      <div class="card" style="margin-top:0">
+        <div class="flow">
+          <div class="branch-tag tag-cond" style="margin-bottom:8px">emr_draft 草稿</div>
+          <div class="node entry"><h4>主诉 + 查体 + 体征</h4><p>标注「（未填写）」的项目</p></div>
+          <div class="varrow"></div>
+          <div class="node llm"><h4>模型组织成现病史</h4><p>不写诊断、不写用药、不编造阴性描述</p></div>
+          <div class="varrow"></div>
+          <div class="node gate"><h4>输出契约</h4><p>信息不足 → presentIllness 为空串 + missingPoints 列出待补要素</p></div>
+          <div class="varrow"></div>
+          <div class="node rule"><h4>医生逐字核对后修改</h4><p>草稿不自动写入病历</p></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3.5 -->
+    <h3>3.5 患者可见文案（安全闸）</h3>
+    <div class="card">
+      <div class="flow">
+        <div class="node entry"><h4>患者端请求</h4><p>报告解读 / 影像解读 / 导诊归一 / 预问诊摘要 / 随访话术 / 护理交班</p></div>
+        <div class="varrow"></div>
+        <div class="node rule"><h4>规则层：白话对照目录 / 模板拼接</h4><p>检验白话目录、影像白话目录、问卷答案模板、随访类型模板</p></div>
+        <div class="varrow"></div>
+        <div class="node llm"><h4>模型润色 / 通俗解释</h4><p>只解释不诊断；不给出用药剂量</p></div>
+        <div class="varrow"></div>
+        <div class="node gate">
+          <h4>PatientTextGuard 安全闸</h4>
+          <p>诊断性结论 · 用药与剂量 · 绝对化表述（一定/必须/百分之百/不用看医生）</p>
+        </div>
+        <div class="branch" style="margin-top:10px">
+          <div class="branch-col">
+            <div class="branch-tag tag-ok">通过</div>
+            <div class="node entry"><h4>直接展示</h4></div>
+          </div>
+          <div class="branch-col">
+            <div class="branch-tag tag-bad">越界</div>
+            <div class="node degrade"><h4>回落规则文案</h4><p>患者只看到确定性内容，看不到模型越界的部分</p></div>
+          </div>
+        </div>
+      </div>
+      <div class="note"><b>费用解释是特例：</b><code class="inline">patient_fee_explain</code> 命名在 AI 能力包里，但实现 100% 规则（费用目录分组 / 自负项 / 建议），不调用模型、不产生 token 成本。</div>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <section id="inventory">
+    <h2>4. 能力清单 <span class="en">Inventory</span></h2>
+    <p class="lead">18 个能力键的入口、确定性层、模型职责与失败兜底。空白的确定性层表示该能力完全依赖模型输出。</p>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:150px">能力键</th>
+            <th style="width:140px">业务场景</th>
+            <th style="width:200px">页面入口</th>
+            <th style="width:230px">确定性层（不依赖模型）</th>
+            <th style="width:210px">模型职责</th>
+            <th style="width:220px">失败兜底</th>
+            <th style="width:96px">接线</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="key"><code>icd10</code></td>
+            <td>门诊诊断编码推荐</td>
+            <td>门诊医生站 · 诊断区</td>
+            <td>ICD 召回 topN（关键词 + 评分，构成候选集）</td>
+            <td>在候选集内挑选、给置信度与理由</td>
+            <td>模型码不在候选集 → 按召回分排序回落，标记 degraded</td>
+            <td><span class="badge b-ok">已接线</span></td>
+          </tr>
+          <tr>
+            <td class="key"><code>drug_audit</code></td>
+            <td>处方合理性审核</td>
+            <td>接口就绪（/ai/drugAudit/execute），无页面入口</td>
+            <td>剂量 / 重复用药 / 相互作用等硬规则</td>
+            <td>≤5 条长尾问题建议</td>
+            <td>仅返回硬规则结果；pass 判定不受影响</td>
+            <td><span class="badge b-gap">未接线</span></td>
+          </tr>
+          <tr>
+            <td class="key"><code>emr_qc</code></td>
+            <td>病历内涵质控</td>
+            <td>接口就绪（/ai/emrQc/execute），无页面入口</td>
+            <td>必填项 + 占位符判定</td>
+            <td>内涵与逻辑问题</td>
+            <td>仅返回规则问题</td>
+            <td><span class="badge b-gap">未接线</span></td>
+          </tr>
+          <tr>
+            <td class="key"><code>lab_interpret</code></td>
+            <td>检验结果解读</td>
+            <td>检验工作站 · 报告详情</td>
+            <td>异常/危急值/未判定计数、历史趋势、规则结论</td>
+            <td>异常项达阈值才做连贯解读与建议</td>
+            <td>规则结论 + 建议；可选写回检验记录</td>
+            <td><span class="badge b-ok">已接线</span></td>
+          </tr>
+          <tr>
+            <td class="key"><code>emergency_triage</code></td>
+            <td>急诊预检分诊建议</td>
+            <td>急诊挂号 / 分诊页</td>
+            <td>生命体征红旗 + 主诉关键词定级</td>
+            <td>建议级别、绿通通道、处置话术</td>
+            <td>仅硬规则级别；级别合并只升不降</td>
+            <td><span class="badge b-ok">已接线</span></td>
+          </tr>
+          <tr>
+            <td class="key"><code>emr_extract</code></td>
+            <td>病历文本结构化</td>
+            <td>门诊医生站 · 住院病历工作台</td>
+            <td>按字段标签逐字切分 + 体征正则</td>
+            <td>补规则切不出的字段</td>
+            <td>规则命中优先，模型只补位</td>
+            <td><span class="badge b-ok">已接线</span></td>
+          </tr>
+          <tr>
+            <td class="key"><code>emr_draft</code></td>
+            <td>现病史草稿</td>
+            <td>门诊医生站 · 病历编辑</td>
+            <td>资料完整性约束（「（未填写）」不补写）</td>
+            <td>组织成文 + 列出缺失要素</td>
+            <td>信息不足输出空串 + missingPoints</td>
+            <td><span class="badge b-ok">已接线</span></td>
+          </tr>
+          <tr>
+            <td class="key"><code>patient_report_explain</code></td>
+            <td>检验报告患者版解读</td>
+            <td>小程序 · 报告详情</td>
+            <td>白话对照目录</td>
+            <td>通俗解释（不诊断、不给药）</td>
+            <td>安全闸命中 → 回落规则文案</td>
+            <td><span class="badge b-ok">已接线</span></td>
+          </tr>
+          <tr>
+            <td class="key"><code>patient_imaging_explain</code></td>
+            <td>影像报告患者版解读</td>
+            <td>小程序 · 报告详情</td>
+            <td>白话对照目录</td>
+            <td>通俗解释（只解读不诊断）</td>
+            <td>安全闸命中 → 回落规则文案</td>
+            <td><span class="badge b-ok">已接线</span></td>
+          </tr>
+          <tr>
+            <td class="key"><code>patient_triage_normalize</code></td>
+            <td>导诊口语归一</td>
+            <td>小程序 · 导诊</td>
+            <td>—</td>
+            <td>口语描述 → 症状词</td>
+            <td>安全闸 + 失败提示重述</td>
+            <td><span class="badge b-ok">已接线</span></td>
+          </tr>
+          <tr>
+            <td class="key"><code>previsit_summary</code></td>
+            <td>预问诊病史摘要</td>
+            <td>接口就绪（/ai/patient/previsitSummary），无调用方</td>
+            <td>问卷答案模板拼接</td>
+            <td>凝练成摘要</td>
+            <td>解析失败回落模板摘要</td>
+            <td><span class="badge b-gap">未接线</span></td>
+          </tr>
+          <tr>
+            <td class="key"><code>followup_compose</code></td>
+            <td>随访话术</td>
+            <td>随访编辑 / 随访通话</td>
+            <td>按随访类型的话术模板</td>
+            <td>个性化润色</td>
+            <td>回落模板话术</td>
+            <td><span class="badge b-ok">已接线</span></td>
+          </tr>
+          <tr>
+            <td class="key"><code>insurance_evidence</code></td>
+            <td>医保审核依据</td>
+            <td>医保合规审核详情</td>
+            <td>诊疗与费用事实汇总</td>
+            <td>依据判定（是否支持报销）</td>
+            <td>回落规则证据清单</td>
+            <td><span class="badge b-ok">已接线</span></td>
+          </tr>
+          <tr>
+            <td class="key"><code>deterioration_alert</code></td>
+            <td>住院病情恶化预警</td>
+            <td>床位中心 / 护士站</td>
+            <td>评分规则定级（近 24h 体征）</td>
+            <td>达阈值才写处置建议</td>
+            <td>只给分值与等级，不给建议</td>
+            <td><span class="badge b-ok">已接线</span></td>
+          </tr>
+          <tr>
+            <td class="key"><code>nursing_handover</code></td>
+            <td>护理交班摘要</td>
+            <td>护理交班工作台</td>
+            <td>患者/管路/事件模板拼接</td>
+            <td>润色成交班报告</td>
+            <td>规则拼接并标注「请结合交班本核对」</td>
+            <td><span class="badge b-ok">已接线</span></td>
+          </tr>
+          <tr>
+            <td class="key"><code>operation_qa</code></td>
+            <td>运营问数</td>
+            <td>AI 管理台 · 问数</td>
+            <td>表白名单 / 敏感列 / 行数上限</td>
+            <td>自然语言 → 单条 SELECT + 结论</td>
+            <td>拒绝生成并给出原因（不执行）</td>
+            <td><span class="badge b-ok">已接线</span></td>
+          </tr>
+          <tr>
+            <td class="key"><code>knowledge_qa</code></td>
+            <td>知识库问答</td>
+            <td>AI 管理台 · 知识库</td>
+            <td>向量检索 topK</td>
+            <td>基于材料回答 + 返回来源</td>
+            <td>无命中 → 拒答；模型失败 → 返回检索原文</td>
+            <td><span class="badge b-ok">已接线</span></td>
+          </tr>
+          <tr>
+            <td class="key"><code>voice_transcribe</code></td>
+            <td>语音录入病历</td>
+            <td>门诊医生站</td>
+            <td>—</td>
+            <td>语音 → 文字（STT）</td>
+            <td>报错提示，不落病历</td>
+            <td><span class="badge b-ok">已接线</span></td>
+          </tr>
+          <tr>
+            <td class="key"><code>—（无能力键）</code></td>
+            <td>患者费用解释</td>
+            <td>小程序 · 支付页</td>
+            <td>费用目录分组 / 自负项 / 建议（纯规则）</td>
+            <td>不调用模型</td>
+            <td>—</td>
+            <td><span class="badge b-new">纯规则</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="note danger" style="margin-top:14px">
+      <b>断链：</b>小程序 <code class="inline">utils/api.js</code> 里存在 <code class="inline">medicationGuide → /ai/patient/medicationGuide</code>，但后端 <code class="inline">AiPatientController</code> 未提供该接口（源码注释写明「待药品域暴露 Facade 后接入」）。当前调用会 404。
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <section id="rag">
+    <h2>5. 知识库管线 <span class="en">RAG Pipeline</span></h2>
+    <p class="lead">问答只是后半段；真正决定回答准确率的是前半段的「切块、向量化、版本」。</p>
+
+    <div class="card">
+      <div class="flow">
+        <div class="node entry"><h4>录入</h4><p>文档上传 / 批量导入 / 手工录入（含分类、版本、来源）</p></div>
+        <div class="varrow"></div>
+        <div class="node rule"><h4>解析 DocumentParser</h4><p>按文件名分派解析器，异步线程池执行，任务状态可查</p></div>
+        <div class="varrow"></div>
+        <div class="node rule"><h4>切块 TextSplitter</h4><p>chunkSize / chunkOverlap 可配，<b>参数会被评测快照记录</b></p></div>
+        <div class="varrow"></div>
+        <div class="node llm"><h4>向量化</h4><p>本地 TF 或远程 Embedding，由选择器按配置切换</p></div>
+        <div class="varrow"></div>
+        <div class="node store"><h4>写入向量库</h4><p>Milvus / 内存实现；文档版本历史可回退；支持全量 rebuild 与单文档重建</p></div>
+        <div class="varrow"></div>
+        <div class="node entry"><h4>问答 / 评测共用检索</h4><p>同一套 embedding + topK 参数，保证「评测通过」和「线上表现」是同一件事</p></div>
+      </div>
+      <div class="note"><b>版本与重建：</b>文档有 <code class="inline">sys_knowledge_doc_history</code> 可回退；重建走任务化（进度可查），避免大文档卡住请求线程。</div>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <section id="eval">
+    <h2>6. 评测与可观测闭环 <span class="en">Evaluation &amp; Observability</span></h2>
+    <p class="lead">四条数据流：离线评测证明「没退化」，在线日志发现「现场失真」，调用审计定位「哪一环坏了」，提示词版本支持「回退」。</p>
+
+    <div class="cols c4">
+      <div class="mini">
+        <b>① 离线评测（检索层）</b>
+        <p>评测用例（问题 + 期望文档）→ 运行 → <code>recall@k</code> / <code>MRR</code> / 平均耗时；每次 run 存 chunk 参数与 embedding 提供方快照，明细保留命中位次。</p>
+      </div>
+      <div class="mini">
+        <b>② 在线观测（问答）</b>
+        <p><code>sys_knowledge_query_log</code>：问题、回答、命中文档、是否降级、降级原因、耗时、顶/踩反馈。</p>
+      </div>
+      <div class="mini">
+        <b>③ 调用审计（全部能力）</b>
+        <p><code>sys_ai_call_log</code>：能力、模型、提示词版本、状态（成功/超时/失败/降级/熔断）、耗时、token、输入输出摘要。</p>
+      </div>
+      <div class="mini">
+        <b>④ 健康与开关</b>
+        <p>逐能力的启用状态、熔断状态、累计降级次数；提示词按版本生效、可一键回退。</p>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:16px">
+      <div class="flow">
+        <div class="node store"><h4>反馈与 badcase</h4><p>顶踩 / 审计日志里的失败与降级 / 医生对草稿的修改</p></div>
+        <div class="varrow"></div>
+        <div class="node rule"><h4>沉淀为评测用例</h4><p>每条 badcase 补进 <code>sys_knowledge_eval_case</code>（或对应能力的评测集）</p></div>
+        <div class="varrow"></div>
+        <div class="node gate"><h4>改动前跑基线</h4><p>改提示词 / 换模型 / 调 chunk 参数</p></div>
+        <div class="varrow"></div>
+        <div class="node entry"><h4>同集对比 → 上线或回退</h4><p>评测集版本 + 提示词版本 + 模型名 + 参数快照一起留痕</p></div>
+      </div>
+    </div>
+
+    <div class="note warn">
+      <b>当前边界：</b>这套闭环目前只覆盖知识库的<b>检索层</b>（recall@k / MRR），回答正确性没有自动评测；全仓 <code class="inline">src/test</code> 为 0 个用例，评测靠管理台手工触发，没有 CI 回归。
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <section id="gaps">
+    <h2>7. 现状短板与断链 <span class="en">Known Gaps</span></h2>
+    <div class="card">
+      <ul class="tight">
+        <li><b>评测只到检索层。</b>能证明「没找错材料」，不能证明「答对了」；回答层缺引用支撑率、字段级 F1 等指标。</li>
+        <li><b>无自动化回归。</b>后端测试目录为空，提示词/模型变更前后只能人工比对。</li>
+        <li><b>三个能力后端就绪、前端无入口。</b>处方审核（drug_audit）、病历质控（emr_qc）、预问诊摘要（previsit_summary）。</li>
+        <li><b>一处前端断链。</b>小程序调用 <code class="inline">/ai/patient/medicationGuide</code>，后端未实现（404）。</li>
+        <li><b>缺少「采纳率 / 修改率」埋点。</b>草稿类能力只有顶踩（1 bit），没有「生成 N 字、最终保存改了多少字」的连续指标。</li>
+        <li><b>回答未强制逐句引用。</b>知识问答返回 sources 列表，但未要求模型逐句标注依据，无法直接计算引用支撑率。</li>
+        <li><b>命名与实质不一致。</b>患者费用解释挂在 AI 能力包里，实为纯规则实现。</li>
+      </ul>
+    </div>
+  </section>
+
+  <footer>
+    数据来源：source/back_end/his-ms-ai（controller / service / support / rag）、source/back_end/his-core-spi（跨域事实）、source/front/src/api/ai.js 与 views、source/miniapp/utils/api.js、docs/02-铺底基础数据/sys_ai_prompt_template.sql。
+    <br>本图仅描述调用关系与防护点，不替代接口契约文档。
+  </footer>
+
+</div>
+</body>
+</html>

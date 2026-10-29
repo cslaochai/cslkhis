@@ -49,6 +49,13 @@ public class ConsultationPageQueryDTO extends PageParam implements Serializable 
     private Integer consultCategory;
 
     /**
+     * 「或会诊科室」：与 consultCategory 任一命中即返回。
+     * <p>营养会诊工作台用它兜住「发到本科室但类别没标营养」的会诊 ——
+     * 发到营养科的普通会诊不能因为类别字段是普通，就从营养科的工作台上消失。
+     */
+    private Long orToDeptId;
+
+    /**
      * 是否急会诊：0-普通 1-急会诊
      */
     private Integer isUrgent;

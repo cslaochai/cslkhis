@@ -42,4 +42,15 @@ public interface SysUserMapper extends BaseMapper<SysUser> {
             "WHERE r.role_code = #{roleCode} AND r.del_flag = 0 AND m.del_flag = 0 " +
             "AND m.permission IS NOT NULL AND m.permission != ''")
     List<String> selectPermissionsByRoleCode(@Param("roleCode") String roleCode);
+
+    /**
+     * 通过角色ID查询持有该角色的所有院内账号用户名（去重）。
+     * 链路：sys_user.emp_id → sys_employee.id → sys_employee_post.employee_id，按 role_id 过滤。
+     * 用于角色权限变更后精准失效其名下账号的身份缓存（而非全量 invalidateAll）。
+     */
+    @Select("SELECT DISTINCT u.user_name FROM sys_user u " +
+            "INNER JOIN sys_employee e ON u.emp_id = e.id " +
+            "INNER JOIN sys_employee_post p ON e.id = p.employee_id " +
+            "WHERE p.role_id = #{roleId}")
+    List<String> selectUserNamesByRoleId(@Param("roleId") Long roleId);
 }

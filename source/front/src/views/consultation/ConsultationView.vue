@@ -5,11 +5,14 @@
       <div class="flex items-center gap-3">
         <el-select
             v-model="admissionId"
+            :loading="admissionSearching"
+            :remote-method="searchAdmissions"
             class="!w-72"
             clearable
             data-testid="p4-consult-admission"
             filterable
-            placeholder="全部在院患者"
+            placeholder="全部在院患者（输入姓名/住院号搜索）"
+            remote
             @change="handleAdmissionChange"
         >
           <el-option v-for="a in admissions" :key="a.admissionId" :label="admissionLabel(a)"
@@ -32,7 +35,7 @@
       <div class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
         <p class="text-xs text-slate-500">急会诊待应答</p>
         <p class="text-lg font-bold text-slate-900" data-testid="p4-consult-urgent">{{ urgentPendingCount }}</p>
-        <p class="text-[11px] text-slate-400">时限 10 分钟，超时在列表标红</p>
+        <p class="text-[11px] text-slate-400">急会诊 10 分钟 / 普通 24 小时，超时在列表标红</p>
       </div>
       <div class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
         <p class="text-xs text-slate-500">已完成</p>
@@ -48,112 +51,128 @@
 
     <!-- 筛选 -->
     <el-card ref="queryCardRef" class="query-card mb-3" shadow="never">
-      <el-form :model="filters" inline @submit.prevent>
-        <el-form-item label="会诊科室">
-          <el-select v-model="filters.toDeptId" class="!w-44" clearable data-testid="p4-filter-dept"
-                     placeholder="会诊科室" @change="handleSearch">
-            <el-option v-for="d in depts" :key="d.id" :label="d.deptName || d.id" :value="String(d.id)"/>
-          </el-select>
-        </el-form-item>
-        <el-form-item label="状态">
-          <el-select v-model="filters.consultStatus" class="!w-32" clearable data-testid="p4-filter-status"
-                     placeholder="状态" @change="handleSearch">
-            <el-option :value="0" label="待应答"/>
-            <el-option :value="3" label="已应答"/>
-            <el-option :value="1" label="已完成"/>
-            <el-option :value="2" label="已取消"/>
-          </el-select>
-        </el-form-item>
-        <el-form-item label="范围">
-          <el-select v-model="filters.consultType" class="!w-32" clearable data-testid="p4-filter-type"
-                     placeholder="范围" @change="handleSearch">
-            <el-option :value="1" label="科内会诊"/>
-            <el-option :value="2" label="科间会诊"/>
-            <el-option :value="3" label="全院会诊"/>
-          </el-select>
-        </el-form-item>
-        <el-form-item label="紧急">
-          <el-select v-model="filters.isUrgent" class="!w-32" clearable data-testid="p4-filter-urgent"
-                     placeholder="紧急" @change="handleSearch">
-            <el-option :value="0" label="普通会诊"/>
-            <el-option :value="1" label="急会诊"/>
-          </el-select>
-        </el-form-item>
-        <el-form-item label="关键字">
-          <el-input
-              v-model="filters.keyword"
-              :prefix-icon="Search"
-              class="!w-72"
-              clearable
-              data-testid="p4-filter-keyword"
-              placeholder="会诊号 / 患者姓名 / 患者号 / 理由"
-              @clear="handleSearch"
-              @keyup.enter="handleSearch"
-          />
-        </el-form-item>
-        <el-form-item>
-          <el-checkbox v-model="filters.unfinishedOnly" data-testid="p4-filter-unfinished" @change="handleSearch">
-            只看未完成
-          </el-checkbox>
-        </el-form-item>
-        <el-form-item>
+      <div class="query-grid-wrap">
+        <el-form class="query-grid" label-width="70px" @submit.prevent>
+          <el-form-item label="会诊科室">
+            <el-select v-model="filters.toDeptId" :fit-input-width="false" clearable data-testid="p4-filter-dept"
+                       filterable placeholder="全部科室" @change="handleSearch">
+              <el-option v-for="d in depts" :key="d.id" :label="d.deptName || d.id" :value="String(d.id)"/>
+            </el-select>
+          </el-form-item>
+          <el-form-item label="类别">
+            <el-select v-model="filters.consultCategory" clearable data-testid="p4-filter-category"
+                       placeholder="全部类别" @change="handleSearch">
+              <el-option v-for="c in CONSULT_CATEGORY_OPTIONS" :key="c.value" :label="c.label" :value="c.value"/>
+            </el-select>
+          </el-form-item>
+          <el-form-item label="状态">
+            <el-select v-model="filters.consultStatus" clearable data-testid="p4-filter-status"
+                       placeholder="全部状态" @change="handleSearch">
+              <el-option :value="0" label="待应答"/>
+              <el-option :value="3" label="已应答"/>
+              <el-option :value="1" label="已完成"/>
+              <el-option :value="2" label="已取消"/>
+            </el-select>
+          </el-form-item>
+          <el-form-item label="范围">
+            <el-select v-model="filters.consultType" clearable data-testid="p4-filter-type"
+                       placeholder="全部范围" @change="handleSearch">
+              <el-option :value="1" label="科内会诊"/>
+              <el-option :value="2" label="科间会诊"/>
+              <el-option :value="3" label="全院会诊"/>
+            </el-select>
+          </el-form-item>
+          <el-form-item label="紧急">
+            <el-select v-model="filters.isUrgent" clearable data-testid="p4-filter-urgent"
+                       placeholder="全部" @change="handleSearch">
+              <el-option :value="0" label="普通会诊"/>
+              <el-option :value="1" label="急会诊"/>
+            </el-select>
+          </el-form-item>
+          <el-form-item label="关键字">
+            <el-input
+                v-model="filters.keyword"
+                :prefix-icon="Search"
+                clearable
+                data-testid="p4-filter-keyword"
+                placeholder="会诊号 / 患者姓名 / 患者号 / 理由"
+                @clear="handleSearch"
+                @keyup.enter="handleSearch"
+            />
+          </el-form-item>
+          <el-form-item label="未完成">
+            <el-checkbox v-model="filters.unfinishedOnly" data-testid="p4-filter-unfinished" @change="handleSearch">
+              只看未完成
+            </el-checkbox>
+          </el-form-item>
+        </el-form>
+        <div class="query-grid-ops">
           <el-button :icon="Search" type="primary" @click="handleSearch">查询</el-button>
-          <el-button @click="resetFilters">重置</el-button>
-        </el-form-item>
-      </el-form>
+          <el-button :icon="Refresh" @click="resetFilters">重置</el-button>
+        </div>
+      </div>
     </el-card>
 
     <!-- 列表 -->
     <el-card class="table-card" shadow="never">
       <el-table v-loading="loading" :data="rows" :max-height="tableMaxHeight" data-testid="p4-consult-table" stripe>
-        <el-table-column label="会诊号" prop="consultationNo" width="150"/>
-        <el-table-column label="患者" min-width="150">
+        <el-table-column label="会诊号" width="150">
+          <template #default="{ row }">
+            <div class="flex items-center gap-1">
+              <el-tag v-if="row.isUrgent === 1" size="small" type="danger">急</el-tag>
+              <span>{{ text(row.consultationNo) }}</span>
+            </div>
+            <div v-if="row.recordNo" class="text-slate-400">病历 {{ row.recordNo }}</div>
+          </template>
+        </el-table-column>
+        <el-table-column label="患者" min-width="130">
           <template #default="{ row }">
             <div class="text-slate-900">{{ text(row.patientName) }}</div>
             <div class="text-slate-400">{{ text(row.patientNo) }} · 床号 {{ text(row.bedNo) }}</div>
           </template>
         </el-table-column>
-        <el-table-column label="申请 → 会诊科室" min-width="180">
+        <el-table-column label="申请 → 会诊科室" min-width="165">
           <template #default="{ row }">
-            <span class="text-slate-700">{{ text(row.fromDeptName) }}</span>
-            <span class="mx-1 text-slate-400">→</span>
-            <span class="font-medium text-slate-900">{{ text(row.toDeptName) }}</span>
+            <div>
+              <span class="text-slate-700">{{ text(row.fromDeptName) }}</span>
+              <span class="mx-1 text-slate-400">→</span>
+              <span class="font-medium text-slate-900">{{ text(row.toDeptName) }}</span>
+            </div>
+            <div class="text-slate-400">{{ text(row.applyDoctorName) }} 申请</div>
           </template>
         </el-table-column>
-        <el-table-column align="center" label="范围" width="100">
+        <el-table-column align="center" label="类别" width="95">
+          <template #default="{ row }">
+            <el-tag effect="plain" size="small" type="info">{{ text(row.consultCategoryText) }}</el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column align="center" label="范围" width="90">
           <template #default="{ row }">
             <el-tag effect="plain" size="small">{{ text(row.consultTypeText) }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column align="center" label="紧急" width="110">
-          <template #default="{ row }">
-            <el-tooltip v-if="row.overdue" :content="row.overdueText || ''" placement="top">
-              <el-tag data-testid="p4-row-overdue" size="small" type="danger">急会诊超时</el-tag>
-            </el-tooltip>
-            <el-tag v-else :type="row.isUrgent === 1 ? 'warning' : 'info'" effect="plain" size="small">
-              {{ text(row.isUrgentText) }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column label="会诊理由" min-width="200" prop="reason" show-overflow-tooltip/>
-        <el-table-column label="申请医生" prop="applyDoctorName" width="100"/>
-        <el-table-column label="申请时间" width="160">
-          <template #default="{ row }">{{ fmt(row.applyTime) }}</template>
-        </el-table-column>
-        <el-table-column label="等待 / 应答" width="130">
-          <template #default="{ row }">{{ waitText(row) }}</template>
-        </el-table-column>
-        <el-table-column align="center" label="状态" width="90">
+        <el-table-column align="center" label="状态" width="85">
           <template #default="{ row }">
             <el-tag :type="statusTagType(row.consultStatus)" data-testid="p4-row-status" size="small">
               {{ text(row.consultStatusText) }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="病历号" width="150">
-          <template #default="{ row }">{{ text(row.recordNo) }}</template>
+        <el-table-column label="会诊理由" min-width="150" prop="reason" show-overflow-tooltip/>
+        <el-table-column label="申请时间" width="150">
+          <template #default="{ row }">{{ fmt(row.applyTime) }}</template>
         </el-table-column>
-        <el-table-column fixed="right" label="操作" width="220">
+        <el-table-column label="等待 / 应答" width="110">
+          <template #default="{ row }">
+            <el-tooltip v-if="row.overdue" :content="row.overdueText || ''" placement="top">
+              <el-tag data-testid="p4-row-overdue" size="small" type="danger">
+                {{ row.isUrgent === 1 ? '急会诊超时' : '会诊超时' }}
+              </el-tag>
+            </el-tooltip>
+            <span v-else>{{ waitText(row) }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column fixed="right" label="操作" width="200">
           <template #default="{ row }">
             <el-button v-if="row.canAccept" v-perm="'ipd:consultation:edit'" link size="small" type="primary"
                        @click="handleAccept(row)">接诊
@@ -186,8 +205,7 @@
     </el-card>
 
     <!-- 申请会诊 -->
-    <ConsultationApply v-model="applyVisible" :depts="depts" :admission-id="admissionId" :admission="currentAdmission"
-                       @saved="reloadAll"/>
+    <ConsultationApply v-model="applyVisible" :admission="currentAdmission" :depts="depts" @saved="reloadAll"/>
 
     <!-- 完成会诊 -->
     <ConsultationFinish v-model="finishVisible" :row="finishRow" @saved="reloadAll"/>
@@ -219,10 +237,10 @@ import {ElMessage, ElMessageBox} from 'element-plus';
 import {Plus, Refresh, Search} from '@element-plus/icons-vue';
 import {acceptConsultation, getConsultationListPage, getConsultationUnfinishedCount} from '@/api/inpatientConsultation';
 import {getInpatientListPage} from '@/api/inpatient';
-import {getDepartmentSelectList} from '@/api/system';
+import {loadDeptOptions} from '@/lib/deptOptions';
 import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination';
 import {useTableMaxHeight} from '@/lib/useTableMaxHeight';
-import {admissionLabel, fmt, text} from '@/lib/consultation';
+import {admissionLabel, CONSULT_CATEGORY_OPTIONS, fmt, text} from '@/lib/consultation';
 import ConsultationApply from './ConsultationApply.vue';
 import ConsultationFinish from './ConsultationFinish.vue';
 import ConsultationCancel from './ConsultationCancel.vue';
@@ -232,19 +250,38 @@ const admissions = ref([]);
 const depts = ref([]);
 const admissionId = ref('');
 const currentAdmission = computed(() => admissions.value.find((a) => String(a.admissionId) === String(admissionId.value)));
-const loadAdmissions = async () => {
+const admissionSearching = ref(false);
+const loadAdmissions = async (patientName = '') => {
   try {
-    const res = await getInpatientListPage({admitStatus: 1, pageNum: 1, pageSize: 200});
-    admissions.value = (res.data?.records || []);
+    const res = await getInpatientListPage({
+      admitStatus: 1,
+      ...(patientName ? {patientName} : {}),
+      pageNum: 1,
+      pageSize: 50,
+    });
+    const records = res.data?.records || [];
+    // 已选患者搜不到时仍要保留在候选里，否则下拉回显成雪花ID
+    const selected = currentAdmission.value;
+    admissions.value = selected && !records.some((a) => String(a.admissionId) === String(selected.admissionId))
+        ? [selected, ...records]
+        : records;
   } catch (error) {
     console.error('加载在院患者失败:', error);
   }
 };
+const searchAdmissions = async (keyword) => {
+  admissionSearching.value = true;
+  try {
+    await loadAdmissions(String(keyword || '').trim());
+  } finally {
+    admissionSearching.value = false;
+  }
+};
 const loadDepts = async () => {
   try {
-    // 不传 scope → 默认按当前人过滤（医生只看到自己被授权的科室）
-    const res = await getDepartmentSelectList({});
-    depts.value = (res.data || []);
+    // 会诊科室候选 = 全院可被邀请的科室：临床/医技/其他专科的末级科室（营养科属医技类型，必须包含）。
+    // 参数全部由前端传入，后端 selectList 是唯一出口（scope=ALL 不受本人岗位限制）。
+    depts.value = await loadDeptOptions({scope: 'ALL', deptType: '1,2,4', leafOnly: true});
   } catch (error) {
     console.error('加载科室失败:', error);
   }
@@ -256,19 +293,22 @@ const loading = ref(false);
 const pagination = ref({pageNum: 1, pageSize: DEFAULT_PAGE_SIZE});
 // 两卡式列表页：表格只设最大高度，超高内部滚动（口径参照 views/system/user/UserView.vue）
 const {queryCardRef, footerRef, tableMaxHeight} = useTableMaxHeight();
-const filters = ref({
+const emptyFilters = () => ({
   toDeptId: '',
+  consultCategory: undefined,
   consultStatus: undefined,
   consultType: undefined,
   isUrgent: undefined,
   keyword: '',
   unfinishedOnly: false,
 });
+const filters = ref(emptyFilters());
 const queryParams = (extra = {}) => ({
   pageNum: pagination.value.pageNum,
   pageSize: pagination.value.pageSize,
   ...(admissionId.value ? {admissionId: admissionId.value} : {}),
   ...(filters.value.toDeptId ? {toDeptId: filters.value.toDeptId} : {}),
+  ...(filters.value.consultCategory !== undefined ? {consultCategory: filters.value.consultCategory} : {}),
   ...(filters.value.consultStatus !== undefined ? {consultStatus: filters.value.consultStatus} : {}),
   ...(filters.value.consultType !== undefined ? {consultType: filters.value.consultType} : {}),
   ...(filters.value.isUrgent !== undefined ? {isUrgent: filters.value.isUrgent} : {}),
@@ -321,24 +361,14 @@ const handleSearch = async () => {
   await reloadAll();
 };
 const resetFilters = async () => {
-  filters.value = {
-    toDeptId: '',
-    consultStatus: undefined,
-    consultType: undefined,
-    isUrgent: undefined,
-    keyword: '',
-    unfinishedOnly: false,
-  };
+  filters.value = emptyFilters();
   pagination.value.pageNum = 1;
   await reloadAll();
 };
 // ---------------- 申请会诊（表单/校验/提交在子组件，页面只管开关） ----------------
 const applyVisible = ref(false);
 const openApply = () => {
-  if (!admissionId.value) {
-    ElMessage.warning('请先选择住院患者（会诊必须挂在一次住院上）');
-    return;
-  }
+  // 顶部没选患者也能申请：弹框自己提供在院患者搜索
   applyVisible.value = true;
 };
 // ---------------- 接诊 ----------------

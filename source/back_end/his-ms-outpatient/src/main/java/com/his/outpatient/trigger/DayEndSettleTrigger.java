@@ -1,5 +1,6 @@
 package com.his.outpatient.trigger;
 
+import com.his.common.support.SystemOperatorContext;
 import com.his.outpatient.service.DayEndSettleService;
 import com.his.outpatient.vo.DayEndSettleResultVO;
 import lombok.RequiredArgsConstructor;
@@ -68,10 +69,13 @@ public class DayEndSettleTrigger {
     public void scheduledDayEndSettle() {
         lastTriggered.set(null);
         try {
+            SystemOperatorContext.bindSystemTask();
             DayEndSettleResultVO r = dayEndSettleService.settlePending(false);
             log.info("[日终结转] 定时任务：{}", r.getMessage());
         } catch (Exception e) {
             log.error("[日终结转] 定时任务失败：{}", e.getMessage(), e);
+        } finally {
+            SystemOperatorContext.clear();
         }
     }
 }

@@ -1,6 +1,7 @@
 package com.his.clinical.trigger;
 
 import com.his.clinical.service.QualityControlService;
+import com.his.common.support.SystemOperatorContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -21,10 +22,13 @@ public class QcAutoRescanTrigger {
     @Scheduled(cron = "0 */10 * * * ?")
     public void scheduledRescan() {
         try {
+            SystemOperatorContext.bindSystemTask();
             qualityControlService.autoRescanOutpatientQc(BATCH_LIMIT);
         } catch (Exception e) {
             // 定时任务失败只记日志：补齐是兜底路径，不能拖住调度线程
             log.error("[质控补扫] 门诊自动质控补扫失败：{}", e.getMessage(), e);
+        } finally {
+            SystemOperatorContext.clear();
         }
     }
 }

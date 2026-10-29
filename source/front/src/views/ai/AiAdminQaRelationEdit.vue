@@ -1,12 +1,5 @@
 <template>
   <el-dialog v-model="visible" :title="form.id ? '编辑表间关系' : '新增表间关系'" width="680px">
-    <el-alert
-        :closable="false"
-        class="qa-relation-hint"
-        show-icon
-        title="表间关系用于说明两张表按哪个字段关联，问数需要跨表取数时直接按这里登记的连接条件拼表。"
-        type="info"
-    />
     <el-form ref="formRef" :model="form" :rules="rules" label-width="120px">
       <el-form-item label="源表.源列" prop="sourceTable">
         <div class="relation-pair">

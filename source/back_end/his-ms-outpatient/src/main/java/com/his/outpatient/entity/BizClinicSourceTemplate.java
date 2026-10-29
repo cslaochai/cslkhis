@@ -1,5 +1,6 @@
 package com.his.outpatient.entity;
 
+import com.baomidou.mybatisplus.annotation.TableLogic;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
@@ -10,7 +11,6 @@ import lombok.EqualsAndHashCode;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import com.baomidou.mybatisplus.annotation.TableLogic;
 
 
 /**
@@ -20,14 +20,6 @@ import com.baomidou.mybatisplus.annotation.TableLogic;
 @EqualsAndHashCode(callSuper = true)
 @TableName("biz_clinic_source_template")
 public class BizClinicSourceTemplate extends BaseEntity {
-    /** 逻辑删除标志（0 未删除 1 已删除） */
-    @TableLogic
-    private Integer delFlag;
-
-    /** 备注 */
-    private String remark;
-
-
 
     /**
      * 科室ID
@@ -132,7 +124,7 @@ public class BizClinicSourceTemplate extends BaseEntity {
     /**
      * 门诊诊查费职级加收档位（1普通 2副主任医师 3主任医师 4知名专家）。
      *
-     * <p>对应 {@link com.his.common.enums.ClinicDiagnosisTierEnum}。模板按档位带出价格默认值，
+     * <p>对应档位码定义见 com.his.common.support.TitleTierMapping（1-普通 2-副主任 3-主任 4-知名专家）。模板按档位带出价格默认值，
      * 生成实际号源时一并落库（价格以生成当时为准，模板后续改档不影响已生成的号源）。
      */
     private Integer diagnosisTier;
@@ -167,4 +159,16 @@ public class BizClinicSourceTemplate extends BaseEntity {
      * 状态（0-停用 1-启用）
      */
     private Integer status;
+
+    /**
+     * 逻辑删除标志（0 未删除 1 已删除）
+     */
+    @TableLogic
+    private Integer delFlag;
+
+    /**
+     * 备注
+     */
+    private String remark;
+
 }

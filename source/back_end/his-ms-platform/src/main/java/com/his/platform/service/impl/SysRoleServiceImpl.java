@@ -170,6 +170,18 @@ public class SysRoleServiceImpl extends ServiceImpl<SysRoleMapper, SysRole> impl
         userIdentityCache.invalidateAll();
     }
 
+    @Override
+    public void refreshPermissionCache(Long roleId) {
+        SysRole role = sysRoleMapper.selectById(roleId);
+        if (role == null) {
+            throw new BusinessException("角色不存在");
+        }
+        // 角色权限缓存：下个请求按最新授权重查
+        rolePermissionCache.invalidate(role.getRoleCode());
+        // 持有该角色的账号身份缓存：精准失效，避免旧权限残留（覆盖直接改库 / TTL 未到期场景）
+        userIdentityCache.invalidateByRoleId(roleId);
+    }
+
     /**
      * 把菜单ID集合补齐为「含所有祖先目录」的集合。
      */

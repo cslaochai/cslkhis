@@ -786,24 +786,6 @@ public class EmergencyServiceImpl extends ServiceImpl<EmergencyMapper, Emergency
     }
 
     /**
-     * 该患者最近一条急诊号挂号单（急诊直录产生，可能不存在——铺底数据没有挂号线索）
-     */
-    /**
-     * 急诊诊查费记账（先救治后付费）。
-     *
-     * <p><b>时机与幂等</b>：接诊（status=2）时记账<b>不出账</b>——费用行必须在病历保存/开单
-     * 触发 {@code createVisitBill} 之前落库，才能被聚合进患者首张待缴账单；终态（离院/死亡/转住院）
-     * 时再兜底出账。{@code bookBatch} 按 sourceType+sourceId+itemCode 判重，两次钩子不会记双份。
-     *
-     * <p><b>为什么不拦流程</b>：急诊的铁律是先救治后付费，任何收费异常都不允许挡住接诊/结诊。
-     * 记账失败只留 ERROR 日志，收费台按待结算行兜底补记；患者没缴费时账单挂待缴，
-     * 长期未缴走挂账欠费口径（bill_status=6），不影响任何诊疗环节。
-     *
-     * <p><b>金额口径</b>：按接诊医生职称推档（普通10/副主任23/主任33，见
-     * {@link EmergencyConsultFeePolicy}），六周岁以内儿童加收30%；未接诊就终态的按普通档兜底。
-     * 留观按日的「留观诊查费」是另一个物价项目，此处不涉及。
-     */
-    /**
      * 急诊诊查费记账（先救治后付费）。
      *
      * <p>价格权威在价表（sys_charge_policy / sys_charge_policy_price，价格管理页「政策价」页签维护）：
@@ -823,13 +805,13 @@ public class EmergencyServiceImpl extends ServiceImpl<EmergencyMapper, Emergency
                     ? null
                     : sysEmployeeTitleMapper.selectTitleById(emergency.getDoctorId());
             // 急诊没有号源快照、也没有「知名专家」名单制挂载点：401 主任医师按主任档收
-            ClinicDiagnosisTierEnum tier = TitleTierMapping.tierOf(title);
+            int tier = TitleTierMapping.tierOf(title);
             PolicyPriceVO price = chargeFacadeService.policyPrice(
-                    ChargeFacadeService.POLICY_EMG_CONSULT, tier.getCode());
+                    ChargeFacadeService.POLICY_EMG_CONSULT, tier);
             if (price == null) {
                 log.warn("[急诊诊查费] 价表缺行或停用 policy=EMG_CONSULT tier={}({})，本次不记账（不拦接诊），"
                                 + "请在价格管理页「政策价」补配置 emergencyNo={}",
-                        tier.getCode(), tier.getLabel(), emergency.getEmergencyNo());
+                        tier, TitleTierMapping.tierLabel(tier), emergency.getEmergencyNo());
                 return;
             }
             LocalDate visitDate = LocalDate.now();

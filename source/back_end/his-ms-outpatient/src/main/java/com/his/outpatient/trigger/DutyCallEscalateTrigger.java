@@ -1,5 +1,6 @@
 package com.his.outpatient.trigger;
 
+import com.his.common.support.SystemOperatorContext;
 import com.his.outpatient.service.DutyCallService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -22,10 +23,13 @@ public class DutyCallEscalateTrigger {
     @Scheduled(cron = "0 * * * * ?")
     public void scheduledEscalateOverdue() {
         try {
+            SystemOperatorContext.bindSystemTask();
             dutyCallService.escalateOverdue();
         } catch (Exception e) {
             // 定时任务失败只记日志：催办/升级不能带崩任何业务线程
             log.error("[听班呼叫] 超时升级定时任务失败：{}", e.getMessage(), e);
+        } finally {
+            SystemOperatorContext.clear();
         }
     }
 }

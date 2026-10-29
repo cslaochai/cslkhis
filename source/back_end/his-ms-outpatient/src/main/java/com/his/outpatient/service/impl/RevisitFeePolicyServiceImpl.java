@@ -6,8 +6,8 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.outpatient.dto.RevisitFeePolicyPageQueryDTO;
 import com.his.outpatient.dto.RevisitFeePolicyUpsertDTO;
 import com.his.outpatient.entity.RevisitFeePolicy;
-import com.his.common.enums.ClinicDiagnosisTierEnum;
 import com.his.common.enums.RevisitChargeModeEnum;
+import com.his.common.support.TitleTierMapping;
 import com.his.common.enums.RevisitFeeConditionEnum;
 import com.his.outpatient.mapper.RevisitFeePolicyMapper;
 import com.his.outpatient.service.RevisitFeePolicyService;
@@ -43,8 +43,6 @@ public class RevisitFeePolicyServiceImpl extends ServiceImpl<RevisitFeePolicyMap
     @Override
     public RevisitFeeDecision decide(RevisitFeeContext context) {
         RevisitFeeDecision decision = new RevisitFeeDecision();
-        // 🔑 只读诊查费：湘医保发〔2025〕58号已废止挂号费合并进门诊诊查费，门诊现在只有一项费用。
-        // context.registFee 保留字段仅作历史兼容（恒 0），不参与判定。
         BigDecimal baseFee = NumUtil.orZero(context == null ? null : context.getDiagnosisFee());
         decision.setRegistFee(BigDecimal.ZERO);
         decision.setBaseDiagnosisFee(baseFee);
@@ -67,13 +65,12 @@ public class RevisitFeePolicyServiceImpl extends ServiceImpl<RevisitFeePolicyMap
         //   base = 普通档全额；加收 = 本档加收额；儿童加收 30% 对两行各自乘，
         //   保证 base + 加收 = 儿童总价（与 decision.diagnosisFee 完全一致，不破坏历史金额口径）。
         //   🔑 金额权威在价表（sys_charge_policy_price，政策 OPD_CONSULT，价格管理页「政策价」可调），
-        //   实时查价表；价表缺行/停用回退枚举兜底价并留 error 痕——挂号是主流程不能因价表空挂死，
-        //   但必须能从日志发现「价表没配」。
-        ClinicDiagnosisTierEnum tier = ClinicDiagnosisTierEnum.ofCode(
-                context == null ? null : context.getDiagnosisTier());
-        BigDecimal baseUnit = policyAmountOrFallback(ClinicDiagnosisTierEnum.GENERAL);
+        //   实时查价表；价表缺行/停用记 error 痕并返回 null，由调用方 null 安全降级——
+        //   挂号主流程不挂死，但必须能从日志发现「价表没配」（不再用代码内写死价兜底，避免漂移掩盖）。
+        Integer tier = context == null ? null : context.getDiagnosisTier();
+        BigDecimal baseUnit = policyAmountOrFallback();
         BigDecimal surchargeUnit = BigDecimal.ZERO;
-        if (tier != null && tier != ClinicDiagnosisTierEnum.GENERAL) {
+        if (tier != null && tier != TitleTierMapping.TIER_GENERAL) {
             BigDecimal fromPrice = policySurchargeOrFallback(tier);
             if (fromPrice != null) {
                 surchargeUnit = fromPrice;
@@ -81,9 +78,10 @@ public class RevisitFeePolicyServiceImpl extends ServiceImpl<RevisitFeePolicyMap
         }
         // 主项目恒为普通门诊主项价；加收项=本档加收额。两行各自乘儿童系数。
         // 变量名 mainItemFee 区别于上文 baseFee（号源快照总价，含加收），避免同一方法内重复声明。
-        BigDecimal mainItemFee = child ? baseUnit.add(PediatricSurchargePolicy.surchargeOf(baseUnit)) : baseUnit;
-        BigDecimal surchargeFee = child
-                ? surchargeUnit.add(PediatricSurchargePolicy.surchargeOf(surchargeUnit)) : surchargeUnit;
+        BigDecimal mainItemFee = baseUnit == null ? BigDecimal.ZERO
+                : (child ? baseUnit.add(PediatricSurchargePolicy.surchargeOf(baseUnit)) : baseUnit);
+        BigDecimal surchargeFee = surchargeUnit == null ? BigDecimal.ZERO
+                : (child ? surchargeUnit.add(PediatricSurchargePolicy.surchargeOf(surchargeUnit)) : surchargeUnit);
         decision.setDiagnosisTier(context == null ? null : context.getDiagnosisTier());
         decision.setBaseFee(mainItemFee);
         decision.setSurchargeFee(surchargeFee);
@@ -278,31 +276,33 @@ public class RevisitFeePolicyServiceImpl extends ServiceImpl<RevisitFeePolicyMap
     }
 
     /**
-     * 价表取门诊诊查费档位全额（政策 OPD_CONSULT），缺行/停用回退枚举兜底价并留 error 痕。
+     * 价表取门诊诊查费普通档（档位1）全额（政策 OPD_CONSULT）。
+     * 价表缺行/停用 → 记 error 痕并返回 null，由调用方 null 安全降级（不再用代码内写死价兜底，
+     * 避免写死价与价表漂移掩盖「价表没配」的事实）。
      */
-    private BigDecimal policyAmountOrFallback(ClinicDiagnosisTierEnum tier) {
+    private BigDecimal policyAmountOrFallback() {
         PolicyPriceVO price = chargeFacadeService.policyPrice(
-                ChargeFacadeService.POLICY_OPD_CONSULT, tier.getCode());
+                ChargeFacadeService.POLICY_OPD_CONSULT, TitleTierMapping.TIER_GENERAL);
         if (price != null && price.getAmount() != null) {
             return price.getAmount();
         }
-        log.error("[门诊诊查费] 价表缺行或停用 policy=OPD_CONSULT tier={}({})，回退枚举兜底价 {} 元，"
-                + "请在价格管理页「政策价」补配置", tier.getCode(), tier.getLabel(), tier.getAmount());
-        return new BigDecimal(tier.getAmount());
+        log.error("[门诊诊查费] 价表缺行或停用 policy=OPD_CONSULT tier=1(普通)，请在价格管理页「政策价」补配置");
+        return null;
     }
 
     /**
-     * 价表取门诊诊查费档位加收额，缺行/停用回退枚举兜底加收额并留 error 痕；无加收结构返回 null。
+     * 价表取门诊诊查费档位加收额（政策 OPD_CONSULT），无加收结构（普通档）返回 null。
+     * 价表缺行/停用 → 记 error 痕并返回 null，由调用方 null 安全降级。
      */
-    private BigDecimal policySurchargeOrFallback(ClinicDiagnosisTierEnum tier) {
+    private BigDecimal policySurchargeOrFallback(Integer tier) {
         PolicyPriceVO price = chargeFacadeService.policyPrice(
-                ChargeFacadeService.POLICY_OPD_CONSULT, tier.getCode());
+                ChargeFacadeService.POLICY_OPD_CONSULT, tier);
         if (price != null) {
             return price.getSurcharge();
         }
-        log.error("[门诊诊查费] 价表缺行或停用 policy=OPD_CONSULT tier={}({})，加收额回退枚举兜底 {} 元，"
-                + "请在价格管理页「政策价」补配置", tier.getCode(), tier.getLabel(), tier.getSurcharge());
-        return tier.getSurcharge() == null ? null : new BigDecimal(tier.getSurcharge());
+        log.error("[门诊诊查费] 价表缺行或停用 policy=OPD_CONSULT tier={}({})，请在价格管理页「政策价」补配置",
+                tier, TitleTierMapping.tierLabel(tier));
+        return null;
     }
 
 }

@@ -2,13 +2,6 @@
   <div class="space-y-6">
     <!-- 标题 + 在院患者过滤 -->
     <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-      <div>
-        <h1 class="text-xl font-semibold text-slate-900">输血管理</h1>
-        <p class="mt-1 text-sm text-slate-500">
-          住院输血闭环：用血申请 → 配血（血型鉴定 + 交叉配血）→ 发血 → 双人核对输注 → 完成回写输血记录。
-          未配血不可发血、未发血不可输注、输注中与已完成不可取消。
-        </p>
-      </div>
       <div class="flex items-center gap-3">
         <el-select
             v-model="filters.admissionId"

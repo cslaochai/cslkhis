@@ -14,16 +14,22 @@
  */
 import { getDepartmentSelectList } from '@/api/system'
 
-/** 缓存：key = `${scope}|${deptType ?? ''}` → Promise<List> */
+/** 缓存：key = `${scope}|${deptType ?? ''}|${leafOnly ? 1 : 0}` → Promise<List> */
 const cache = new Map()
 
-/** 取科室下拉列表（带缓存）。失败不写入缓存，下次调用会重试。 */
-export function loadDeptOptions({ scope = 'CURRENT', deptType = null } = {}) {
-  const key = `${scope}|${deptType ?? ''}`
+/**
+ * 取科室下拉列表（带缓存）。失败不写入缓存，下次调用会重试。
+ *
+ * <p>{@code leafOnly} 只在「被邀请/被选择的科室」这类场景用：会诊、转科选的是具体接诊科室，
+ * 选到「内科系统」这种父节点等于把单子发给一个没人值守的壳。
+ */
+export function loadDeptOptions({ scope = 'CURRENT', deptType = null, leafOnly = false } = {}) {
+  const key = `${scope}|${deptType ?? ''}|${leafOnly ? 1 : 0}`
   if (!cache.has(key)) {
     const p = getDepartmentSelectList({
       scope,
       ...(deptType != null ? { deptType } : {}),
+      ...(leafOnly ? {leafOnly: true} : {}),
     })
       .then((res) => res?.data || [])
       .catch((err) => {

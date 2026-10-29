@@ -28,6 +28,13 @@ import java.util.List;
 public final class SystemOperatorContext {
 
     /**
+     * 系统定时任务的操作人：超级管理员（种子库 employee_id=1, emp_code=E100001，恒在）。
+     * 仅作审计归属，无业务含义；如需区分「是哪个定时任务」，由各自业务的 create_by 文案表达。
+     */
+    private static final long SYSTEM_TASK_EMPLOYEE_ID = 1L;
+    private static final String SYSTEM_TASK_OPERATOR_NAME = "系统定时任务";
+
+    /**
      * 以院内出码人（收银员）身份执行后续写账。只给身份与姓名，不给角色与权限码
      * （回调链路上没有控制器方法鉴权，绑权限反而是多余的提权面）。
      */
@@ -50,6 +57,21 @@ public final class SystemOperatorContext {
         operator.setPatientId(patientId);
         operator.setRealName(realName);
         bind(operator);
+    }
+
+    /**
+     * 定时任务 / 后台作业的统一系统操作人。
+     *
+     * <p>这些入口没有登录态：MetaObjectHandler 取不到当前用户会直接 return，
+     * 导致 {@code create_by_id} / {@code update_by_id} 留空；而库里这些列 {@code NOT NULL}，
+     * 漏填直接抛 {@code SQLIntegrityConstraintViolationException}（本院出院随访自动建计划就因此失败）。
+     *
+     * <p>这里绑定超级管理员（employee_id=1, emp_code=E100001，种子库恒在）作为系统归属，
+     * 使自动填充能正常写入，审计上可追溯为「系统定时任务」。
+     * 调用方必须在 finally 中 {@link #clear()}。
+     */
+    public static void bindSystemTask() {
+        bindEmployee(SYSTEM_TASK_EMPLOYEE_ID, SYSTEM_TASK_OPERATOR_NAME);
     }
 
     private static void bind(CurrentUser operator) {

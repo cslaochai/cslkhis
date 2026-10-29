@@ -1,5 +1,6 @@
 package com.his.inpatient.trigger;
 
+import com.his.common.support.SystemOperatorContext;
 import com.his.inpatient.service.BedCenterService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -19,10 +20,13 @@ public class BedWaitDutyEscalateTrigger {
     @Scheduled(cron = "0 0 * * * ?")
     public void scheduledEscalateWaitToDuty() {
         try {
+            SystemOperatorContext.bindSystemTask();
             bedCenterService.escalateWaitToDuty();
         } catch (Exception e) {
             // 催办不能带崩任何业务线程
             log.error("[等床协调] 定时催办任务失败：{}", e.getMessage(), e);
+        } finally {
+            SystemOperatorContext.clear();
         }
     }
 }

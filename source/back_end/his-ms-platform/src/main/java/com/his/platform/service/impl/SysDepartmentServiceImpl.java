@@ -60,11 +60,10 @@ public class SysDepartmentServiceImpl extends ServiceImpl<SysDepartmentMapper, S
     public List<DepartmentSelectListVO> selectList(DepartmentSelectDTO selectDTO) {
         LambdaQueryWrapper<SysDepartment> wrapper = new LambdaQueryWrapper<>();
         wrapper.like(TextUtil.hasText(selectDTO.getDeptName()), SysDepartment::getDeptName, selectDTO.getDeptName())
-                .apply(TextUtil.hasText(selectDTO.getDeptType()),
-                        "FIND_IN_SET({0}, dept_type) > 0", selectDTO.getDeptType())
                 .orderByAsc(SysDepartment::getSortOrder)
                 // 唯一二级键：排序字段大量并列，缺主键兜底时列表顺序在不同请求间会漂
                 .orderByAsc(SysDepartment::getId);
+        applyDeptTypeFilter(wrapper, selectDTO.getDeptType());
 
         if (!isAllScope(selectDTO.getScope())) {
             Set<Long> allowed = deptScopeService.allowedDeptIds();
@@ -77,8 +76,49 @@ public class SysDepartmentServiceImpl extends ServiceImpl<SysDepartmentMapper, S
         }
 
         List<SysDepartment> depts = sysDepartmentMapper.selectList(wrapper);
+        if (Boolean.TRUE.equals(selectDTO.getLeafOnly())) {
+            depts = retainLeaf(depts);
+        }
         Map<Long, String> parentNameMap = buildParentNameMap(depts);
         return depts.stream().map(d -> toSelectVO(d, parentNameMap)).collect(Collectors.toList());
+    }
+
+    /**
+     * 科室类型过滤：{@code dept_type} 是多值列（如 {@code "1,4"}），一个值直接 FIND_IN_SET 命中；
+     * 多个值必须展开成 OR —— 把 {@code "1,2,4"} 整串喂给 FIND_IN_SET 匹配的是「这一整串」，
+     * 任何真实行都不会命中，下拉会静默变空。
+     */
+    private void applyDeptTypeFilter(LambdaQueryWrapper<SysDepartment> wrapper, String deptType) {
+        if (!TextUtil.hasText(deptType)) {
+            return;
+        }
+        List<String> types = Arrays.stream(deptType.split(","))
+                .map(String::trim).filter(TextUtil::hasText).distinct().collect(Collectors.toList());
+        if (types.isEmpty()) {
+            return;
+        }
+        wrapper.and(w -> {
+            for (int i = 0; i < types.size(); i++) {
+                if (i > 0) {
+                    w.or();
+                }
+                w.apply("FIND_IN_SET({0}, dept_type) > 0", types.get(i));
+            }
+        });
+    }
+
+    /**
+     * 只留末级科室：本级不能是任何其他科室的上级。
+     * <p>父节点判断必须看全量科室（不受本次过滤条件影响），否则筛了类型后
+     * 「有下级但下级没命中类型」的节点会被误当成末级。
+     */
+    private List<SysDepartment> retainLeaf(List<SysDepartment> depts) {
+        Set<Long> parentIds = sysDepartmentMapper.selectList(new LambdaQueryWrapper<SysDepartment>()
+                        .select(SysDepartment::getParentId)).stream()
+                .map(SysDepartment::getParentId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+        return depts.stream().filter(d -> !parentIds.contains(d.getId())).collect(Collectors.toList());
     }
 
     @Override

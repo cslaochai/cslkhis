@@ -26,8 +26,8 @@ import com.his.charge.entity.BizFeeRecord;
 import com.his.charge.entity.BizInsuranceSettlement;
 import com.his.charge.entity.BizSettlementBill;
 import com.his.charge.entity.BizSettlementBillItem;
-import com.his.common.enums.ClinicDiagnosisTierEnum;
 import com.his.common.enums.InpatientSettleStatusEnum;
+import com.his.common.support.TitleTierMapping;
 import com.his.charge.mapper.BizInsuranceSettlementMapper;
 import com.his.charge.mapper.BizSettlementBillItemMapper;
 import com.his.charge.mapper.BizSettlementBillMapper;
@@ -579,15 +579,15 @@ public class ChargeFacadeServiceImpl implements ChargeFacadeService {
     /**
      * 加收项院内码与名称（按职级档位映射）。
      * 普通档(1/null)不加收，本方法只在 surchargeFee > 0 时调用，对应档位 2/3/4。
-     * 院内码沿用主项前缀 ZCF + 加收标记 + 档位码，国家医保编码见 ClinicDiagnosisTierEnum.getYbCode()。
+     * 院内码沿用主项前缀 ZCF + 加收标记 + 档位码；档位文案见 TitleTierMapping.tierLabel，
+     * 国家医保编码见价表 PolicyPriceVO.ybCode（运行时由价格表提供，不再写死）。
      */
     private static SurchargeMeta surchargeMeta(Integer tier) {
-        ClinicDiagnosisTierEnum e = ClinicDiagnosisTierEnum.ofCode(tier);
-        if (e == null || e == ClinicDiagnosisTierEnum.GENERAL) {
+        if (tier == null || tier == TitleTierMapping.TIER_GENERAL) {
             // 兜底：正常不会走到这里（surchargeFee>0 已拦截普通档），给出可识别的回落值而非 NPE
             return new SurchargeMeta("ZCF_ADD_0", "门诊诊查费加收");
         }
-        return new SurchargeMeta("ZCF_ADD_" + e.getCode(), "门诊诊查费加收(" + e.getLabel() + ")");
+        return new SurchargeMeta("ZCF_ADD_" + tier, "门诊诊查费加收(" + TitleTierMapping.tierLabel(tier) + ")");
     }
 
     private BillBriefVO toBrief(BizSettlementBill bill) {

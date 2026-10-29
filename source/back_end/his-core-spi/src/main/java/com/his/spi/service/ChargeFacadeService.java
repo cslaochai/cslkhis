@@ -50,9 +50,9 @@ public interface ChargeFacadeService {
      * 价格管理页调价即时生效。
      *
      * @param policyCode 政策编码（{@link #POLICY_OPD_CONSULT} / {@link #POLICY_EMG_CONSULT}）
-     * @param tierCode   档位码（对齐 ClinicDiagnosisTierEnum：1-普通 2-副主任 3-主任 4-知名专家）
+     * @param tierCode   档位码（1-普通 2-副主任 3-主任 4-知名专家，定义见 TitleTierMapping）
      * @return 价目单；<b>null = 价表缺行或政策/档位被停用</b>，调用方自行降级
-     *         （急诊只 log 不记账不拦人；门诊回退枚举兜底价并留痕）
+     *         （急诊只 log 不记账不拦人；门诊价表缺行记 error 痕并 null 安全降级）
      */
     PolicyPriceVO policyPrice(String policyCode, Integer tierCode);
 

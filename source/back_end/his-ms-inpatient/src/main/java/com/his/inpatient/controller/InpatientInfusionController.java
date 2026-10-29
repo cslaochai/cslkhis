@@ -19,8 +19,12 @@ import java.util.List;
 @RestController
 @RequestMapping("/patient/inpatient/infusion")
 @RequiredArgsConstructor
-@PreAuthorize("hasAuthority('ipd:nurse:list')")
 public class InpatientInfusionController {
+
+    /**
+     * 输液动作是护士动作（ipd:nurse:edit），医生顶班执行同一套动作时用医嘱编辑码兜底。
+     */
+    private static final String NURSE_ACTION = "hasAnyAuthority('ipd:nurse:edit', 'ipd:order:edit')";
 
     private final InpatientInfusionService inpatientInfusionService;
 
@@ -28,7 +32,7 @@ public class InpatientInfusionController {
      * 开始输注：把已执行的静脉类医嘱执行行置于输液中并记录滴速。
      * 用于住院医嘱执行工作台的输液闭环弹框（护士站与住院医嘱页共用）。
      */
-    @PreAuthorize("hasAuthority('ipd:nurse:edit')")
+    @PreAuthorize(NURSE_ACTION)
     @Operation(summary = "开始输注（执行行需已执行且为静脉类；记录滴速）")
     @PostMapping("/start")
     public Result<InpatientOrderExecVO> start(@Valid @RequestBody InfusionActionDTO dto) {
@@ -39,7 +43,7 @@ public class InpatientInfusionController {
      * 追加一条巡视记录：滴速、剩余量与备注。
      * 用于输注进行中在输液闭环弹框里逐次登记床旁巡查。
      */
-    @PreAuthorize("hasAuthority('ipd:nurse:edit')")
+    @PreAuthorize(NURSE_ACTION)
     @Operation(summary = "巡视（开始后、结束前；滴速/余量/备注）")
     @PostMapping("/round")
     public Result<InfusionRoundVO> round(@Valid @RequestBody InfusionActionDTO dto) {
@@ -50,7 +54,7 @@ public class InpatientInfusionController {
      * 结束输注并收口本袋：登记不良反应标记，标记有反应时必须填写描述。
      * 用于输液闭环弹框的结束动作，结束后该执行行不再允许巡视。
      */
-    @PreAuthorize("hasAuthority('ipd:nurse:edit')")
+    @PreAuthorize(NURSE_ACTION)
     @Operation(summary = "结束输注（adverseFlag=1 时描述必填）")
     @PostMapping("/finish")
     public Result<InpatientOrderExecVO> finish(@Valid @RequestBody InfusionActionDTO dto) {
@@ -61,6 +65,7 @@ public class InpatientInfusionController {
      * 查一条执行行的全部巡视记录，按时间升序。
      * 用于输液闭环弹框展示本袋输注的巡查轨迹。
      */
+    @PreAuthorize("hasAnyAuthority('ipd:order:list', 'ipd:nurse:list')")
     @Operation(summary = "某执行行的巡视记录（时间升序）")
     @GetMapping("/rounds")
     public Result<List<InfusionRoundVO>> rounds(@RequestParam Long execId) {

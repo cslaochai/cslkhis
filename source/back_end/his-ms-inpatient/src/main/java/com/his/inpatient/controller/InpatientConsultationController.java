@@ -20,7 +20,6 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/patient/inpatient/consultation")
 @RequiredArgsConstructor
-@PreAuthorize("hasAuthority('ipd:consultation:list')")
 public class InpatientConsultationController {
 
     private final InpatientConsultationService inpatientConsultationService;
@@ -30,6 +29,7 @@ public class InpatientConsultationController {
      * 用于住院会诊工作台查询卡，受邀科室侧按会诊科室过滤本科待办。
      */
     @Operation(summary = "会诊分页（unfinishedOnly=1 只看未完成；toDeptId 用会诊科室工作台过滤）")
+    @PreAuthorize("hasAuthority('ipd:consultation:list')")
     @GetMapping("/listPage")
     public Result<IPage<ConsultationVO>> listPage(@Valid ConsultationPageQueryDTO query) {
         return Result.success(inpatientConsultationService.listPage(query));
@@ -40,6 +40,7 @@ public class InpatientConsultationController {
      * 用于会诊工作台点开某条会诊的详情弹框。
      */
     @Operation(summary = "会诊详情")
+    @PreAuthorize("hasAuthority('ipd:consultation:list')")
     @GetMapping("/getDetailById")
     public Result<ConsultationVO> getDetailById(@RequestParam Long consultationId) {
         return Result.success(inpatientConsultationService.getDetailById(consultationId));
@@ -71,11 +72,11 @@ public class InpatientConsultationController {
     }
 
     /**
-     * 完成会诊并落结论，完成即回写住院会诊记录并返回该病历ID。
+     * 完成会诊并落结论，完成即回写住院会诊记录并返回该病历号。
      * 用于受邀医师在接诊后填写结论并提交收口。
      */
     @PreAuthorize("hasAuthority('ipd:consultation:edit')")
-    @Operation(summary = "完成会诊（必须带结论；完成即回写住院病历，返回回写的病历ID）")
+    @Operation(summary = "完成会诊（必须带结论；完成即回写住院病历，返回回写的病历号）")
     @PostMapping("/finish")
     public Result<String> finish(@RequestBody @Valid ConsultationFinishDTO dto) {
         return Result.success("会诊已完成并回写病历", inpatientConsultationService.finish(dto));
@@ -98,6 +99,7 @@ public class InpatientConsultationController {
      * 用于会诊工作台「未完成会诊」统计卡与待办角标，可按受邀科室或单名住院患者取数。
      */
     @Operation(summary = "未完成会诊数（待应答 + 已应答；工作台角标用）")
+    @PreAuthorize("hasAuthority('ipd:consultation:list')")
     @GetMapping("/countUnfinished")
     public Result<Long> countUnfinished(@RequestParam(required = false) Long toDeptId,
                                         @RequestParam(required = false) Long admissionId) {

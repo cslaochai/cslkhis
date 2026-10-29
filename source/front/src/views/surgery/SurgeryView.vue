@@ -572,8 +572,10 @@
 
     <SurgerySafetyCheck
         v-model="safetyVisible"
-        :employees="employees"
+        :anesthetists="anesthetistOptions"
+        :nurses="nurseOptions"
         :row="safetyRow"
+        :surgeons="surgeonOptions"
         @saved="refreshAfterSafety"
     />
 

@@ -50,9 +50,10 @@
           </template>
         </el-table-column>
         <el-table-column label="创建时间" prop="createTime" width="180"/>
-        <el-table-column fixed="right" label="操作" width="320">
+        <el-table-column fixed="right" label="操作" width="400">
           <template #default="{ row }">
             <el-button :icon="Setting" link type="primary" @click="handleConfigMenu(row)">菜单权限</el-button>
+            <el-button :icon="RefreshRight" link type="warning" @click="handleRefreshCache(row)">刷新缓存</el-button>
             <el-button v-perm="'system:workbench:config'" :icon="Grid" link type="primary"
                        @click="handleConfigWorkbench(row)">工作台配置
             </el-button>
@@ -92,8 +93,8 @@
 <script lang="js" setup>
 import {onMounted, reactive, ref} from 'vue'
 import {ElMessage, ElMessageBox} from 'element-plus'
-import {Delete, Edit, Grid, Plus, Refresh, Search, Setting} from '@element-plus/icons-vue'
-import {deleteRole, getRoleListPage} from '@/api/system'
+import {Delete, Edit, Grid, Plus, Refresh, RefreshRight, Search, Setting} from '@element-plus/icons-vue'
+import {deleteRole, getRoleListPage, refreshRolePermissionCache} from '@/api/system'
 import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination'
 import {useTableMaxHeight} from '@/lib/useTableMaxHeight'
 import RoleEdit from '@/views/system/role/RoleEdit.vue'
@@ -194,6 +195,22 @@ const handleEdit = (row) => {
 const handleConfigMenu = (row) => {
   menuRole.value = row
   menuDialogVisible.value = true
+}
+
+const handleRefreshCache = async (row) => {
+  try {
+    await ElMessageBox.confirm(
+      `确定要刷新角色 "${row.roleName}" 的权限缓存吗？刷新后该角色及持有该角色的所有账号将立即按最新授权收口（菜单/功能权限即时生效）。`,
+      '刷新权限缓存',
+      {type: 'warning'}
+    )
+    const res = await refreshRolePermissionCache(row.id)
+    if (res.code === 200) {
+      ElMessage.success('权限缓存刷新成功')
+    }
+  } catch (error)  /* 取消不提示；错误已由全局拦截器统一提示 */{
+
+  }
 }
 
 const handleConfigWorkbench = (row) => {

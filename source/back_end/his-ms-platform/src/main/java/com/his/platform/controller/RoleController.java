@@ -105,4 +105,17 @@ public class RoleController {
         sysRoleService.saveRoleMenu(upsertDTO);
         return Result.success("保存成功", null);
     }
+
+    /**
+     * 刷新角色权限缓存：失效该角色的权限缓存（his:perm:role:{roleCode}）与持有该角色账号的身份缓存
+     * （his:user:identity:{username}）。用于「角色管理」页「刷新缓存」按钮，覆盖绕过服务层直接改库
+     * （如旁路 SQL 授权）或 TTL 未到期时的手动强制刷新，使该角色及名下账号立即按最新授权收口。
+     */
+    @PreAuthorize("hasAuthority('system:role:add')")
+    @Operation(summary = "刷新角色权限缓存")
+    @PostMapping("/refreshPermissionCache")
+    public Result<Void> refreshPermissionCache(@RequestParam Long roleId) {
+        sysRoleService.refreshPermissionCache(roleId);
+        return Result.success("刷新成功", null);
+    }
 }

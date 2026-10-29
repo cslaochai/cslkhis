@@ -141,7 +141,7 @@ public class BizClinicSource extends BaseEntity {
     /**
      * 门诊诊查费职级加收档位（1普通 2副主任医师 3主任医师 4知名专家）。
      *
-     * <p>对应 {@link com.his.common.enums.ClinicDiagnosisTierEnum}。
+     * <p>对应档位码定义见 com.his.common.support.TitleTierMapping（1-普通 2-副主任 3-主任 4-知名专家）。
      * 政策把加收拆成四个国家编码（011102020010000~3），本列记录本号源适用哪一档，
      * 用于出账留痕与医保对账；<b>计价仍读 {@link #diagnosisFee}</b>（金额快照）。
      */

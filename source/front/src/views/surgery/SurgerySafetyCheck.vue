@@ -79,7 +79,7 @@
           <el-form-item label="手术医师签名" required>
             <el-select v-model="safetyForm.surgeonId" class="!w-full" data-testid="p134-safety-surgeon" filterable
                        placeholder="本场手术医师">
-              <el-option v-for="e in employees" :key="e.id"
+              <el-option v-for="e in surgeonOptions" :key="e.id"
                          :label="`${e.empName || e.id}${e.deptName ? '（' + e.deptName + '）' : ''}`"
                          :value="String(e.id)"/>
             </el-select>
@@ -87,7 +87,7 @@
           <el-form-item label="麻醉医师签名" required>
             <el-select v-model="safetyForm.anesthetistId" class="!w-full" data-testid="p134-safety-anesthetist" filterable
                        placeholder="在场麻醉医师">
-              <el-option v-for="e in employees" :key="e.id"
+              <el-option v-for="e in anesthetistOptions" :key="e.id"
                          :label="`${e.empName || e.id}${e.deptName ? '（' + e.deptName + '）' : ''}`"
                          :value="String(e.id)"/>
             </el-select>
@@ -95,7 +95,7 @@
           <el-form-item label="手术室护士签名" required>
             <el-select v-model="safetyForm.nurseId" class="!w-full" data-testid="p134-safety-nurse" filterable
                        placeholder="巡回/器械护士">
-              <el-option v-for="e in employees" :key="e.id"
+              <el-option v-for="e in nurseOptions" :key="e.id"
                          :label="`${e.empName || e.id}${e.deptName ? '（' + e.deptName + '）' : ''}`"
                          :value="String(e.id)"/>
             </el-select>
@@ -132,9 +132,19 @@ const props = defineProps({
   modelValue: {type: Boolean, default: false},
   // 当前要签核的那一条手术申请
   row: {type: Object, default: null},
-  employees: {type: Array, default: () => []},
+  // 三方签名各按岗位收口（与排台弹框同一份候选）：手术医师=医生岗、
+  // 麻醉医师=角色 10041、手术室护士=角色 10042。
+  // 原先三格共用一份「本部门员工」，麻醉科/手术室的人根本不在里面，
+  // 三方核查只能在本科室里凑三个人，签字的人并不是真正在场的角色。
+  surgeons: {type: Array, default: () => []},
+  anesthetists: {type: Array, default: () => []},
+  nurses: {type: Array, default: () => []},
 });
 const emit = defineEmits(['update:modelValue', 'saved']);
+
+const surgeonOptions = computed(() => props.surgeons);
+const anesthetistOptions = computed(() => props.anesthetists);
+const nurseOptions = computed(() => props.nurses);
 
 const visible = computed({
   get: () => props.modelValue,

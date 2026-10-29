@@ -1,5 +1,6 @@
 package com.his.outpatient.trigger;
 
+import com.his.common.support.SystemOperatorContext;
 import com.his.outpatient.service.EmergencyService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -19,10 +20,13 @@ public class EmergencyWaitEscalateTrigger {
     @Scheduled(cron = "0 */5 * * * ?")
     public void scheduledEscalateOverdue() {
         try {
+            SystemOperatorContext.bindSystemTask();
             emergencyService.escalateOverdue();
         } catch (Exception e) {
             // 定时任务失败只记日志：催办不能影响任何业务线程
             log.error("[急诊候诊] 超时升级定时任务失败：{}", e.getMessage(), e);
+        } finally {
+            SystemOperatorContext.clear();
         }
     }
 
@@ -34,9 +38,12 @@ public class EmergencyWaitEscalateTrigger {
     @Scheduled(cron = "0 */5 * * * ?")
     public void scheduledEscalateObservation() {
         try {
+            SystemOperatorContext.bindSystemTask();
             emergencyService.escalateObservation();
         } catch (Exception e) {
             log.error("[急诊留观] 超时限催办定时任务失败：{}", e.getMessage(), e);
+        } finally {
+            SystemOperatorContext.clear();
         }
     }
 }

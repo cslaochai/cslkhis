@@ -37,4 +37,9 @@ public interface UserIdentityCache {
      * 全量失效（角色 / 菜单权限码变更后调用；用户数级，量小 keys 可接受）。
      */
     void invalidateAll();
+
+    /**
+     * 按角色失效其名下所有账号的身份缓存（角色菜单 / 权限变更后精准失效，替代粗暴的 invalidateAll）。
+     */
+    void invalidateByRoleId(Long roleId);
 }

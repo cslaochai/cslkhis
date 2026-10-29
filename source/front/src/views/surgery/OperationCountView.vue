@@ -21,7 +21,8 @@
       </div>
 
       <div v-if="!countRow" class="py-8 text-center text-sm text-slate-400" data-testid="g15-count-empty">
-        该手术尚未建立器械清点单（清点是可选登记的；一旦建了单，三轮对不上会锁死手术完成登记）
+        该手术尚未建立器械清点单。二级及以上手术必须先建单并走完术前 → 关体前 → 关体后三轮，才能登记手术完成；
+        一旦建了单，三轮对不上会锁死完成登记。
       </div>
 
       <div v-else class="space-y-4">

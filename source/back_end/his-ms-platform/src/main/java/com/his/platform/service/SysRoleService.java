@@ -55,4 +55,11 @@ public interface SysRoleService {
      * @param upsertDTO 子孙节点会自动补齐所属父目录——只勾二级菜单而漏掉父目录时侧边栏不显示
      */
     void saveRoleMenu(RoleMenuUpsertDTO upsertDTO);
+
+    /**
+     * 手动刷新角色权限缓存：失效该角色的权限缓存（his:perm:role:{roleCode}）
+     * 以及持有该角色的所有账号身份缓存（his:user:identity:{username}）。
+     * 用于「角色管理」页「刷新缓存」按钮，覆盖绕过服务层直接改库 / TTL 未到期时的强制刷新。
+     */
+    void refreshPermissionCache(Long roleId);
 }

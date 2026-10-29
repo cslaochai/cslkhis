@@ -1,5 +1,6 @@
 package com.his.medicaltech.trigger;
 
+import com.his.common.support.SystemOperatorContext;
 import com.his.medicaltech.service.ExamAppointmentService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -19,12 +20,15 @@ public class ExamNoShowTrigger {
     @Scheduled(cron = "0 */10 * * * ?")
     public void scheduledNoShow() {
         try {
+            SystemOperatorContext.bindSystemTask();
             int n = examAppointmentService.autoNoShow();
             if (n > 0) {
                 log.info("[检查预约] 定时扫描判定爽约 {} 张", n);
             }
         } catch (Exception e) {
             log.error("[检查预约] 爽约定时扫描失败：{}", e.getMessage(), e);
+        } finally {
+            SystemOperatorContext.clear();
         }
     }
 }

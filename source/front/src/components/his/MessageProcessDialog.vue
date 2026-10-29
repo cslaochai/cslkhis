@@ -115,6 +115,9 @@
       </template>
     </div>
     <template #footer>
+      <el-button v-if="isConsult" data-testid="msg-goto-consult" type="primary" @click="goConsult">
+        前往会诊管理
+      </el-button>
       <el-button @click="visible = false">关闭</el-button>
     </template>
   </el-dialog>
@@ -123,6 +126,7 @@
 <script setup>
 import {computed, ref, watch} from 'vue';
 import {ElMessage} from 'element-plus';
+import {useRouter} from 'vue-router';
 import {
   getCriticalValueDetail,
   getInspectionDetail,
@@ -147,6 +151,13 @@ const isCritical = computed(() => bizType.value === 'critical');
 // 听班呼叫：待办型消息必须在这里闭环「到岗应答」—— 只标已读等于没应答，
 // 呼叫单还是「待到岗」，收件箱却看着像处理过了。
 const isDutyCall = computed(() => bizType.value === 'duty-call' || bizType.value === 'duty-call-esc');
+// 会诊邀请与会诊进展（接诊/完成）共用 bizType=consult，正文即全部信息，另给一个跳转到会诊工作台的入口
+const isConsult = computed(() => bizType.value === 'consult');
+const router = useRouter();
+const goConsult = () => {
+  visible.value = false;
+  router.push({name: 'Consultation'});
+};
 const loading = ref(false);
 // inspection / report 走结构化 HTML（与报告详情同口径）；critical 走 Vue 模板（带动作）
 const htmlContent = ref('');

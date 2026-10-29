@@ -80,7 +80,14 @@ public class SysEmployeeServiceImpl extends ServiceImpl<SysEmployeeMapper, SysEm
             // 已排班场景：deptId 语义切换为「排班的出诊科室」，不再走主科室/岗位科室过滤（见 applyScheduledFilter）
             applyScheduledFilter(wrapper, queryDTO);
         } else {
-            applyDeptScope(wrapper, queryDTO);
+            if (!TextUtil.hasText(queryDTO.getRoleCode())) {
+                applyDeptScope(wrapper, queryDTO);
+            } else if (queryDTO.getDeptId() != null) {
+                // 角色名册是跨科室的（麻醉医师在麻醉科、手术室护士在手术室），按登录人科室收口会让
+                // 排台「麻醉医师」下拉恒空；只有调用方显式指定科室时才按该科室收口（越权科室仍报错），
+                // deptId 条件由 applyStaffTypeFilter 的 else 分支追加。
+                deptScopeService.resolveDeptId(queryDTO.getDeptId());
+            }
             applyStaffTypeFilter(wrapper, queryDTO);
             applyRoleFilter(wrapper, queryDTO);
             applyScheduleScopeFilter(wrapper, queryDTO);

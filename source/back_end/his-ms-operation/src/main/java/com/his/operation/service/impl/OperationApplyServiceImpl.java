@@ -1089,12 +1089,22 @@ public class OperationApplyServiceImpl extends ServiceImpl<BizOperationApplyMapp
 
     /**
      * 器械清点闸门。
+     *
+     * <p>「建了清点单就必须走满三轮」只对已建单的手术有效；二级及以上手术连清点单都没有
+     * 就直接登记完成，等于把异物遗留唯一能在关腔前发现的机制变成了可选项。
+     * 一级手术（穿刺、换药、浅表切开）器械不入体腔，不强制。
      */
     private void guardCount(BizOperationApply entity) {
         long sheets = bizOperationCountMapper.selectCount(
                 new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<BizOperationCount>()
                         .eq(BizOperationCount::getApplyId, entity.getId()));
         if (sheets == 0) {
+            Integer level = entity.getOperationLevel();
+            if (level != null && level >= 2) {
+                throw new BusinessException("手术单 " + entity.getApplyNo() + " 是"
+                        + dictCacheService.getDicDataLabel(DictTypeConst.OPERATION_LEVEL, level)
+                        + "，必须先建立器械清点单并走完三轮（术前 → 关体前 → 关体后）才能登记完成");
+            }
             return;
         }
         if (bizOperationCountMapper.countDiscrepancy(entity.getId()) > 0) {

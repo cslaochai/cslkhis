@@ -37,7 +37,7 @@
 
 <script setup>
 /**
- * 完成会诊弹框：完成后端回写住院病历，提示带出返回的病历ID（证据链口径见列表页注释）。
+ * 完成会诊弹框：完成后端回写住院病历，提示带出返回的病历号（证据链口径见列表页注释）。
  */
 import {computed, ref, watch} from 'vue';
 import {ElMessage} from 'element-plus';
@@ -80,7 +80,7 @@ const submitFinish = async () => {
       conclusion: finishForm.value.conclusion,
       consultTime: finishForm.value.consultTime || undefined,
     });
-    ElMessage.success(`会诊已完成，已回写病历（病历ID ${res.data || '—'}）`);
+    ElMessage.success(`会诊已完成，已回写病历（病历号 ${res.data || '—'}）`);
     visible.value = false;
     emit('saved');
   } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{

@@ -24,7 +24,10 @@
           <el-select v-model="admitForm.bedId" :disabled="!admitForm.wardId" class="!w-full" placeholder="先选病区">
             <el-option v-for="b in admitBeds" :key="b.bedId" :label="b.bedNo" :value="String(b.bedId)"/>
           </el-select>
-          <p v-if="admitForm.wardId && !admitBeds.length" class="mt-1 text-xs text-rose-500">该病区暂无空闲床位</p>
+          <p v-if="admitForm.wardId && !admitBeds.length" class="mt-1 text-xs text-rose-500">
+            该病区暂无空闲床位 —— 先到「床位管理」登记等床（空床后按等床顺序收治），或换一个有空床的病区。
+            <el-button class="!align-baseline" link size="small" type="primary" @click="goBedCenter">去床位管理</el-button>
+          </p>
         </el-form-item>
         <el-form-item label="入院医生" required>
           <el-select v-model="admitForm.admitDoctorId" class="!w-full" filterable placeholder="选择医生">
@@ -49,6 +52,7 @@
 <script setup>
 import {computed, ref, watch} from 'vue';
 import {ElMessage} from 'element-plus';
+import {useRouter} from 'vue-router';
 import {admitEmergency, getEmergencyBedSelectList} from '@/api/emergency';
 import {getEmployeeList} from '@/api/system';
 
@@ -66,6 +70,13 @@ const visible = computed({
   set: (v) => emit('update:modelValue', v),
 });
 
+const router = useRouter();
+// 满床是常态而不是异常：急诊转住院这条路本身只认「现成空床」，
+// 没有空床就把人指到等床队列，别让操作者卡在"该病区暂无空闲床位"上没下一步。
+const goBedCenter = () => {
+  visible.value = false;
+  router.push('/bed-center');
+};
 const admitSubmitting = ref(false);
 const admitBeds = ref([]);
 const employees = ref([]);

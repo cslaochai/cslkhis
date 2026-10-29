@@ -37,4 +37,12 @@ public class DepartmentSelectDTO {
      */
     @Schema(description = "科室名称，模糊匹配")
     private String deptName;
+
+    /**
+     * 只看末级科室：{@code true} 时滤掉有下级科室的节点（如「内科系统」「长沙麓康医院」）。
+     * <p>「请哪个科室」这类必须落到具体科室的下拉（会诊、转科、排班）要传，
+     * 否则用户会选中一个不存在的「科室」提交上去。
+     */
+    @Schema(description = "只看末级科室：true-滤掉有下级的节点")
+    private Boolean leafOnly;
 }

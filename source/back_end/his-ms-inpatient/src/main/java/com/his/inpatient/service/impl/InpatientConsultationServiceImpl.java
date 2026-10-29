@@ -56,6 +56,13 @@ public class InpatientConsultationServiceImpl extends ServiceImpl<BizConsultatio
      */
     private static final int URGENT_RESPONSE_MINUTES = 10;
 
+    /**
+     * 普通会诊响应时限（分钟）= 24 小时。
+     * <p>与急会诊同样**只在查询时判定**超时，不落状态列；与营养看板的
+     * 「普通超 24 小时」口径一致（两处都对不上时，临床会同时看到两种答案）。
+     */
+    private static final int NORMAL_RESPONSE_MINUTES = 24 * 60;
+
     private final SysMessageService sysMessageService;
 
 
@@ -87,7 +94,7 @@ public class InpatientConsultationServiceImpl extends ServiceImpl<BizConsultatio
         }
         return urgent != null && urgent == YesOrNoEnum.YES.getCode()
                 ? minutes <= URGENT_RESPONSE_MINUTES
-                : minutes <= 24 * 60L;
+                : minutes <= NORMAL_RESPONSE_MINUTES;
     }
 
     /**
@@ -105,25 +112,26 @@ public class InpatientConsultationServiceImpl extends ServiceImpl<BizConsultatio
 
         BizAdmission admission = bizAdmissionMapper.selectById(dto.getAdmissionId());
         if (admission == null) {
-            throw new BusinessException("入院记录不存在");
+            throw new BusinessException(400, "入院记录不存在");
         }
         if (!Objects.equals(AdmitStatusEnum.IN_HOSPITAL.getCode(), admission.getAdmitStatus())) {
-            throw new BusinessException("该患者已出院，不能再申请会诊");
+            throw new BusinessException(400, "该患者已出院，不能再申请会诊");
         }
         Long fromDeptId = resolveAdmissionDeptId(admission);
         if (fromDeptId == null) {
-            throw new BusinessException("入院记录缺少科室信息，无法确定申请科室");
+            throw new BusinessException(400, "入院记录缺少科室信息，无法确定申请科室");
         }
         // 数据权限：只能为自己科室在院的患者申请会诊（会诊科室是业务目标，不受限）
         deptScopeService.assertDeptAccessible(fromDeptId);
 
         // 范围与科室的一致性：科内必须同科室；科间/全院必须跨科室。
+        // 提示只说「选错了」，不回报内部科室 ID —— 医生看的是科室名，ID 只会让人以为是系统故障。
         boolean sameDept = Objects.equals(fromDeptId, dto.getToDeptId());
         if (Objects.equals(ConsultScopeEnum.IN_DEPT.getCode(), dto.getConsultType()) && !sameDept) {
-            throw new BusinessException("「科内会诊」的会诊科室必须与申请科室一致（当前申请科室 ID=" + fromDeptId + "）");
+            throw new BusinessException(400, "「科内会诊」的会诊科室必须是本科室；请到别的科室会诊请改选「科间会诊」");
         }
         if (!Objects.equals(ConsultScopeEnum.IN_DEPT.getCode(), dto.getConsultType()) && sameDept) {
-            throw new BusinessException("「" + ConsultScopeEnum.getLabelOrUnknown(dto.getConsultType())
+            throw new BusinessException(400, "「" + ConsultScopeEnum.getLabelOrUnknown(dto.getConsultType())
                     + "」必须请到别的科室；本科室内部的请会诊请选「科内会诊」");
         }
 
@@ -141,7 +149,7 @@ public class InpatientConsultationServiceImpl extends ServiceImpl<BizConsultatio
                 .eq(BizConsultation::getToDeptId, dto.getToDeptId())
                 .in(BizConsultation::getConsultStatus, ConsultationStatusEnum.PENDING.getCode(), ConsultationStatusEnum.ACCEPTED.getCode()));
         if (unfinished > 0) {
-            throw new BusinessException("该住院已存在向「" + deptNameOf(dto.getToDeptId())
+            throw new BusinessException(400, "该住院已存在向「" + deptNameOf(dto.getToDeptId())
                     + "」发起且未完成的会诊（" + unfinished + " 条），不能重复申请；请先完成或取消原会诊");
         }
 
@@ -205,7 +213,7 @@ public class InpatientConsultationServiceImpl extends ServiceImpl<BizConsultatio
             String title = (urgent ? "急会诊邀请：" : "会诊邀请：") + patientName
                     + "（" + entity.getConsultationNo() + "）";
             String content = String.format(
-                    "%s科 %s 医生为患者 %s 申请%s会诊（%s）：\n会诊理由：%s\n请尽快在会诊列表中「接诊」。",
+                    "%s %s 医生为患者 %s 申请%s会诊（%s）：\n会诊理由：%s\n请尽快在会诊列表中「接诊」。",
                     deptNameOf(entity.getFromDeptId()),
                     entity.getApplyDoctorName() == null ? "未知" : entity.getApplyDoctorName(),
                     patientName,
@@ -243,13 +251,13 @@ public class InpatientConsultationServiceImpl extends ServiceImpl<BizConsultatio
         }
         BizConsultation entity = bizConsultationMapper.selectById(dto.getId());
         if (entity == null) {
-            throw new BusinessException("会诊记录不存在");
+            throw new BusinessException(400, "会诊记录不存在");
         }
         if (!Objects.equals(entity.getAdmissionId(), admission.getAdmissionId())) {
-            throw new BusinessException("该会诊不属于本次住院，不能修改");
+            throw new BusinessException(400, "该会诊不属于本次住院，不能修改");
         }
         if (!Objects.equals(ConsultationStatusEnum.PENDING.getCode(), entity.getConsultStatus())) {
-            throw new BusinessException("会诊 " + entity.getConsultationNo() + " 当前状态为「"
+            throw new BusinessException(400, "会诊 " + entity.getConsultationNo() + " 当前状态为「"
                     + ConsultationStatusEnum.getLabelOrUnknown(entity.getConsultStatus())
                     + "」，只有「待应答」的会诊申请可以修改；已应答的请直接完成会诊");
         }
@@ -259,7 +267,7 @@ public class InpatientConsultationServiceImpl extends ServiceImpl<BizConsultatio
                 .in(BizConsultation::getConsultStatus, ConsultationStatusEnum.PENDING.getCode(), ConsultationStatusEnum.ACCEPTED.getCode())
                 .ne(BizConsultation::getConsultationId, entity.getConsultationId()));
         if (unfinished > 0) {
-            throw new BusinessException("该住院已存在向「" + deptNameOf(dto.getToDeptId())
+            throw new BusinessException(400, "该住院已存在向「" + deptNameOf(dto.getToDeptId())
                     + "」发起且未完成的会诊，不能改成同一个会诊科室");
         }
 
@@ -288,9 +296,10 @@ public class InpatientConsultationServiceImpl extends ServiceImpl<BizConsultatio
             throw new BusinessException("当前用户信息不存在");
         }
         BizConsultation entity = mustGet(dto.getConsultationId());
-        assertConsultAccessible(entity.getFromDeptId(), entity.getToDeptId());
+        // 接诊只能由会诊科室的人做：申请科室能看见这单，但不能替会诊科室接诊
+        assertReceivingAccessible(entity);
         if (!Objects.equals(ConsultationStatusEnum.PENDING.getCode(), entity.getConsultStatus())) {
-            throw new BusinessException("会诊 " + entity.getConsultationNo() + " 当前状态为「"
+            throw new BusinessException(400, "会诊 " + entity.getConsultationNo() + " 当前状态为「"
                     + ConsultationStatusEnum.getLabelOrUnknown(entity.getConsultStatus()) + "」，不能应答");
         }
         Long doctorId = operatorUser.getEmployeeId();
@@ -325,28 +334,32 @@ public class InpatientConsultationServiceImpl extends ServiceImpl<BizConsultatio
                     URGENT_RESPONSE_MINUTES, doctorName);
         }
         log.info("会诊应答 consultationNo={} 接诊医生={} 等待分钟={}", entity.getConsultationNo(), doctorName, waitMinutes);
+
+        notifyApplicant(entity, "会诊已接诊", deptNameOf(entity.getToDeptId()) + " " + doctorName
+                + " 已接诊（会诊号 " + entity.getConsultationNo() + "），等待会诊结论。");
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public String finish(ConsultationFinishDTO dto) {
         BizConsultation entity = mustGet(dto.getConsultationId());
-        assertConsultAccessible(entity.getFromDeptId(), entity.getToDeptId());
+        // 结论是会诊科室写的：申请科室不能替别人下结论
+        assertReceivingAccessible(entity);
 
         // ★ 铁律：未应答不可完成（= 医嘱未校对不可执行）
         if (Objects.equals(ConsultationStatusEnum.PENDING.getCode(), entity.getConsultStatus())) {
-            throw new BusinessException("会诊 " + entity.getConsultationNo()
+            throw new BusinessException(400, "会诊 " + entity.getConsultationNo()
                     + " 尚未被会诊科室应答，不能填写结论；请先由会诊科室「接诊」");
         }
         if (!Objects.equals(ConsultationStatusEnum.ACCEPTED.getCode(), entity.getConsultStatus())) {
-            throw new BusinessException("会诊 " + entity.getConsultationNo() + " 当前状态为「"
+            throw new BusinessException(400, "会诊 " + entity.getConsultationNo() + " 当前状态为「"
                     + ConsultationStatusEnum.getLabelOrUnknown(entity.getConsultStatus()) + "」，不能重复完成");
         }
 
         LocalDateTime now = TimeUtil.nowSeconds();
         LocalDateTime consultTime = TimeUtil.toSeconds(dto.getConsultTime() != null ? dto.getConsultTime() : now);
         if (entity.getAcceptTime() != null && consultTime.isBefore(entity.getAcceptTime())) {
-            throw new BusinessException("会诊时间不能早于接诊时间（接诊时间 " + entity.getAcceptTime() + "）");
+            throw new BusinessException(400, "会诊时间不能早于接诊时间（接诊时间 " + entity.getAcceptTime() + "）");
         }
 
         // 回写住院病历：先写病历，再改会诊 —— 病历写不进去就不许把会诊标成完成
@@ -366,7 +379,13 @@ public class InpatientConsultationServiceImpl extends ServiceImpl<BizConsultatio
         log.info("会诊完成 consultationNo={} 会诊科室={} 结论字数={} 回写病历ID={} recordNo={}",
                 entity.getConsultationNo(), entity.getToDeptId(),
                 dto.getConclusion().length(), recordId, record.getRecordNo());
-        return recordId == null ? null : String.valueOf(recordId);
+
+        notifyApplicant(entity, "会诊已完成", deptNameOf(entity.getToDeptId()) + " "
+                + (entity.getAcceptDoctorName() == null ? "" : entity.getAcceptDoctorName())
+                + " 已完成会诊（会诊号 " + entity.getConsultationNo() + "），结论已回写病历 "
+                + record.getRecordNo() + "。");
+        // 返回病历号而不是雪花主键：界面上「病历 BL2026...」才是医生能拿去翻病历的东西
+        return record.getRecordNo();
     }
 
     /**
@@ -441,10 +460,10 @@ public class InpatientConsultationServiceImpl extends ServiceImpl<BizConsultatio
         BizConsultation entity = mustGet(dto.getConsultationId());
         assertConsultAccessible(entity.getFromDeptId(), entity.getToDeptId());
         if (Objects.equals(ConsultationStatusEnum.CANCELLED.getCode(), entity.getConsultStatus())) {
-            throw new BusinessException("会诊 " + entity.getConsultationNo() + " 已取消，不能重复取消");
+            throw new BusinessException(400, "会诊 " + entity.getConsultationNo() + " 已取消，不能重复取消");
         }
         if (!Objects.equals(ConsultationStatusEnum.PENDING.getCode(), entity.getConsultStatus())) {
-            throw new BusinessException("会诊 " + entity.getConsultationNo() + " 当前状态为「"
+            throw new BusinessException(400, "会诊 " + entity.getConsultationNo() + " 当前状态为「"
                     + ConsultationStatusEnum.getLabelOrUnknown(entity.getConsultStatus())
                     + "」，不能取消；会诊科室已接诊的会诊必须走「完成」");
         }
@@ -485,7 +504,7 @@ public class InpatientConsultationServiceImpl extends ServiceImpl<BizConsultatio
     public ConsultationVO getDetailById(Long consultationId) {
         ConsultationVO vo = bizConsultationMapper.selectConsultationById(consultationId);
         if (vo == null) {
-            throw new BusinessException("会诊记录不存在");
+            throw new BusinessException(400, "会诊记录不存在");
         }
         assertConsultAccessible(vo.getFromDeptId(), vo.getToDeptId());
         decorate(vo);
@@ -509,31 +528,38 @@ public class InpatientConsultationServiceImpl extends ServiceImpl<BizConsultatio
 
         boolean pending = Objects.equals(ConsultationStatusEnum.PENDING.getCode(), vo.getConsultStatus());
         boolean accepted = Objects.equals(ConsultationStatusEnum.ACCEPTED.getCode(), vo.getConsultStatus());
-        vo.setCanAccept(pending);
-        vo.setCanEdit(pending);
-        vo.setCanCancel(pending);
-        vo.setCanFinish(accepted);
+        // 按钮只按「谁真能点」给：接诊/完成限会诊科室，否则申请方会看到一个点了就 403 的按钮；
+        // 营养工作台按类别并集会把发到别科的会诊也列出来，这里不同步收口就必然出现死按钮
+        boolean receiving = deptScopeService.canAccessDept(vo.getToDeptId());
+        boolean applying = deptScopeService.canAccessDept(vo.getFromDeptId());
+        vo.setCanAccept(pending && receiving);
+        vo.setCanFinish(accepted && receiving);
+        vo.setCanEdit(pending && applying);
+        vo.setCanCancel(pending && (applying || receiving));
 
         LocalDateTime now = TimeUtil.nowSeconds();
         LocalDateTime from = vo.getApplyTime();
         LocalDateTime to = vo.getAcceptTime() != null ? vo.getAcceptTime() : now;
         vo.setResponseMinutes(from == null ? null : TimeUtil.minutesBetween(from, to));
 
-        // 急会诊超时**查询时算**：只看"还没应答的急会诊"
-        boolean overdue = Objects.equals(YesOrNoEnum.YES.getCode(), vo.getIsUrgent()) && pending
-                && vo.getApplyTime() != null
-                && now.isAfter(vo.getApplyTime().plusMinutes(URGENT_RESPONSE_MINUTES));
+        // 超时**查询时算**：只看"还没应答的"，急会诊 10 分钟、普通会诊 24 小时
+        boolean urgent = Objects.equals(YesOrNoEnum.YES.getCode(), vo.getIsUrgent());
+        int limitMinutes = urgent ? URGENT_RESPONSE_MINUTES : NORMAL_RESPONSE_MINUTES;
+        boolean overdue = pending && vo.getApplyTime() != null
+                && now.isAfter(vo.getApplyTime().plusMinutes(limitMinutes));
         vo.setOverdue(overdue);
         if (overdue) {
-            vo.setOverdueText("急会诊已等待 " + TimeUtil.minutesBetween(vo.getApplyTime(), now) + " 分钟未应答（时限 "
-                    + URGENT_RESPONSE_MINUTES + " 分钟）");
+            Long waited = TimeUtil.minutesBetween(vo.getApplyTime(), now);
+            vo.setOverdueText(urgent
+                    ? "急会诊已等待 " + waited + " 分钟未应答（时限 " + URGENT_RESPONSE_MINUTES + " 分钟）"
+                    : "普通会诊已等待 " + (waited == null ? "—" : waited / 60) + " 小时未应答（时限 24 小时）");
         }
     }
 
     private BizConsultation mustGet(Long consultationId) {
         BizConsultation entity = bizConsultationMapper.selectById(consultationId);
         if (entity == null) {
-            throw new BusinessException("会诊记录不存在");
+            throw new BusinessException(400, "会诊记录不存在");
         }
         return entity;
     }
@@ -574,12 +600,53 @@ public class InpatientConsultationServiceImpl extends ServiceImpl<BizConsultatio
     }
 
     /**
-     * 会诊单双方（申请/会诊科室）任一在授权范围内即可见/可操作
+     * 会诊单双方（申请/会诊科室）任一在授权范围内即可**查看**（详情、取消）。
      */
     private void assertConsultAccessible(Long fromDeptId, Long toDeptId) {
         if (!deptScopeService.canAccessDept(fromDeptId)
                 && !deptScopeService.canAccessDept(toDeptId)) {
-            throw new BusinessException("该数据所属科室不在当前岗位的数据范围内");
+            throw new BusinessException(403, "该数据所属科室不在当前岗位的数据范围内");
+        }
+    }
+
+    /**
+     * 应答/完成只认会诊科室：申请方看得见这单，但不能替会诊科室接诊，更不能替别人写结论。
+     * <p>只按「申请方或受邀方」放行会让申请医生接诊自己发出去的会诊 —— 病历上会留一个
+     * 自己请自己会诊的结论，责任链断在这里。
+     */
+    private void assertReceivingAccessible(BizConsultation entity) {
+        if (!deptScopeService.canAccessDept(entity.getToDeptId())) {
+            throw new BusinessException(403, "只有会诊科室「" + deptNameOf(entity.getToDeptId())
+                    + "」的医师可以接诊与完成会诊");
+        }
+    }
+
+    /**
+     * 会诊进展回推申请人：接诊、完成各发一条**通知型**消息（handleStatus=null，已读即闭环，
+     * 不占待办、也不会被 closeConsultTodo 误关）。
+     * <p>发给自己就跳过；发送失败只记日志 —— 会诊状态已经落库，一条消息不该把它回滚。
+     */
+    private void notifyApplicant(BizConsultation entity, String titlePrefix, String content) {
+        Long applicantId = entity.getApplyDoctorId();
+        CurrentUser operator = UserUtils.getCurrentUser();
+        if (applicantId == null || (operator != null && Objects.equals(applicantId, operator.getEmployeeId()))) {
+            return;
+        }
+        try {
+            EmployeeBriefVO applicant = systemFacadeService.findEmployee(applicantId);
+            if (applicant == null) {
+                log.warn("[会诊] 找不到申请医生，进展通知跳过 consultationNo={} applyDoctorId={}",
+                        entity.getConsultationNo(), applicantId);
+                return;
+            }
+            String title = titlePrefix + "：" + entity.getConsultationNo();
+            sysMessageService.sendSystemMessage(applicant.getId(),
+                    applicant.getEmpName() == null ? "站内用户" : applicant.getEmpName(),
+                    title, content, BizTypeEnum.CONSULT.getType(), entity.getConsultationId(),
+                    "info", null, null);
+        } catch (Exception ex) {
+            log.warn("[会诊] 进展通知发送失败 consultationNo={} applicantId={}",
+                    entity.getConsultationNo(), applicantId, ex);
         }
     }
 }

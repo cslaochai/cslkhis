@@ -49,7 +49,9 @@ public interface BizConsultationMapper extends BaseMapper<BizConsultation> {
               AND (#{q.toDeptId} IS NULL OR c.to_dept_id = #{q.toDeptId})
               AND (#{q.consultStatus} IS NULL OR c.consult_status = #{q.consultStatus})
               AND (#{q.consultType} IS NULL OR c.consult_type = #{q.consultType})
-              AND (#{q.consultCategory} IS NULL OR c.consult_category = #{q.consultCategory})
+              AND (#{q.consultCategory} IS NULL
+                   OR c.consult_category = #{q.consultCategory}
+                   <if test="q.orToDeptId != null"> OR c.to_dept_id = #{q.orToDeptId}</if>)
               AND (#{q.isUrgent} IS NULL OR c.is_urgent = #{q.isUrgent})
               AND (#{q.unfinishedOnly} IS NULL OR #{q.unfinishedOnly} = 0 OR c.consult_status IN (0, 3))
               AND (#{q.keyword} IS NULL OR #{q.keyword} = ''

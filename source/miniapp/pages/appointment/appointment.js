@@ -12,7 +12,7 @@ function isBookable(s) {
 }
 
 /** startTime 在不同排班来源下可能是 HH:mm 或 HH:mm:ss，统一截到分 */
-// 诊查费职级加收档位，与后端 ClinicDiagnosisTierEnum 一一对应（湘医保发〔2025〕58号附件1）
+// 诊查费职级加收档位，与后端 TitleTierMapping 一致（1-普通 2-副主任 3-主任 4-知名专家，湘医保发〔2025〕58号附件1）
 const TIER_TEXT = { 1: '', 2: '副主任医师', 3: '主任医师', 4: '知名专家' }
 
 function hhmm(t) {

@@ -328,6 +328,11 @@ export function saveRoleMenu(data) {
     return request.post('/system/role/saveRoleMenu', data)
 }
 
+// 刷新角色权限缓存：失效该角色的权限缓存与持有该角色账号的身份缓存（覆盖直接改库 / TTL 未到期场景）
+export function refreshRolePermissionCache(roleId) {
+    return request.post('/system/role/refreshPermissionCache', null, {params: {roleId}})
+}
+
 // ========== 菜单管理 ==========
 
 // 查询菜单树
@@ -449,6 +454,13 @@ export function searchIcd10(keyword) {
 // 智能预测ICD-10编码
 export function predictIcd10(data) {
     return request.post('/system/icd10/predict', data)
+}
+
+// ========== 手术操作编码（ICD-9-CM-3） ==========
+
+// 搜索手术操作编码
+export function searchOperationIcd(keyword, limit = 50) {
+    return request.get('/system/icd9cm3/selectList', {params: {keyword, limit}})
 }
 
 // ========== 检查检验项目 ==========

@@ -32,9 +32,9 @@ public interface InpatientConsultationService {
     void accept(ConsultationAcceptDTO dto);
 
     /**
-     * 完成会诊：必须带结论，并回写住院病历
+     * 完成会诊：必须带结论，并回写住院病历。只有会诊科室（受邀方）可以完成。
      *
-     * @return 回写的住院病历ID
+     * @return 回写的住院病历号（界面上医生拿它去翻病历，不是雪花主键）
      */
     String finish(ConsultationFinishDTO dto);
 

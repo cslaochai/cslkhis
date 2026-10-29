@@ -32,15 +32,34 @@
         <span class="ml-2 text-[11px] text-slate-400">申请科室取患者当前科室，服务端写入，不需要填</span>
       </el-form-item>
       <el-form-item label="拟施手术" required>
-        <el-input
+        <!-- 术式取自 ICD-9-CM-3 码表（13,000+ 条），选中即带出编码；码表未收录的术式仍可手输，
+             但手输行没有编码锚点，病案首页与医保上传只能按名称比对 -->
+        <el-select
             v-model="applyForm.plannedOperationName"
+            allow-create
+            class="!w-full"
             data-testid="p4-op-apply-name"
-            maxlength="200"
-            placeholder="如：腹腔镜胆囊切除术"
-        />
+            default-first-option
+            filterable
+            :loading="opDictLoading"
+            placeholder="输入术式名称或编码搜索，未收录可直接输入"
+            remote
+            :remote-method="searchOperationDict"
+            @change="onOperationPicked"
+        >
+          <el-option
+              v-for="o in opDictOptions"
+              :key="o.opCode"
+              :label="o.opName"
+              :value="o.opName"
+          >
+            <span>{{ o.opName }}</span>
+            <span class="float-right text-[11px] text-slate-400">{{ o.opCode }}</span>
+          </el-option>
+        </el-select>
       </el-form-item>
       <el-form-item label="手术编码">
-        <el-input v-model="applyForm.plannedOperationCode" placeholder="ICD-9-CM-3（可空，但不建议）"/>
+        <el-input v-model="applyForm.plannedOperationCode" placeholder="选术式自动带出 ICD-9-CM-3，也可手填"/>
       </el-form-item>
       <el-form-item label="手术级别">
         <el-select v-model="applyForm.operationLevel" class="!w-full" clearable placeholder="选择级别">
@@ -121,6 +140,7 @@ import {computed, reactive, ref, watch} from 'vue';
 import {ElMessage} from 'element-plus';
 import {Warning} from '@element-plus/icons-vue';
 import {saveOperationApply} from '@/api/inpatientOperation';
+import {searchOperationIcd} from '@/api/system';
 
 const props = defineProps({
   modelValue: {type: Boolean, default: false},
@@ -157,6 +177,32 @@ const applyForm = reactive({
 });
 const currentAdmission = computed(() => props.admissions.find((a) => String(a.admissionId) === String(applyForm.admissionId)));
 
+/** 术式候选：远端检索（码表 13,000+ 条，不一次性拉全量） */
+const opDictOptions = ref([]);
+const opDictLoading = ref(false);
+// 输入很快时多次请求会乱序返回，只认最后一次，避免旧结果盖掉新关键词的候选
+let opDictSeq = 0;
+const searchOperationDict = async (keyword) => {
+  const seq = ++opDictSeq;
+  opDictLoading.value = true;
+  try {
+    const res = await searchOperationIcd(keyword || '', 50);
+    if (seq === opDictSeq)
+      opDictOptions.value = res.data || [];
+  } catch (e) /* 检索失败不阻断手输术式 */{
+    console.error('手术操作编码检索失败', e);
+  } finally {
+    if (seq === opDictSeq)
+      opDictLoading.value = false;
+  }
+};
+/** 选中码表项才带出编码；手输术式不动已填的编码（历史申请可能只有手输名称） */
+const onOperationPicked = (name) => {
+  const hit = opDictOptions.value.find((o) => o.opName === name);
+  if (hit && hit.opCode)
+    applyForm.plannedOperationCode = hit.opCode;
+};
+
 watch(visible, (open) => {
   if (!open) return;
   const row = props.row;
@@ -188,6 +234,12 @@ watch(visible, (open) => {
     applyForm.isMain = 1;
     applyForm.remark = '';
   }
+  // 修改时把当前术式塞进候选（allow-create 只保证显示，不回填编码）；新申请先拉一批常用术式
+  opDictOptions.value = applyForm.plannedOperationName
+      ? [{opCode: applyForm.plannedOperationCode || '', opName: applyForm.plannedOperationName}]
+      : [];
+  if (!applyForm.plannedOperationName)
+    searchOperationDict('');
 });
 
 const submitApply = async () => {

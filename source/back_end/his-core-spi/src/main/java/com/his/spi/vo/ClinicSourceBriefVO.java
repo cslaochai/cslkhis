@@ -104,7 +104,7 @@ public class ClinicSourceBriefVO {
     private BigDecimal diagnosisFee;
 
     /**
-     * 职级档位，取值见 ClinicDiagnosisTierEnum
+     * 职级档位码（1-普通 2-副主任 3-主任 4-知名专家，见 TitleTierMapping）
      */
     private Integer diagnosisTier;
 

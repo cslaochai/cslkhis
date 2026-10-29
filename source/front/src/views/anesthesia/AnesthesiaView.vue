@@ -508,6 +508,7 @@ import AnesthesiaFollowupEdit from './AnesthesiaFollowupEdit.vue';
 import * as A from '@/lib/anesthesia';
 import {chargeTagType, fmt, statusTagType, text} from '@/lib/anesthesia';
 import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination';
+import {OPERATION_ANESTHETIST_ROLE_CODE} from '@/lib/operationSchedule';
 
 const applies = ref([]);
 const employees = ref([]);
@@ -519,7 +520,9 @@ const loadBaseData = async () => {
     console.error('加载手术申请失败:', e);
   }
   try {
-    const res = await getEmployeeList({});
+    // 麻醉记录单/PACU 上签的是麻醉医师，候选按角色 10041 收口（与排台同一口径）。
+    // 原来拉的是「本部门员工」：手术医师登录时麻醉医师下拉里只有自己科室的人。
+    const res = await getEmployeeList({roleCode: OPERATION_ANESTHETIST_ROLE_CODE});
     employees.value = (res.data || []);
   } catch (e) {
     console.error('加载员工失败:', e);

@@ -302,7 +302,7 @@
                 <el-button v-if="!isNurse && row.canEdit" v-perm="'ipd:order:edit'" data-testid="p1-edit-order" link size="small"
                            type="primary" @click="openEdit(row)">修改
                 </el-button>
-                <el-button v-if="row.canStop" v-perm="orderPerm('edit')" link size="small" type="warning"
+                <el-button v-if="row.canStop" v-perm="'ipd:order:edit'" link size="small" type="warning"
                            @click="doStop(row)">停止
                 </el-button>
                 <el-button v-if="row.canCancel" v-perm="orderPerm('delete')" link size="small" type="danger"
@@ -426,8 +426,9 @@
           </div>
         </el-tab-pane>
 
-        <!-- ============== 待执行（护士站专属：执行/跳过是护士的动作） ============== -->
-        <el-tab-pane v-if="isNurse" name="exec">
+        <!-- ============== 待执行（护士站主入口；医生站同样保留 —— 护士不在时医生顶班执行，
+             而「待执行」页签原先 v-if="isNurse"，等于执行链在医生站没有入口） ============== -->
+        <el-tab-pane name="exec">
           <template #label>
           <span class="inline-flex items-center gap-1.5">
             待执行
@@ -914,7 +915,7 @@
               <el-input-number v-model="infusionForm.remainingVolume" :max="5000" :min="0" class="mt-2"
                                controls-position="right" placeholder="余量 ml" style="width: 100%"/>
               <el-input v-model="infusionForm.remark" class="mt-2" placeholder="穿刺部位/局部情况"/>
-              <el-button v-perm="orderPerm('add')" class="mt-2 !w-full" data-testid="g14-do-round" type="primary"
+              <el-button v-perm="orderPerm('edit')" class="mt-2 !w-full" data-testid="g14-do-round" type="primary"
                          @click="doInfusionRound">记录巡视
               </el-button>
             </template>
@@ -1313,10 +1314,12 @@ const props = defineProps({
   mode: {type: String, required: false, default: 'doctor'}
 });
 const isNurse = computed(() => props.mode === 'nurse');
-// 按 mode 选 ipd:order / ipd:nurse 前缀；护士没有 :delete 码，delete 类动作按 ipd:nurse:edit 判定
+// 只有「校对/执行」按 mode 切码：护士站用 ipd:nurse:edit（后端 /verify、/exec/complete 两侧都认）。
+// 开立、停止、作废是医生动作，码固定 ipd:order:*——历史上把它们映射成 ipd:nurse:edit，
+// 护士点了必 403（护士站没有 ipd:order:edit，两个码不是一回事）。
 const orderPerm = (action) => {
-  if (isNurse.value)
-    return action === 'delete' ? 'ipd:nurse:edit' : `ipd:nurse:${action}`;
+  if (action === 'edit')
+    return isNurse.value ? 'ipd:nurse:edit' : 'ipd:order:edit';
   return `ipd:order:${action}`;
 };
 // ---------------- 基础数据 ----------------
@@ -1689,9 +1692,10 @@ const checkPathwayDeviation = async (items) => {
   }
 };
 const reloadAll = async () => {
-  const tasks = [loadOrders(), loadLogRows()];
+  // 待执行队列两侧都拉：医生站现在也开「待执行」页签（护士不在时顶班执行）
+  const tasks = [loadOrders(), loadLogRows(), loadPendingRows(), loadStats()];
   if (isNurse.value)
-    tasks.push(loadVerifyRows(), loadPendingRows(), loadStats());
+    tasks.push(loadVerifyRows());
   await Promise.all(tasks);
 };
 const refreshAll = async () => {

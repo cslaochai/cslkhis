@@ -18,30 +18,48 @@ import java.math.BigDecimal;
 @TableName("sys_charge_policy_price")
 public class SysChargePolicyPrice extends BaseEntity {
 
-    /** 政策编码（sys_charge_policy.policy_code） */
+    /**
+     * 政策编码（sys_charge_policy.policy_code）
+     */
     private String policyCode;
 
-    /** 档位码（对齐 ClinicDiagnosisTierEnum：1-普通 2-副主任 3-主任 4-知名专家） */
+    /**
+     * 档位码（1-普通 2-副主任 3-主任 4-知名专家，定义见 TitleTierMapping）
+     */
     private Integer tierCode;
 
-    /** 档位名称 */
+    /**
+     * 档位名称
+     */
     private String tierLabel;
 
-    /** 国家医保编码（门诊档位子码 011102020010000~003 / 急诊 110200003） */
+    /**
+     * 国家医保编码（门诊档位子码 011102020010000~003 / 急诊 110200003）
+     */
     private String ybCode;
 
-    /** 全额（元） */
+    /**
+     * 全额（元）
+     */
     private BigDecimal amount;
 
-    /** 加收额（元）：无加收为 null */
+    /**
+     * 加收额（元）：无加收为 null
+     */
     private BigDecimal surcharge;
 
-    /** 排序号 */
+    /**
+     * 排序号
+     */
     private Integer sortOrder;
 
-    /** 状态：0-停用 1-启用（停用后该档按缺行降级） */
+    /**
+     * 状态：0-停用 1-启用（停用后该档按缺行降级）
+     */
     private Integer status;
 
-    /** 备注 */
+    /**
+     * 备注
+     */
     private String remark;
 }

@@ -1,5 +1,6 @@
 package com.his.inpatient.trigger;
 
+import com.his.common.support.SystemOperatorContext;
 import com.his.inpatient.service.ReferralService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -19,10 +20,13 @@ public class ReferralDutyEscalateTrigger {
     @Scheduled(cron = "0 */30 * * * ?")
     public void scheduledEscalatePendingToDuty() {
         try {
+            SystemOperatorContext.bindSystemTask();
             referralService.escalatePendingToDuty();
         } catch (Exception e) {
             // 催办不能带崩任何业务线程
             log.error("[双向转诊] 定时催办任务失败：{}", e.getMessage(), e);
+        } finally {
+            SystemOperatorContext.clear();
         }
     }
 }

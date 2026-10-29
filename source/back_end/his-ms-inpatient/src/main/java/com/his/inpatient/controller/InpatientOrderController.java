@@ -20,8 +20,18 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/patient/inpatient/order")
 @RequiredArgsConstructor
-@PreAuthorize("hasAnyAuthority('ipd:order:list', 'ipd:nurse:list')")
 public class InpatientOrderController {
+
+    /**
+     * 医嘱查询权限：医生站与护士站共用同一张表，两侧的列表码都放行。
+     */
+    private static final String VIEW = "hasAnyAuthority('ipd:order:list', 'ipd:nurse:list')";
+
+    /**
+     * 校对与执行是护士动作，护士站挂的是 ipd:nurse:edit；医生站也要留兜底通道
+     * （护士不在时医生顶班执行），所以两个码都认。
+     */
+    private static final String NURSE_ACTION = "hasAnyAuthority('ipd:order:edit', 'ipd:nurse:edit')";
 
     private final InpatientOrderService inpatientOrderService;
 
@@ -29,6 +39,7 @@ public class InpatientOrderController {
      * 医嘱分页查询：可按住院次、患者、类别、状态与关键字过滤，带待校对过滤位。
      * 住院医生站「住院医嘱」页与护士站医嘱页签共用同一张表格。
      */
+    @PreAuthorize(VIEW)
     @Operation(summary = "医嘱分页（医生站 / 护士站共用；pendingVerifyOnly=1 只看待校对）")
     @GetMapping("/listPage")
     public Result<IPage<InpatientOrderVO>> listPage(@Valid InpatientOrderPageQueryDTO query) {
@@ -50,7 +61,7 @@ public class InpatientOrderController {
      * 护士批量校对医嘱，校对通过后才生成执行计划。
      * 用于护士站医嘱工作区「待校对」页签勾选后提交。
      */
-    @PreAuthorize("hasAuthority('ipd:order:edit')")
+    @PreAuthorize(NURSE_ACTION)
     @Operation(summary = "护士医嘱校对（批量，未校对不可执行）")
     @PostMapping("/verify")
     public Result<Integer> verify(@Valid @RequestBody InpatientOrderVerifyDTO dto) {
@@ -84,6 +95,7 @@ public class InpatientOrderController {
      * 待执行队列分页：加急优先、同级按计划时间升序。
      * 用于护士站医嘱工作区「待执行」页签，读取时同时为当天应执行的长期医嘱补执行计划（幂等）。
      */
+    @PreAuthorize(VIEW)
     @Operation(summary = "护士待执行队列（加急优先、按计划时间升序；会补当天长期医嘱计划）")
     @GetMapping("/execPendingList")
     public Result<IPage<InpatientOrderExecVO>> execPendingList(@Valid OrderExecPageQueryDTO query) {
@@ -94,7 +106,7 @@ public class InpatientOrderController {
      * 批量登记医嘱执行结果：已执行的同时计费，已跳过的必须留原因。
      * 用于护士站「待执行」页签勾选后提交执行。
      */
-    @PreAuthorize("hasAuthority('ipd:order:edit')")
+    @PreAuthorize(NURSE_ACTION)
     @Operation(summary = "医嘱执行（批量：2-已执行并计费 / 3-已跳过并留原因）")
     @PostMapping("/exec/complete")
     public Result<Integer> execComplete(@Valid @RequestBody OrderExecCompleteDTO execCompleteDTO) {
@@ -105,6 +117,7 @@ public class InpatientOrderController {
      * 执行记录分页：含已执行与已跳过，留痕不删除。
      * 用于护士站医嘱工作区「执行记录」页签回顾与追溯。
      */
+    @PreAuthorize(VIEW)
     @Operation(summary = "执行记录查询（含已执行 / 已跳过，留痕不删除）")
     @GetMapping("/execList")
     public Result<IPage<InpatientOrderExecVO>> execList(@Valid OrderExecPageQueryDTO query) {
@@ -115,6 +128,7 @@ public class InpatientOrderController {
      * 待校对医嘱计数。
      * 用于护士站医嘱工作区「待校对」页签的角标，按住院次过滤时只数该患者。
      */
+    @PreAuthorize(VIEW)
     @Operation(summary = "待校对医嘱数（护士站卡片）")
     @GetMapping("/countPendingVerify")
     public Result<Long> countPendingVerify(@RequestParam(required = false) Long admissionId) {
@@ -125,6 +139,7 @@ public class InpatientOrderController {
      * 待执行医嘱计数。
      * 用于护士站医嘱工作区「待执行」页签的角标，按住院次过滤时只数该患者。
      */
+    @PreAuthorize(VIEW)
     @Operation(summary = "待执行医嘱数（护士站卡片）")
     @GetMapping("/countPendingExec")
     public Result<Long> countPendingExec(@RequestParam(required = false) Long admissionId) {

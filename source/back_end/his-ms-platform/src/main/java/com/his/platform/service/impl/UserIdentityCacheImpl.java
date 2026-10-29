@@ -110,4 +110,20 @@ public class UserIdentityCacheImpl implements UserIdentityCache {
             log.warn("用户身份缓存全量失效失败,等待 TTL 兜底", e);
         }
     }
+
+    @Override
+    public void invalidateByRoleId(Long roleId) {
+        if (roleId == null) {
+            return;
+        }
+        List<String> userNames = sysUserMapper.selectUserNamesByRoleId(roleId);
+        if (userNames == null || userNames.isEmpty()) {
+            return;
+        }
+        for (String userName : userNames) {
+            if (TextUtil.hasText(userName)) {
+                invalidate(userName);
+            }
+        }
+    }
 }

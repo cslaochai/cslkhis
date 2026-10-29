@@ -258,8 +258,8 @@
                           :admission-label="admissionLabelFn" @saved="onInpatientSaved"/>
     <SurgeryApplyEdit v-model="surgeryVisible" :row="null" :admissions="admissionCandidates"
                       @saved="onInpatientSaved"/>
-    <ConsultationApply v-model="consultVisible" :depts="deptCandidates" :admission-id="admissionIdStr"
-                       :admission="admissionObj" @saved="onInpatientSaved"/>
+    <ConsultationApply v-model="consultVisible" :admission="admissionObj" :depts="deptCandidates"
+                       @saved="onInpatientSaved"/>
   </div>
 </template>
 
@@ -272,6 +272,7 @@ import {
   getLaboratoryApplyList, saveLaboratoryApply, deleteLaboratoryApply,
 } from '@/api/doctor';
 import {searchInspectionItem, searchLaboratoryItem} from '@/api/system';
+import {loadDeptOptions} from '@/lib/deptOptions';
 import {getInspectionTemplates, getLaboratoryTemplates} from '@/api/doctor';
 import {getInspectionDetail, getLaboratoryDetail, getCriticalValueListPage} from '@/api/medicaltech';
 import InspectionDetail from '@/views/lab/InspectionDetail.vue';
@@ -291,12 +292,20 @@ const orderTab = ref('inspection');
 const patientId = computed(() => props.patient?.patientId);
 const registId = computed(() => props.patient?.registId);
 const admissionId = computed(() => props.patient?.admissionId);
-const admissionIdStr = computed(() => (admissionId.value != null ? String(admissionId.value) : ''));
 const admissionObj = computed(() => (admissionId.value != null
   ? {admissionId: admissionId.value, patientId: patientId.value, patientName: props.patient?.patientName}
   : null));
 const admissionCandidates = computed(() => (admissionObj.value ? [admissionObj.value] : []));
 const deptCandidates = ref([]);
+// 会诊/转住院弹框的科室候选：全院末级科室（不按当前岗位收口，否则急诊医生只能请到急诊科）
+const loadDeptCandidates = async () => {
+  try {
+    deptCandidates.value = await loadDeptOptions({scope: 'ALL', deptType: '1,2,4', leafOnly: true});
+  } catch (error) {
+    console.error('加载科室候选失败:', error);
+    deptCandidates.value = [];
+  }
+};
 const admissionLabelFn = (a) => `住院号 ${a?.admissionId ?? ''}`;
 
 // ---------- 检查 ----------
@@ -566,7 +575,7 @@ const applyLabTpl = (t) => {
 
 // ---------- 生命周期 ----------
 const reloadAll = () => { loadIns(); loadLab(); loadCritical(); };
-onMounted(() => { reloadAll(); loadTpls(); });
+onMounted(() => { reloadAll(); loadTpls(); loadDeptCandidates(); });
 watch(() => props.patient?.id, () => { insList.value = []; labList.value = []; criticalList.value = []; reloadAll(); });
 // 医嘱套套用后由父组件（EmergencyDoctorView）调用来刷新检查/检验列表
 defineExpose({reloadAll});

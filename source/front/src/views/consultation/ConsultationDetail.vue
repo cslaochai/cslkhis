@@ -10,6 +10,7 @@
       <el-descriptions-item label="床号">{{ text(detail.bedNo) }}</el-descriptions-item>
       <el-descriptions-item label="申请科室">{{ text(detail.fromDeptName) }}</el-descriptions-item>
       <el-descriptions-item label="会诊科室">{{ text(detail.toDeptName) }}</el-descriptions-item>
+      <el-descriptions-item label="会诊类别">{{ text(detail.consultCategoryText) }}</el-descriptions-item>
       <el-descriptions-item label="会诊范围">{{ text(detail.consultTypeText) }}</el-descriptions-item>
       <el-descriptions-item label="紧急程度">{{ text(detail.isUrgentText) }}</el-descriptions-item>
       <el-descriptions-item label="申请医生">{{ text(detail.applyDoctorName) }}</el-descriptions-item>
@@ -29,24 +30,6 @@
       </el-icon>
       {{ detail.overdueText }}
     </div>
-    <div class="mt-3 flex items-center gap-2 text-[11px] text-slate-400">
-      <el-icon>
-        <Clock/>
-      </el-icon>
-      等待/应答时长由后端按申请与接诊时间计算
-      <el-icon class="ml-2">
-        <Document/>
-      </el-icon>
-      完成会诊后病历号可见（{{ text(detail?.recordNo) }}）
-      <el-icon class="ml-2">
-        <User/>
-      </el-icon>
-      留痕为员工ID对应的姓名
-      <el-icon class="ml-2">
-        <CircleCheck/>
-      </el-icon>
-      状态机由后端强制
-    </div>
     <template #footer>
       <el-button v-if="detail?.canFinish" v-perm="'ipd:consultation:edit'" type="primary"
                  @click="finishFromDetail">完成会诊
@@ -63,7 +46,7 @@
  */
 import {computed, ref, watch} from 'vue';
 import {ElMessage} from 'element-plus';
-import {CircleCheck, Clock, Document, User, Warning} from '@element-plus/icons-vue';
+import {Warning} from '@element-plus/icons-vue';
 import {getConsultationDetail} from '@/api/inpatientConsultation';
 import {fmt, text} from '@/lib/consultation';
 

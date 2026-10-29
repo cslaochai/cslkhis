@@ -20,36 +20,58 @@ public class PolicyPriceVO implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
-    /** 政策编码（OPD_CONSULT / EMG_CONSULT） */
+    /**
+     * 政策编码（OPD_CONSULT / EMG_CONSULT）
+     */
     private String policyCode;
 
-    /** 政策项目名称（物价目录名） */
+    /**
+     * 政策项目名称（物价目录名）
+     */
     private String policyName;
 
-    /** 院内费用行项目编码（biz_fee_record.item_code，如 ZCF/JZCF） */
+    /**
+     * 院内费用行项目编码（biz_fee_record.item_code，如 ZCF/JZCF）
+     */
     private String itemCode;
 
-    /** 院内费用行项目名称 */
+    /**
+     * 院内费用行项目名称
+     */
     private String itemName;
 
-    /** 计价单位 */
+    /**
+     * 计价单位
+     */
     private String unit;
 
-    /** 支付分类（FeeCatalogTypeEnum：3-丙类） */
+    /**
+     * 支付分类（FeeCatalogTypeEnum：3-丙类）
+     */
     private Integer catalogType;
 
-    /** 档位码（对齐 ClinicDiagnosisTierEnum：1-普通 2-副主任 3-主任 4-知名专家） */
+    /**
+     * 档位码（1-普通 2-副主任 3-主任 4-知名专家，定义见 com.his.common.support.TitleTierMapping）
+     */
     private Integer tierCode;
 
-    /** 档位名称 */
+    /**
+     * 档位名称
+     */
     private String tierLabel;
 
-    /** 国家医保编码（门诊档位子码 / 急诊主项码） */
+    /**
+     * 国家医保编码（门诊档位子码 / 急诊主项码）
+     */
     private String ybCode;
 
-    /** 全额（元） */
+    /**
+     * 全额（元）
+     */
     private BigDecimal amount;
 
-    /** 加收额（元）：门诊副主任及以上拆「主项目+加收」两行用，无加收为 null */
+    /**
+     * 加收额（元）：门诊副主任及以上拆「主项目+加收」两行用，无加收为 null
+     */
     private BigDecimal surcharge;
 }
