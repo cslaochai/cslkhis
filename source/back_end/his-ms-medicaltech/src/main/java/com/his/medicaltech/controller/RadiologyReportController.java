@@ -78,7 +78,7 @@ public class RadiologyReportController {
     @PostMapping("/submit")
     @PreAuthorize("hasAuthority('medtech:radioDiagnosis:write')")
     public Result<RadioReportDetailVO> submit(@Valid @RequestBody RadioReportUpsertDTO dto) {
-        return Result.success("已提交审核", radiologyReportService.submit(dto));
+        return Result.success("已提交审核", radiologyReportService.submit(dto, dto.getPin()));
     }
 
     /**
@@ -89,7 +89,7 @@ public class RadiologyReportController {
     @PostMapping("/audit")
     @PreAuthorize("hasAuthority('medtech:radioDiagnosis:audit')")
     public Result<RadioReportDetailVO> audit(@Valid @RequestBody RadioReportAuditDTO dto) {
-        return Result.success("审核通过", radiologyReportService.audit(dto));
+        return Result.success("审核通过", radiologyReportService.audit(dto, dto.getPin()));
     }
 
     /**

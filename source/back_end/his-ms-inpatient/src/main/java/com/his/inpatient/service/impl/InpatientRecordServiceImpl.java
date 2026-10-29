@@ -536,7 +536,7 @@ public class InpatientRecordServiceImpl extends ServiceImpl<BizInpatientRecordMa
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public int submit(InpatientRecordSubmitDTO dto) {
+    public int submit(InpatientRecordSubmitDTO dto, String pin) {
         CurrentUser operatorUser = UserUtils.getCurrentUser();
         if (operatorUser == null) {
             throw new BusinessException("当前用户信息不存在");
@@ -563,7 +563,7 @@ public class InpatientRecordServiceImpl extends ServiceImpl<BizInpatientRecordMa
             bizInpatientRecordMapper.updateById(r);
 
             SignatureVO sig = signOrFail(r, SignSceneEnum.SUBMIT,
-                    "病历提交");
+                    "病历提交", pin);
             if (sig != null) {
                 // 签名服务已经 UPDATE 过锚点。把新值同步回内存实体后再写一次，
                 // 否则内存里的旧 signStatus=0 会在别处 updateById 时把锚点**覆盖回去**
@@ -588,7 +588,7 @@ public class InpatientRecordServiceImpl extends ServiceImpl<BizInpatientRecordMa
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public int archive(InpatientRecordArchiveDTO dto) {
+    public int archive(InpatientRecordArchiveDTO dto, String pin) {
         CurrentUser operatorUser = UserUtils.getCurrentUser();
         if (operatorUser == null) {
             throw new BusinessException("当前用户信息不存在");
@@ -610,7 +610,7 @@ public class InpatientRecordServiceImpl extends ServiceImpl<BizInpatientRecordMa
             // 已签名的直接跳过（blockReason 会拒绝重复签，不能把整个归档批次拖挂）。
             if (!Objects.equals(1, r.getSignStatus())) {
                 SignatureVO sig = signOrFail(r,
-                        SignSceneEnum.ARCHIVE, "病历归档");
+                        SignSceneEnum.ARCHIVE, "病历归档", pin);
                 if (sig != null) {
                     r.setSignStatus(1);
                     r.setSignId(sig.getId());
@@ -643,7 +643,8 @@ public class InpatientRecordServiceImpl extends ServiceImpl<BizInpatientRecordMa
      */
     private SignatureVO signOrFail(BizInpatientRecord r,
                                    SignSceneEnum scene,
-                                   String actionLabel) {
+                                   String actionLabel,
+                                   String pin) {
         CurrentUser operatorUser = UserUtils.getCurrentUser();
         if (operatorUser == null) {
             throw new BusinessException("当前用户信息不存在");
@@ -656,6 +657,8 @@ public class InpatientRecordServiceImpl extends ServiceImpl<BizInpatientRecordMa
         cmd.setSignerName(operatorUser.getRealName());
         cmd.setSignerDeptId(operatorUser.getDeptId());
         cmd.setSignerDeptName(operatorUser.getDeptName());
+        // PIN 走签名域校验：明文只在这一层流过，不落库、不进日志
+        cmd.setPin(pin);
         try {
             return signatureService.sign(cmd);
         } catch (BusinessException e) {

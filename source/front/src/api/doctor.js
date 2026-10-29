@@ -12,6 +12,7 @@ export function getPrescriptionListPage(params) {
 }
 
 // 处方审核（审方药师签名；审核人由后端从登录态取，前端不传）
+// pin 为药师本次输入的 PIN；退回（auditResult=2）不产生签名，无需传 pin
 export function auditPrescription(data) {
     return request.post('/prescription/audit', data)
 }
@@ -32,6 +33,7 @@ export function getInspectionApplyList(params) {
 }
 
 // 检查开单（批次E：开单即落库，不再等"保存病历"）
+// 开单即签：pin 为签名人本次输入的 PIN，后端校验通过才解密私钥
 export function saveInspectionApply(data) {
     return request.post('/inspection/applyUpsert', data)
 }
@@ -47,6 +49,7 @@ export function getLaboratoryApplyList(params) {
 }
 
 // 检验开单（开单即落库）
+// 开单即签：pin 为签名人本次输入的 PIN，后端校验通过才解密私钥
 export function saveLaboratoryApply(data) {
     return request.post('/laboratory/applyUpsert', data)
 }

@@ -16,4 +16,9 @@ public class InspectionAuditDTO {
      * 审核人（可选）
      */
     private String auditBy;
+
+    /**
+     * 签名 PIN（软签二次确认）：签名人本人输入，明文不入库
+     */
+    private String pin;
 }

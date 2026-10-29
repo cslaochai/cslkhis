@@ -69,6 +69,16 @@ public class SignCertVO {
     private String keyFingerprintGroups;
 
     /**
+     * CA 签发者（issuer）；为空表示尚未线下送 CA 签发
+     */
+    private String caIssuer;
+
+    /**
+     * CA 证书序列号（CA 回执）
+     */
+    private String caSerial;
+
+    /**
      * 签发方式（1-人工签发 2-系统自动签发）
      */
     private Integer issuedMode;

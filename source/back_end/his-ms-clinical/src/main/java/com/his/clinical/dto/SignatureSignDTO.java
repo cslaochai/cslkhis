@@ -33,4 +33,9 @@ public class SignatureSignDTO {
      * 补签原因（补签必填，写进 remark）
      */
     private String remark;
+
+    /**
+     * 签名 PIN（软签二次确认）：签名人本人输入，明文不入库
+     */
+    private String pin;
 }

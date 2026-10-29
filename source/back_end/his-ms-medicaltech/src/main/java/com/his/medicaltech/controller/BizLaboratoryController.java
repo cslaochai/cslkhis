@@ -93,7 +93,7 @@ public class BizLaboratoryController {
     @Operation(summary = "审核检验报告")
     @PostMapping("/audit")
     public Result<Void> auditLaboratory(@Valid @RequestBody LaboratoryAuditDTO auditDTO) {
-        boolean success = medicalTechService.auditLaboratory(auditDTO.getRecordId(), auditDTO.getAuditBy());
+        boolean success = medicalTechService.auditLaboratory(auditDTO.getRecordId(), auditDTO.getAuditBy(), auditDTO.getPin());
         return success ? Result.success("审核成功", null) : Result.error("审核失败");
     }
 

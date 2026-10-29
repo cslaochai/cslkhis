@@ -51,8 +51,10 @@ public interface CriticalNoticeService {
 
     /**
      * 签发：校验在院 → 医师电子签名（业务类型=9）→ 状态 1→2
+     *
+     * @param pin 签名人本次输入的 PIN（软签二次确认，明文不入库）
      */
-    void issue(CriticalNoticeDTO.Issue dto);
+    void issue(CriticalNoticeDTO.Issue dto, String pin);
 
     /**
      * 签收：家属手写签名+法定关系落板，状态 2→3

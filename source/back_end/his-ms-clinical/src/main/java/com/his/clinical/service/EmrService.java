@@ -58,8 +58,10 @@ public interface EmrService extends IService<BizMedicalRecord> {
 
     /**
      * 新增处方
+     *
+     * @param pin 签名人本次输入的 PIN（软签二次确认）
      */
-    boolean addPrescription(BizPrescription prescription);
+    boolean addPrescription(BizPrescription prescription, String pin);
 
     /**
      * 获取处方详情（包含明细）
@@ -115,9 +117,10 @@ public interface EmrService extends IService<BizMedicalRecord> {
      *
      * @param dto      病历保存DTO
      * @param isSubmit 是否提交（true=结诊，false=临时保存）
+     * @param pin      签名人本次输入的 PIN（软签二次确认）；结诊时才用得上
      * @return 保存后的病历ID
      */
-    Long saveMedicalRecord(MedicalRecordSaveDTO dto, boolean isSubmit);
+    Long saveMedicalRecord(MedicalRecordSaveDTO dto, boolean isSubmit, String pin);
 
     // 检查/检验申请单（批次E：开单即落库 + 删除保护 + 结果回显）
 
@@ -129,17 +132,19 @@ public interface EmrService extends IService<BizMedicalRecord> {
      * 价格让前端传等于把定价权交给浏览器。
      *
      * @param dto 开单入参
+     * @param pin 签名人本次输入的 PIN（软签二次确认）
      * @return 落库后的申请单（含执行进度字段）
      */
-    BizInspectionApplyVO upsertInspectionApply(InspectionApplyUpsertDTO dto);
+    BizInspectionApplyVO upsertInspectionApply(InspectionApplyUpsertDTO dto, String pin);
 
     /**
      * 检验开单（开单即落库），语义同 {@link #upsertInspectionApply(InspectionApplyUpsertDTO)}。
      *
      * @param dto 开单入参
+     * @param pin 签名人本次输入的 PIN（软签二次确认）
      * @return 落库后的申请单（含执行进度字段）
      */
-    BizLaboratoryApplyVO upsertLaboratoryApply(LaboratoryApplyUpsertDTO dto);
+    BizLaboratoryApplyVO upsertLaboratoryApply(LaboratoryApplyUpsertDTO dto, String pin);
 
     /**
      * 删除检查申请单（带保护）。

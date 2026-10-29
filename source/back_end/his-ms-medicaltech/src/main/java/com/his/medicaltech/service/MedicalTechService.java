@@ -62,7 +62,7 @@ public interface MedicalTechService extends IService<BizInspectionRecord> {
      * 技师的动作到 {@link #finishShoot(Long)} 为止。
      */
     boolean executeInspection(Long recordId, String executeBy, String resultDescription,
-                              String resultConclusion, String suggestions);
+                              String resultConclusion, String suggestions, String pin);
 
     /**
      * 拍片完成（**放射**项目专用，技师岗的终点，sql/138）。
@@ -84,7 +84,7 @@ public interface MedicalTechService extends IService<BizInspectionRecord> {
     /**
      * 审核检查报告
      */
-    boolean auditInspection(Long recordId, String auditBy);
+    boolean auditInspection(Long recordId, String auditBy, String pin);
 
     /**
      * 检查报告签名 PDF 验签：重算文件 SHA-256 与落库签名值 + 证书公钥比对。
@@ -133,12 +133,12 @@ public interface MedicalTechService extends IService<BizInspectionRecord> {
      * 录入检验结果
      */
     boolean inputLabResult(Long recordId, String executeBy, List<BizLabResult> results,
-                           String diagnosis, String suggestions);
+                           String diagnosis, String suggestions, String pin);
 
     /**
      * 审核检验报告
      */
-    boolean auditLaboratory(Long recordId, String auditBy);
+    boolean auditLaboratory(Long recordId, String auditBy, String pin);
 
     /**
      * 检验报告签名 PDF 验签：重算文件 SHA-256 与落库签名值 + 证书公钥比对。

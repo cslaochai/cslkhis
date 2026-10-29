@@ -13,16 +13,20 @@ public interface InpatientOrderService {
     /**
      * 开立 / 修改医嘱（一次提交 = 一个组套）
      *
+     * @param dto  医嘱入参
+     * @param pin 签名人本次输入的 PIN（软签二次确认，明文不入库）
      * @return 本次的组套号（orderGroup）
      */
-    String save(InpatientOrderUpsertDTO dto);
+    String save(InpatientOrderUpsertDTO dto, String pin);
 
     /**
      * 护士医嘱校对（批量）：校对通过才生成执行计划、才进执行队列
      *
+     * @param dto  校对入参
+     * @param pin 签名人本次输入的 PIN（软签二次确认，明文不入库）
      * @return 实际校对成功的条数
      */
-    int verify(InpatientOrderVerifyDTO dto);
+    int verify(InpatientOrderVerifyDTO dto, String pin);
 
     /**
      * 停止长期医嘱（同组套整组停）

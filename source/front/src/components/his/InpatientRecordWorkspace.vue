@@ -521,6 +521,9 @@
         <el-button @click="detailDialog = false">关闭</el-button>
       </template>
     </el-dialog>
+
+    <!-- 软签二次确认：病历提交与归档各落一次签名，由签名人本人输入 PIN -->
+    <SignPinDialog ref="pinDialogRef" v-model="pinDialogVisible"/>
   </div>
 </template>
 
@@ -542,6 +545,7 @@ import {
 } from '@/api/inpatientRecord';
 import {extractEmrText} from '@/api/ai';
 import {searchIcd10} from '@/api/system';
+import SignPinDialog from '@/components/his/SignPinDialog.vue';
 import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination';
 // ---------------- 基础数据 ----------------
 const admissions = ref([]);
@@ -656,6 +660,9 @@ const statCards = computed(() => [
 // ---------------- 新建 / 编辑 ----------------
 const dialog = ref(false);
 const saving = ref(false);
+// 软签二次确认：PIN 由签名人本人输入，服务端校验通过才解密私钥
+const pinDialogRef = ref(null);
+const pinDialogVisible = ref(false);
 const editingId = ref('');
 const recordTypeOptions = ref([]);
 const emptyForm = () => ({
@@ -880,12 +887,18 @@ const submitRecord = async () => {
   }
 };
 const doSubmit = async (row) => {
+  // 提交要落签名：先取 PIN，取消则不提交
+  const pin = await pinDialogRef.value.askPin();
+  if (!pin) {
+    ElMessage.info('已取消签名，病历未提交');
+    return;
+  }
   try {
-    const res = await submitInpatientRecord({ids: [row.id]});
+    const res = await submitInpatientRecord({ids: [row.id], pin});
     ElMessage.success(`已提交 ${res.data} 份病历`);
     await reloadAll();
   } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
-    
+
   }
 };
 const doArchive = async (row) => {
@@ -899,13 +912,19 @@ const doArchive = async (row) => {
       ElMessage.warning('归档说明必填');
       return;
     }
-    const res = await archiveInpatientRecord({ids: [row.id], remark: value});
+    // 归档要落签名：先取 PIN，取消则不归档
+    const pin = await pinDialogRef.value.askPin();
+    if (!pin) {
+      ElMessage.info('已取消签名，病历未归档');
+      return;
+    }
+    const res = await archiveInpatientRecord({ids: [row.id], remark: value, pin});
     ElMessage.success(`已归档 ${res.data} 份病历`);
     await reloadAll();
   } catch (error) {
     if (error === 'cancel' || error === 'close')
       return;
-    
+
   }
 };
 // ---------------- 详情（要素明细） ----------------

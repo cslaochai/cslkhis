@@ -336,7 +336,7 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public boolean addPrescription(BizPrescription prescription) {
+    public boolean addPrescription(BizPrescription prescription, String pin) {
         // 抗菌药物处方权闸：必须在落库之前 —— 开出去再拦，处方号已经生成、库存已经锁定。
         // 目录外药品由端口内部放过，临床侧只把本单全部药品ID上交。
         List<Long> drugIds = prescription.getDetails() == null ? Collections.emptyList()
@@ -365,7 +365,7 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
         }
 
         // 开方签名：必须在明细落库之后 —— 被签内容包括处方明细，先签会签出一份"没有药"的处方
-        signPrescription(prescription);
+        signPrescription(prescription, pin);
 
         return true;
     }
@@ -375,8 +375,10 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
      *
      * <p>签名失败即抛出让整个开方事务回滚：**一张"开出去了但没有医师签名"的处方
      * 比一张开不出去的处方更危险** —— 它会安静地流到发药窗口。
+     *
+     * @param pin 签名人本次输入的 PIN（软签二次确认）
      */
-    private void signPrescription(BizPrescription p) {
+    private void signPrescription(BizPrescription p, String pin) {
         SignCommandDTO cmd = new SignCommandDTO();
         cmd.setBizType(SignBizTypeEnum.PRESCRIPTION.getCode());
         cmd.setBizId(p.getId());
@@ -385,6 +387,7 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
         cmd.setSignerName(p.getDoctorName());
         cmd.setSignerDeptId(p.getDeptId());
         cmd.setSignerDeptName(p.getDeptName());
+        cmd.setPin(pin);
         try {
             SignatureVO sig = emrSignatureService.sign(cmd);
             // 同步回内存实体：本方法之后若还有 updateById(prescription)，旧值会把锚点覆盖掉
@@ -423,15 +426,17 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
      *
      * <p>只签医师签名ID 为空的行：签名服务自己也会拒绝重复签名，
      * 但在这里先滤掉可以让"已签的处方"不参与，避免整批回滚。
+     *
+     * @param pin 签名人本次输入的 PIN（软签二次确认）
      */
-    private void signPrescriptionsOfRecord(BizMedicalRecord r) {
+    private void signPrescriptionsOfRecord(BizMedicalRecord r, String pin) {
         List<BizPrescription> list = bizPrescriptionMapper.selectList(
                 new LambdaQueryWrapper<BizPrescription>()
                         .eq(BizPrescription::getRecordId, r.getId())
                         .isNull(BizPrescription::getDoctorSignId)
                         .orderByAsc(BizPrescription::getId));
         for (BizPrescription p : list) {
-            signPrescription(p);
+            signPrescription(p, pin);
         }
     }
 
@@ -607,7 +612,7 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public BizInspectionApplyVO upsertInspectionApply(InspectionApplyUpsertDTO dto) {
+    public BizInspectionApplyVO upsertInspectionApply(InspectionApplyUpsertDTO dto, String pin) {
         RegistStateRowVO appoint = requireAppoint(dto.getRegistId());
         PatientBriefVO patient = requirePatient(dto.getPatientId());
         LabItemVO item = medicalTechFacadeService.findInspectionItem(dto.getInspectionItemId());
@@ -649,13 +654,13 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
             bizInspectionApplyMapper.insert(apply);
         }
         // 开单即签：签名失败整单回滚（与门诊病历"结诊即签"同一口径，不留"开了单没签名"的半成品）
-        signInspectionApply(apply);
+        signInspectionApply(apply, pin);
         return toInspectionApplyVO(apply);
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public BizLaboratoryApplyVO upsertLaboratoryApply(LaboratoryApplyUpsertDTO dto) {
+    public BizLaboratoryApplyVO upsertLaboratoryApply(LaboratoryApplyUpsertDTO dto, String pin) {
         RegistStateRowVO appoint = requireAppoint(dto.getRegistId());
         PatientBriefVO patient = requirePatient(dto.getPatientId());
         LabItemVO item = medicalTechFacadeService.findLabItem(dto.getLaboratoryItemId());
@@ -698,7 +703,7 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
         } else {
             bizLaboratoryApplyMapper.insert(apply);
         }
-        signLaboratoryApply(apply);
+        signLaboratoryApply(apply, pin);
         return toLaboratoryApplyVO(apply);
     }
 
@@ -855,8 +860,10 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
     /**
      * 检查申请单电子签名（业务类型=7，场景=申请开立）：模式A下既用于「结诊统一签名」的新行开单，
      * 也用于已落库行的重签（作废-补签闭环）；签名失败随本事务回滚。
+     *
+     * @param pin 签名人本次输入的 PIN（软签二次确认）
      */
-    private void signInspectionApply(BizInspectionApply apply) {
+    private void signInspectionApply(BizInspectionApply apply, String pin) {
         SignCommandDTO cmd = new SignCommandDTO();
         cmd.setBizType(SignBizTypeEnum.INSPECTION_APPLY.getCode());
         cmd.setBizId(apply.getId());
@@ -865,6 +872,7 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
         cmd.setSignerName(apply.getDoctorName());
         cmd.setSignerDeptId(apply.getDeptId());
         cmd.setSignerDeptName(apply.getDeptName());
+        cmd.setPin(pin);
         try {
             SignatureVO sig = emrSignatureService.sign(cmd);
             apply.setSignStatus(ObjectSignStatusEnum.SIGNED.getCode());
@@ -877,8 +885,10 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
 
     /**
      * 检验申请单电子签名（业务类型=8，场景=申请开立），规则同 {@link #signInspectionApply}。
+     *
+     * @param pin 签名人本次输入的 PIN（软签二次确认）
      */
-    private void signLaboratoryApply(BizLaboratoryApply apply) {
+    private void signLaboratoryApply(BizLaboratoryApply apply, String pin) {
         SignCommandDTO cmd = new SignCommandDTO();
         cmd.setBizType(SignBizTypeEnum.LAB_APPLY.getCode());
         cmd.setBizId(apply.getId());
@@ -887,6 +897,7 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
         cmd.setSignerName(apply.getDoctorName());
         cmd.setSignerDeptId(apply.getDeptId());
         cmd.setSignerDeptName(apply.getDeptName());
+        cmd.setPin(pin);
         try {
             SignatureVO sig = emrSignatureService.sign(cmd);
             apply.setSignStatus(ObjectSignStatusEnum.SIGNED.getCode());
@@ -1214,7 +1225,8 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
      * 让执行记录的 apply_id 悬空。
      */
     private void ensureInspectionApplies(Long registId, RegistStateRowVO appoint, PatientBriefVO patient,
-                                         List<MedicalRecordSaveDTO.InspectionApplyDTO> dtos, boolean isSubmit) {
+                                         List<MedicalRecordSaveDTO.InspectionApplyDTO> dtos, boolean isSubmit,
+                                         String pin) {
         if (registId == null || CollectionUtils.isEmpty(dtos)) {
             return;
         }
@@ -1260,7 +1272,7 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
             }
             // 结诊提交：内容最终确认，统一签名锁定（已签名行在上面已跳过）
             if (isSubmit && apply.getId() != null) {
-                signInspectionApply(apply);
+                signInspectionApply(apply, pin);
             }
         }
     }
@@ -1289,7 +1301,8 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
     }
 
     private void ensureLaboratoryApplies(Long registId, RegistStateRowVO appoint, PatientBriefVO patient,
-                                         List<MedicalRecordSaveDTO.LaboratoryApplyDTO> dtos, boolean isSubmit) {
+                                         List<MedicalRecordSaveDTO.LaboratoryApplyDTO> dtos, boolean isSubmit,
+                                         String pin) {
         if (registId == null || CollectionUtils.isEmpty(dtos)) {
             return;
         }
@@ -1335,7 +1348,7 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
             }
             // 结诊提交：内容最终确认，统一签名锁定（已签名行在上面已跳过）
             if (isSubmit && apply.getId() != null) {
-                signLaboratoryApply(apply);
+                signLaboratoryApply(apply, pin);
             }
         }
     }
@@ -1420,7 +1433,7 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public Long saveMedicalRecord(MedicalRecordSaveDTO recordSaveDTO, boolean isSubmit) {
+    public Long saveMedicalRecord(MedicalRecordSaveDTO recordSaveDTO, boolean isSubmit, String pin) {
         // 结诊门槛：草稿可部分保存，提交时临床必填必须齐全（见 requireSubmitFields）
         if (isSubmit) {
             requireSubmitFields(recordSaveDTO);
@@ -1698,12 +1711,12 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
         //    把执行记录的 apply_id 删成悬空。这里同步前端提交的申请单数组（无 id 新增、
         //    有 id 更新），结诊提交（isSubmit=true）时统一电子签名（内容最终确认、签名即锁定）。
         ensureInspectionApplies(recordSaveDTO.getRegistId(), appointInfo, patientInfo,
-                recordSaveDTO.getInspectionApplies(), isSubmit);
+                recordSaveDTO.getInspectionApplies(), isSubmit, pin);
         backfillApplyRecord(recordSaveDTO.getRegistId(), recordId, bizMedicalRecord.getRecordNo());
 
         // 4. 检验申请（同 3）
         ensureLaboratoryApplies(recordSaveDTO.getRegistId(), appointInfo, patientInfo,
-                recordSaveDTO.getLaboratoryApplies(), isSubmit);
+                recordSaveDTO.getLaboratoryApplies(), isSubmit, pin);
 
         // 5. 如果是结诊，还需要提交病历并生成收费单
         if (isSubmit) {
@@ -1773,12 +1786,12 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
             //     签名绑的是内容摘要，先把病历内容全部写定再签，才能保证"签完之后内容不再变"。
             //     同时也必须在"已提交状态落库之后"：签名服务是从库里读对象状态做放行判断的，
             //     只改内存对象没用（住院病历那边实测被这条拦过）。
-            signOutpatientRecord(bizMedicalRecord);
+            signOutpatientRecord(bizMedicalRecord, pin);
 
             // 13b. 同一时刻签本次就诊的处方（开方医师签名，P5.6）。
             //      处方在本次保存里是"先删后增"重建出来的，到这里必然都是未签名的；
             //      草稿阶段的临时保存不会进这个分支（本块整体在「结诊提交」里）。
-            signPrescriptionsOfRecord(bizMedicalRecord);
+            signPrescriptionsOfRecord(bizMedicalRecord, pin);
 
             // 14. 事务提交后异步收尾：规则质控 + 引导单 PDF + 处方签 PDF。
             //     这三件事原来同步堵在结诊事务里（iText 加载 simsun 字体 + 规则引擎全量跑 + 两次写盘），
@@ -1821,8 +1834,10 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
      *
      * <p>签名落库后把新签名值同步回内存实体：本方法之后若还有 updateById(bizMedicalRecord)
      * 之类的写操作，内存里的旧 signStatus（null/0）会把刚落库的锚点覆盖掉。
+     *
+     * @param pin 签名人本次输入的 PIN（软签二次确认）
      */
-    private void signOutpatientRecord(BizMedicalRecord r) {
+    private void signOutpatientRecord(BizMedicalRecord r, String pin) {
         SignCommandDTO cmd = new SignCommandDTO();
         cmd.setBizType(SignBizTypeEnum.OUTPATIENT_RECORD.getCode());
         cmd.setBizId(r.getId());
@@ -1831,6 +1846,7 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
         cmd.setSignerName(r.getDoctorName());
         cmd.setSignerDeptId(r.getDeptId());
         cmd.setSignerDeptName(r.getDeptName());
+        cmd.setPin(pin);
         try {
             SignatureVO sig = emrSignatureService.sign(cmd);
             r.setSignStatus(ObjectSignStatusEnum.SIGNED.getCode());

@@ -48,6 +48,14 @@ public class SignCommandDTO {
     private String signerTitle;
 
     /**
+     * 签名人本次输入的 PIN（软签二次确认）。
+     *
+     * <p>无 UKey 硬件时用 PIN 代替芯片内的 PIN 保护：每次签名都要签名人本人输入，
+     * 明文不入库、只存哈希。跨模块内部流程直调时由调用方透传。
+     */
+    private String pin;
+
+    /**
      * 来源 IP（留痕，可为空）
      */
     private String clientIp;

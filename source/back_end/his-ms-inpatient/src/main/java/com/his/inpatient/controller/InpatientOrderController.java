@@ -54,7 +54,7 @@ public class InpatientOrderController {
     @Operation(summary = "开立/修改医嘱（一次提交 = 一个组套），返回组套号")
     @PostMapping("/save")
     public Result<String> save(@RequestBody @Valid InpatientOrderUpsertDTO dto) {
-        return Result.success("医嘱已保存", inpatientOrderService.save(dto));
+        return Result.success("医嘱已保存", inpatientOrderService.save(dto, dto.getPin()));
     }
 
     /**
@@ -65,7 +65,7 @@ public class InpatientOrderController {
     @Operation(summary = "护士医嘱校对（批量，未校对不可执行）")
     @PostMapping("/verify")
     public Result<Integer> verify(@Valid @RequestBody InpatientOrderVerifyDTO dto) {
-        return Result.success("医嘱校对成功", inpatientOrderService.verify(dto));
+        return Result.success("医嘱校对成功", inpatientOrderService.verify(dto, dto.getPin()));
     }
 
     /**

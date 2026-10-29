@@ -221,7 +221,7 @@ public class InpatientLeaveServiceImpl extends ServiceImpl<BizInpatientLeaveMapp
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public void approve(InpatientLeaveDTO.Approve dto) {
+    public void approve(InpatientLeaveDTO.Approve dto, String pin) {
         BizInpatientLeave leave = requireLeave(dto.getId());
         if (!Objects.equals(LeaveStatusEnum.PENDING.getCode(), leave.getLeaveStatus())) {
             throw new BusinessException("只有「待审批」的请假单能审批，当前为「"
@@ -278,6 +278,8 @@ public class InpatientLeaveServiceImpl extends ServiceImpl<BizInpatientLeaveMapp
             cmd.setSignerTitle(TextUtil.cutToNull(bizInpatientLeaveMapper.selectEmployeeTitle(me), 50));
             cmd.setClientIp(dto.getClientIp());
             cmd.setRemark("住院请假单审批（" + InpatientLeaveTypeEnum.getLabel(leave.getLeaveType(), "—") + "）");
+            // PIN 走签名域校验：明文只在这一层流过，不落库、不进日志
+            cmd.setPin(pin);
             try {
                 SignatureVO sig = emrSignatureService.sign(cmd);
                 // 锚点三件套必须在这里一起写：provider 的 applySignAnchor 已把 sign_status 置 1，

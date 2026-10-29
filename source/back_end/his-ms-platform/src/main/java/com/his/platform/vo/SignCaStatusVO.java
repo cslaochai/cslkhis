@@ -8,17 +8,12 @@ import java.io.Serializable;
 @Data
 public class SignCaStatusVO implements Serializable {
 
-    /** 证书签发模式（internal-演示模式 external-远程 CA） */
+    /** CA 交互方式（offline-线下人工：HIS 生成密钥对、申请单线下送 CA、回填证书） */
     private String caMode;
 
-    /**
-     * external 模式下的适配器名，internal 为 null
-     */
-    private String providerName;
-
-    /** 远程 CA 通道是否就绪（仅配置为 external 模式时为真） */
+    /** 是否可用：线下人工模式下恒为 true（不依赖任何 CA 接口连通性） */
     private Boolean available;
 
-    /** 当前模式的签发行为提示文案（信任根与中断/回退口径） */
+    /** 当前签发行为提示文案（信任根与线下流程口径） */
     private String hint;
 }

@@ -7,28 +7,17 @@ his:
     iterations: 120000
     # 证书默认有效期（天）
     default-valid-days: 365
-    # 缺证书时是否自动签发（首次签名按需向 CA 申请证书，避免把业务堵死）
-    auto-issue-cert: true
     # 默认时间来源：1-本机时钟 2-院内授时服务器 3-第三方TSA
     # 本期未接入 2/3，即使这里填 2 或 3 也会被运行期降级成 1 并在日志里告警（不谎报可信时间）
     time-source: 1
-    # 证书签发模式：internal-演示模式（默认，不调用远程签名认证，签发只提示不落证书）；external-远程CA（csssl，RA公钥签发，私钥本地托管）
-    # external 模式下 csssl 未返回证书即中断签发，绝不静默回退到本地自签
-    ca-mode: ${HIS_SIGN_CA_MODE:internal}
     # 新签发证书的密钥算法：SM2（国密，默认，对齐 WS/T 847）或 RSA2048（兼容既有链路）
     key-algorithm: ${HIS_SIGN_KEY_ALGO:SM2}
-    # 外部CA（csssl）对接：地址与服务账号由 profile / 环境变量覆盖（见 application-pro.yml）
+    # csssl 认证中心对接地址：仅用于可信时间戳（TSA）通道。
+    # 证书签发为线下人工，不经此地址。
     ca-base-url: ""
-    ca-username: ""
-    ca-password: ""
     ca-timeout-ms: 5000
-    # 外部CA（csssl）接口路径（相对 ca-base-url），与 CA 侧 REST 路由契约一致
+    # csssl 接口路径（相对 ca-base-url），与 CA 侧 REST 路由契约一致
     ca-paths:
-      login-public-key: /auth/publicKey
-      login: /auth/login
-      cert-issue: /admin/certs/public-key
-      # {certId} 由签发回执返回的证书主键替换
-      cert-download: "/admin/certs/{certId}/cert.pem"
       tsa-stamp: /tsa/stamp
       tsa-public-key: /tsa/publicKey
     # 可信时间戳（TSA）统一由 csssl 认证中心提供：HIS 侧不自建 TSA、不自签时间戳令牌。

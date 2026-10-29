@@ -31,7 +31,7 @@ public class MedicalRecordController {
     @Operation(summary = "保存病历（临时保存）")
     @PostMapping("/recordSave")
     public Result<String> recordSave(@RequestBody @Valid MedicalRecordSaveDTO recordSaveDTO) {
-        Long recordId = emrService.saveMedicalRecord(recordSaveDTO, false);
+        Long recordId = emrService.saveMedicalRecord(recordSaveDTO, false, recordSaveDTO.getPin());
         return Result.success("保存成功", String.valueOf(recordId));
     }
 
@@ -44,7 +44,7 @@ public class MedicalRecordController {
     @Operation(summary = "结诊提交病历")
     @PostMapping("/recordSubmitDirect")
     public Result<String> recordSubmitDirect(@RequestBody @Valid MedicalRecordSaveDTO recordSaveDTO) {
-        Long recordId = emrService.saveMedicalRecord(recordSaveDTO, true);
+        Long recordId = emrService.saveMedicalRecord(recordSaveDTO, true, recordSaveDTO.getPin());
         return Result.success("结诊成功", String.valueOf(recordId));
     }
 

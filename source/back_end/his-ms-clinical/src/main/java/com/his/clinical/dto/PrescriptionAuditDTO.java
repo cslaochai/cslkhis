@@ -30,4 +30,9 @@ public class PrescriptionAuditDTO {
      * 审方意见（通过时可为空；**退回时必填**，作为退回原因记入处方与站内信）
      */
     private String auditOpinion;
+
+    /**
+     * 签名 PIN（软签二次确认）：签名人本人输入，明文不入库
+     */
+    private String pin;
 }

@@ -158,7 +158,7 @@ public class PrescriptionServiceImpl extends ServiceImpl<BizMedicalRecordMapper,
     @Override
     @Transactional(rollbackFor = Exception.class)
     public BizPrescriptionVO auditPrescription(PrescriptionAuditDTO dto, Long auditorId, String auditorName,
-                                               Long auditorDeptId, String auditorDeptName) {
+                                               Long auditorDeptId, String auditorDeptName, String pin) {
         BizPrescription p = bizPrescriptionMapper.selectById(dto.getPrescriptionId());
         if (p == null) {
             throw new BusinessException("处方不存在或已被删除");
@@ -208,6 +208,7 @@ public class PrescriptionServiceImpl extends ServiceImpl<BizMedicalRecordMapper,
             cmd.setSignerName(auditorName);
             cmd.setSignerDeptId(auditorDeptId);
             cmd.setSignerDeptName(auditorDeptName);
+            cmd.setPin(pin);
             cmd.setRemark("审方：" + (opinion == null ? "" : opinion));
             SignatureVO sig;
             try {

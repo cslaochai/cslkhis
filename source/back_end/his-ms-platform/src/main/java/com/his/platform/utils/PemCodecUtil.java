@@ -43,6 +43,32 @@ public final class PemCodecUtil {
         return wrap(PUBLIC_HEADER, PUBLIC_FOOTER, key.getEncoded());
     }
 
+    /**
+     * 从 X.509 证书 PEM 中取出公钥（SPKI 格式 PEM）。
+     *
+     * <p>用于 CA 线下签发回填时校验「证书里的公钥」与「本地密钥对」是否同一对——
+     * 不一致说明贴错了证书，回填了也验不过签。
+     *
+     * @return 公钥 PEM；证书无法解析时返回 null（由调用方给出人话报错）
+     */
+    public static String publicKeyFromCertificate(String certPem) {
+        if (certPem == null || certPem.isBlank()) {
+            return null;
+        }
+        try {
+            java.security.cert.CertificateFactory cf =
+                    java.security.cert.CertificateFactory.getInstance("X.509");
+            try (java.io.ByteArrayInputStream in = new java.io.ByteArrayInputStream(
+                    certPem.getBytes(java.nio.charset.StandardCharsets.US_ASCII))) {
+                java.security.cert.Certificate cert = cf.generateCertificate(in);
+                PublicKey pub = cert.getPublicKey();
+                return pub == null ? null : toPem(pub);
+            }
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
     public static String toPem(PrivateKey key) {
         return wrap(PRIVATE_HEADER, PRIVATE_FOOTER, key.getEncoded());
     }

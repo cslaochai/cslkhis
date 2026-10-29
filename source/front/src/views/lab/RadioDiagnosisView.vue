@@ -144,6 +144,9 @@
         <el-button @click="showAudit = false">取消</el-button>
       </template>
     </el-dialog>
+
+    <!-- 软签二次确认：审核通过要落审核医师签名，由审核人本人输入 PIN -->
+    <SignPinDialog ref="pinDialogRef" v-model="pinDialogVisible"/>
   </div>
 </template>
 
@@ -170,6 +173,7 @@ import {
 import {patientGenderText} from '@/lib/patientGender';
 import {hasPerm} from '@/lib/perm';
 import ExamImagePanel from '@/components/his/ExamImagePanel.vue';
+import SignPinDialog from '@/components/his/SignPinDialog.vue';
 import RadioDiagnosisWrite from './RadioDiagnosisWrite.vue';
 import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination';
 
@@ -267,6 +271,9 @@ const handleWriteSaved = async () => {
 // ========== 审核 / 退回 ==========
 const auditRow = ref(null);
 const auditOpinion = ref('');
+// 软签二次确认：PIN 由签名人本人输入，服务端校验通过才解密私钥
+const pinDialogRef = ref(null);
+const pinDialogVisible = ref(false);
 const auditDetail = ref(null);
 const openAudit = async (row) => {
   if (!row.reportId)
@@ -282,15 +289,21 @@ const openAudit = async (row) => {
   showAudit.value = true;
 };
 const doAudit = async () => {
+  // 审核通过要落审核医师签名：先取 PIN，取消则不提交
+  const pin = await pinDialogRef.value.askPin();
+  if (!pin) {
+    ElMessage.info('已取消签名，审核未提交');
+    return;
+  }
   submitting.value = true;
   try {
-    await auditRadioReport({reportId: auditRow.value?.reportId, reason: auditOpinion.value});
+    await auditRadioReport({reportId: auditRow.value?.reportId, reason: auditOpinion.value, pin});
     ElMessage.success('审核通过（审核医师签名已完成）');
     showAudit.value = false;
     await Promise.all([loadData(), loadTabCounts()]);
   } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
     // 服务端会拒绝「自己审自己」与「跳过审核」，这两条必须原样弹出来，不能吞掉
-    
+
   } finally {
     submitting.value = false;
   }
@@ -300,6 +313,7 @@ const doReject = async () => {
     return ElMessage.warning('退回必须写明原因');
   submitting.value = true;
   try {
+    // 退回重写不产生签名（签名=签发），因此不需要 PIN
     await rejectRadioReport({reportId: auditRow.value?.reportId, reason: auditOpinion.value});
     ElMessage.success('已退回，报告回到草稿');
     showAudit.value = false;

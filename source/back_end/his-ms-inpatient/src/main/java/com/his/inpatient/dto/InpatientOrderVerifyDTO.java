@@ -17,4 +17,9 @@ public class InpatientOrderVerifyDTO implements Serializable {
      */
     @NotEmpty(message = "请选择要校对的医嘱")
     private List<Long> orderIds;
+
+    /**
+     * 签名 PIN（软签二次确认）：签名人本人输入，明文不入库
+     */
+    private String pin;
 }

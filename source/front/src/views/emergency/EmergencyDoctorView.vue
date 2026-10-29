@@ -610,6 +610,9 @@
         @cancel="rxSignVisible = false"
     />
 
+    <!-- ========== 软签二次确认（PIN 由签名人本人输入，服务端校验通过才解密私钥）========== -->
+    <SignPinDialog ref="pinDialogRef" v-model="pinDialogVisible"/>
+
     <!-- ========== 医嘱套（复用门诊「药品/耗材套餐」数据；套用=药品进当前处方页签，检查/检验直接提交急诊申请单）========== -->
     <el-dialog v-model="pkgVisible" title="医嘱套" width="640px" destroy-on-close
                data-testid="emg-doc-pkg-dialog">
@@ -744,6 +747,7 @@ import {
 import PatientBriefBar from '@/components/his/PatientBriefBar.vue';
 import PatientDetailDialog from '@/components/his/PatientDetailDialog.vue';
 import PageActionBar from '@/components/his/PageActionBar.vue';
+import SignPinDialog from '@/components/his/SignPinDialog.vue';
 import RxSignDialog from '@/views/doctor-workstation/RxSignDialog.vue';
 import EmergencyTransferEdit from '@/views/emergency/EmergencyTransferEdit.vue';
 import EmergencyTimeline from '@/views/emergency/EmergencyTimeline.vue';
@@ -1480,6 +1484,17 @@ const applyPkg = async (pkg) => {
   try {
     const res = await getDrugPackageDetail(pkg.id);
     const details = res.data?.details || [];
+    // 检查/检验开单即签：一个套餐可能含多张申请单，弹一次 PIN 复用于本批次全部签名
+    const hasSignedItem = details.some((d) => (d.itemType === 2 || d.itemType === 3)
+        && current.value?.registId && current.value?.patientId);
+    let pin = null;
+    if (hasSignedItem) {
+      pin = await pinDialogRef.value.askPin();
+      if (!pin) {
+        ElMessage.info('已取消签名，套餐未套用');
+        return;
+      }
+    }
     let rxCount = 0, insCount = 0, labCount = 0;
     for (const d of details) {
       if (d.itemType === 1) {
@@ -1507,6 +1522,7 @@ const applyPkg = async (pkg) => {
           patientNo: current.value.patientNo,
           clinicalDiagnosis: recordForm.diagnosisName || '',
           isEmergency: 1,
+          pin,
         };
         if (recordForm.id) base.recordId = recordForm.id;
         if (d.itemType === 2) {
@@ -1613,6 +1629,9 @@ const saving = ref(false);
 const rxSignVisible = ref(false);
 const pendingRxCount = ref(0);
 let pendingSubmitData = null;
+// 软签二次确认：PIN 由签名人本人输入，服务端校验通过才解密私钥
+const pinDialogRef = ref(null);
+const pinDialogVisible = ref(false);
 
 const saveAll = async () => {
   if (!current.value) return;
@@ -1713,14 +1732,21 @@ const onRxSigned = async (dataUrl) => {
   saving.value = true;
   // 结诊带 silent：否决项拦截要弹框让医生选，不能让全局红条先弹一遍；其余失败提示归本函数
   try {
+    // 软签二次确认：结诊这一次请求里后端要签病历+处方，弹一次 PIN 即可
+    const pin = await pinDialogRef.value.askPin();
+    if (!pin) {
+      ElMessage.info('已取消签名，本次结诊未提交');
+      return;
+    }
     let res;
     try {
-      res = await submitMedicalRecord(data, {silent: true});
+      res = await submitMedicalRecord({...data, pin}, {silent: true});
     } catch (e) {
       const action = await handleEmrSubmitVeto(e);
       if (action === 'cancel') return;
       if (action !== 'force') throw e;
-      res = await submitMedicalRecord({...data, forceSubmit: true}, {silent: true});
+      // 驳回后重试的是同一次结诊，复用同一个 PIN
+      res = await submitMedicalRecord({...data, forceSubmit: true, pin}, {silent: true});
     }
     if (res.data) recordForm.id = res.data;
     ElMessage.success('已保存并提交（处方已签名）');

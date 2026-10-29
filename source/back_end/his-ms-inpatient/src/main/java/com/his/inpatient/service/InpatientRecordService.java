@@ -36,16 +36,20 @@ public interface InpatientRecordService {
     /**
      * 提交（批量；草稿 → 已提交，记录 submitTime 与书写医生）
      *
+     * @param dto  提交入参
+     * @param pin 签名人本次输入的 PIN（软签二次确认，明文不入库）
      * @return 实际提交份数
      */
-    int submit(InpatientRecordSubmitDTO dto);
+    int submit(InpatientRecordSubmitDTO dto, String pin);
 
     /**
      * 归档（批量；已提交 → 已归档。归档是单向门，归档说明必填）
      *
+     * @param dto  归档入参
+     * @param pin 签名人本次输入的 PIN（软签二次确认，明文不入库）
      * @return 实际归档份数
      */
-    int archive(InpatientRecordArchiveDTO dto);
+    int archive(InpatientRecordArchiveDTO dto, String pin);
 
     /**
      * 修改日志分页（可按单据查，也可按入院查"这次住院所有文书的修改轨迹"）

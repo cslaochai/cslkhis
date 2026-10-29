@@ -6,15 +6,14 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.his.platform.config.SignProperties;
 import com.his.platform.entity.SysSignCert;
 import com.his.platform.mapper.SysSignCertMapper;
-import com.his.platform.service.ExternalCaChannelService;
 import com.his.platform.service.SignCertService;
-import com.his.platform.utils.KeyPairFactory;
 import com.his.platform.utils.SignCryptoUtil;
-import com.his.spi.dto.SignCertIssueDTO;
+import com.his.spi.dto.SignCertBindDTO;
+import com.his.spi.dto.SignCertKeygenDTO;
 import com.his.spi.dto.SignCertPageQueryDTO;
 import com.his.spi.dto.SignCertRevokeDTO;
 import com.his.spi.service.SignCertFacadeService;
-import com.his.spi.vo.SignCaProbeOutboundVO;
+import com.his.spi.vo.SignCaApplyVO;
 import com.his.spi.vo.SignCaStatusVO;
 import com.his.spi.vo.SignCertBriefVO;
 import com.his.spi.vo.SignCertSelectListVO;
@@ -30,7 +29,7 @@ import java.util.List;
 
 /**
  * SignCertFacadeService 在 his-sign 侧的实现：运行时签名/验签代理内部能力，
- * 证书台账运维（分页 / 详情 / 签发 / 吊销 / 下拉）与 CA 状态探针转调内部服务。
+ * 证书台账运维（分页 / 详情 / 密钥生成 / 证书回填 / 吊销 / 下拉）与 CA 状态转调内部服务。
  */
 @Slf4j
 @Service
@@ -42,8 +41,6 @@ public class SignCertFacadeServiceImpl implements SignCertFacadeService {
     private final SysSignCertMapper sysSignCertMapper;
 
     private final SignProperties signProperties;
-
-    private final ExternalCaChannelService externalCaChannelService;
 
     // ---------- 运行时：证书取用 / 私钥 / 签名运算（代理内部能力） ----------
 
@@ -70,9 +67,10 @@ public class SignCertFacadeServiceImpl implements SignCertFacadeService {
     }
 
     @Override
-    public String privatePemOf(Long certId) {
+    public String signWithCert(Long certId, String content, String pin) {
+        // 私钥的解密与使用全部收在签名域内：调用方只拿到签名值，私钥不出本模块
         SysSignCert cert = sysSignCertMapper.selectById(certId);
-        return signCertService.privatePemOf(cert);
+        return signCertService.signWithPin(cert, content, pin);
     }
 
     @Override
@@ -109,11 +107,6 @@ public class SignCertFacadeServiceImpl implements SignCertFacadeService {
     @Override
     public String sha256Hex(String content) {
         return SignCryptoUtil.sha256Hex(content);
-    }
-
-    @Override
-    public String signWithPrivateKey(String privatePem, String content) {
-        return SignCryptoUtil.sign(privatePem, content);
     }
 
     @Override
@@ -159,9 +152,14 @@ public class SignCertFacadeServiceImpl implements SignCertFacadeService {
     }
 
     @Override
-    public SignCertVO issueCert(SignCertIssueDTO dto) {
+    public SignCaApplyVO keygenCert(SignCertKeygenDTO dto) {
         // 操作人在 web 层补；Facade 路径无登录态，操作人留空，签发事实仍落库
-        com.his.platform.vo.SignCertVO inner = signCertService.issue(dto, null, null);
+        return signCertService.keygen(dto, null, null);
+    }
+
+    @Override
+    public SignCertVO bindCert(SignCertBindDTO dto) {
+        com.his.platform.vo.SignCertVO inner = signCertService.bind(dto, null, null);
         SignCertVO vo = new SignCertVO();
         BeanUtils.copyProperties(inner, vo);
         return vo;
@@ -194,44 +192,11 @@ public class SignCertFacadeServiceImpl implements SignCertFacadeService {
     @Override
     public SignCaStatusVO caStatus() {
         SignCaStatusVO vo = new SignCaStatusVO();
-        String mode = signProperties.getCaMode();
-        vo.setCaMode(mode);
-        boolean available = externalCaChannelService.available();
-        vo.setAvailable(available);
-        if (available) {
-            vo.setProviderName(externalCaChannelService.name());
-            vo.setHint("远程签名认证模式：证书由 CA 认证中心（csssl）签发，私钥本地托管；"
-                    + "适配器未返回证书时中断签发，绝不静默回退到本地自签");
-        } else {
-            vo.setProviderName(null);
-            vo.setHint("演示模式（internal）：未开启远程签名认证，证书签发不落证书，仅提示；"
-                    + "如需真实签发请将 his.sign.ca-mode 配置为 external");
-        }
-        return vo;
-    }
-
-    @Override
-    public SignCaProbeOutboundVO probeCaOutbound() {
-        SignCaProbeOutboundVO vo = new SignCaProbeOutboundVO();
-        if (!externalCaChannelService.available()) {
-            vo.setProviderName(null);
-            vo.setCsrPrinted(false);
-            vo.setCertReturned(false);
-            vo.setConclusion("当前为演示模式（internal），未开启远程签名认证、未向 CA 提交 CSR；"
-                    + "切换 external 后可再探外发通道");
-            return vo;
-        }
-        // 本地生成密钥对，只把公钥交给适配器试跑一次，私钥不出本地、不落库
-        KeyPairFactory.KeyPairPem pair = KeyPairFactory.generate();
-        ExternalCaChannelService.IssuedCert issued = externalCaChannelService.issueCert(
-                new ExternalCaChannelService.IssueRequest(
-                        "CN=CA探针, O=长沙市麓康医院", pair.publicPem(), 30));
-        vo.setProviderName(externalCaChannelService.name());
-        vo.setCsrPrinted(true);
-        vo.setCertReturned(issued != null);
-        vo.setConclusion(issued != null
-                ? "外部 CA 已返回证书，外发通道可用，可按真实机构流程接入"
-                : "CSR 已按适配器口径提交并打印到服务端控制台，适配器未返回证书（未接入真 CA）；签发在此中断，不回退到本地自签");
+        vo.setCaMode("offline");
+        vo.setAvailable(true);
+        vo.setHint("CA 交互为线下人工：HIS 本地生成密钥对（私钥加密托管、不出 HIS），"
+                + "管理员把「CA 签发申请单」线下送 CA 认证中心人工签发，再回填证书；"
+                + "全程不调用任何 CA 接口");
         return vo;
     }
 }

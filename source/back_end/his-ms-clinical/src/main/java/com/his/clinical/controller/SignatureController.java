@@ -2,10 +2,17 @@ package com.his.clinical.controller;
 
 import com.his.spi.vo.SignVerifyVO;
 import com.his.spi.vo.SignatureVO;
+import com.his.spi.service.SignCertFacadeService;
 import com.his.spi.service.TsaStampFacadeService;
+import com.his.spi.dto.SignCertBindDTO;
+import com.his.spi.dto.SignCertKeygenDTO;
+import com.his.spi.dto.SignCertPageQueryDTO;
+import com.his.spi.dto.SignCertRevokeDTO;
 import com.his.spi.dto.TsaTimeSourceDTO;
 import com.his.spi.dto.TsaTokenPageQueryDTO;
 import com.his.spi.dto.TsaTokenVerifyDTO;
+import com.his.spi.vo.SignCaApplyVO;
+import com.his.spi.vo.SignCertVO;
 import com.his.spi.vo.TsaStatusVO;
 import com.his.spi.vo.TsaTokenVO;
 import com.his.spi.vo.TsaTokenVerifyVO;
@@ -36,6 +43,7 @@ public class SignatureController {
     private final EmrSignatureService emrSignatureService;
     private final SignatureCenterService signatureCenterService;
     private final TsaStampFacadeService tsaStampFacadeService;
+    private final SignCertFacadeService signCertFacadeService;
 
     // 签名记录
 
@@ -126,7 +134,7 @@ public class SignatureController {
     @Operation(summary = "补签（管理员发起；签名人为当前登录用户，必须写明原因）")
     @PostMapping("/emr/signature/sign")
     public Result<SignatureVO> sign(@Valid @RequestBody SignatureSignDTO dto) {
-        return Result.success(signatureCenterService.sign(dto));
+        return Result.success(signatureCenterService.sign(dto, dto.getPin()));
     }
 
     /**
@@ -138,6 +146,61 @@ public class SignatureController {
     @PostMapping("/emr/signature/invalidate")
     public Result<SignatureVO> invalidate(@Valid @RequestBody SignatureInvalidateDTO dto) {
         return Result.success(signatureCenterService.invalidate(dto));
+    }
+
+    // ---------- 签名证书（CA 线下人工签发：生成密钥对 → 线下送 CA → 回填证书） ----------
+
+    /**
+     * 证书台账分页（按持有人、状态、签发方式与关键字过滤）。
+     */
+    @Operation(summary = "签名证书台账分页")
+    @GetMapping("/emr/signCert/listPage")
+    public Result<PageResult<SignCertVO>> signCertListPage(@Valid SignCertPageQueryDTO query) {
+        var page = signCertFacadeService.listCertPage(query);
+        return Result.success(PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(),
+                page.getPages(), page.getRecords()));
+    }
+
+    /**
+     * 单张证书详情：含公钥 PEM、指纹与 CA 签发信息。
+     */
+    @Operation(summary = "签名证书详情（含公钥 PEM 与指纹）")
+    @GetMapping("/emr/signCert/getById")
+    public Result<SignCertVO> signCertDetail(@RequestParam Long id) {
+        return Result.success(signCertFacadeService.getCertDetail(id));
+    }
+
+    /**
+     * 生成签名密钥对：返回「CA 签发申请单」（Subject DN + 公钥 PEM），供管理员线下送 CA 人工签发。
+     *
+     * <p>私钥在 HIS 本地生成并加密托管，全程不出 HIS；本接口不调用任何 CA 接口。
+     */
+    @PreAuthorize("hasAuthority('sign:center:edit')")
+    @Operation(summary = "生成签名密钥对（返回 CA 签发申请单，线下送 CA 人工签发）")
+    @PostMapping("/emr/signCert/keygen")
+    public Result<SignCaApplyVO> signCertKeygen(@Valid @RequestBody SignCertKeygenDTO dto) {
+        return Result.success(signCertFacadeService.keygenCert(dto));
+    }
+
+    /**
+     * 回填 CA 线下签发的证书：校验证书公钥与本地密钥对一致后转为有效状态。
+     */
+    @PreAuthorize("hasAuthority('sign:center:edit')")
+    @Operation(summary = "回填 CA 签发的证书")
+    @PostMapping("/emr/signCert/bind")
+    public Result<SignCertVO> signCertBind(@Valid @RequestBody SignCertBindDTO dto) {
+        return Result.success(signCertFacadeService.bindCert(dto));
+    }
+
+    /**
+     * 吊销证书：必须写明理由；吊销不删行，历史签名仍要靠它的公钥验通。
+     */
+    @PreAuthorize("hasAuthority('sign:center:edit')")
+    @Operation(summary = "吊销签名证书（必须写理由）")
+    @PostMapping("/emr/signCert/revoke")
+    public Result<SignCertVO> signCertRevoke(@Valid @RequestBody SignCertRevokeDTO dto) {
+        signCertFacadeService.revokeCert(dto);
+        return Result.success(signCertFacadeService.getCertDetail(dto.getCertId()));
     }
 
     // ---------- 可信时间戳运维（TSA 状态 / 令牌台账 / 时间来源 / 复验） ----------

@@ -48,8 +48,10 @@ public interface InpatientLeaveService {
 
     /**
      * 审批：allow=true 批准（当前登录医师电子签名锁定）；allow=false 拒绝（必填理由）
+     *
+     * @param pin 签名人本次输入的 PIN（软签二次确认，明文不入库；仅批准分支用得上）
      */
-    void approve(InpatientLeaveDTO.Approve dto);
+    void approve(InpatientLeaveDTO.Approve dto, String pin);
 
     /**
      * 登记离院 = 患方签署承诺书三要素（姓名/关系/手写签名）+ 实际离院时间

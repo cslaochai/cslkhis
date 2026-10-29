@@ -127,6 +127,26 @@ public class SysSignCert extends BaseEntity {
     private Integer signCount;
 
     /**
+     * 签名 PIN 哈希（软签二次确认用；PBKDF2 派生，明文不入库）
+     */
+    private String pinHash;
+
+    /**
+     * PIN 哈希派生盐（Base64）
+     */
+    private String pinSalt;
+
+    /**
+     * PIN 哈希派生迭代次数
+     */
+    private Integer pinIterations;
+
+    /**
+     * CA 签发申请单中的 Subject DN（线下送 CA 时用；CA 回填证书后仍保留备查）
+     */
+    private String caSubjectDn;
+
+    /**
      * 逻辑删除标志（0 未删除 1 已删除）
      */
     @TableLogic

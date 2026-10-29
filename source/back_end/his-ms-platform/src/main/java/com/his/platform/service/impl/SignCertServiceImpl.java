@@ -18,13 +18,17 @@ import com.his.spi.dto.SignCertRevokeDTO;
 import com.his.platform.entity.SysSignCert;
 import com.his.platform.mapper.SignConfigMapper;
 import com.his.platform.mapper.SysSignCertMapper;
-import com.his.platform.service.ExternalCaChannelService;
 import com.his.platform.service.RedisSequenceService;
 import com.his.platform.service.SignCertService;
 import com.his.platform.utils.KeyPairFactory;
 import com.his.platform.utils.KeyProtectorUtil;
+import com.his.platform.utils.PemCodecUtil;
 import com.his.platform.utils.SignCryptoUtil;
+import com.his.platform.utils.SignPinUtil;
 import com.his.platform.vo.SignCertVO;
+import com.his.spi.dto.SignCertBindDTO;
+import com.his.spi.dto.SignCertKeygenDTO;
+import com.his.spi.vo.SignCaApplyVO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DuplicateKeyException;
@@ -39,6 +43,10 @@ import java.util.Objects;
 
 /**
  * 签名证书服务实现。
+ *
+ * <p>CA 交互全程线下人工：HIS 本地生成密钥对（私钥加密托管，不出 HIS）→ 管理员把
+ * 「CA 签发申请单」（Subject DN + 公钥）线下送 CA 认证中心人工签发 → 管理员把返回的
+ * 证书 PEM 回填本系统。全程不调用任何 CA 接口。
  */
 @Slf4j
 @Service
@@ -53,13 +61,11 @@ public class SignCertServiceImpl extends ServiceImpl<SysSignCertMapper, SysSignC
 
     private final KeyProtectorUtil keyProtectorUtil;
 
+    private final SignPinUtil signPinUtil;
+
     private final SignProperties signProperties;
 
     private final RedisSequenceService redisSequenceService;
-    /**
-     * 外部 CA 适配器（M8 留口子）：无实现/未配置 external 时为 null，签发只提示不落证书
-     */
-    private final ExternalCaChannelService externalCaChannelService;
 
     // 取证书 / 自动签发
 
@@ -87,21 +93,20 @@ public class SignCertServiceImpl extends ServiceImpl<SysSignCertMapper, SysSignC
         if (exist != null) {
             return exist;
         }
-        if (!autoIssueEnabled()) {
-            throw new BusinessException("员工「" + (TextUtil.hasText(empName) ? empName : empId)
-                    + "」没有有效的签名证书，且系统已关闭自动签发；"
-                    + "请先在「签名中心 → 证书管理」为其签发证书");
-        }
-        log.info("自动签发签名证书：empId={} empName={}", empId, empName);
-        return doIssue(empId, empName, deptId, deptName, effectiveValidDays(null),
-                CertIssuedModeEnum.AUTO, null, null, "首次签名时由系统按需自动签发（CA 签发、私钥本地托管）");
+        // CA 交互已改为线下人工，系统无法自动完成签发——此时必须说清该怎么办，而不是静默发一张无 CA 背书的证书
+        throw new BusinessException("员工「" + (TextUtil.hasText(empName) ? empName : empId)
+                + "」没有有效的签名证书；证书签发需线下办理："
+                + "请在「签名中心 → 证书管理」先生成密钥对，把 CA 签发申请单线下送 CA 认证中心签发，再回填证书");
     }
 
+    /**
+     * 生成密钥对（CA 线下签发第一步）：私钥本地生成并加密托管，公钥随申请单线下送 CA。
+     *
+     * <p>不调用任何 CA 接口——HIS 与 CA 认证中心的交互全程线下人工完成。
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public SignCertVO issue(SignCertIssueDTO dto, Long operatorId, String operatorName) {
-        // C-非 web 入参：SignCertService.issue 是能力层 API，由 system 模块的 SignatureCenterServiceImpl 转调（操作人在层外补），
-        // 注解只能挂他模块 Controller，本层拿不到绑定校验，Bean Validation 不覆盖，保留
+    public SignCaApplyVO keygen(SignCertKeygenDTO dto, Long operatorId, String operatorName) {
         if (dto.getEmpId() == null) {
             throw new BusinessException("员工ID不能为空");
         }
@@ -114,58 +119,85 @@ public class SignCertServiceImpl extends ServiceImpl<SysSignCertMapper, SysSignC
                     + exist.getCertNo() + "（有效期至 " + exist.getValidTo() + "）；"
                     + "如需换新证书请先吊销原证书（吊销会留痕）");
         }
-        SysSignCert cert = doIssue(dto.getEmpId(), dto.getEmpName(), dto.getDeptId(), dto.getDeptName(),
-                effectiveValidDays(dto.getValidDays()), CertIssuedModeEnum.MANUAL,
-                operatorId, operatorName, dto.getRemark());
+        SysSignCert cert = doKeygen(dto.getEmpId(), dto.getEmpName(), dto.getDeptId(), dto.getDeptName(),
+                effectiveValidDays(null), dto.getPin(), dto.getRemark());
+        return toApplyVO(cert);
+    }
+
+    /**
+     * 回填 CA 签发的证书（CA 线下签发第二步）：校验证书公钥与本地密钥对一致后，转为有效状态。
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public SignCertVO bind(SignCertBindDTO dto, Long operatorId, String operatorName) {
+        if (dto.getCertId() == null) {
+            throw new BusinessException("证书ID不能为空");
+        }
+        SysSignCert cert = sysSignCertMapper.selectById(dto.getCertId());
+        if (cert == null) {
+            throw new BusinessException("证书不存在");
+        }
+        if (!Integer.valueOf(CertStatusEnum.PENDING_CA.getCode()).equals(cert.getCertStatus())) {
+            throw new BusinessException("证书 " + cert.getCertNo() + " 当前状态为「"
+                    + CertStatusEnum.getLabel(cert.getCertStatus()) + "」，只有「待CA签发」的证书才可回填；"
+                    + "如需换证请先生成新的密钥对");
+        }
+        if (!TextUtil.hasText(dto.getCertPem()) || !dto.getCertPem().contains("BEGIN CERTIFICATE")) {
+            throw new BusinessException("证书内容不合法：应为 CA 签发的 PEM 文本（含 -----BEGIN CERTIFICATE----- 段）");
+        }
+        // 公钥一致性校验：CA 回执的证书必须是用这把公钥签的，否则回填了也验不过签
+        String certPublicKey = PemCodecUtil.publicKeyFromCertificate(dto.getCertPem());
+        if (certPublicKey == null) {
+            throw new BusinessException("无法从回填的证书中解析出公钥，请确认贴入的是完整的证书 PEM");
+        }
+        if (!certPublicKey.trim().equals(cert.getPublicKey().trim())) {
+            throw new BusinessException("回填的证书与本证书的公钥不一致（证书指纹 "
+                    + SignCryptoUtil.fingerprintGroups(cert.getPublicKey()) + " ≠ "
+                    + SignCryptoUtil.fingerprintGroups(certPublicKey) + "）；"
+                    + "请核对是否贴错了别的证书");
+        }
+
+        int validDays = effectiveValidDays(dto.getValidDays());
+        LocalDateTime now = TimeUtil.nowSeconds();
+        cert.setCertPem(dto.getCertPem());
+        cert.setCaSerial(TextUtil.hasText(dto.getCaSerial()) ? dto.getCaSerial() : null);
+        cert.setCaIssuer(TextUtil.hasText(dto.getCaIssuer()) ? dto.getCaIssuer() : null);
+        cert.setValidFrom(now);
+        cert.setValidTo(now.plusDays(validDays));
+        cert.setCertStatus(CertStatusEnum.ACTIVE.getCode());
+        if (TextUtil.hasText(dto.getRemark())) {
+            cert.setRemark(dto.getRemark());
+        } else {
+            cert.setRemark("CA 线下签发，证书由管理员人工回填（私钥本地生成并加密托管，未出 HIS）");
+        }
+        sysSignCertMapper.updateById(cert);
+        log.info("回填 CA 签发证书 certNo={} empId={} caIssuer={} 有效期至={}",
+                cert.getCertNo(), cert.getEmpId(), cert.getCaIssuer(), cert.getValidTo());
         return toVO(cert, true);
     }
 
-    private SysSignCert doIssue(Long empId, String empName, Long deptId, String deptName,
-                                int validDays, CertIssuedModeEnum mode,
-                                Long operatorId, String operatorName, String remark) {
-        // 证书签发是 CA 认证中心（csssl）的职责，HIS 侧不自建 CA、不自签证书。
-        // internal = 演示模式：不调用远程签名认证，直接提示一句并中断签发（不落证书）。
-        // external = 真签发：本地生成密钥对（私钥不出本地、受主口令保护落库），把 Subject+公钥交给 csssl 签发；
-        //   适配器未返回证书即中断签发，绝不静默回退自签（那等于伪造信任根）。
-        if (!externalCaChannelService.available()) {
-            throw new BusinessException("未开启远程签名认证（his.sign.ca-mode=internal 演示模式），证书签发已跳过；"
-                    + "请将 his.sign.ca-mode 配置为 external 以调用 CA 认证中心签发");
-        }
-        return issueViaExternalCa(empId, empName, deptId, deptName, validDays, mode);
-    }
-
-    // 查询
-
     /**
-     * 外部 CA 签发路径：本地生成密钥对（私钥不出本地、主口令加密落库）→ 组 Subject+公钥提交 CA 签发。
+     * 生成密钥对并落库（状态=待CA签发）。
      *
-     * <p>csssl 适配器返回证书链后：公钥/指纹/受保护私钥沿用院内口径落库，CA 回执的
-     * 序列号/签发CA/证书链写入新增列（cert_pem / ca_serial / ca_issuer），有效期以
-     * CA 回执证书为准（CSSSL 证书 valid_from/valid_to 由 CA 生成）。
+     * <p>私钥在本机生成、经主口令加密后落库，全程不出 HIS；CA 认证中心只经手公钥。
      */
-    private SysSignCert issueViaExternalCa(Long empId, String empName, Long deptId, String deptName,
-                                           int validDays, CertIssuedModeEnum mode) {
+    private SysSignCert doKeygen(Long empId, String empName, Long deptId, String deptName,
+                                 int validDays, String pin, String remark) {
         // 没有主口令就不签发：宁可不发证，也不让私钥明文落库
         keyProtectorUtil.requireSecret();
 
         KeyPairFactory.KeyPairPem pair = KeyPairFactory.generate(signProperties.getKeyAlgorithm());
         String keyAlgo = signProperties.getKeyAlgorithm();
-        StringBuilder dn = new StringBuilder("CN=").append(TextUtil.hasText(empName) ? empName : "unknown")
-                .append(", O=长沙市麓康医院");
-        if (TextUtil.hasText(deptName)) {
-            dn.append(", OU=").append(deptName);
-        }
-        ExternalCaChannelService.IssuedCert issued = externalCaChannelService.issueCert(
-                new ExternalCaChannelService.IssueRequest(dn.toString(), pair.publicPem(), validDays));
-        if (issued == null) {
-            throw new BusinessException("外部 CA（" + externalCaChannelService.name() + "）未返回证书，签发已中断；"
-                    + "不会回退到本地自签（那等于伪造信任根），请检查 csssl 服务状态与 his.sign.ca-base-url 配置");
-        }
-
         String salt = keyProtectorUtil.newSalt();
         String protectedKey = keyProtectorUtil.protect(pair.privatePem(), salt, signProperties.getIterations());
+
+        // PIN 只存哈希：明文不入库、不落日志
+        String pinSalt = signPinUtil.newSalt();
+        String pinHash = signPinUtil.hash(pin, pinSalt, signPinUtil.defaultIterations());
+
         LocalDateTime now = TimeUtil.nowSeconds();
         LocalDateTime to = now.plusDays(validDays);
+        String dn = buildSubjectDn(empName, deptName);
 
         for (int attempt = 1; attempt <= 3; attempt++) {
             SysSignCert cert = new SysSignCert();
@@ -182,19 +214,20 @@ public class SignCertServiceImpl extends ServiceImpl<SysSignCertMapper, SysSignC
             cert.setProtectedPrivateKey(protectedKey);
             cert.setKeySalt(salt);
             cert.setKeyIterations(signProperties.getIterations());
-            cert.setIssuedMode(mode.getCode());
-            cert.setCertStatus(CertStatusEnum.ACTIVE.getCode());
+            cert.setPinHash(pinHash);
+            cert.setPinSalt(pinSalt);
+            cert.setPinIterations(signPinUtil.defaultIterations());
+            cert.setCaSubjectDn(dn);
+            cert.setIssuedMode(CertIssuedModeEnum.MANUAL.getCode());
+            cert.setCertStatus(CertStatusEnum.PENDING_CA.getCode());
             cert.setValidFrom(now);
             cert.setValidTo(to);
-            cert.setCertPem(issued.certPem());
-            cert.setCaSerial(issued.caSerial());
-            cert.setCaIssuer(issued.caIssuer());
             cert.setSignCount(0);
-            cert.setRemark("CSSSL院内CA公钥签发（私钥本地托管、证书由CA签发）");
+            cert.setRemark(remark);
             try {
                 sysSignCertMapper.insert(cert);
-                log.info("签发签名证书 certNo={} empId={} 算法={} caSerial={} 有效期至={}",
-                        cert.getCertNo(), empId, keyAlgo, issued.caSerial(), to);
+                log.info("生成签名密钥对 certNo={} empId={} 算法={} subject={}（待线下送 CA 签发）",
+                        cert.getCertNo(), empId, keyAlgo, dn);
                 return cert;
             } catch (DuplicateKeyException e) {
                 if (attempt == 3) {
@@ -204,9 +237,30 @@ public class SignCertServiceImpl extends ServiceImpl<SysSignCertMapper, SysSignC
                 log.warn("证书编号冲突，重试第 {} 次：{}", attempt, cert.getCertNo());
             }
         }
-        throw new BusinessException("证书签发失败");
+        throw new BusinessException("密钥对生成失败");
     }
 
+    /**
+     * CA 签发申请单上的 Subject DN：CN=姓名, O=机构, OU=科室
+     */
+    private String buildSubjectDn(String empName, String deptName) {
+        StringBuilder dn = new StringBuilder("CN=").append(TextUtil.hasText(empName) ? empName : "unknown")
+                .append(", O=长沙市麓康医院");
+        if (TextUtil.hasText(deptName)) {
+            dn.append(", OU=").append(deptName);
+        }
+        return dn.toString();
+    }
+
+    // 查询
+
+    /**
+     * 外部 CA 签发路径：本地生成密钥对（私钥不出本地、主口令加密落库）→ 组 Subject+公钥提交 CA 签发。
+     *
+     * <p>csssl 适配器返回证书链后：公钥/指纹/受保护私钥沿用院内口径落库，CA 回执的
+     * 序列号/签发CA/证书链写入新增列（cert_pem / ca_serial / ca_issuer），有效期以
+     * CA 回执证书为准（CSSSL 证书 valid_from/valid_to 由 CA 生成）。
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public SignCertVO revoke(SignCertRevokeDTO dto, Long operatorId, String operatorName) {
@@ -294,6 +348,11 @@ public class SignCertServiceImpl extends ServiceImpl<SysSignCertMapper, SysSignC
         if (Objects.equals(CertStatusEnum.REVOKED.getCode(), cert.getCertStatus())) {
             throw new BusinessException("证书 " + cert.getCertNo() + " 已吊销，不能用于签名");
         }
+        if (Objects.equals(CertStatusEnum.PENDING_CA.getCode(), cert.getCertStatus())) {
+            throw new BusinessException("证书 " + cert.getCertNo() + " 尚未完成 CA 签发（当前状态："
+                    + CertStatusEnum.getLabel(cert.getCertStatus()) + "）；"
+                    + "请先线下送 CA 签发并回填证书后才能用于签名");
+        }
         LocalDateTime now = TimeUtil.nowSeconds();
         if (cert.getValidTo() != null && cert.getValidTo().isBefore(now)) {
             throw new BusinessException("证书 " + cert.getCertNo() + " 已于 " + cert.getValidTo()
@@ -301,6 +360,37 @@ public class SignCertServiceImpl extends ServiceImpl<SysSignCertMapper, SysSignC
         }
         return keyProtectorUtil.unprotect(cert.getProtectedPrivateKey(), cert.getKeySalt(),
                 cert.getKeyIterations() == null ? signProperties.getIterations() : cert.getKeyIterations());
+    }
+
+    /**
+     * 软签签名：先校验签名人 PIN，再解密私钥完成签名。
+     *
+     * <p>PIN 是软签的「签名人专有」替身——UKey 时代由芯片内的 PIN 保证「签署时仅由签名人控制」，
+     * 无硬件时用一次性口令把这一步补上：口令不入库，只存 PBKDF2 哈希。
+     *
+     * @param cert    证书行
+     * @param content 待签内容
+     * @param pin     签名人本次输入的 PIN
+     * @return Base64 签名值
+     */
+    @Override
+    public String signWithPin(SysSignCert cert, String content, String pin) {
+        if (cert == null) {
+            throw new BusinessException("证书不存在");
+        }
+        if (!TextUtil.hasText(pin)) {
+            throw new BusinessException("请输入签名 PIN：软签要求每次签名都由签名人本人确认");
+        }
+        // PIN 校验先于私钥解密：口令不对就不碰私钥
+        boolean pinOk = signPinUtil.verify(pin, cert.getPinSalt(),
+                cert.getPinIterations() == null ? signPinUtil.defaultIterations() : cert.getPinIterations(),
+                cert.getPinHash());
+        if (!pinOk) {
+            log.warn("签名 PIN 校验失败 certNo={} empId={}", cert.getCertNo(), cert.getEmpId());
+            throw new BusinessException("签名 PIN 错误，无法完成签名");
+        }
+        String privatePem = privatePemOf(cert);
+        return SignCryptoUtil.sign(privatePem, content);
     }
 
     @Override
@@ -339,17 +429,29 @@ public class SignCertServiceImpl extends ServiceImpl<SysSignCertMapper, SysSignC
         return signProperties.getDefaultValidDays() > 0 ? signProperties.getDefaultValidDays() : 365;
     }
 
-    private boolean autoIssueEnabled() {
-        String v = signConfigMapper.selectValue(SystemConfigKeyConst.SIGN_CERT_AUTO_ISSUE);
-        if (TextUtil.hasText(v)) {
-            return !"0".equals(v.trim());
-        }
-        return signProperties.isAutoIssueCert();
-    }
-
     private String nextCertNo() {
         return CERT_NO_PREFIX + LocalDate.now().format(DateFormats.COMPACT_DATE)
                 + String.format("%04d", redisSequenceService.next("CERT"));
+    }
+
+    /**
+     * 生成「CA 签发申请单」：管理员拿这份单据线下送 CA 认证中心人工签发。
+     */
+    private SignCaApplyVO toApplyVO(SysSignCert c) {
+        SignCaApplyVO vo = new SignCaApplyVO();
+        vo.setCertId(c.getId());
+        vo.setCertNo(c.getCertNo());
+        vo.setEmpName(c.getEmpName());
+        vo.setSubjectDn(c.getCaSubjectDn());
+        vo.setPublicKeyPem(c.getPublicKey());
+        vo.setKeyFingerprintGroups(SignCryptoUtil.fingerprintGroups(c.getKeyFingerprint()));
+        vo.setValidDays(c.getValidTo() != null && c.getValidFrom() != null
+                ? (int) java.time.Duration.between(c.getValidFrom(), c.getValidTo()).toDays() : null);
+        vo.setCertStatusText(CertStatusEnum.getLabel(c.getCertStatus()));
+        vo.setGuide("线下签发流程：① 把下方 Subject DN 与公钥 PEM 送 CA 认证中心人工签发；"
+                + "② CA 返回证书 PEM 后，在「证书管理」用 certId=" + c.getCertNo() + " 回填证书；"
+                + "③ 回填后证书方可用于签名。私钥全程留在本系统，未曾送出。");
+        return vo;
     }
 
     private SignCertVO toVO(SysSignCert c, boolean withPublicKey) {
@@ -365,6 +467,8 @@ public class SignCertServiceImpl extends ServiceImpl<SysSignCertMapper, SysSignC
         vo.setSignAlgo(c.getSignAlgo());
         vo.setKeyFingerprint(c.getKeyFingerprint());
         vo.setKeyFingerprintGroups(SignCryptoUtil.fingerprintGroups(c.getKeyFingerprint()));
+        vo.setCaIssuer(c.getCaIssuer());
+        vo.setCaSerial(c.getCaSerial());
         vo.setIssuedMode(c.getIssuedMode());
         vo.setIssuedModeText(CertIssuedModeEnum.getLabel(c.getIssuedMode()));
         vo.setCertStatus(c.getCertStatus());

@@ -18,4 +18,9 @@ public class EcgAuditDTO {
      * 审核意见（通过时选填）/ 退回原因（退回时必填）
      */
     private String reason;
+
+    /**
+     * 签名 PIN（软签二次确认）：签名人本人输入，明文不入库
+     */
+    private String pin;
 }

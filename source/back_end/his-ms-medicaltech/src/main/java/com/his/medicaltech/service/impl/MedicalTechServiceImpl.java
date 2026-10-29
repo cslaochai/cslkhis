@@ -209,7 +209,7 @@ public class MedicalTechServiceImpl extends ServiceImpl<BizInspectionRecordMappe
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean executeInspection(Long recordId, String executeBy, String resultDescription,
-                                     String resultConclusion, String suggestions) {
+                                     String resultConclusion, String suggestions, String pin) {
         BizInspectionRecord record = this.getById(recordId);
         if (record == null) {
             throw new BusinessException("检查记录不存在");
@@ -266,7 +266,7 @@ public class MedicalTechServiceImpl extends ServiceImpl<BizInspectionRecordMappe
 
         // 报告医师签名：必须放在"结果与报告都落库之后" —— 被签内容包括检查描述与检查结论，
         // 而签名层是重新从库里读的，先签等于签出一份空报告。
-        SignatureVO sign = signInspectionReport(record, false);
+        SignatureVO sign = signInspectionReport(record, false, pin);
         record.setReportSignId(sign.getId());
         record.setReportSignedTime(sign.getSignedTime());
         return true;
@@ -305,7 +305,7 @@ public class MedicalTechServiceImpl extends ServiceImpl<BizInspectionRecordMappe
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public boolean auditInspection(Long recordId, String auditBy) {
+    public boolean auditInspection(Long recordId, String auditBy, String pin) {
         BizInspectionRecord record = this.getById(recordId);
         if (record == null) {
             throw new BusinessException("检查记录不存在");
@@ -313,7 +313,7 @@ public class MedicalTechServiceImpl extends ServiceImpl<BizInspectionRecordMappe
         deptScopeService.assertDeptAccessible(record.getInspectionDeptId());
         // 先签名、后改状态：签名层的准入规则要求记录处于「已出结果」，先把状态写成
         // 「已审核」会让签名层把自己拒掉（"已审核的不能重复签"）。
-        SignatureVO sign = signInspectionReport(record, true);
+        SignatureVO sign = signInspectionReport(record, true, pin);
         record.setAuditSignId(sign.getId());
         record.setAuditSignedTime(sign.getSignedTime());
         record.setAuditBy(auditBy);
@@ -325,7 +325,7 @@ public class MedicalTechServiceImpl extends ServiceImpl<BizInspectionRecordMappe
         // 审核通过后自动生成签名报告 PDF（含报告医师/审核医师签名区、审核医师手写笔迹 + 文件级数字签名）。
         // 生成失败不阻断审核：PDF 是交付物不是审核前置条件，失败留日志可在报告页重试。
         try {
-            ReportPdfFileVO pdfFile = reportPdfService.generateInspectionPdf(record);
+            ReportPdfFileVO pdfFile = reportPdfService.generateInspectionPdf(record, pin);
             if (pdfFile != null) {
                 record.setReportPdfPath(pdfFile.getRelativePath());
                 record.setReportPdfHash(pdfFile.getFileHash());
@@ -543,7 +543,8 @@ public class MedicalTechServiceImpl extends ServiceImpl<BizInspectionRecordMappe
             }
         }
         boolean success = this.inputLabResult(record.getId(),
-                labResultSaveDTO.getExecuteBy(), results, labResultSaveDTO.getDiagnosis(), labResultSaveDTO.getSuggestions());
+                labResultSaveDTO.getExecuteBy(), results, labResultSaveDTO.getDiagnosis(),
+                labResultSaveDTO.getSuggestions(), labResultSaveDTO.getPin());
         return success;
     }
 
@@ -566,7 +567,7 @@ public class MedicalTechServiceImpl extends ServiceImpl<BizInspectionRecordMappe
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean inputLabResult(Long recordId, String executeBy, List<BizLabResult> results,
-                                  String diagnosis, String suggestions) {
+                                  String diagnosis, String suggestions, String pin) {
         BizLaboratoryRecord record = bizLaboratoryRecordMapper.selectById(recordId);
         if (record == null) {
             throw new BusinessException("检验记录不存在");
@@ -604,7 +605,7 @@ public class MedicalTechServiceImpl extends ServiceImpl<BizInspectionRecordMappe
 
         // 报告医师签名：必须放在检验结果明细落库之后 —— 被签内容包含检验结果明细，
         // 只签一个 record 头等于签了个空信封（把"白细胞 1.0"改成"10.0"照样验得过去）。
-        SignatureVO sign = signLabReport(record, false);
+        SignatureVO sign = signLabReport(record, false, pin);
         record.setReportSignId(sign.getId());
         record.setReportSignedTime(sign.getSignedTime());
         return true;
@@ -658,14 +659,14 @@ public class MedicalTechServiceImpl extends ServiceImpl<BizInspectionRecordMappe
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public boolean auditLaboratory(Long recordId, String auditBy) {
+    public boolean auditLaboratory(Long recordId, String auditBy, String pin) {
         BizLaboratoryRecord record = bizLaboratoryRecordMapper.selectById(recordId);
         if (record == null) {
             throw new BusinessException("检验记录不存在");
         }
         deptScopeService.assertDeptAccessible(record.getLaboratoryDeptId());
         // 先签名、后改状态（同 auditInspection 的理由：签名层要求"已出结果未审核"）
-        SignatureVO sign = signLabReport(record, true);
+        SignatureVO sign = signLabReport(record, true, pin);
         record.setAuditSignId(sign.getId());
         record.setAuditSignedTime(sign.getSignedTime());
         record.setAuditBy(auditBy);
@@ -679,7 +680,7 @@ public class MedicalTechServiceImpl extends ServiceImpl<BizInspectionRecordMappe
                     new LambdaQueryWrapper<BizLabResult>()
                             .eq(BizLabResult::getRecordId, recordId)
                             .orderByAsc(BizLabResult::getSortOrder));
-            ReportPdfFileVO pdfFile = reportPdfService.generateLaboratoryPdf(record, results);
+            ReportPdfFileVO pdfFile = reportPdfService.generateLaboratoryPdf(record, results, pin);
             if (pdfFile != null) {
                 record.setReportPdfPath(pdfFile.getRelativePath());
                 record.setReportPdfHash(pdfFile.getFileHash());
@@ -732,19 +733,19 @@ public class MedicalTechServiceImpl extends ServiceImpl<BizInspectionRecordMappe
     /**
      * 检查报告签名（{@code audit=false} 报告医师 / {@code audit=true} 审核医师）
      */
-    private SignatureVO signInspectionReport(BizInspectionRecord r, boolean audit) {
+    private SignatureVO signInspectionReport(BizInspectionRecord r, boolean audit, String pin) {
         return signReport(SignBizTypeEnum.INSPECTION_REPORT.getCode(), r.getId(), r.getRecordNo(),
                 audit ? SignSceneEnum.REPORT_AUDIT : SignSceneEnum.REPORT_ISSUE,
-                r.getInspectionDeptId(), r.getInspectionDeptName(), "检查报告");
+                r.getInspectionDeptId(), r.getInspectionDeptName(), "检查报告", pin);
     }
 
     /**
      * 检验报告签名（同上）
      */
-    private SignatureVO signLabReport(BizLaboratoryRecord r, boolean audit) {
+    private SignatureVO signLabReport(BizLaboratoryRecord r, boolean audit, String pin) {
         return signReport(SignBizTypeEnum.LAB_REPORT.getCode(), r.getId(), r.getRecordNo(),
                 audit ? SignSceneEnum.REPORT_AUDIT : SignSceneEnum.REPORT_ISSUE,
-                r.getLaboratoryDeptId(), r.getLaboratoryDeptName(), "检验报告");
+                r.getLaboratoryDeptId(), r.getLaboratoryDeptName(), "检验报告", pin);
     }
 
     /**
@@ -758,7 +759,7 @@ public class MedicalTechServiceImpl extends ServiceImpl<BizInspectionRecordMappe
      * 比一次执行失败危险得多** —— 它会安静地流到临床。
      */
     private SignatureVO signReport(Integer bizType, Long bizId, String bizNo, SignSceneEnum scene,
-                                   Long deptId, String deptName, String bizLabel) {
+                                   Long deptId, String deptName, String bizLabel, String pin) {
         Long signerId = UserUtils.getCurrentUser().getEmployeeId();
         if (signerId == null) {
             throw new BusinessException(bizLabel + " " + bizNo + " 签名失败：取不到当前登录用户，无法确定签名人");
@@ -771,6 +772,7 @@ public class MedicalTechServiceImpl extends ServiceImpl<BizInspectionRecordMappe
         cmd.setSignerName(UserUtils.getCurrentUser().getRealName());
         cmd.setSignerDeptId(deptId);
         cmd.setSignerDeptName(deptName);
+        cmd.setPin(pin);
         try {
             return emrSignatureFacadeService.sign(cmd);
         } catch (BusinessException e) {

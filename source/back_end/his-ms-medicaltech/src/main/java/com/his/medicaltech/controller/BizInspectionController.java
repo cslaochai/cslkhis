@@ -95,7 +95,7 @@ public class BizInspectionController {
     public Result<Void> executeInspection(@Valid @RequestBody InspectionExecuteDTO executeDTO) {
         boolean success = medicalTechService.executeInspection(executeDTO.getRecordId(),
                 executeDTO.getExecuteBy(), executeDTO.getResultDescription(),
-                executeDTO.getResultConclusion(), executeDTO.getSuggestions());
+                executeDTO.getResultConclusion(), executeDTO.getSuggestions(), executeDTO.getPin());
         return success ? Result.success("执行成功", null) : Result.error("执行失败");
     }
 
@@ -121,7 +121,7 @@ public class BizInspectionController {
     @Operation(summary = "审核检查报告")
     @PostMapping("/audit")
     public Result<Void> auditInspection(@Valid @RequestBody InspectionAuditDTO auditDTO) {
-        boolean success = medicalTechService.auditInspection(auditDTO.getRecordId(), auditDTO.getAuditBy());
+        boolean success = medicalTechService.auditInspection(auditDTO.getRecordId(), auditDTO.getAuditBy(), auditDTO.getPin());
         return success ? Result.success("审核成功", null) : Result.error("审核失败");
     }
 

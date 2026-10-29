@@ -59,14 +59,18 @@ public interface EcgService {
     /**
      * 提交报告进入待审核并落报告医师签名（Holter 还需先完成分析）。
      * 用于心电书写弹框的「提交审核」。
+     *
+     * @param pin 签名人本次输入的签名 PIN（软签二次确认；为空则拒绝签名）
      */
-    EcgDetailVO submit(EcgReportUpsertDTO dto);
+    EcgDetailVO submit(EcgReportUpsertDTO dto, String pin);
 
     /**
      * 审核通过并落审核医师签名，审核人不得是报告人本人。
      * 用于心电工作站待审核报告的审核弹框。
+     *
+     * @param pin 签名人本次输入的签名 PIN（软签二次确认；为空则拒绝签名）
      */
-    EcgDetailVO audit(EcgAuditDTO dto);
+    EcgDetailVO audit(EcgAuditDTO dto, String pin);
 
     /**
      * 退回重写：结论作废、报告退回草稿并清签名。

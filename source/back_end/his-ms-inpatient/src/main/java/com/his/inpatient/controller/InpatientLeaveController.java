@@ -103,7 +103,7 @@ public class InpatientLeaveController {
     @PostMapping("/approve")
     public Result<Void> approve(@Valid @RequestBody InpatientLeaveDTO.Approve dto, HttpServletRequest request) {
         dto.setClientIp(request.getRemoteAddr());
-        inpatientLeaveService.approve(dto);
+        inpatientLeaveService.approve(dto, dto.getPin());
         return Result.success("已审批", null);
     }
 

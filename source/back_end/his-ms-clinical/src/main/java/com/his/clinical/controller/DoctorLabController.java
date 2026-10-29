@@ -44,7 +44,7 @@ public class DoctorLabController {
     @Operation(summary = "检验开单（开单即落库）")
     @PostMapping("/applyUpsert")
     public Result<BizLaboratoryApplyVO> applyUpsert(@Valid @RequestBody LaboratoryApplyUpsertDTO dto) {
-        return Result.success(emrService.upsertLaboratoryApply(dto));
+        return Result.success(emrService.upsertLaboratoryApply(dto, dto.getPin()));
     }
 
     /**

@@ -40,13 +40,13 @@ public class ReportPdfServiceImpl implements ReportPdfService {
     private final SystemFacadeService systemFacadeService;
 
     @Override
-    public ReportPdfFileVO generateInspectionPdf(BizInspectionRecord record) {
+    public ReportPdfFileVO generateInspectionPdf(BizInspectionRecord record, String pin) {
         if (record == null || !TextUtil.hasText(record.getRecordNo())) {
             return null;
         }
         try {
             byte[] pdfBytes = buildInspectionPdf(record);
-            return signAndStore(record.getRecordNo(), pdfBytes);
+            return signAndStore(record.getRecordNo(), pdfBytes, pin);
         } catch (Exception e) {
             log.error("检查报告 PDF 生成失败 recordNo={}", record.getRecordNo(), e);
             return null;
@@ -54,13 +54,13 @@ public class ReportPdfServiceImpl implements ReportPdfService {
     }
 
     @Override
-    public ReportPdfFileVO generateLaboratoryPdf(BizLaboratoryRecord record, List<BizLabResult> results) {
+    public ReportPdfFileVO generateLaboratoryPdf(BizLaboratoryRecord record, List<BizLabResult> results, String pin) {
         if (record == null || !TextUtil.hasText(record.getRecordNo())) {
             return null;
         }
         try {
             byte[] pdfBytes = buildLaboratoryPdf(record, results == null ? List.of() : results);
-            return signAndStore(record.getRecordNo(), pdfBytes);
+            return signAndStore(record.getRecordNo(), pdfBytes, pin);
         } catch (Exception e) {
             log.error("检验报告 PDF 生成失败 recordNo={}", record.getRecordNo(), e);
             return null;
@@ -270,7 +270,7 @@ public class ReportPdfServiceImpl implements ReportPdfService {
     /**
      * 对 PDF 字节做 SHA-256，用审核医师（当前登录人）证书签名，落盘 uploads/reportPdf/yyyyMMdd/{recordNo}.pdf。
      */
-    private ReportPdfFileVO signAndStore(String recordNo, byte[] pdfBytes) throws Exception {
+    private ReportPdfFileVO signAndStore(String recordNo, byte[] pdfBytes, String pin) throws Exception {
         CurrentUser user = UserUtils.getCurrentUser();
         if (user == null || user.getEmployeeId() == null) {
             throw new com.his.common.exception.BusinessException("报告PDF签名失败：取不到当前登录用户，无法确定签名人");
@@ -279,8 +279,8 @@ public class ReportPdfServiceImpl implements ReportPdfService {
                 user.getEmployeeId(), user.getRealName(), user.getDeptId(), user.getDeptName());
 
         String hash = sha256Hex(pdfBytes);
-        String signValue = signCertFacadeService.signWithPrivateKey(
-                signCertFacadeService.privatePemOf(cert.getId()), "SHA-256:" + hash);
+        // 软签：PIN 校验与私钥使用都在签名域内完成，这里只拿签名值
+        String signValue = signCertFacadeService.signWithCert(cert.getId(), "SHA-256:" + hash, pin);
 
         String dateDir = LocalDate.now().format(com.his.common.util.DateFormats.COMPACT_DATE);
         String relativePath = "uploads/reportPdf/" + dateDir + "/" + recordNo + ".pdf";

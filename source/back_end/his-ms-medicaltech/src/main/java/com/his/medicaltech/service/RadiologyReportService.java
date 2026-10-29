@@ -38,13 +38,17 @@ public interface RadiologyReportService {
 
     /**
      * 提交审核（→1 待审核 + 报告医师签名）
+     *
+     * @param pin 签名人本次输入的签名 PIN（软签二次确认；为空则拒绝签名）
      */
-    RadioReportDetailVO submit(RadioReportUpsertDTO dto);
+    RadioReportDetailVO submit(RadioReportUpsertDTO dto, String pin);
 
     /**
      * 审核通过（→3 已审核 + 审核医师签名）
+     *
+     * @param pin 签名人本次输入的签名 PIN（软签二次确认；为空则拒绝签名）
      */
-    RadioReportDetailVO audit(RadioReportAuditDTO dto);
+    RadioReportDetailVO audit(RadioReportAuditDTO dto, String pin);
 
     /**
      * 退回重写（→0 草稿 + 版本号+1 + 清签名指针）

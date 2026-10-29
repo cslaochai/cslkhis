@@ -112,10 +112,9 @@ public class EmrSignatureServiceImpl extends ServiceImpl<BizEmrSignatureMapper, 
 
         SignCertBriefVO cert = signCertFacadeService.ensureActiveCert(cmd.getSignerId(), cmd.getSignerName(),
                 cmd.getSignerDeptId(), cmd.getSignerDeptName());
-        String privatePem = signCertFacadeService.privatePemOf(cert.getId());
 
         for (int attempt = 1; attempt <= MAX_RETRY; attempt++) {
-            BizEmrSignature entity = buildSignature(cmd, scene, subject, cert, privatePem);
+            BizEmrSignature entity = buildSignature(cmd, scene, subject, cert);
             try {
                 signatureStoreService.insertAndAnchor(entity, provider, scene, cert);
                 log.info("签名成功 signNo={} {} id={} 场景={} 签名人={} 证书={} 摘要={}",
@@ -135,13 +134,14 @@ public class EmrSignatureServiceImpl extends ServiceImpl<BizEmrSignatureMapper, 
 
     // 查询
     private BizEmrSignature buildSignature(SignCommandDTO cmd, SignSceneEnum scene, SignSubject subject,
-                                           SignCertBriefVO cert, String privatePem) {
+                                           SignCertBriefVO cert) {
         BizEmrSignature prev = bizEmrSignatureMapper.selectLastByBiz(cmd.getBizType(), cmd.getBizId());
         String prevDigest = prev == null ? null : prev.getContentDigest();
 
         String content = subject.contentWithPrev(prevDigest);
         String digest = signCertFacadeService.sha256Hex(content);
-        String signValue = signCertFacadeService.signWithPrivateKey(privatePem, content);
+        // 软签：PIN 校验与私钥使用都在签名域内完成，这里只拿签名值
+        String signValue = signCertFacadeService.signWithCert(cert.getId(), content, cmd.getPin());
         LocalDateTime now = TimeUtil.nowSeconds();
 
         BizEmrSignature e = new BizEmrSignature();

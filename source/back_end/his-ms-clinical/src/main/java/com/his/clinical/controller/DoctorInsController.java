@@ -47,7 +47,7 @@ public class DoctorInsController {
     @Operation(summary = "检查开单（开单即落库）")
     @PostMapping("/applyUpsert")
     public Result<BizInspectionApplyVO> applyUpsert(@Valid @RequestBody InspectionApplyUpsertDTO dto) {
-        return Result.success(emrService.upsertInspectionApply(dto));
+        return Result.success(emrService.upsertInspectionApply(dto, dto.getPin()));
     }
 
     /**

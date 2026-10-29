@@ -40,29 +40,13 @@ public class SignProperties {
     private int timeSource = 1;
 
     /**
-     * 证书签发模式：internal-演示模式（不调用远程签名认证）；external-远程 CA（csssl，RA 公钥签发，私钥本地托管）。
-     * internal 为演示环境用：签发不落证书，仅提示未开启远程签名认证；external 才真正调用 csssl 签发。
-     */
-    private String caMode = "internal";
-
-    /**
-     * 外部 CA 对接地址（csssl 根路径，如 http://localhost:8092/ssl）。
-     * 证书签发与可信时间戳（TSA）共用这一个地址：CA 走 /admin/certs/*，TSA 走 /tsa/*。
+     * csssl 认证中心对接地址（如 http://localhost:8092/ssl）。
+     * 仅用于可信时间戳（TSA）通道；证书签发为线下人工，不经此地址。
      */
     private String caBaseUrl;
 
     /**
-     * 外部 CA 服务账号（csssl 管理后台账号）
-     */
-    private String caUsername;
-
-    /**
-     * 外部 CA 服务账号口令（明文；生产经环境变量注入）
-     */
-    private String caPassword;
-
-    /**
-     * 外部 CA 请求超时（毫秒）
+     * csssl 请求超时（毫秒）
      */
     private int caTimeoutMs = 5000;
 
@@ -73,7 +57,7 @@ public class SignProperties {
     private String keyAlgorithm = "RSA2048";
 
     /**
-     * 外部 CA（csssl）接口路径（his.sign.ca-paths.*），相对 ca-base-url
+     * csssl 接口路径（his.sign.ca-paths.*），相对 ca-base-url
      */
     private CaPaths caPaths = new CaPaths();
 
@@ -82,26 +66,6 @@ public class SignProperties {
      */
     @Data
     public static class CaPaths {
-
-        /**
-         * 登录口令加密用的 SM2 公钥获取路径
-         */
-        private String loginPublicKey = "/auth/publicKey";
-
-        /**
-         * 服务账号登录路径
-         */
-        private String login = "/auth/login";
-
-        /**
-         * 公钥签发申请路径
-         */
-        private String certIssue = "/admin/certs/public-key";
-
-        /**
-         * 证书链下载路径，{certId} 由签发回执里的证书主键替换
-         */
-        private String certDownload = "/admin/certs/{certId}/cert.pem";
 
         /**
          * 可信时间戳盖章路径

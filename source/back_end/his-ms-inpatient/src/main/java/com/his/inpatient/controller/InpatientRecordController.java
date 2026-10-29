@@ -69,7 +69,7 @@ public class InpatientRecordController {
     @Operation(summary = "提交病历文书（草稿 → 已提交；提交后仍可修改，但每次修改留痕）")
     @PostMapping("/submit")
     public Result<Integer> submit(@RequestBody @Valid InpatientRecordSubmitDTO dto) {
-        return Result.success("病历文书已提交", inpatientRecordService.submit(dto));
+        return Result.success("病历文书已提交", inpatientRecordService.submit(dto, dto.getPin()));
     }
 
     /**
@@ -80,7 +80,7 @@ public class InpatientRecordController {
     @Operation(summary = "归档病历文书（已提交 → 已归档；单向门，归档后禁改，说明必填）")
     @PostMapping("/archive")
     public Result<Integer> archive(@RequestBody @Valid InpatientRecordArchiveDTO dto) {
-        return Result.success("病历文书已归档", inpatientRecordService.archive(dto));
+        return Result.success("病历文书已归档", inpatientRecordService.archive(dto, dto.getPin()));
     }
 
     /**

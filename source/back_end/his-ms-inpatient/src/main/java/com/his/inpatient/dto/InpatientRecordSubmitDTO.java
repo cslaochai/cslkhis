@@ -22,4 +22,9 @@ public class InpatientRecordSubmitDTO implements Serializable {
      * 备注
      */
     private String remark;
+
+    /**
+     * 签名 PIN（软签二次确认）：签名人本人输入，明文不入库
+     */
+    private String pin;
 }

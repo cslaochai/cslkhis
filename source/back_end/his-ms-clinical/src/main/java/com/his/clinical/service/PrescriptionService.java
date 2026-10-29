@@ -38,9 +38,11 @@ public interface PrescriptionService extends IService<BizMedicalRecord> {
      * 处方审核（审方药师签名 + 状态置「已审核」）。
      *
      * <p>审核人由调用方从登录态取（{@code CurrentUser.employeeId}），不接受入参传入。
+     *
+     * @param pin 药师本次输入的 PIN（软签二次确认）
      */
     BizPrescriptionVO auditPrescription(PrescriptionAuditDTO dto, Long auditorId, String auditorName,
-                                        Long auditorDeptId, String auditorDeptName);
+                                        Long auditorDeptId, String auditorDeptName, String pin);
 
     /**
      * 合理用药批量审查（药物相互作用 × 剂量上限，知识表在药品字典* 两张）

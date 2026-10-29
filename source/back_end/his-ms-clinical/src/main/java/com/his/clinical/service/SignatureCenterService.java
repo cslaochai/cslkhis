@@ -17,8 +17,10 @@ public interface SignatureCenterService {
 
     /**
      * 管理员补签：签名人取当前登录用户
+     *
+     * @param pin 签名人本次输入的 PIN（软签二次确认）
      */
-    SignatureVO sign(SignatureSignDTO dto);
+    SignatureVO sign(SignatureSignDTO dto, String pin);
 
     /**
      * 作废签名：操作人取当前登录用户

@@ -147,6 +147,10 @@ public class InpatientLeaveDTO {
          * 签名留证 IP，由 Controller 从请求侧写入，不接受前端自报
          */
         private String clientIp;
+        /**
+         * 签名 PIN（软签二次确认）：签名人本人输入，明文不入库
+         */
+        private String pin;
     }
 
     /**

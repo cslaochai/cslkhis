@@ -146,6 +146,9 @@
     <PrescriptionAuditDetail v-model="detailVisible" :row="detailRow" :blocked-of="blockedOf"
                              :hits-of="hitsOf" :hit-type-text="hitTypeText" :rational-of="rationalOf"
                              :status-color="statusColor" :status-text="statusText"/>
+
+    <!-- 软签二次确认：审方通过要落药师电子签名，由药师本人输入 PIN -->
+    <SignPinDialog ref="pinDialogRef" v-model="pinDialogVisible"/>
   </div>
 </template>
 
@@ -157,6 +160,7 @@ import {auditPrescription, getPrescriptionListPage, rationalCheckPrescriptions} 
 import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination';
 import {useTableMaxHeight} from '@/lib/useTableMaxHeight';
 import PrescriptionAuditDetail from './PrescriptionAuditDetail.vue';
+import SignPinDialog from '@/components/his/SignPinDialog.vue';
 const loading = ref(false);
 const list = ref([]);
 const keyword = ref('');
@@ -168,6 +172,9 @@ const {queryCardRef, footerRef, tableMaxHeight} = useTableMaxHeight();
 const rationalMap = ref({});
 const detailVisible = ref(false);
 const detailRow = ref(null);
+// 软签二次确认：PIN 由审方药师本人输入，服务端校验通过才解密私钥
+const pinDialogRef = ref(null);
+const pinDialogVisible = ref(false);
 const rxStatusMap = {
   1: {label: '草稿', color: 'bg-slate-100 text-slate-600'},
   2: {label: '已提交', color: 'bg-amber-100 text-amber-700'},
@@ -262,11 +269,17 @@ const handleAudit = async (row) => {
       inputType: 'textarea',
       type: 'warning',
     });
-    const res = await auditPrescription({prescriptionId: row.id, auditResult: 1, auditOpinion: value || ''});
+    // 审方通过要落药师电子签名：先取 PIN，取消则不提交审方
+    const pin = await pinDialogRef.value.askPin();
+    if (!pin) {
+      ElMessage.info('已取消签名，审方未提交');
+      return;
+    }
+    const res = await auditPrescription({prescriptionId: row.id, auditResult: 1, auditOpinion: value || '', pin});
     ElMessage.success(`审方完成，已签署药师签名（${res.data?.auditBy || '当前药师'}）`);
     loadData();
   } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
-    
+
   }
 };
 /** 审方退回（L7）：原因必填；不产生药师签名，处方置「审方退回」等医生改方重提 */
@@ -280,11 +293,12 @@ const handleReturn = async (row) => {
       inputValidator: (v) => (v && v.trim() ? true : '退回原因不能为空'),
       type: 'warning',
     });
+    // 退回不产生签名（签名=签发），因此不需要 PIN
     await auditPrescription({prescriptionId: row.id, auditResult: 2, auditOpinion: value.trim()});
     ElMessage.success('已退回，医生将收到站内信通知');
     loadData();
   } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
-    
+
   }
 };
 onMounted(() => {

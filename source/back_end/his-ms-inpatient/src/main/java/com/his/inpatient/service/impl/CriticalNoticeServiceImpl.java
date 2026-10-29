@@ -182,7 +182,7 @@ public class CriticalNoticeServiceImpl extends ServiceImpl<BizCriticalNoticeMapp
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public void issue(CriticalNoticeDTO.Issue dto) {
+    public void issue(CriticalNoticeDTO.Issue dto, String pin) {
         CurrentUser operatorUser = UserUtils.getCurrentUser();
         if (operatorUser == null) {
             throw new BusinessException("当前用户信息不存在");
@@ -223,6 +223,8 @@ public class CriticalNoticeServiceImpl extends ServiceImpl<BizCriticalNoticeMapp
         cmd.setSignerTitle(TextUtil.cutToNull(bizCriticalNoticeMapper.selectEmployeeTitle(me), 50));
         cmd.setClientIp(dto.getClientIp());
         cmd.setRemark("病危重通知签发（" + NoticeTypeEnum.getLabel(notice.getNoticeType()) + "）");
+        // PIN 走签名域校验：明文只在这一层流过，不落库、不进日志
+        cmd.setPin(pin);
         try {
             SignatureVO sig = emrSignatureService.sign(cmd);
             // 锚点三件套必须在这里一起写：provider 的 applySignAnchor 已把 sign_status 置 1，

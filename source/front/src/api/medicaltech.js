@@ -22,9 +22,10 @@ export function startInspection(recordId) {
   return request.post('/medicaltech/inspection/start', null, { params: { recordId } })
 }
 
-// 执行检查
-export function executeInspection(recordId, data) {
-  return request.post('/medicaltech/inspection/execute', { ...data, recordId })
+// 执行检查（出结果时完成报告医师签名）
+// pin：软签二次确认口令，签名人本人输入；为 null 时后端拒签
+export function executeInspection(recordId, data, pin) {
+  return request.post('/medicaltech/inspection/execute', { ...data, recordId, pin })
 }
 
 // 拍片完成（sql/138：放射项目专用，技师岗终点 —— 不建报告不签名，诊断归放射诊断工作站）
@@ -32,9 +33,10 @@ export function finishShoot(recordId) {
   return request.post('/medicaltech/inspection/finishShoot', null, { params: { recordId } })
 }
 
-// 审核检查报告
-export function auditInspection(recordId, auditBy) {
-  return request.post('/medicaltech/inspection/audit', { recordId, auditBy })
+// 审核检查报告（同时完成审核医师签名）
+// pin：软签二次确认口令，签名人本人输入；为 null 时后端拒签
+export function auditInspection(recordId, auditBy, pin) {
+  return request.post('/medicaltech/inspection/audit', { recordId, auditBy, pin })
 }
 
 // 检查报告签名 PDF 验签（文件级数字签名）
@@ -63,14 +65,16 @@ export function receiveSpecimen(recordId, receiveBy) {
   return request.post('/medicaltech/laboratory/receive', { recordId, receiveBy })
 }
 
-// 录入检验结果
-export function inputLabResult(recordId, data) {
-  return request.post('/medicaltech/laboratory/inputResult', { ...data, recordId })
+// 录入检验结果（同时完成报告医师签名）
+// pin：软签二次确认口令，签名人本人输入；为 null 时后端拒签
+export function inputLabResult(recordId, data, pin) {
+  return request.post('/medicaltech/laboratory/inputResult', { ...data, recordId, pin })
 }
 
-// 审核检验报告
-export function auditLaboratory(recordId, auditBy) {
-  return request.post('/medicaltech/laboratory/audit', { recordId, auditBy })
+// 审核检验报告（同时完成审核医师签名）
+// pin：软签二次确认口令，签名人本人输入；为 null 时后端拒签
+export function auditLaboratory(recordId, auditBy, pin) {
+  return request.post('/medicaltech/laboratory/audit', { recordId, auditBy, pin })
 }
 
 // 检验报告签名 PDF 验签（文件级数字签名）

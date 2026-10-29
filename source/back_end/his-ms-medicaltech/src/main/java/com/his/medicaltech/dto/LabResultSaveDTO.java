@@ -33,4 +33,9 @@ public class LabResultSaveDTO {
      * 检验结果明细列表
      */
     private List<LabResultItemSaveDTO> results;
+
+    /**
+     * 签名 PIN（软签二次确认）：签名人本人输入，明文不入库
+     */
+    private String pin;
 }

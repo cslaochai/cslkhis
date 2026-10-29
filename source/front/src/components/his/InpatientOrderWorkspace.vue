@@ -1269,6 +1269,9 @@
         </template>
       </el-dialog>
     </div>
+
+    <!-- 软签二次确认：医嘱开立与校对各落一次签名，由签名人本人输入 PIN -->
+    <SignPinDialog ref="pinDialogRef" v-model="pinDialogVisible"/>
   </div>
 </template>
 
@@ -1280,6 +1283,7 @@ import {getMyDeptInpatientListPage} from '@/api/inpatient';
 import {getPatientFullDetail} from '@/api/patient';
 import {getInspectionRecordListPage, getLaboratoryDetail, getLaboratoryRecordListPage} from '@/api/medicaltech';
 import PatientDetailDialog from '@/components/his/PatientDetailDialog.vue';
+import SignPinDialog from '@/components/his/SignPinDialog.vue';
 import {getDrugSelectList, getInspectionSelectList, getLaboratorySelectList, getUserInfo} from '@/api/system';
 import {patientAgeText, patientGenderText} from '@/lib/patientGender';
 import {DICT_TYPE, loadDictDataMap} from '@/lib/dict-cache';
@@ -1713,6 +1717,9 @@ const handleAdmissionChange = async () => {
 };
 const openDialog = ref(false);
 const saving = ref(false);
+// 软签二次确认：PIN 由签名人本人输入，服务端校验通过才解密私钥
+const pinDialogRef = ref(null);
+const pinDialogVisible = ref(false);
 const emptyItem = () => ({
   orderClass: 1, dictId: '', itemCode: '', itemName: '', spec: '', unit: '',
   dosage: undefined, dosageUnit: '', route: '', frequency: '', quantity: 1, price: undefined,
@@ -2114,6 +2121,12 @@ const submitOrder = async () => {
     ElMessage.warning('修改单条医嘱只能保留一条项目；需要加项目请走「开立医嘱」');
     return;
   }
+  // 医嘱开立要落开立医师签名：先取 PIN，取消则不提交
+  const pin = await pinDialogRef.value.askPin();
+  if (!pin) {
+    ElMessage.info('已取消签名，医嘱未开立');
+    return;
+  }
   saving.value = true;
   try {
     const res = await saveInpatientOrder({
@@ -2129,6 +2142,7 @@ const submitOrder = async () => {
       // 来自模板的医嘱一律记 source=2，事后能统计"模板开立的医嘱"是哪些
       source: isEditing.value ? undefined : (appliedTemplateId.value ? 2 : 1),
       items,
+      pin,
     });
     ElMessage.success(isEditing.value
         ? `医嘱已修改（${res.data}），原开立签名已作废并重签，等待护士校对`
@@ -2149,12 +2163,18 @@ const doVerify = async (ids) => {
     ElMessage.warning('请先勾选要校对的医嘱');
     return;
   }
+  // 校对要落护士签名：一次可校多条，弹一次 PIN 复用于本批次全部签名
+  const pin = await pinDialogRef.value.askPin();
+  if (!pin) {
+    ElMessage.info('已取消签名，校对未提交');
+    return;
+  }
   try {
-    const res = await verifyInpatientOrder({orderIds: ids});
+    const res = await verifyInpatientOrder({orderIds: ids, pin});
     ElMessage.success(`已校对 ${res.data} 条医嘱`);
     await reloadAll();
   } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
-    
+
   }
 };
 const doStop = async (row) => {

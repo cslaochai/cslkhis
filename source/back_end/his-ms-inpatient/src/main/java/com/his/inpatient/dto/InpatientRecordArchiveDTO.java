@@ -24,4 +24,9 @@ public class InpatientRecordArchiveDTO implements Serializable {
      */
     @NotBlank(message = "归档说明必填（归档是单向门，必须留痕说明归档依据/批次）")
     private String remark;
+
+    /**
+     * 签名 PIN（软签二次确认）：签名人本人输入，明文不入库
+     */
+    private String pin;
 }

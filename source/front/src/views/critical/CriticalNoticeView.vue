@@ -147,6 +147,9 @@
 
     <!-- 详情（只读，操作列「详情」打开）：按 id 自拉数据，见 CriticalNoticeDetail -->
     <CriticalNoticeDetail v-model="dvVisible" :dict="dict" :id="dvId"/>
+
+    <!-- 软签二次确认：签发要落医师电子签名，由签发医师本人输入 PIN -->
+    <SignPinDialog ref="pinDialogRef" v-model="pinDialogVisible"/>
   </div>
 </template>
 
@@ -168,6 +171,7 @@ import {patientGenderText} from '@/lib/patientGender'
 import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination'
 import {useTableMaxHeight} from '@/lib/useTableMaxHeight'
 import {NS, fmt, statusTag, signTagText, gate} from '@/lib/criticalNotice'
+import SignPinDialog from '@/components/his/SignPinDialog.vue'
 import CriticalNoticeEdit from './CriticalNoticeEdit.vue'
 import CriticalNoticeAck from './CriticalNoticeAck.vue'
 import CriticalNoticeDetail from './CriticalNoticeDetail.vue'
@@ -272,6 +276,9 @@ const reloadAll = () => Promise.all([loadStats(), loadList(), loadInpatients()])
 const fVisible = ref(false)
 const fRow = ref(null)
 const fBase = ref(null)
+// 软签二次确认：PIN 由签发医师本人输入，服务端校验通过才解密私钥
+const pinDialogRef = ref(null)
+const pinDialogVisible = ref(false)
 const openForm = (row, base) => {
   fRow.value = row || null
   fBase.value = base || null
@@ -280,7 +287,13 @@ const openForm = (row, base) => {
 
 // ---------------- 签发 ----------------
 const onIssue = async (row) => {
-  const res = await gate(noticeIssue({id: row.id}), '签发失败')
+  // 签发要落医师电子签名：先取 PIN，取消则不签发
+  const pin = await pinDialogRef.value.askPin()
+  if (!pin) {
+    ElMessage.info('已取消签名，通知单未签发')
+    return
+  }
+  const res = await gate(noticeIssue({id: row.id, pin}), '签发失败')
   if (!res) return
   ElMessage.success(res.message || '已签发并完成医师电子签名')
   reloadAll()

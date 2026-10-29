@@ -260,6 +260,13 @@ public class MedicalRecordSaveDTO {
     @AllowedValues(values = {"1", "2"}, message = "操作类型取值不合法")
     private Integer operationType;
 
+    // 签名确认
+
+    /**
+     * 签名 PIN（软签二次确认）：签名人本人输入，明文不入库
+     */
+    private String pin;
+
     /**
      * 处方入参
      */

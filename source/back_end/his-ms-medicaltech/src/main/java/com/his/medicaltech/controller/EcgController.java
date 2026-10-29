@@ -117,7 +117,7 @@ public class EcgController {
     @PostMapping("/submit")
     @PreAuthorize("hasAuthority('medtech:ecg:write')")
     public Result<EcgDetailVO> submit(@Valid @RequestBody EcgReportUpsertDTO dto) {
-        return Result.success("已提交审核", ecgService.submit(dto));
+        return Result.success("已提交审核", ecgService.submit(dto, dto.getPin()));
     }
 
     /**
@@ -128,7 +128,7 @@ public class EcgController {
     @PostMapping("/audit")
     @PreAuthorize("hasAuthority('medtech:ecg:audit')")
     public Result<EcgDetailVO> audit(@Valid @RequestBody EcgAuditDTO dto) {
-        return Result.success("审核通过", ecgService.audit(dto));
+        return Result.success("审核通过", ecgService.audit(dto, dto.getPin()));
     }
 
     /**

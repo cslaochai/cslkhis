@@ -114,7 +114,7 @@ public class CriticalNoticeController {
     @PostMapping("/issue")
     public Result<Void> issue(@Valid @RequestBody CriticalNoticeDTO.Issue dto, HttpServletRequest request) {
         dto.setClientIp(request.getRemoteAddr());
-        criticalNoticeService.issue(dto);
+        criticalNoticeService.issue(dto, dto.getPin());
         return Result.success("已签发并完成医师电子签名", null);
     }
 

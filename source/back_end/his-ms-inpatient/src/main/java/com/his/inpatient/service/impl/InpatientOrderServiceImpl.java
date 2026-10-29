@@ -110,7 +110,7 @@ public class InpatientOrderServiceImpl extends ServiceImpl<BizInpatientOrderMapp
      */
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public String save(InpatientOrderUpsertDTO dto) {
+    public String save(InpatientOrderUpsertDTO dto, String pin) {
         CurrentUser operatorUser = UserUtils.getCurrentUser();
         if (operatorUser == null) {
             throw new BusinessException("当前用户信息不存在");
@@ -158,7 +158,7 @@ public class InpatientOrderServiceImpl extends ServiceImpl<BizInpatientOrderMapp
 
         // 修改：仅「待校对」的单条医嘱，且不允许改动整组共享字段
         if (dto.getId() != null) {
-            return updateOne(dto, admission, now);
+            return updateOne(dto, admission, now, pin);
         }
 
         // 新增
@@ -245,7 +245,7 @@ public class InpatientOrderServiceImpl extends ServiceImpl<BizInpatientOrderMapp
             bizInpatientOrderMapper.insert(order);
             // 开立即签：签名的内容取自**库里的医嘱行**，所以必须 insert 之后再签。
             // 签名失败直接抛，整个开立事务回滚 —— 不留下"医嘱在、签名没签上"的缺口。
-            signOrder(order, SignSceneEnum.ORDER_CREATE, "医嘱开立");
+            signOrder(order, SignSceneEnum.ORDER_CREATE, "医嘱开立", pin);
             orderNos.add(order.getOrderNo());
         }
 
@@ -264,7 +264,7 @@ public class InpatientOrderServiceImpl extends ServiceImpl<BizInpatientOrderMapp
      * 「同起同停」的物理载体，允许单条改动，同一组套内就会出现两种开始时间，那条规则当场名存实亡。
      * 需要变更就走「停止原组套 → 重新开立」。
      */
-    private String updateOne(InpatientOrderUpsertDTO dto, BizAdmission admission, LocalDateTime now) {
+    private String updateOne(InpatientOrderUpsertDTO dto, BizAdmission admission, LocalDateTime now, String pin) {
         CurrentUser operatorUser = UserUtils.getCurrentUser();
         if (operatorUser == null) {
             throw new BusinessException("当前用户信息不存在");
@@ -322,7 +322,7 @@ public class InpatientOrderServiceImpl extends ServiceImpl<BizInpatientOrderMapp
         // 正确处理是「作废旧签名 + 按新内容重签」，而不是留着一条验不过的签名让人猜。
         // 作废会把医嘱行上的 doctor_sign_id 清空，于是紧接着的重签不会被 blockReason 拦住。
         invalidateDoctorSignIfAny(order, "医嘱内容被修改（" + operatorUser.getRealName() + "），原开立签名对新内容已失效");
-        signOrder(order, SignSceneEnum.ORDER_CREATE, "医嘱修改后重签");
+        signOrder(order, SignSceneEnum.ORDER_CREATE, "医嘱修改后重签", pin);
 
         log.info("修改医嘱 orderNo={} 组套={} 项目={}", order.getOrderNo(), order.getOrderGroup(), order.getItemName());
         return order.getOrderGroup();
@@ -349,7 +349,7 @@ public class InpatientOrderServiceImpl extends ServiceImpl<BizInpatientOrderMapp
     /**
      * 给一条医嘱签名；失败直接抛（不吞），由调用方的业务事务整体回滚
      */
-    private void signOrder(BizInpatientOrder order, SignSceneEnum scene, String actionLabel) {
+    private void signOrder(BizInpatientOrder order, SignSceneEnum scene, String actionLabel, String pin) {
         CurrentUser operatorUser = UserUtils.getCurrentUser();
         if (operatorUser == null) {
             throw new BusinessException("当前用户信息不存在");
@@ -362,6 +362,8 @@ public class InpatientOrderServiceImpl extends ServiceImpl<BizInpatientOrderMapp
         cmd.setSignerName(operatorUser.getRealName());
         cmd.setSignerDeptId(currentDeptId(operatorUser));
         cmd.setSignerDeptName(currentDeptName(operatorUser));
+        // PIN 走签名域校验：明文只在这一层流过，不落库、不进日志
+        cmd.setPin(pin);
         try {
             SignatureVO sig = emrSignatureService.sign(cmd);
             if (scene == SignSceneEnum.ORDER_VERIFY) {
@@ -378,7 +380,7 @@ public class InpatientOrderServiceImpl extends ServiceImpl<BizInpatientOrderMapp
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public int verify(InpatientOrderVerifyDTO dto) {
+    public int verify(InpatientOrderVerifyDTO dto, String pin) {
         CurrentUser operatorUser = UserUtils.getCurrentUser();
         if (operatorUser == null) {
             throw new BusinessException("当前用户信息不存在");
@@ -416,7 +418,7 @@ public class InpatientOrderServiceImpl extends ServiceImpl<BizInpatientOrderMapp
             // 校对即签：先落库（签名服务读库放行判断），再签校对名。
             // 这条签名的内容里会带上开立签名的摘要 —— 护士校对之后医生再改医嘱，
             // 第二环验签会当场断掉，医嘱上的"双签"才不是摆设。
-            signOrder(order, SignSceneEnum.ORDER_VERIFY, "医嘱校对");
+            signOrder(order, SignSceneEnum.ORDER_VERIFY, "医嘱校对", pin);
             ensurePlanForToday(order, now);
             // 临床营养医嘱校对通过 → 同事务派生膳食方案。
             // 校对是"护士确认这条医嘱真实存在"的唯一时点，未校对的医嘱不该出现在营养科工作台上；

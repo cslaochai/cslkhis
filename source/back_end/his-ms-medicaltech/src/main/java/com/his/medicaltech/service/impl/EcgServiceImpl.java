@@ -297,7 +297,7 @@ public class EcgServiceImpl extends ServiceImpl<BizInspectionRecordMapper, BizIn
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public EcgDetailVO submit(EcgReportUpsertDTO dto) {
+    public EcgDetailVO submit(EcgReportUpsertDTO dto, String pin) {
         BizInspectionRecord record = loadEcgRecord(dto.getRecordId());
         BizReport report = ensureReport(record);
         rejectIfClosed(report);
@@ -337,7 +337,7 @@ public class EcgServiceImpl extends ServiceImpl<BizInspectionRecordMapper, BizIn
         if (record.getReportSignId() != null) {
             throw new BusinessException("本报告已有报告医师签名，不能重复提交；如需修改请由审核医师退回后重写");
         }
-        SignatureVO sign = signReport(record, SignSceneEnum.REPORT_ISSUE);
+        SignatureVO sign = signReport(record, SignSceneEnum.REPORT_ISSUE, pin);
         record.setReportSignId(sign.getId());
         record.setReportSignedTime(sign.getSignedTime());
 
@@ -370,7 +370,7 @@ public class EcgServiceImpl extends ServiceImpl<BizInspectionRecordMapper, BizIn
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public EcgDetailVO audit(EcgAuditDTO dto) {
+    public EcgDetailVO audit(EcgAuditDTO dto, String pin) {
         BizReport report = requireReport(dto.getReportId());
         BizInspectionRecord record = loadEcgRecord(report.getRecordId());
         if (!Objects.equals(ReportStatusEnum.PENDING_REVIEW.getCode(), report.getReportStatus())) {
@@ -383,7 +383,7 @@ public class EcgServiceImpl extends ServiceImpl<BizInspectionRecordMapper, BizIn
         }
 
         // 先签名、后改状态：签名层的准入规则要求记录仍处于「已出结果未审核」
-        SignatureVO sign = signReport(record, SignSceneEnum.REPORT_AUDIT);
+        SignatureVO sign = signReport(record, SignSceneEnum.REPORT_AUDIT, pin);
         record.setAuditSignId(sign.getId());
         record.setAuditSignedTime(sign.getSignedTime());
         record.setAuditBy(UserUtils.getCurrentUser().getRealName());
@@ -618,7 +618,14 @@ public class EcgServiceImpl extends ServiceImpl<BizInspectionRecordMapper, BizIn
         report.setIsCritical(dto.getIsCritical());
     }
 
-    private SignatureVO signReport(BizInspectionRecord record, SignSceneEnum scene) {
+    /**
+     * 报告签名（报告医师 / 审核医师）。
+     *
+     * <p>签名人取自登录态：入参里的姓名字符串谁都能填成别人的名字，用它签名等于签名可伪造。
+     *
+     * <p>PIN 是签名人本人的二次确认口令，只在签名域内校验，明文不入库也不落日志。
+     */
+    private SignatureVO signReport(BizInspectionRecord record, SignSceneEnum scene, String pin) {
         Long signerId = UserUtils.getCurrentUser().getEmployeeId();
         if (signerId == null) {
             throw new BusinessException("签名失败：取不到当前登录用户，无法确定签名人");
@@ -631,6 +638,7 @@ public class EcgServiceImpl extends ServiceImpl<BizInspectionRecordMapper, BizIn
         cmd.setSignerName(UserUtils.getCurrentUser().getRealName());
         cmd.setSignerDeptId(record.getInspectionDeptId());
         cmd.setSignerDeptName(record.getInspectionDeptName());
+        cmd.setPin(pin);
         try {
             return emrSignatureFacadeService.sign(cmd);
         } catch (BusinessException e) {

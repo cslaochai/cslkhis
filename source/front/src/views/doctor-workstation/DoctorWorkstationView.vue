@@ -2234,6 +2234,9 @@
       @confirm="onRxSigned"
   />
 
+  <!-- 软签二次确认：结诊一次性签病历+处方+检查+检验，弹一次 PIN 复用于本次提交 -->
+  <SignPinDialog ref="pinDialogRef" v-model="pinDialogVisible"/>
+
   <!-- ================= 开住院证（门诊 → 住院的入口） ================= -->
   <DoctorWorkstationAdmissionAdd
       v-model="orderDialogVisible"
@@ -2372,6 +2375,7 @@ import PatientDetailDialog from '@/components/his/PatientDetailDialog.vue';
 import {useCurrentPatientStore} from '@/stores/currentPatient';
 import PageActionBar from '@/components/his/PageActionBar.vue';
 import OrderPanel from '@/components/his/OrderPanel.vue';
+import SignPinDialog from '@/components/his/SignPinDialog.vue';
 import DoctorWorkstationAdmissionAdd from './DoctorWorkstationAdmissionAdd.vue';
 import DoctorWorkstationAdmissionList from './DoctorWorkstationAdmissionList.vue';
 import RxSignDialog from './RxSignDialog.vue';
@@ -4933,10 +4937,20 @@ const handleComplete = async () => {
 
 // 实际结诊提交（签名板确认后或无处方时调用）
 // forceSubmit=true 表示医生在否决项弹框里点了「仍要结诊」：缺陷不会消失，结诊收尾照旧出质控单留痕
-const doSubmitRecord = async (submitData, forceSubmit = false) => {
+// knownPin：否决项驳回后重试时复用同一个 PIN，避免同一次结诊反复让医生输口令
+const doSubmitRecord = async (submitData, forceSubmit = false, knownPin = null) => {
   submitting.value = true;
+  // pin 提到 try 外声明：否决项驳回后的重试要用它，不重新弹框
+  let pin = knownPin;
   try {
-    await submitMedicalRecord({...submitData, forceSubmit}, {silent: true});
+    // 结诊这一次请求里后端要签病历+处方+检查+检验多份，弹一次 PIN 复用于全部签名；
+    // 用户取消 → 中止本次结诊，一个请求都不发
+    pin = pin ?? await pinDialogRef.value.askPin();
+    if (!pin) {
+      ElMessage.info('已取消签名，本次结诊未提交');
+      return;
+    }
+    await submitMedicalRecord({...submitData, forceSubmit, pin}, {silent: true});
     ElMessage.success('结诊成功');
     // 异步预生成就诊文书（引导单/处方签 PDF）：不 await、不阻塞结诊流程，
     // 生成完成后自动弹出「结诊文书」供医生打印给患者（缴费二维码在引导单左上角）
@@ -4951,7 +4965,8 @@ const doSubmitRecord = async (submitData, forceSubmit = false) => {
     const message = String(error?.message || '');
     const vetoAction = await handleEmrSubmitVeto(error);
     if (vetoAction === 'force') {
-      await doSubmitRecord(submitData, true);
+      // 重试的是同一次结诊（同一批签名对象），复用刚才的 PIN，不必让医生再输一遍
+      await doSubmitRecord(submitData, true, pin);
       return;
     }
     if (vetoAction === 'cancel') {
@@ -5307,6 +5322,9 @@ const validateAllPrescriptions = () => {
 const rxSignature = ref('');
 const rxSignDialogVisible = ref(false);
 const pendingSubmitData = ref(null);
+// 软签二次确认：PIN 由签名人本人输入，服务端校验通过才解密私钥
+const pinDialogRef = ref(null);
+const pinDialogVisible = ref(false);
 
 const buildPrescriptionPayload = () => {
   return prescriptionList.value

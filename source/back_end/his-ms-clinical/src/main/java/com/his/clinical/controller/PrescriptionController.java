@@ -74,7 +74,8 @@ public class PrescriptionController {
                 UserUtils.getCurrentUser().getEmployeeId(),
                 UserUtils.getCurrentUser().getRealName(),
                 user == null ? null : user.getDeptId(),
-                user == null ? null : user.getDeptName()));
+                user == null ? null : user.getDeptName(),
+                dto.getPin()));
     }
 
     /**

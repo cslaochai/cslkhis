@@ -58,4 +58,9 @@ public class EcgReportUpsertDTO {
     @NotNull(message = "是否危急不能为空")
     @AllowedValues(values = {"0", "1"}, message = "是否危急取值不合法")
     private Integer isCritical;
+
+    /**
+     * 签名 PIN（软签二次确认）：签名人本人输入，明文不入库
+     */
+    private String pin;
 }

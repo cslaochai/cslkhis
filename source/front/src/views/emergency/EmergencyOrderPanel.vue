@@ -260,6 +260,9 @@
                       @saved="onInpatientSaved"/>
     <ConsultationApply v-model="consultVisible" :admission="admissionObj" :depts="deptCandidates"
                        @saved="onInpatientSaved"/>
+
+    <!-- 软签二次确认：检查/检验开单即签，开单前由签名人本人输入 PIN -->
+    <SignPinDialog ref="pinDialogRef" v-model="pinDialogVisible"/>
   </div>
 </template>
 
@@ -278,6 +281,7 @@ import {getInspectionDetail, getLaboratoryDetail, getCriticalValueListPage} from
 import InspectionDetail from '@/views/lab/InspectionDetail.vue';
 import LaboratoryDetail from '@/views/lab/LaboratoryDetail.vue';
 import ExamImagePanel from '@/components/his/ExamImagePanel.vue';
+import SignPinDialog from '@/components/his/SignPinDialog.vue';
 import TransfusionApplyEdit from '@/views/transfusion/TransfusionApplyEdit.vue';
 import SurgeryApplyEdit from '@/views/surgery/SurgeryApplyEdit.vue';
 import ConsultationApply from '@/views/consultation/ConsultationApply.vue';
@@ -289,6 +293,9 @@ const props = defineProps({
 });
 
 const orderTab = ref('inspection');
+// 软签二次确认：PIN 由签名人本人输入，服务端校验通过才解密私钥
+const pinDialogRef = ref(null);
+const pinDialogVisible = ref(false);
 const patientId = computed(() => props.patient?.patientId);
 const registId = computed(() => props.patient?.registId);
 const admissionId = computed(() => props.patient?.admissionId);
@@ -392,6 +399,9 @@ const onInsItemChange = (val) => {
 };
 const saveIns = async () => {
   if (!insForm.inspectionItemId) { ElMessage.warning('请选择检查项目'); return; }
+  // 开单即签：先取 PIN，取消则整单不提交
+  const pin = await pinDialogRef.value.askPin();
+  if (!pin) { ElMessage.info('已取消签名，检查申请未提交'); return; }
   insSaving.value = true;
   try {
     const payload = {
@@ -406,6 +416,7 @@ const saveIns = async () => {
       clinicalDiagnosis: insForm.clinicalDiagnosis,
       specialRequirements: insForm.specialRequirements,
       isEmergency: insForm.isEmergency ? 1 : 0,
+      pin,
     };
     if (props.recordId) payload.recordId = props.recordId;
     await saveInspectionApply(payload);
@@ -456,6 +467,9 @@ const onLabItemChange = (val) => {
 };
 const saveLab = async () => {
   if (!labForm.laboratoryItemId) { ElMessage.warning('请选择检验项目'); return; }
+  // 开单即签：先取 PIN，取消则整单不提交
+  const pin = await pinDialogRef.value.askPin();
+  if (!pin) { ElMessage.info('已取消签名，检验申请未提交'); return; }
   labSaving.value = true;
   try {
     const payload = {
@@ -470,6 +484,7 @@ const saveLab = async () => {
       clinicalDiagnosis: labForm.clinicalDiagnosis,
       isFasting: labForm.isFasting ? 1 : 0,
       isEmergency: labForm.isEmergency ? 1 : 0,
+      pin,
     };
     if (props.recordId) payload.recordId = props.recordId;
     await saveLaboratoryApply(payload);

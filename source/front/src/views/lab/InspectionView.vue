@@ -266,6 +266,9 @@
         <el-button @click="showAuditDialog = false">取消</el-button>
       </template>
     </el-dialog>
+
+    <!-- 软签二次确认：出结果与审核各落一次签名，由签名人本人输入 PIN -->
+    <SignPinDialog ref="pinDialogRef" v-model="pinDialogVisible"/>
   </div>
 </template>
 
@@ -285,6 +288,7 @@ import {
 import {patientGenderText} from '@/lib/patientGender';
 import {getEmployeeCurrent} from '@/api/system';
 import ExamImagePanel from '@/components/his/ExamImagePanel.vue';
+import SignPinDialog from '@/components/his/SignPinDialog.vue';
 import InspectionDetail from './InspectionDetail.vue';
 import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination';
 import {useTableMaxHeight} from '@/lib/useTableMaxHeight';
@@ -299,6 +303,9 @@ const auditRemark = ref('');
 // 当前登录医师档案预维护的签名笔迹（审核弹框预览用）
 const auditSignImage = ref('');
 const auditSignLoading = ref(false);
+// 软签二次确认：PIN 由签名人本人输入，服务端校验通过才解密私钥
+const pinDialogRef = ref(null);
+const pinDialogVisible = ref(false);
 const loading = ref(false);
 const orders = ref([]);
 const pagination = ref({
@@ -496,17 +503,23 @@ const handleResultEntry = async (row) => {
 const handleSubmitResult = async () => {
   if (!selectedOrder.value)
     return;
+  // 出结果即落报告医师签名：先取 PIN，取消则不提交
+  const pin = await pinDialogRef.value.askPin();
+  if (!pin) {
+    ElMessage.info('已取消签名，检查结果未提交');
+    return;
+  }
   try {
     await executeInspection(selectedOrder.value.id, {
       resultDescription: inspectionResultForm.value.resultDescription,
       resultConclusion: inspectionResultForm.value.resultConclusion,
       suggestions: inspectionResultForm.value.suggestions,
-    });
+    }, pin);
     ElMessage.success('检查结果提交成功');
     showResultDialog.value = false;
     loadData();
   } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
-    
+
   }
 };
 const handleAudit = async (row) => {
@@ -537,13 +550,19 @@ const handleAudit = async (row) => {
 const handleSubmitAudit = async () => {
   if (!selectedOrder.value)
     return;
+  // 审核即落审核医师签名：先取 PIN，取消则不提交
+  const pin = await pinDialogRef.value.askPin();
+  if (!pin) {
+    ElMessage.info('已取消签名，审核未提交');
+    return;
+  }
   try {
-    await auditInspection(selectedOrder.value.id, '当前用户');
+    await auditInspection(selectedOrder.value.id, '当前用户', pin);
     ElMessage.success('审核成功');
     showAuditDialog.value = false;
     loadData();
   } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
-    
+
   }
 };
 onMounted(() => {

@@ -20,4 +20,9 @@ public class RadioReportAuditDTO {
      */
     @Size(max = 500, message = "审核意见不能超过 500 字")
     private String reason;
+
+    /**
+     * 签名 PIN（软签二次确认）：签名人本人输入，明文不入库
+     */
+    private String pin;
 }

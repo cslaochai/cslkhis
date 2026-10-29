@@ -223,6 +223,9 @@
       <el-button @click="visible = false">关闭</el-button>
     </template>
   </el-dialog>
+
+  <!-- 软签二次确认：提交报告要落报告医师签名，由签名人本人输入 PIN -->
+  <SignPinDialog ref="pinDialogRef" v-model="pinDialogVisible"/>
 </template>
 
 <script setup>
@@ -239,6 +242,7 @@ import {
 } from '@/api/medicaltech';
 import {patientGenderText} from '@/lib/patientGender';
 import EcgWavePanel from '@/components/his/EcgWavePanel.vue';
+import SignPinDialog from '@/components/his/SignPinDialog.vue';
 
 const props = defineProps({
   // v-model 控制显隐
@@ -256,6 +260,9 @@ const visible = computed({
 
 // ========== 报告书写（医师岗） ==========
 const submitting = ref(false);
+// 软签二次确认：PIN 由签名人本人输入，服务端校验通过才解密私钥
+const pinDialogRef = ref(null);
+const pinDialogVisible = ref(false);
 const detail = ref(null);
 const templates = ref([]);
 const form = ref({
@@ -444,14 +451,21 @@ const doSubmit = async () => {
   } catch {
     return;
   }
+  // 提交报告要落报告医师签名：先取 PIN，取消则不提交
+  const pin = await pinDialogRef.value.askPin();
+  if (!pin) {
+    ElMessage.info('已取消签名，报告未提交');
+    return;
+  }
   submitting.value = true;
   try {
-    await ecgSubmit(payload());
+    // 草稿不签名，只有提交带 pin
+    await ecgSubmit({...payload(), pin});
     ElMessage.success('已提交审核（报告医师签名已完成）');
     visible.value = false;
     emit('saved');
   } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
-    
+
   } finally {
     submitting.value = false;
   }

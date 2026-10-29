@@ -54,7 +54,7 @@ export function invalidateSignature(signId, reason) {
   return request.post('/emr/signature/invalidate', { signId, reason })
 }
 
-// ---------------- 签名证书 ----------------
+// ---------------- 签名证书（CA 线下人工签发） ----------------
 
 // 证书分页
 export function getSignCertList(params) {
@@ -66,9 +66,14 @@ export function getSignCertDetail(id) {
   return request.get('/emr/signCert/getById', { params: { id } })
 }
 
-// 人工签发证书
-export function issueSignCert(params) {
-  return request.post('/emr/signCert/issue', params)
+// 生成签名密钥对（CA 线下签发第一步）：返回「CA 签发申请单」（Subject DN + 公钥 PEM），供线下送 CA 人工签发
+export function keygenSignCert(params) {
+  return request.post('/emr/signCert/keygen', params)
+}
+
+// 回填 CA 线下签发的证书（CA 线下签发第二步）：校验证书公钥与本地密钥对一致后转为有效
+export function bindSignCert(params) {
+  return request.post('/emr/signCert/bind', params)
 }
 
 // 吊销证书（必须写理由；吊销不删行）

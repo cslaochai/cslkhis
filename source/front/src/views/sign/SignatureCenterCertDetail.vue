@@ -8,8 +8,8 @@
       </div>
       <div class="mt-3 rounded-lg border border-slate-200 bg-white p-3 text-xs leading-6">
         <p>算法组合：{{ certDetail.keyAlgo }} / {{ certDetail.digestAlgo }} / {{ certDetail.signAlgo }}</p>
-        <p>签发方式：{{ certDetail.issuedModeText }}<span
-            class="text-amber-700">（自动签发的信任级别低于人工签发）</span></p>
+        <p>CA 签发：{{ text(certDetail.caIssuer) || '未回填（待线下送 CA 签发）' }}<span
+            v-if="certDetail.caSerial" class="text-slate-500"> · 序列号 {{ certDetail.caSerial }}</span></p>
         <p>状态：{{ certDetail.certStatusText }}<span v-if="certDetail.expired"
                                                      class="text-red-600"> · 已过有效期</span></p>
         <p>有效期：{{ text(certDetail.validFrom) }} ~ {{ text(certDetail.validTo) }}</p>

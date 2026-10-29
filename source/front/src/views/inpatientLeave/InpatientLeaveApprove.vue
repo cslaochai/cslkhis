@@ -25,12 +25,16 @@
       <el-button data-testid="lv-approve-cancel" @click="visible = false">取消</el-button>
     </template>
   </el-dialog>
+
+  <!-- 软签二次确认：批准要落医师电子签名，由审批医师本人输入 PIN -->
+  <SignPinDialog ref="pinDialogRef" v-model="pinDialogVisible"/>
 </template>
 
 <script setup>
 import {computed, reactive, ref, watch} from 'vue'
 import {ElMessage} from 'element-plus'
 import {leaveApprove} from '@/api/inpatientLeave'
+import SignPinDialog from '@/components/his/SignPinDialog.vue'
 
 const props = defineProps({
   modelValue: {type: Boolean, default: false},
@@ -56,6 +60,9 @@ const gate = async (p, msg) => {
 }
 
 const apSaving = ref(false)
+// 软签二次确认：PIN 由审批医师本人输入，服务端校验通过才解密私钥
+const pinDialogRef = ref(null)
+const pinDialogVisible = ref(false)
 const ap = reactive({id: null, leaveNo: '', patientName: '', allow: true, doctorAdvice: '', rejectReason: ''})
 watch(visible, (open) => {
   if (!open) return
@@ -72,11 +79,21 @@ watch(visible, (open) => {
 const doApprove = async () => {
   if (ap.allow && !ap.doctorAdvice) return ElMessage.warning('批准必须填写医师意见（病情评估：是否允许外出、外出期间注意事项）')
   if (!ap.allow && !ap.rejectReason) return ElMessage.warning('拒绝必须填写理由（写清病情为什么不允许外出）')
+  // 批准即电子签名：先取 PIN，取消则不提交；拒绝不产生签名，不需要 PIN
+  let pin
+  if (ap.allow) {
+    pin = await pinDialogRef.value.askPin()
+    if (!pin) {
+      ElMessage.info('已取消签名，审批未提交')
+      return
+    }
+  }
   apSaving.value = true
   const res = await gate(leaveApprove({
     id: ap.id, allow: ap.allow,
     doctorAdvice: ap.allow ? ap.doctorAdvice : (ap.doctorAdvice || undefined),
     rejectReason: ap.allow ? undefined : ap.rejectReason,
+    pin,
   }), '审批失败')
   apSaving.value = false
   if (!res) return

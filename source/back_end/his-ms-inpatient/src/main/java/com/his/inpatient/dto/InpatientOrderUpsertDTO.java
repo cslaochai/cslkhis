@@ -74,6 +74,11 @@ public class InpatientOrderUpsertDTO implements Serializable {
     private String remark;
 
     /**
+     * 签名 PIN（软签二次确认）：签名人本人输入，明文不入库
+     */
+    private String pin;
+
+    /**
      * 医嘱明细（≥1 条）
      */
     @NotEmpty(message = "医嘱明细不能为空（至少 1 条项目）")

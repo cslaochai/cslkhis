@@ -1,10 +1,11 @@
 package com.his.spi.service;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.his.spi.dto.SignCertIssueDTO;
+import com.his.spi.dto.SignCertBindDTO;
+import com.his.spi.dto.SignCertKeygenDTO;
 import com.his.spi.dto.SignCertPageQueryDTO;
 import com.his.spi.dto.SignCertRevokeDTO;
-import com.his.spi.vo.SignCaProbeOutboundVO;
+import com.his.spi.vo.SignCaApplyVO;
 import com.his.spi.vo.SignCaStatusVO;
 import com.his.spi.vo.SignCertBriefVO;
 import com.his.spi.vo.SignCertSelectListVO;
@@ -16,8 +17,10 @@ import java.util.List;
 /**
  * 签名证书端口：证书取用、私钥解密与签名运算的唯一出口，证书事实仍由签名域持有。
  *
- * <p>临床各域只拿「证书编号 + 公钥 + 私钥文本」完成签名与验签，不持有证书档案行；
- * 证书台账的查询与运维（签发、吊销、分页）是签名中心自己的页面口径，不经本端口。
+ * <p>临床各域只拿「证书编号 + 公钥」完成验签，不持有证书档案行；
+ * 签名一律走 {@link #signWithCert(Long, String, String)}（带 PIN 二次确认），
+ * 私钥的解密与使用全部收在签名域内，绝不外发。
+ * 证书台账的查询与运维（密钥生成、证书回填、吊销、分页）是签名中心自己的页面口径，不经本端口。
  */
 public interface SignCertFacadeService {
 
@@ -40,13 +43,6 @@ public interface SignCertFacadeService {
      * <p>用于验签时把签名行上留存的证书定位回公钥；证书行已不存在时返回 null，由调用方给出结论。
      */
     SignCertBriefVO getCertById(Long certId);
-
-    /**
-     * 取证书私钥明文（PEM）。
-     *
-     * <p>仅在签名运算那一瞬使用，禁止写进任何出参与日志。
-     */
-    String privatePemOf(Long certId);
 
     /**
      * 登记一次证书使用：累加使用次数并刷新最近使用时间。
@@ -81,11 +77,16 @@ public interface SignCertFacadeService {
     String sha256Hex(String content);
 
     /**
-     * 用私钥对内容签名，返回 Base64 签名值。
+     * 带 PIN 二次确认的签名（软签主路径）：校验签名人 PIN → 解密私钥 → 签名。
      *
-     * <p>密钥或算法本身坏了属环境故障，按运行时异常上抛，不与业务失败混淆。
+     * <p>私钥的解密与使用全部收在签名域内完成，调用方只拿到签名值，私钥不出签名域。
+     *
+     * @param certId  证书ID
+     * @param content 待签内容
+     * @param pin     签名人本次输入的 PIN；为空或错误一律拒绝签名
+     * @return Base64 签名值
      */
-    String signWithPrivateKey(String privatePem, String content);
+    String signWithCert(Long certId, String content, String pin);
 
     /**
      * 用公钥验签。
@@ -117,9 +118,17 @@ public interface SignCertFacadeService {
     SignCertVO getCertDetail(Long certId);
 
     /**
-     * 人工签发证书（已有有效证书时拒绝，必须先吊销），返回签发结果。
+     * 生成签名密钥对并返回「CA 签发申请单」（CA 线下签发流程第一步）。
+     *
+     * <p>私钥在 HIS 本地生成并加密托管，全程不出 HIS；管理员把申请单上的 Subject DN 与公钥 PEM
+     * 线下送 CA 认证中心人工签发，CA 返回证书 PEM 后用 {@link #bindCert(SignCertBindDTO)} 回填。
      */
-    SignCertVO issueCert(SignCertIssueDTO dto);
+    SignCaApplyVO keygenCert(SignCertKeygenDTO dto);
+
+    /**
+     * 回填 CA 线下签发的证书（CA 线下签发流程第二步）：校验证书公钥与本地密钥对一致后转为有效。
+     */
+    SignCertVO bindCert(SignCertBindDTO dto);
 
     /**
      * 吊销证书：必须写明理由，只改状态不删行——历史签名仍要靠它的公钥验通。
@@ -132,12 +141,7 @@ public interface SignCertFacadeService {
     List<SignCertSelectListVO> listActiveCertOptions(String keyword);
 
     /**
-     * CA 模式状态：演示模式 / 远程 CA 的实时自检（模式、适配器名、是否就绪、行为提示）。
+     * CA 模式状态：证书签发走线下人工（模式、是否就绪、行为提示）。
      */
     SignCaStatusVO caStatus();
-
-    /**
-     * 证书机构外发探针：本地生成密钥对并向适配器提交一次 CSR 试跑，回显提交与回执事实，不落库。
-     */
-    SignCaProbeOutboundVO probeCaOutbound();
 }

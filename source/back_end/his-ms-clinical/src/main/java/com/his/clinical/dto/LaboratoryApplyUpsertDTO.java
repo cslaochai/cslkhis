@@ -73,4 +73,9 @@ public class LaboratoryApplyUpsertDTO {
     @Schema(description = "是否加急（0-否 1-是）")
     @AllowedValues(values = {"0", "1"}, message = "是否急诊取值不合法")
     private Integer isEmergency;
+
+    /**
+     * 签名 PIN（软签二次确认）：签名人本人输入，明文不入库
+     */
+    private String pin;
 }

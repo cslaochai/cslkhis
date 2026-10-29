@@ -101,7 +101,7 @@ public class SignatureCenterServiceImpl implements SignatureCenterService {
     }
 
     @Override
-    public SignatureVO sign(SignatureSignDTO dto) {
+    public SignatureVO sign(SignatureSignDTO dto, String pin) {
         CurrentUser user = UserUtils.getCurrentUser();
         if (user == null) {
             throw new BusinessException("当前用户信息不存在");
@@ -111,6 +111,7 @@ public class SignatureCenterServiceImpl implements SignatureCenterService {
         cmd.setBizId(dto.getBizId());
         cmd.setSignScene(dto.getSignScene() == null ? SignSceneEnum.MAKEUP.getCode() : dto.getSignScene());
         fillSigner(cmd, user);
+        cmd.setPin(pin);
         cmd.setRemark("补签：" + (dto.getRemark() == null ? "" : dto.getRemark()));
         return emrSignatureService.sign(cmd);
     }

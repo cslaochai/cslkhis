@@ -39,8 +39,7 @@
             overview.certActive
           }}</p>
         <p class="mt-1 text-xs text-slate-400">
-          共 {{ overview.certTotal }} 张 · 已吊销 {{ overview.certRevoked }} · 自动签发 {{ overview.certAutoIssued }}
-          张（信任级别低于人工）
+          共 {{ overview.certTotal }} 张 · 已吊销 {{ overview.certRevoked }}
         </p>
       </div>
     </div>
@@ -303,11 +302,6 @@
                        style="width: 130px" @change="() => { certQuery.pageNum = 1; loadCertList() }">
               <el-option v-for="o in options.certStatuses || []" :key="o.id" :label="o.text" :value="Number(o.id)"/>
             </el-select>
-            <el-select v-model="certQuery.issuedMode" clearable data-testid="p5-sign-f-issuedmode"
-                       placeholder="签发方式"
-                       style="width: 130px" @change="() => { certQuery.pageNum = 1; loadCertList() }">
-              <el-option v-for="o in options.issuedModes || []" :key="o.id" :label="o.text" :value="Number(o.id)"/>
-            </el-select>
             <el-input v-model="certQuery.keyword" clearable data-testid="p5-sign-f-certkeyword"
                       placeholder="证书号 / 员工姓名 / 指纹"
                       style="width: 230px"
@@ -319,7 +313,7 @@
               </template>
             </el-input>
             <el-button type="primary" @click="() => { certQuery.pageNum = 1; loadCertList() }">查询</el-button>
-            <el-button data-testid="p5-sign-issue-open" plain type="primary" @click="openIssue">人工签发证书</el-button>
+            <el-button data-testid="p5-sign-issue-open" plain type="primary" @click="openIssue">办理签名证书</el-button>
           </div>
 
           <div v-loading="certLoading" class="p-4">
@@ -348,18 +342,16 @@
                         class="font-mono text-xs text-slate-600">{{ row.keyFingerprintGroups }}</span>
                 </template>
               </el-table-column>
-              <el-table-column label="签发方式" width="100">
+              <el-table-column label="CA 签发" width="150">
                 <template #default="{ row }">
-                  <el-tag :data-testid="`p5-sign-cert-mode-${row.certNo}`"
-                          :type="row.issuedMode === 1 ? 'success' : 'warning'"
-                          size="small">
-                    {{ row.issuedModeText }}
-                  </el-tag>
+                  <span v-if="row.caIssuer" class="text-xs text-slate-600">{{ row.caIssuer }}</span>
+                  <span v-else class="text-xs text-slate-400">待线下送 CA</span>
                 </template>
               </el-table-column>
               <el-table-column label="状态" width="120">
                 <template #default="{ row }">
-                  <el-tag :type="row.certStatus === 1 ? 'success' : 'info'" size="small">{{
+                  <el-tag :type="row.certStatus === 1 ? 'success' : (row.certStatus === 0 ? 'warning' : 'info')"
+                          size="small">{{
                       row.certStatusText
                     }}
                   </el-tag>
@@ -525,7 +517,7 @@
     <!-- ---------------- 证书详情（子组件 SignatureCenterCertDetail） ---------------- -->
     <SignatureCenterCertDetail v-model="certDetailVisible" :id="certDetailId"/>
 
-    <!-- ---------------- 签发证书（子组件 SignatureCenterCertIssue） ---------------- -->
+    <!-- ---------------- 办理证书（子组件 SignatureCenterCertIssue） ---------------- -->
     <SignatureCenterCertIssue v-model="issueVisible" @saved="onIssueSaved"/>
 
     <!-- ---------------- 吊销证书 ---------------- -->
@@ -560,7 +552,8 @@
  *      合成一个"通过/不通过"会丢掉最关键的信息 —— 两者性质与处理方式完全不同。
  *   3. **时间戳来源必须自报**。本期时间取的是**本机时钟**，不具备可信时间效力；
  *      页面上原样展示来源，不得表述为"可信时间戳"。
- *   4. **证书是院内托管的**，不是 CA 签发的。自动签发的证书信任级别低于人工签发。
+ *   4. **证书的信任根在 CA 认证中心**。HIS 只托管医生私钥，签发由管理员线下送 CA 人工办理；
+ *      私钥全程不出 HIS，CA 中心也永远拿不到医生私钥。
  *   5. **存量病历的签名补不回来**。库里已归档病历都是签名能力上线之前产生的，
  *      它们没有签名；覆盖率表把"未签名（存量）"单独列出来，显示为 0% 而不是藏起来。
  *      补签等于伪造，本系统不允许对历史归档文书补签。
@@ -623,7 +616,7 @@ const certQuery = reactive({
 // 证书详情（子组件 SignatureCenterCertDetail）
 const certDetailVisible = ref(false);
 const certDetailId = ref(null);
-// 签发证书（子组件 SignatureCenterCertIssue）
+// 办理证书（子组件 SignatureCenterCertIssue）
 const issueVisible = ref(false);
 // 吊销证书
 const revokeVisible = ref(false);
