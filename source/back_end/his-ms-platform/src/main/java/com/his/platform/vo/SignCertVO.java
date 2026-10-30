@@ -1,5 +1,6 @@
 package com.his.platform.vo;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import lombok.Data;
@@ -33,6 +34,11 @@ public class SignCertVO {
      * 签名人姓名
      */
     private String empName;
+
+    /**
+     * 员工编号（工号，sys_employee.emp_code）：线下送 CA 做 RA 申请时取用，可作 Subject DN 的 OU
+     */
+    private String empCode;
 
     /**
      * BIGINT 出参一律转字符串：雪花 ID 超过 JS 安全整数范围，Number 化会静默改值
@@ -72,7 +78,10 @@ public class SignCertVO {
      * CA 签发者（issuer）；为空表示尚未线下送 CA 签发
      */
     private String caIssuer;
-
+    /**
+     * CA 签发申请主体 DN（CN=姓名, O=机构, OU=科室）；线下送 CA 申请时连同公钥一起提交
+     */
+    private String caSubjectDn;
     /**
      * CA 证书序列号（CA 回执）
      */
@@ -95,10 +104,12 @@ public class SignCertVO {
     /**
      * 生效时间
      */
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime validFrom;
     /**
      * 失效时间
      */
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime validTo;
 
     /**
@@ -113,6 +124,7 @@ public class SignCertVO {
     /**
      * 吊销时间
      */
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime revokeTime;
     /**
      * 吊销操作人姓名
@@ -122,6 +134,7 @@ public class SignCertVO {
     /**
      * 最近一次使用时间
      */
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime lastUsedTime;
     /**
      * 累计签名次数

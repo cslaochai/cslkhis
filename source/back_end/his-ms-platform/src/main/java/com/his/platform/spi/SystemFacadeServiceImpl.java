@@ -246,6 +246,21 @@ public class SystemFacadeServiceImpl implements SystemFacadeService {
     }
 
     @Override
+    public List<EmployeeBriefVO> listEmployeesByPermission(String permission) {
+        if (!TextUtil.hasText(permission)) {
+            return List.of();
+        }
+        List<Long> empIds = sysUserMapper.selectEmployeeIdsByPermission(permission.trim());
+        if (empIds.isEmpty()) {
+            return List.of();
+        }
+        return toEmployeeBriefList(sysEmployeeMapper.selectList(
+                new LambdaQueryWrapper<SysEmployee>()
+                        .in(SysEmployee::getId, empIds)
+                        .eq(SysEmployee::getStatus, EnableStatusEnum.ENABLED.getCode())));
+    }
+
+    @Override
     public boolean accountNameExists(String userName) {
         if (!TextUtil.hasText(userName)) {
             return false;

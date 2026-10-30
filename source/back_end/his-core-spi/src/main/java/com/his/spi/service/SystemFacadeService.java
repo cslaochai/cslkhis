@@ -166,6 +166,15 @@ public interface SystemFacadeService {
      */
     List<EmployeeBriefVO> listEmployeesByName(String empName);
 
+    /**
+     * 持有指定权限码的全部在职员工，用于「谁有处置权就通知谁」的预警接收人圈定
+     * （如无签结诊告警发给持有签名证书吊销处置权的角色）。
+     *
+     * @param permission 权限码（sys_menu.permission 精确匹配，空白时返回空列表）
+     * @return 停用人不出现在结果里；无人持有该权限返回空列表
+     */
+    List<EmployeeBriefVO> listEmployeesByPermission(String permission);
+
     // ---------- 登录账号 ----------
 
     /**

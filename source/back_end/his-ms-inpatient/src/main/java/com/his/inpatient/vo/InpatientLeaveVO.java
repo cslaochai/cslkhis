@@ -353,7 +353,7 @@ public class InpatientLeaveVO {
          */
         private String remark;
         /**
-         * 关联电子签名证据（签名中心可回查）
+         * 关联电子签名证据（签名验签页可回查）
          */
         @JsonSerialize(using = ToStringSerializer.class)
         private Long signRefId;

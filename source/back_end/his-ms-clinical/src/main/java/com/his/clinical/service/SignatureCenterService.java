@@ -6,12 +6,12 @@ import com.his.clinical.dto.SignatureSignDTO;
 import com.his.clinical.vo.SignatureOptionsVO;
 
 /**
- * 签名中心（运维/审计界面）的出参与命令装配。
+ * 签名验签（运维/审计界面）的出参与命令装配。
  */
 public interface SignatureCenterService {
 
     /**
-     * 下拉选项：对象类型/场景/签名状态/验签状态/时间来源/证书状态/签发方式
+     * 下拉选项：对象类型/场景/签名状态/验签状态/证书状态/签发方式
      */
     SignatureOptionsVO queryOptions();
 

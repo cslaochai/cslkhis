@@ -2236,6 +2236,7 @@
 
   <!-- 软签二次确认：结诊一次性签病历+处方+检查+检验，弹一次 PIN 复用于本次提交 -->
   <SignPinDialog ref="pinDialogRef" v-model="pinDialogVisible"/>
+  <UnsignedSignAlertDialog ref="unsignedSignAlertRef"/>
 
   <!-- ================= 开住院证（门诊 → 住院的入口） ================= -->
   <DoctorWorkstationAdmissionAdd
@@ -2376,6 +2377,8 @@ import {useCurrentPatientStore} from '@/stores/currentPatient';
 import PageActionBar from '@/components/his/PageActionBar.vue';
 import OrderPanel from '@/components/his/OrderPanel.vue';
 import SignPinDialog from '@/components/his/SignPinDialog.vue';
+import UnsignedSignAlertDialog from '@/components/his/UnsignedSignAlertDialog.vue';
+import {getSignCertByEmp} from '@/api/signature';
 import DoctorWorkstationAdmissionAdd from './DoctorWorkstationAdmissionAdd.vue';
 import DoctorWorkstationAdmissionList from './DoctorWorkstationAdmissionList.vue';
 import RxSignDialog from './RxSignDialog.vue';
@@ -4829,6 +4832,15 @@ const handleComplete = async () => {
     }
     return;
   }
+  // 无签结诊强提示（P5.7）：医生证书被吊销/未配置时业务照常、电子签名留白。
+  // 证书查询失败不拦结诊（由后端预检兜底判 signSkipped），查询成功且无有效证书才走强提示。
+  let signSkipped = false;
+  try {
+    const empRes = await getEmployeeCurrent();
+    const certRes = await getSignCertByEmp(empRes.data?.id);
+    signSkipped = !(certRes.code === 200 && !!certRes.data);
+  } catch (error) /* 证书查询失败不拦结诊，后端预检兜底 */ {
+  }
   // 检查各项状态（包括暂存的检查检验）
   const hasPrescriptions = prescriptionForm.details.length > 0;
   const hasInspections = inspectionRecords.value.length > 0;
@@ -4851,20 +4863,25 @@ const handleComplete = async () => {
       ⚠ 当前没有开具任何处方/检查/检验，患者无需缴费。
     </div>`;
   }
-  try {
-    await ElMessageBox.confirm(`<div class="space-y-2">
+  if (signSkipped) {
+    // 无有效证书：普通确认框换成全屏不可绕过的强提示，确认后直接提交（跳过 PIN 与签名板）
+    await unsignedSignAlertRef.value.open();
+  } else {
+    try {
+      await ElMessageBox.confirm(`<div class="space-y-2">
         <div class="text-sm text-slate-600">确认完成该患者的就诊？</div>
         <div class="rounded-lg bg-slate-50 p-3 text-sm">${checkListHtml}</div>
         ${warningHtml}
         <div class="text-xs text-slate-400 mt-2">系统将自动保存并提交病历，生成收费单。</div>
       </div>`, '结诊确认', {
-      dangerouslyUseHTMLString: true,
-      confirmButtonText: '确认完成',
-      cancelButtonText: '返回修改',
-      type: 'info',
-    });
-  } catch (action) {
-    return; // 用户取消
+        dangerouslyUseHTMLString: true,
+        confirmButtonText: '确认完成',
+        cancelButtonText: '返回修改',
+        type: 'info',
+      });
+    } catch (action) {
+      return; // 用户取消
+    }
   }
   // 获取患者信息并构建提交数据
   const patient = currentPatient.value;
@@ -4909,8 +4926,8 @@ const handleComplete = async () => {
     laboratoryApplies: buildLaboratoryApplyPayload(),
   };
   // 有处方先取医师签名笔迹（视觉落款）：档案已维护笔迹 → 默认直接使用不弹框；
-  // 档案没有 → 才退回签名板弹框手写
-  if (submitData.prescriptions.length > 0) {
+  // 档案没有 → 才退回签名板弹框手写。无签结诊（signSkipped）时整个签名链路跳过。
+  if (submitData.prescriptions.length > 0 && !signSkipped) {
     pendingSubmitData.value = submitData;
     rxSignature.value = '';
     let archiveSign = '';
@@ -4929,7 +4946,7 @@ const handleComplete = async () => {
     return;
   }
   try {
-    await doSubmitRecord(submitData);
+    await doSubmitRecord(submitData, false, null, signSkipped);
   } catch (error) /* 提示与弹框全在 doSubmitRecord 里收口 */ {
 
   }
@@ -4938,15 +4955,16 @@ const handleComplete = async () => {
 // 实际结诊提交（签名板确认后或无处方时调用）
 // forceSubmit=true 表示医生在否决项弹框里点了「仍要结诊」：缺陷不会消失，结诊收尾照旧出质控单留痕
 // knownPin：否决项驳回后重试时复用同一个 PIN，避免同一次结诊反复让医生输口令
-const doSubmitRecord = async (submitData, forceSubmit = false, knownPin = null) => {
+const doSubmitRecord = async (submitData, forceSubmit = false, knownPin = null, signSkipped = false) => {
   submitting.value = true;
   // pin 提到 try 外声明：否决项驳回后的重试要用它，不重新弹框
   let pin = knownPin;
   try {
     // 结诊这一次请求里后端要签病历+处方+检查+检验多份，弹一次 PIN 复用于全部签名；
-    // 用户取消 → 中止本次结诊，一个请求都不发
-    pin = pin ?? await pinDialogRef.value.askPin();
-    if (!pin) {
+    // 用户取消 → 中止本次结诊，一个请求都不发。
+    // 无签结诊（signSkipped）时后端不签名，PIN 置空串直接过。
+    pin = pin ?? (signSkipped ? '' : await pinDialogRef.value.askPin());
+    if (!pin && !signSkipped) {
       ElMessage.info('已取消签名，本次结诊未提交');
       return;
     }
@@ -4966,7 +4984,7 @@ const doSubmitRecord = async (submitData, forceSubmit = false, knownPin = null) 
     const vetoAction = await handleEmrSubmitVeto(error);
     if (vetoAction === 'force') {
       // 重试的是同一次结诊（同一批签名对象），复用刚才的 PIN，不必让医生再输一遍
-      await doSubmitRecord(submitData, true, pin);
+      await doSubmitRecord(submitData, true, pin, signSkipped);
       return;
     }
     if (vetoAction === 'cancel') {

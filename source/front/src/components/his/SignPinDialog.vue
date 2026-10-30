@@ -5,7 +5,7 @@
               title="软签确认：每次签名都要由本人输入 PIN，校验通过才会解密私钥完成签名。"/>
     <el-form @submit.prevent>
       <el-form-item label="签名PIN" required>
-        <el-input v-model="pin" data-testid="sign-pin-input" maxlength="32" placeholder="请输入签名 PIN"
+        <el-input v-model="pin" autocomplete="new-password" data-testid="sign-pin-input" maxlength="32" placeholder="请输入签名 PIN"
                   show-password type="password" @keyup.enter="confirm">
           <template #prefix>
             <el-icon><Lock/></el-icon>

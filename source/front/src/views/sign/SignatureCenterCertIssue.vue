@@ -8,26 +8,29 @@
     </el-steps>
 
     <!-- 第一步：生成密钥对 -->
-    <el-form v-show="step === 0" label-width="90px">
+    <el-form v-show="step === 0" label-width="90px" autocomplete="off">
       <el-form-item label="员工" required>
         <el-select
             v-model="form.empId"
             :loading="empLoading"
             :remote-method="searchEmp"
+            autocomplete="off"
             data-testid="p5-sign-issue-emp"
             filterable
+            name="empKeyword"
             placeholder="按姓名搜索员工"
             remote
             reserve-keyword
             style="width: 100%"
             @change="onEmpChange"
+            @focus="e => e.target.removeAttribute('readonly')"
         >
           <el-option v-for="e in empOptions" :key="e.id" :label="`${e.empName}（${e.deptName || '未分配科室'}）`"
                      :value="e.id"/>
         </el-select>
       </el-form-item>
       <el-form-item label="签名PIN" required>
-        <el-input v-model="form.pin" data-testid="p5-sign-issue-pin" placeholder="4-32 位，签名时由本人输入" show-password/>
+        <el-input v-model="form.pin" autocomplete="new-password" data-testid="p5-sign-issue-pin" name="certPin" placeholder="4-32 位，签名时由本人输入" show-password/>
         <div class="text-xs text-slate-500 mt-1">PIN 是软签的二次确认口令：私钥本地加密托管，签名时须本人输入 PIN 才能解密。只存哈希，明文不入库。</div>
       </el-form-item>
       <el-form-item label="备注">
@@ -62,16 +65,7 @@
         <el-input v-model="bindForm.certPem" data-testid="p5-sign-bind-pem" :rows="8" type="textarea"
                   placeholder="粘贴 CA 签发返回的证书 PEM（含 -----BEGIN CERTIFICATE----- 段）"/>
       </el-form-item>
-      <el-form-item label="CA 序列号">
-        <el-input v-model="bindForm.caSerial" data-testid="p5-sign-bind-serial" placeholder="可空，留空则从证书解析"/>
-      </el-form-item>
-      <el-form-item label="签发 CA">
-        <el-input v-model="bindForm.caIssuer" data-testid="p5-sign-bind-issuer" placeholder="可空，留空则从证书解析"/>
-      </el-form-item>
-      <el-form-item label="有效期(天)">
-        <el-input-number v-model="bindForm.validDays" :max="3650" :min="1" data-testid="p5-sign-bind-days"
-                         placeholder="留空取系统配置" style="width: 100%"/>
-      </el-form-item>
+      <p class="pl-2 text-xs text-slate-400">序列号、签发者、主体 DN、有效期均从证书文件解析，无需填写。</p>
     </el-form>
 
     <template #footer>
@@ -90,7 +84,7 @@
 </template>
 
 <script setup>
-import {computed, reactive, ref, watch} from 'vue';
+import {computed, nextTick, reactive, ref, watch} from 'vue';
 import {ElMessage} from 'element-plus';
 import {bindSignCert, keygenSignCert} from '@/api/signature';
 import {getEmployeeList} from '@/api/system';
@@ -120,10 +114,7 @@ const form = reactive({
 });
 const bindForm = reactive({
   certId: undefined,
-  certPem: '',
-  caSerial: '',
-  caIssuer: '',
-  validDays: undefined
+  certPem: ''
 });
 
 const searchEmp = async (keyword) => {
@@ -139,8 +130,17 @@ const searchEmp = async (keyword) => {
 };
 
 // 打开即重置表单并拉一次员工候选（与原先 openIssue 的口径一致）
+// 360 登录管家等密码管家无视 autocomplete：开框时把员工搜索框置只读（自动填充不碰只读框），聚焦才解锁
+const unlockAutofill = (e) => {
+  if (e.target.matches?.('input[name="empKeyword"]')) e.target.removeAttribute('readonly');
+};
+document.addEventListener('focusin', unlockAutofill, true);
 watch(visible, (open) => {
   if (!open) return;
+  nextTick(() => {
+    const el = document.querySelector('input[name="empKeyword"]');
+    if (el) el.readOnly = true;
+  });
   step.value = 0;
   applyInfo.value = null;
   form.empId = undefined;
@@ -151,9 +151,6 @@ watch(visible, (open) => {
   form.remark = '';
   bindForm.certId = undefined;
   bindForm.certPem = '';
-  bindForm.caSerial = '';
-  bindForm.caIssuer = '';
-  bindForm.validDays = undefined;
   searchEmp('');
 });
 
@@ -204,9 +201,6 @@ const submitBind = async () => {
     const res = await bindSignCert({
       certId: bindForm.certId,
       certPem: bindForm.certPem,
-      caSerial: bindForm.caSerial || undefined,
-      caIssuer: bindForm.caIssuer || undefined,
-      validDays: bindForm.validDays || undefined,
     });
     ElMessage.success(`证书已回填生效 ${res.data?.certNo || ''}`);
     visible.value = false;

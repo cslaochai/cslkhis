@@ -136,7 +136,7 @@
     <el-dialog v-model="vVisible" data-testid="cn-void-dialog" title="作废通知单" width="480px">
       <p class="mb-2 text-sm text-slate-500">{{
           vForm.noticeNo
-        }}：作废不改内容、不删行，仅状态留痕；已签名锁定的须先在签名中心作废签名。</p>
+        }}：作废不改内容、不删行，仅状态留痕；已签名锁定的须先在「电子签名与时间戳」作废签名。</p>
       <el-input v-model="vForm.voidReason" :rows="3" data-testid="cn-void-reason" maxlength="500" placeholder="作废原因（必填：写清错在哪）"
                 show-word-limit type="textarea"/>
       <template #footer>

@@ -36,6 +36,11 @@ public class SignCertVO {
     private String empName;
 
     /**
+     * 员工编号（工号，sys_employee.emp_code）：线下送 CA 做 RA 申请时取用，可作 Subject DN 的 OU
+     */
+    private String empCode;
+
+    /**
      * 所属科室ID（雪花 ID 超 JS 安全整数范围，Number 化会静默改值）
      */
     @JsonSerialize(using = ToStringSerializer.class)
@@ -75,6 +80,11 @@ public class SignCertVO {
      * CA 签发者（issuer）；为空表示尚未线下送 CA 签发
      */
     private String caIssuer;
+
+    /**
+     * CA 签发申请主体 DN（CN=姓名, O=机构, OU=科室）；线下送 CA 申请时连同公钥一起提交
+     */
+    private String caSubjectDn;
 
     /**
      * CA 证书序列号（CA 回执）

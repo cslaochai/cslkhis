@@ -102,7 +102,7 @@ public class InpatientRecordSignContentServiceImpl extends ServiceImpl<BizInpati
         }
         if (Objects.equals(1, r.getSignStatus())) {
             return "文书 " + r.getRecordNo() + " 已签名（签名即锁定），不能重复签名；"
-                    + "如需修改内容，请先在「签名中心」作废该签名（作废会留痕并解除锁定）";
+                    + "如需修改内容，请先在「签名验签」作废该签名（作废会留痕并解除锁定）";
         }
         if (Objects.equals(RecordStatusEnum.DRAFT.getCode(), r.getRecordStatus())) {
             return "文书 " + r.getRecordNo() + " 还是草稿，不能签名；"

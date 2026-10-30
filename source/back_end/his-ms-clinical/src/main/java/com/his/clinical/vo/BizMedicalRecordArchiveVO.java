@@ -97,6 +97,11 @@ public class BizMedicalRecordArchiveVO {
     private Integer archiveStatus;
 
     /**
+     * 病历电子签名状态：0-未签名（待补签） 1-已签名 2-已作废；未签名时归档动作会被服务端拦截
+     */
+    private Integer signStatus;
+
+    /**
      * 归档时间
      */
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")

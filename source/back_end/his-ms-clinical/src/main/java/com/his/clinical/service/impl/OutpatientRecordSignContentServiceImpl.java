@@ -105,7 +105,7 @@ public class OutpatientRecordSignContentServiceImpl extends ServiceImpl<BizMedic
         }
         if (Objects.equals(ObjectSignStatusEnum.SIGNED.getCode(), r.getSignStatus())) {
             return "门诊病历 " + r.getRecordNo() + " 已签名（签名即锁定），不能重复签名；"
-                    + "如需修改，请先在「签名中心」作废该签名（作废会留痕并解除锁定）";
+                    + "如需修改，请先在「签名验签」作废该签名（作废会留痕并解除锁定）";
         }
         Integer status = r.getRecordStatus();
         if (Objects.equals(RecordStatusEnum.DRAFT.getCode(), status)) {

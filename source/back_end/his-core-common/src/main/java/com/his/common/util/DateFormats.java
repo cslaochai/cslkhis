@@ -57,15 +57,6 @@ public final class DateFormats {
      */
     public static final DateTimeFormatter COMPACT_DATETIME_MS = DateTimeFormatter.ofPattern("yyyyMMddHHmmssSSS");
 
-    // ==================== 协议格式（对接外部系统专用，不要用于库内） ====================
-
-    /**
-     * {@code 2026-10-07T14:30:05}。仅医保/TSA 通道报文用（对方协议要求带 {@code T}）。
-     *
-     * <p>库内所有对外文本仍走 {@link #DATETIME}（空格分隔）。
-     */
-    public static final DateTimeFormatter ISO_DATETIME = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss");
-
     // ==================== 解析专用（STRICT，格式非法直接抛，不是"渲染"） ====================
 
     /**

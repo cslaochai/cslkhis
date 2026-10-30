@@ -135,7 +135,7 @@ public class CriticalNoticeController {
      * 用于台账操作列的作废动作。
      */
     @PreAuthorize("hasAuthority('ipd:criticalNotice:edit')")
-    @Operation(summary = "作废（必填原因；已签收不许作废，已签名须先在签名中心作废签名）")
+    @Operation(summary = "作废（必填原因；已签收不许作废，已签名须先在签名验签页作废签名）")
     @PostMapping("/voidById")
     public Result<Void> voidById(@Valid @RequestBody CriticalNoticeDTO.VoidNotice dto) {
         criticalNoticeService.voidNotice(dto);

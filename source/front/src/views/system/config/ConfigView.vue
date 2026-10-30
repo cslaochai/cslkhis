@@ -115,7 +115,6 @@
               <el-select v-model="signConfig.timeSource" style="width: 260px">
                 <el-option label="本机时钟" :value="1"/>
                 <el-option label="院内授时" :value="2"/>
-                <el-option label="第三方 TSA" :value="3"/>
               </el-select>
             </el-form-item>
             <el-form-item label="证书有效期（天）" prop="certValidDays">

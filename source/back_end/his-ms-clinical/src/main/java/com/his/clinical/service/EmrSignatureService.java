@@ -17,7 +17,7 @@ public interface EmrSignatureService {
 
     /**
      * 签名记录分页：可按对象类型、签名场景、签名人、签名状态、验签结果与时间区间筛选。
-     * 用于签名中心「签名记录」签的查询卡表格。
+     * 用于签名验签页「签名记录」签的查询卡表格。
      */
     IPage<SignatureVO> listPage(SignaturePageQueryDTO query);
 
@@ -42,7 +42,7 @@ public interface EmrSignatureService {
     SignatureVO invalidate(Long signId, String reason, Long operatorId, String operatorName);
 
     /**
-     * 单条签名详情：被签内容快照、摘要、签名证书与时间戳来源一并取回。
+     * 单条签名详情：被签内容快照、摘要与签名证书一并取回。
      * 用于签名记录点开一行后的「签名详情与验签」抽屉。
      */
     SignatureVO getById(Long id);
@@ -59,8 +59,8 @@ public interface EmrSignatureService {
     ObjectSignatureVO objectStatus(Integer bizType, Long bizId);
 
     /**
-     * 签名概览统计：签名与证书计数、各对象类型的签名覆盖率，并带时间来源与证书信任级别说明。
-     * 用于签名中心页面顶部的概览卡片区。
+     * 签名概览统计：签名与证书计数、各对象类型的签名覆盖率，并带证书信任级别说明。
+     * 用于签名验签页顶部的概览卡片区。
      */
     SignatureSummaryVO summary();
 }

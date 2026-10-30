@@ -56,8 +56,10 @@ public final class PemCodecUtil {
             return null;
         }
         try {
+            // SM2 证书的国密曲线（1.2.156.10197.1.301）默认 JCE 不认识，必须走 BC 解析
             java.security.cert.CertificateFactory cf =
-                    java.security.cert.CertificateFactory.getInstance("X.509");
+                    java.security.cert.CertificateFactory.getInstance("X.509",
+                            new org.bouncycastle.jce.provider.BouncyCastleProvider());
             try (java.io.ByteArrayInputStream in = new java.io.ByteArrayInputStream(
                     certPem.getBytes(java.nio.charset.StandardCharsets.US_ASCII))) {
                 java.security.cert.Certificate cert = cf.generateCertificate(in);
@@ -66,6 +68,36 @@ public final class PemCodecUtil {
             }
         } catch (Exception e) {
             return null;
+        }
+    }
+
+    /**
+     * 解析 X.509 证书 PEM（CA 线下签发回填用）：序列号/签发者/主体/有效期一律以证书文件为准，
+     * 不让操作人手工抄写 —— 证书本身就是唯一事实源。
+     *
+     * @return 解析出的 X509 证书对象
+     * @throws IllegalArgumentException PEM 为空或解析失败（含 SM2 国密证书走 BC 通道）
+     */
+    public static java.security.cert.X509Certificate parseCertificate(String certPem) {
+        if (certPem == null || certPem.isBlank()) {
+            throw new IllegalArgumentException("证书 PEM 为空");
+        }
+        try {
+            java.security.cert.CertificateFactory cf =
+                    java.security.cert.CertificateFactory.getInstance("X.509",
+                            new org.bouncycastle.jce.provider.BouncyCastleProvider());
+            try (java.io.ByteArrayInputStream in = new java.io.ByteArrayInputStream(
+                    certPem.getBytes(java.nio.charset.StandardCharsets.US_ASCII))) {
+                java.security.cert.Certificate cert = cf.generateCertificate(in);
+                if (!(cert instanceof java.security.cert.X509Certificate)) {
+                    throw new IllegalArgumentException("贴入的内容不是 X.509 证书");
+                }
+                return (java.security.cert.X509Certificate) cert;
+            }
+        } catch (IllegalArgumentException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new IllegalArgumentException("证书 PEM 解析失败：" + e.getMessage(), e);
         }
     }
 

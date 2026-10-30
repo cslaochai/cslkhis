@@ -26,21 +26,6 @@ public class SignCertBindDTO {
     private String certPem;
 
     /**
-     * CA 证书序列号（CA 回执；留空则从证书 PEM 解析）
-     */
-    private String caSerial;
-
-    /**
-     * 签发 CA 名称（issuer；留空则从证书 PEM 解析）
-     */
-    private String caIssuer;
-
-    /**
-     * 有效期天数：CA 回执未带有效期时以此推算（留空取系统参数，再留空取 365）
-     */
-    private Integer validDays;
-
-    /**
      * 备注
      */
     private String remark;

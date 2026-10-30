@@ -10,8 +10,7 @@ import request from './request'
  * 2. **验签结论拆成两个断言**：`signatureValid`（签名值本身能不能验通 —— false 表示证据被换过）
  *    与 `contentMatched`（当前内容摘要 == 签名时摘要 —— false 表示签名后内容被改过）。
  *    绝对不要合成一个"通过/不通过"布尔值：两者的性质与处理方式完全不同。
- * 3. **时间戳来源必须自报**。本条签名的时间戳是"本机时钟 / 院内授时 / 第三方 TSA"，
- *    由 `timeSource` / `timeSourceText` / `timeSourceNote` 如实给出，**不得**对外表述为可信时间。
+ * 3. **签名时间取本机时钟**，由 `timeSource` / `timeSourceText` / `timeSourceNote` 如实给出，**不得**对外表述为可信时间。
  * 4. **证书是院内托管的**，不是 CA 签发的。`certTrustNote` 说明信任级别，
  *    `issuedMode`=2 表示自动签发，信任级别低于人工签发，页面上要能看出来。
  * 5. 所有 ID 都是字符串（雪花ID），**不要 Number()**。
@@ -81,33 +80,7 @@ export function revokeSignCert(certId, reason) {
   return request.post('/emr/signCert/revoke', { certId, reason })
 }
 
-// ---------------- 可信时间戳 TSA（G6） ----------------
-
-/**
- * 口径：available（适配器在线）/ configTimeSource（配置值）/ effectiveTimeSource（生效值）
- * 三个必须一起读 —— 配置了 3 但适配器不在线时生效的是 1（本机时钟），只看配置值就是谎报。
- * 本期接入的是本地内置 TSA（演示信任根，令牌结构真实但非第三方 CA/TSA）。
- */
-
-// TSA 服务状态（纯查询，无副作用）
-export function getTsaStatus() {
-  return request.get('/emr/tsa/status')
-}
-
-// 时间戳令牌台账分页（serial 精确 / keyword 摘要模糊 可空）
-export function getTsaTokenList(params) {
-  return request.get('/emr/tsa/tokenListPage', { params })
-}
-
-// ---------------- 可信时间戳 TSA 运维（G6b） ----------------
-
-// 切换签名时间来源（1 本机时钟 / 3 可信时间戳；2 院内授时未实现会被拒绝）。
-// 返回操作后的最新状态（configTimeSource / effectiveTimeSource 同屏）。
-export function updateTsaTimeSource(timeSource) {
-  return request.post('/emr/tsa/timeSource', { timeSource })
-}
-
-// 台账令牌复验（只读，不落留痕）。valid=false 时 failReason 给人话原因。
-export function verifyTsaToken(id) {
-  return request.post('/emr/tsa/verifyToken', { id })
+// 按员工查签名证书（员工管理「签名设置」只读弹框用；无证书返回空）
+export function getSignCertByEmp(empId) {
+  return request.get('/emr/signCert/getByEmp', { params: { empId } })
 }

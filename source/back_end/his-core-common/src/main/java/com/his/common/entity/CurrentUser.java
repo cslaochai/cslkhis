@@ -36,7 +36,7 @@ import java.util.List;
 public class CurrentUser implements UserDetails {
 
     /**
-     * 账号ID（登录账号维度，患者账号同样有值，与 {@link #patientId} 不是一回事）
+     * 账号ID 除了登录的时候能用这个字段，业务记录操作人请使用employeeId，严禁使用userId
      */
     private Long userId;
 

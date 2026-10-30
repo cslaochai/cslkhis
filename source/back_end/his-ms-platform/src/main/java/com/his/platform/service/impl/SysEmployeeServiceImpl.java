@@ -22,10 +22,12 @@ import com.his.platform.mapper.SysWardMapper;
 import com.his.platform.service.DeptScopeService;
 import com.his.platform.service.EmployeePostService;
 import com.his.platform.service.RedisSequenceService;
+import com.his.platform.service.SignCertService;
 import com.his.platform.service.SysEmployeeService;
 import com.his.platform.service.UserIdentityCache;
 import com.his.platform.vo.EmployeePostVO;
 import com.his.platform.vo.EmployeeVO;
+import com.his.spi.dto.SignCertKeygenDTO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -49,6 +51,13 @@ public class SysEmployeeServiceImpl extends ServiceImpl<SysEmployeeMapper, SysEm
     private final EmployeePostService employeePostService;
     private final DeptScopeService deptScopeService;
     private final UserIdentityCache userIdentityCache;
+    private final SignCertService signCertService;
+
+    /**
+     * 建号自动造钥时的初始签名 PIN：与系统演示口令同口径，供线下送 CA 与首次软签过渡；
+     * 目前无改 PIN 功能，签名上线时需一并补「重置 PIN」。
+     */
+    private static final String INITIAL_SIGN_PIN = "123456";
 
     @Override
     public PageResult<EmployeeVO> listPage(EmployeeQueryDTO queryDTO) {
@@ -77,15 +86,11 @@ public class SysEmployeeServiceImpl extends ServiceImpl<SysEmployeeMapper, SysEm
         wrapper.like(TextUtil.hasText(queryDTO.getEmpName()), SysEmployee::getEmpName, queryDTO.getEmpName())
                 .eq(queryDTO.getEmpType() != null, SysEmployee::getEmpType, queryDTO.getEmpType());
         if (Boolean.TRUE.equals(queryDTO.getOnlyScheduled())) {
-            // 已排班场景：deptId 语义切换为「排班的出诊科室」，不再走主科室/岗位科室过滤（见 applyScheduledFilter）
             applyScheduledFilter(wrapper, queryDTO);
         } else {
             if (!TextUtil.hasText(queryDTO.getRoleCode())) {
                 applyDeptScope(wrapper, queryDTO);
             } else if (queryDTO.getDeptId() != null) {
-                // 角色名册是跨科室的（麻醉医师在麻醉科、手术室护士在手术室），按登录人科室收口会让
-                // 排台「麻醉医师」下拉恒空；只有调用方显式指定科室时才按该科室收口（越权科室仍报错），
-                // deptId 条件由 applyStaffTypeFilter 的 else 分支追加。
                 deptScopeService.resolveDeptId(queryDTO.getDeptId());
             }
             applyStaffTypeFilter(wrapper, queryDTO);
@@ -93,13 +98,7 @@ public class SysEmployeeServiceImpl extends ServiceImpl<SysEmployeeMapper, SysEm
             applyScheduleScopeFilter(wrapper, queryDTO);
         }
 
-        // 2026-09-22：下拉/名册一律按 **主键升序**（原来是工号序）。
-        // 这份列表主要给人挑人用（排班面板名册、各类医生下拉），
-        // 而排班记录里存的医生标识就是这同一个主键 —— 两边统一按它排，
-        // 看板上就不会出现「名册是 A 序、排班是 B 序」的错位。
-        // ⚠️ 用 last() 就不要再叠 orderByAsc：两者都会生成 ORDER BY，拼成两段 ORDER BY 是语法错误。
         wrapper.last("ORDER BY id ASC");
-
         return sysEmployeeMapper.selectList(wrapper).stream()
                 .map(this::convertToVO)
                 .peek(this::maskSensitive)
@@ -225,13 +224,33 @@ public class SysEmployeeServiceImpl extends ServiceImpl<SysEmployeeMapper, SysEm
 
         // 岗位（角色 × 科室）整体替换：鉴权直接 join 岗位表，主科室由主岗位回填。
         // posts=null 表示本次不带岗位字段，原样保留。
-        employeePostService.replacePosts(empId, upsertDTO.getPosts());
+        EmployeePostVO primaryPost = employeePostService.replacePosts(empId, upsertDTO.getPosts());
 
         // 员工资料（姓名/科室等）也在身份缓存里；posts=null 的部分更新（如名册切启用状态）
         // 不会走 replacePosts 的失效分支，这里无条件清一次，确保改完立即生效。
         userIdentityCache.invalidateByEmployeeId(empId);
 
+        // 新建医生随建号自动生成签名密钥对（CA 线下签发第一步）：私钥本地加密托管不出 HIS，
+        // 公钥随「CA 签发申请单」进签名验签页，操作员拿去 CA 平台提交申请，审核发证后回填。
+        // 同事务内执行：造钥失败（如未配签名主口令）账号一并回滚，错误信息指明原因，不留"有账号无证书"的哑巴数据。
+        if (isNew && Integer.valueOf(1).equals(upsertDTO.getEmpType())) {
+            keygenForNewDoctor(emp, primaryPost);
+        }
+
         return isNew ? "新增成功" : "修改成功";
+    }
+
+    private void keygenForNewDoctor(SysEmployee emp, EmployeePostVO primaryPost) {
+        SignCertKeygenDTO kdto = new SignCertKeygenDTO();
+        kdto.setEmpId(emp.getId());
+        kdto.setEmpName(emp.getEmpName());
+        kdto.setDeptId(primaryPost != null ? primaryPost.getDeptId() : null);
+        kdto.setDeptName(primaryPost != null ? primaryPost.getDeptName() : null);
+        kdto.setPin(INITIAL_SIGN_PIN);
+        kdto.setRemark("建号自动生成（初始签名PIN " + INITIAL_SIGN_PIN + "）；CA 申请单见 组织与资源-签名证书");
+        var current = UserUtils.getCurrentUser();
+        signCertService.keygen(kdto, current != null ? current.getUserId() : null,
+                current != null ? current.getUsername() : null);
     }
 
     @Override

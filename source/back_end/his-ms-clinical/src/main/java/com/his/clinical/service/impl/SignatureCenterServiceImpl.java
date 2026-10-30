@@ -19,7 +19,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * 签名中心出参与命令装配。
+ * 签名验签出参与命令装配。
  */
 @Service
 @RequiredArgsConstructor
@@ -77,15 +77,10 @@ public class SignatureCenterServiceImpl implements SignatureCenterService {
         for (SignVerifyStatusEnum s : SignVerifyStatusEnum.values()) {
             verifyStatuses.add(opt(s.getCode(), s.getLabel()));
         }
-        List<OptionItemVO> timeSources = new ArrayList<>();
-        for (TimeSourceEnum t : TimeSourceEnum.values()) {
-            timeSources.add(opt(t.getCode(), t.getLabel()));
-        }
         vo.setBizTypes(bizTypes);
         vo.setScenes(scenes);
         vo.setSignStatuses(signStatuses);
         vo.setVerifyStatuses(verifyStatuses);
-        vo.setTimeSources(timeSources);
 
         List<OptionItemVO> certStatuses = new ArrayList<>();
         for (CertStatusEnum s : CertStatusEnum.values()) {

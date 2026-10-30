@@ -53,4 +53,15 @@ public interface SysUserMapper extends BaseMapper<SysUser> {
             "INNER JOIN sys_employee_post p ON e.id = p.employee_id " +
             "WHERE p.role_id = #{roleId}")
     List<String> selectUserNamesByRoleId(@Param("roleId") Long roleId);
+
+    /**
+     * 持有指定权限码的全部员工ID（去重）。
+     * 链路：sys_menu.permission → sys_role_menu → sys_employee_post.employee_id。
+     * 用于「谁有处置权就通知谁」的预警接收人圈定（如无签结诊告警发给医务科）。
+     */
+    @Select("SELECT DISTINCT p.employee_id FROM sys_menu m " +
+            "INNER JOIN sys_role_menu rm ON m.id = rm.menu_id " +
+            "INNER JOIN sys_employee_post p ON rm.role_id = p.role_id " +
+            "WHERE m.permission = #{permission} AND m.del_flag = 0")
+    List<Long> selectEmployeeIdsByPermission(@Param("permission") String permission);
 }

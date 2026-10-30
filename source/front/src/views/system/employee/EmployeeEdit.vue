@@ -490,6 +490,17 @@ const handleSubmit = async () => {
       }
     } else {
       res = await createEmployee(submitData)
+      // 新建医生（empType=1）后端已随建号自动生成签名密钥对：提示去办 CA 申请
+      if (res.code === 200 && formData.empType === 1) {
+        await ElMessageBox.alert(
+            '系统已为该医生自动生成签名密钥对（初始签名PIN：123456）。' +
+            '请到「组织与资源 → 签名证书」找到状态为「待CA签发」的证书，详情里一键复制申请材料（Subject DN + 公钥），' +
+            '到 CA 认证平台提交证书申请，审核发证后把证书回填到这里生效。',
+            '已自动生成签名密钥对',
+            {confirmButtonText: '知道了'}
+        ).catch(() => {
+        })
+      }
     }
 
     if (res.code === 200) {

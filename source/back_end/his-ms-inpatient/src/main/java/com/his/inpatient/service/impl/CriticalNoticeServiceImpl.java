@@ -142,7 +142,7 @@ public class CriticalNoticeServiceImpl extends ServiceImpl<BizCriticalNoticeMapp
             }
             if (!Objects.equals(NoticeStatusEnum.DRAFT.getCode(), notice.getNoticeStatus())) {
                 throw new BusinessException(NoticeStatusEnum.getLabel(notice.getNoticeStatus(), "—")
-                        + "的通知单不能修改；已签发要改先在「签名中心」作废签名并走作废重开");
+                        + "的通知单不能修改；已签发要改先在「签名验签」作废签名并走作废重开");
             }
             requireUnsigned(notice);
         }
@@ -283,7 +283,7 @@ public class CriticalNoticeServiceImpl extends ServiceImpl<BizCriticalNoticeMapp
             throw new BusinessException("该通知单已作废");
         }
         if (Objects.equals(ObjectSignStatusEnum.SIGNED.getCode(), notice.getSignStatus())) {
-            throw new BusinessException("该通知单已电子签名锁定，请先在「签名中心」作废签名，再作废单据（作废留痕）");
+            throw new BusinessException("该通知单已电子签名锁定，请先在「签名验签」作废签名，再作废单据（作废留痕）");
         }
         assertDeptAccessible(notice.getDeptId());
         notice.setNoticeStatus(NoticeStatusEnum.VOIDED.getCode());
@@ -339,7 +339,7 @@ public class CriticalNoticeServiceImpl extends ServiceImpl<BizCriticalNoticeMapp
     private void requireUnsigned(BizCriticalNotice notice) {
         if (Objects.equals(ObjectSignStatusEnum.SIGNED.getCode(), notice.getSignStatus())) {
             throw new BusinessException("通知单 " + notice.getNoticeNo() + " 已电子签名（签名即锁定），不允许直接修改；"
-                    + "请先在「签名中心」作废该签名（作废会留痕并解除锁定）");
+                    + "请先在「签名验签」作废该签名（作废会留痕并解除锁定）");
         }
     }
 

@@ -49,8 +49,13 @@ public interface SignCertService {
     SignCertVO getById(Long id);
 
     /**
+     * 按员工取当前有效证书：员工管理「签名设置」弹框只读展示用；无有效证书返回 null。
+     */
+    SignCertVO getActiveCertVO(Long empId);
+
+    /**
      * 证书台账分页：按持有人、证书状态、算法与有效期等条件筛选。
-     * 用于签名中心「签名证书」签的查询卡表格。
+     * 用于签名证书页签的查询卡表格。
      */
     IPage<SignCertVO> listPage(SignCertPageQueryDTO query);
 

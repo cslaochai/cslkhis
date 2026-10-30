@@ -393,7 +393,7 @@
               <template #default="{ row }">
                 <div class="text-xs text-slate-600">{{ row.doctorName || '—' }} · {{ fmtTime(row.orderTime) }}</div>
                 <!-- 待校对列表特别要看签名：开立名没签上的医嘱在校对前就能发现，
-                     不用等到出了纠纷才去翻签名中心。 -->
+                     不用等到出了纠纷才去翻签名验签页。 -->
                 <el-tag :data-testid="`p5-order-verify-sign-${row.orderNo}`" :type="row.doctorSigned ? 'success' : 'danger'"
                         size="small">
                   开立{{ row.doctorSigned ? '已签' : '未签' }}

@@ -92,7 +92,7 @@ public class CriticalNoticeSignContentServiceImpl extends ServiceImpl<BizCritica
         }
         if (Objects.equals(ObjectSignStatusEnum.SIGNED.getCode(), n.getSignStatus())) {
             return "通知单 " + n.getNoticeNo() + " 已签名（签名即锁定），不能重复签名；"
-                    + "如需修改，请先在「签名中心」作废该签名（作废会留痕并解除锁定）";
+                    + "如需修改，请先在「签名验签」作废该签名（作废会留痕并解除锁定）";
         }
         if (Objects.equals(NoticeStatusEnum.VOIDED.getCode(), n.getNoticeStatus())) {
             return "通知单 " + n.getNoticeNo() + " 已作废，不能签名";

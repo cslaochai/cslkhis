@@ -1,5 +1,6 @@
 package com.his.spi.vo;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import lombok.Data;
@@ -54,8 +55,9 @@ public class SignVerifyVO {
     private String certNo;
 
     /** 签名时刻 */
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime signedTime;
-    /** 时间来源（1-本机时钟 2-院内授时服务器 3-第三方可信时间戳） */
+    /** 时间来源（1-本机时钟 2-院内授时服务器） */
     private Integer timeSource;
     /** 时间来源文案（由枚举 label 渲染） */
     private String timeSourceText;
@@ -74,26 +76,6 @@ public class SignVerifyVO {
      * 内容比对：当前内容摘要 == 签名时摘要（false = 签名后被改过）
      */
     private Boolean contentMatched;
-
-    /**
-     * 可信时间戳校验（仅 time_source=3 的行有值）：令牌是否由 TSA 签发且与摘要/时刻一致
-     */
-    private Boolean tsaValid;
-
-    /**
-     * 时间戳序列号（time_source=3 时回显）
-     */
-    private String tsaSerial;
-
-    /**
-     * TSA 授时时刻（time_source=3 时回显）
-     */
-    private LocalDateTime tsaTime;
-
-    /**
-     * 时间戳校验说明（通过为空；失败时说明缺什么/哪一环没对上）
-     */
-    private String tsaNote;
 
     /**
      * 签名时的内容摘要
@@ -116,5 +98,6 @@ public class SignVerifyVO {
     private Integer conclusionLevel;
 
     /** 本次验签的服务端时刻 */
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime checkedAt;
 }

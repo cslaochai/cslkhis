@@ -1,4 +1,4 @@
--- sys_menu  铺底数据：522 行（按主键序 自 dev 库 2026-10-25 导出；2026-10-26 删除门诊工位派岗 2960/29601/29602）
+-- sys_menu  铺底数据：526 行（按主键序 自 dev 库 2026-10-25 导出；2026-10-26 删除门诊工位派岗 2960/29601/29602；2026-10-30 签名功能按角色拆分：删 606/2088，增 29620-29624；309 吊销拆权限：29623 改名，增 29625）
 SET NAMES utf8mb4;
 SET FOREIGN_KEY_CHECKS = 0;
 START TRANSACTION;
@@ -90,7 +90,6 @@ VALUES
 (603, '病历审核', 600, 2, 2, '/medical-review', 'medical-record/MedicalReviewView', 'emr.medicalReview', 'DocumentChecked', 'emr:medicalReview:list', 0, 0, 1, 1, 'admin', '2026-05-08 00:00:00', 'admin', '2026-05-08 00:00:00', 0, NULL, 1, 1),
 (604, '病案质控工作台', 600, 20, 2, '/medical-record-qc', 'quality/MedicalRecordQcView', 'qc.recordQc', 'DataAnalysis', 'qc:recordQc:list', 0, 0, 1, 1, 'admin', '2026-05-08 00:00:00', 'admin', '2026-05-08 00:00:00', 0, NULL, 1, 1),
 (605, '全院数据质量监测', 600, 21, 2, '/data-quality', 'quality/DataQualityView', 'qc.dataQuality', 'Histogram', 'qc:dataQuality:list', 0, 0, 1, 1, 'admin', '2026-05-08 00:00:00', 'system', '2026-09-29 11:29:20', 0, NULL, 1, 1),
-(606, '电子签名与时间戳', 1100, 42, 2, '/signature-center', 'sign/SignatureCenterView', 'sign.center', 'Stamp', 'sign:center:list', 0, 0, 1, 1, 'admin', '2026-05-08 00:00:00', 'system', '2026-09-28 23:37:49', 0, NULL, 1, 1),
 (607, '临床路径', 600, 22, 2, '/clinical-path', 'clinical-path/ClinicalPathView', 'qc.clinicalPath', 'Guide', 'qc:clinicalPath:list', 0, 0, 1, 1, 'admin', '2026-05-08 00:00:00', 'admin', '2026-05-08 00:00:00', 0, NULL, 1, 1),
 (608, '危急值管理', 600, 30, 2, '/critical-value', 'critical-value/CriticalValueView', 'medtech.criticalValue', 'Warning', 'medtech:criticalValue:list', 0, 0, 1, 1, 'admin', '2026-05-08 00:00:00', 'admin', '2026-05-08 00:00:00', 0, NULL, 1, 1),
 (609, '病案归档', 600, 3, 2, '/medical-record-archive', 'medical-record/MedicalRecordArchiveView', 'emr.archive', 'FolderChecked', 'emr:archive:list', 0, 0, 1, 1, 'admin', '2026-05-08 00:00:00', 'admin', '2026-05-08 00:00:00', 0, NULL, 1, 1),
@@ -248,7 +247,6 @@ VALUES
 (2085, '病历审核-修改', 603, 2, 3, NULL, NULL, 'emr.medicalReview:edit', NULL, 'emr:medicalReview:edit', 0, 1, 0, 1, 'admin', '2026-05-08 00:00:00', 'admin', '2026-05-08 00:00:00', 0, NULL, 1, 1),
 (2086, '病案质控工作台-新增', 604, 1, 3, NULL, NULL, 'qc.recordQc:add', NULL, 'qc:recordQc:add', 0, 1, 0, 1, 'admin', '2026-05-08 00:00:00', 'admin', '2026-05-08 00:00:00', 0, NULL, 1, 1),
 (2087, '病案质控工作台-修改', 604, 2, 3, NULL, NULL, 'qc.recordQc:edit', NULL, 'qc:recordQc:edit', 0, 1, 0, 1, 'admin', '2026-05-08 00:00:00', 'admin', '2026-05-08 00:00:00', 0, NULL, 1, 1),
-(2088, '电子签名与时间戳-修改', 606, 2, 3, NULL, NULL, 'sign.center:edit', NULL, 'sign:center:edit', 0, 1, 0, 1, 'admin', '2026-05-08 00:00:00', 'admin', '2026-05-08 00:00:00', 0, NULL, 1, 1),
 (2089, '危急值管理-修改', 608, 2, 3, NULL, NULL, 'medtech.criticalValue:edit', NULL, 'medtech:criticalValue:edit', 0, 1, 0, 1, 'admin', '2026-05-08 00:00:00', 'admin', '2026-05-08 00:00:00', 0, NULL, 1, 1),
 (2090, '危急值管理-删除', 608, 3, 3, NULL, NULL, 'medtech.criticalValue:delete', NULL, 'medtech:criticalValue:delete', 0, 1, 0, 1, 'admin', '2026-05-08 00:00:00', 'admin', '2026-05-08 00:00:00', 0, NULL, 1, 1),
 (2091, '病案归档-修改', 609, 2, 3, NULL, NULL, 'emr.archive:edit', NULL, 'emr:archive:edit', 0, 1, 0, 1, 'admin', '2026-05-08 00:00:00', 'admin', '2026-05-08 00:00:00', 0, NULL, 1, 1),
@@ -527,5 +525,11 @@ VALUES
 (29607, '急诊医生工作站-接诊转归', 200, 1, 3, NULL, NULL, 'opd.emergencyDoctor:edit', NULL, 'opd:emergencyDoctor:edit', NULL, NULL, 0, 1, 'admin', '2026-10-23 19:20:43', 'admin', '2026-10-23 19:20:43', 0, NULL, 0, 0),
 (29608, '护士工作站-床旁结算', 303, 1, 3, NULL, NULL, 'nur:bedside:settle', NULL, 'nur:bedside:settle', NULL, NULL, 0, 1, 'admin', '2026-10-24 16:32:49', 'admin', '2026-10-24 16:32:49', 0, NULL, 0, 0),
 (29609, '排班历史查询', 2945, 10, 2, '/schedule-history', 'views/schedule/ScheduleHistoryView.vue', 'org:scheduleHistory', 'Document', 'schedule:history:list', 0, 0, 1, 1, 'admin', '2026-10-25 12:27:47', '', '2026-10-25 12:27:47', 0, NULL, 1, 0),
-(29610, '护理排班-备案', 331, 5, 3, '', '', 'nursing.schedule:file', '', 'nursing:schedule:file', 0, 1, 1, 1, 'sql295', '2026-10-25 16:30:34', 'sql295', '2026-10-25 16:30:34', 0, '护理部对护理片区已发布周次的备案与退回（不阻塞在岗生效）', 1, 1);
+(29610, '护理排班-备案', 331, 5, 3, '', '', 'nursing.schedule:file', '', 'nursing:schedule:file', 0, 1, 1, 1, 'sql295', '2026-10-25 16:30:34', 'sql295', '2026-10-25 16:30:34', 0, '护理部对护理片区已发布周次的备案与退回（不阻塞在岗生效）', 1, 1),
+(29620, '签名验签', 600, 37, 2, '/signature-verify', 'sign/SignatureVerifyView', 'sign.verify', 'Stamp', 'sign:verify:list', 0, 0, 1, 1, 'admin', '2026-10-30 10:00:00', 'admin', '2026-10-30 10:00:00', 0, NULL, 1, 1),
+(29621, '签名证书', 800, 42, 2, '/sign-cert', 'sign/SignatureCertView', 'sign.cert', 'Key', 'sign:cert:list', 0, 0, 1, 1, 'admin', '2026-10-30 10:00:00', 'admin', '2026-10-30 10:00:00', 0, NULL, 1, 1),
+(29622, '签名验签-验签作废', 29620, 1, 3, NULL, NULL, 'sign.verify.edit', NULL, 'sign:verify:edit', 0, 1, 0, 1, 'admin', '2026-10-30 10:00:00', 'admin', '2026-10-30 10:00:00', 0, NULL, 1, 1),
+(29623, '签名证书-办理', 29621, 1, 3, NULL, NULL, 'sign.cert.edit', NULL, 'sign:cert:edit', 0, 1, 0, 1, 'admin', '2026-10-30 10:00:00', 'admin', '2026-10-30 10:00:00', 0, NULL, 1, 1),
+(29624, '日志审计-签名记录', 1108, 1, 3, NULL, NULL, 'sign.audit.list', NULL, 'sign:audit:list', 0, 1, 0, 1, 'admin', '2026-10-30 10:00:00', 'admin', '2026-10-30 10:00:00', 0, NULL, 1, 1),
+(29625, '签名证书-吊销处置', 29621, 2, 3, NULL, NULL, 'sign.cert.revoke', NULL, 'sign:cert:revoke', 0, 1, 0, 1, 'admin', '2026-10-30 10:00:00', 'admin', '2026-10-30 10:00:00', 0, NULL, 1, 1);
 COMMIT;

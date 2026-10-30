@@ -28,7 +28,7 @@ public enum SignSceneEnum {
     ORDER_VERIFY(4, "校对签名"),
 
     /**
-     * 事后补签（管理员在签名中心发起，必须写明原因）
+     * 事后补签（管理员在签名验签页发起，必须写明原因）
      */
     MAKEUP(5, "补签"),
 

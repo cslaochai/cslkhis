@@ -234,7 +234,7 @@ public class RadiologyReportServiceImpl extends ServiceImpl<BizReportMapper, Biz
 
         // 退回后必须清掉签名指针，否则医师改完再提交会被签名层挡住
         // （"已有报告医师签名，不能重复签名"）。签名记录本身没删 —— 它仍在签名链上，
-        // 签名中心能看到这一版曾经被谁签过；清掉的只是"当前有效签名"这个指针。
+        // 签名验签页能看到这一版曾经被谁签过；清掉的只是"当前有效签名"这个指针。
         Long current = UserUtils.getCurrentUser().getEmployeeId();
         sysAuditLogService.record(current, UserUtils.getCurrentUser().getRealName(),
                 "放射报告", "退回重写", "biz_report", report.getId(),

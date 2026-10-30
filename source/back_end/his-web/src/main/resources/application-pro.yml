@@ -29,9 +29,6 @@ his:
     master-secret: ${HIS_SIGN_SECRET:}
     # 新签发证书的密钥算法：SM2（国密）或 RSA2048
     key-algorithm: ${HIS_SIGN_KEY_ALGO:SM2}
-    # csssl 认证中心对接：仅用于可信时间戳（TSA）。证书签发为线下人工，不经此地址。
-    ca-base-url: ${HIS_SIGN_CA_BASE_URL:}
-    ca-timeout-ms: ${HIS_SIGN_CA_TIMEOUT_MS:5000}
   insurance:
     channel:
       # remote=调医保前置系统(csmip)；生产必须给真实前置机地址，localhost 默认值只够本机联调

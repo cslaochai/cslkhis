@@ -71,9 +71,10 @@
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column fixed="right" label="操作" width="150">
+        <el-table-column fixed="right" label="操作" width="210">
           <template #default="{ row }">
             <el-button :icon="Edit" link type="primary" @click="handleEdit(row)">编辑</el-button>
+            <el-button link type="primary" @click="handleSignSetting(row)">签名设置</el-button>
             <el-button v-perm="'org:employee:delete'" :icon="Delete" link type="danger" @click="handleDelete(row)">
               删除
             </el-button>
@@ -104,6 +105,9 @@
         :title-options="titleOptions"
         @saved="loadData"
     />
+
+    <!-- 签名设置：只读查看该员工的签名证书（取数与渲染都在 EmployeeSignDialog.vue） -->
+    <EmployeeSignDialog v-model="signDialogVisible" :employee="signDialogRow"/>
   </div>
 </template>
 
@@ -114,6 +118,7 @@ import {Delete, Edit, Plus, Refresh, Search} from '@element-plus/icons-vue'
 import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination'
 import {useTableMaxHeight} from '@/lib/useTableMaxHeight'
 import EmployeeEdit from './EmployeeEdit.vue'
+import EmployeeSignDialog from './EmployeeSignDialog.vue'
 import {getDictLabelByValue} from '@/lib/employeeDict'
 import {deleteEmployee, getEmployeeListPage} from '@/api/system'
 import {DICT_TYPE, loadDictDataMap} from '@/lib/dict-cache'
@@ -202,6 +207,14 @@ const handleAdd = () => {
 const handleEdit = (row) => {
   dialogRow.value = row
   dialogVisible.value = true
+}
+
+// 签名设置：只读弹框看该员工的签名证书
+const signDialogVisible = ref(false)
+const signDialogRow = ref(null)
+const handleSignSetting = (row) => {
+  signDialogRow.value = row
+  signDialogVisible.value = true
 }
 
 const handleDelete = async (row) => {

@@ -8,9 +8,12 @@ import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
+import com.his.clinical.entity.BizMedicalRecord;
 import com.his.clinical.entity.BizMedicalRecordArchive;
 import com.his.common.enums.ArchiveStatusEnum;
+import com.his.common.enums.ObjectSignStatusEnum;
 import com.his.clinical.mapper.BizMedicalRecordArchiveMapper;
+import com.his.clinical.mapper.BizMedicalRecordMapper;
 import com.his.clinical.service.MedicalRecordArchiveService;
 import com.his.clinical.vo.BizMedicalRecordArchiveVO;
 import com.his.clinical.vo.MedicalRecordArchiveCountVO;
@@ -28,6 +31,8 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 /**
@@ -47,6 +52,7 @@ public class MedicalRecordArchiveServiceImpl extends ServiceImpl<BizMedicalRecor
 
     private final SysMessageService sysMessageService;
     private final DeptScopeService deptScopeService;
+    private final BizMedicalRecordMapper bizMedicalRecordMapper;
 
     @Override
     public PageResult<BizMedicalRecordArchiveVO> selectArchivePage(Long patientId, Integer archiveStatus, String keyword,
@@ -65,6 +71,7 @@ public class MedicalRecordArchiveServiceImpl extends ServiceImpl<BizMedicalRecor
         Page<BizMedicalRecordArchive> page = this.page(new Page<>(pageNum, pageSize), wrapper);
         List<BizMedicalRecordArchiveVO> voList = page.getRecords().stream()
                 .map(this::toVo).collect(Collectors.toList());
+        fillSignStatus(voList);
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(), voList);
     }
 
@@ -75,7 +82,30 @@ public class MedicalRecordArchiveServiceImpl extends ServiceImpl<BizMedicalRecor
             return null;
         }
         deptScopeService.assertDeptAccessible(entity.getDeptId());
-        return toVo(entity);
+        BizMedicalRecordArchiveVO vo = toVo(entity);
+        fillSignStatus(java.util.Collections.singletonList(vo));
+        return vo;
+    }
+
+    /**
+     * 列表/详情补签名状态：锚点在病历行（biz_medical_record.sign_status），归档表不冗余，
+     * 批量回查一次，供前端把「待补签」行标出来。
+     */
+    private void fillSignStatus(List<BizMedicalRecordArchiveVO> voList) {
+        List<Long> recordIds = voList.stream()
+                .map(BizMedicalRecordArchiveVO::getRecordId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .collect(Collectors.toList());
+        if (recordIds.isEmpty()) {
+            return;
+        }
+        Map<Long, Integer> signMap = bizMedicalRecordMapper.selectBatchIds(recordIds).stream()
+                .collect(Collectors.toMap(BizMedicalRecord::getId,
+                        r -> r.getSignStatus() == null ? ObjectSignStatusEnum.UNSIGNED.getCode() : r.getSignStatus()));
+        for (BizMedicalRecordArchiveVO vo : voList) {
+            vo.setSignStatus(signMap.get(vo.getRecordId()));
+        }
     }
 
     private BizMedicalRecordArchiveVO toVo(BizMedicalRecordArchive entity) {
@@ -94,6 +124,14 @@ public class MedicalRecordArchiveServiceImpl extends ServiceImpl<BizMedicalRecor
         deptScopeService.assertDeptAccessible(archive.getDeptId());
         if (archive.getArchiveStatus() != 1) {
             throw new BusinessException("当前状态不允许归档");
+        }
+        // 归档签名闸门：无签结诊的病历锁定「待补签」，补签（或走纸质病历人工核验）前不进正式病案库
+        BizMedicalRecord record = bizMedicalRecordMapper.selectById(archive.getRecordId());
+        if (record != null) {
+            Integer signStatus = record.getSignStatus();
+            if (signStatus == null || signStatus != ObjectSignStatusEnum.SIGNED.getCode()) {
+                throw new BusinessException("该病历未完成医师电子签名（待补签），暂不允许归档，请先补签或走纸质病历人工核验");
+            }
         }
 
         archive.setArchiveStatus(ArchiveStatusEnum.ARCHIVED.getCode());

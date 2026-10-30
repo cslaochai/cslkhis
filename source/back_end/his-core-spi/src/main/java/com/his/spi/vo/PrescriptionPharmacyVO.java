@@ -68,6 +68,12 @@ public class PrescriptionPharmacyVO implements Serializable {
     private String doctorName;
 
     /**
+     * 开方医师电子签名ID（null = 未签名，即无签结诊的「待补签」处方，发药侧按此拦截）
+     */
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long doctorSignId;
+
+    /**
      * 审方药师
      */
     private String auditBy;

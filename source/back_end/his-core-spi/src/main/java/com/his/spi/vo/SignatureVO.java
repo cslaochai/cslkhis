@@ -1,5 +1,6 @@
 package com.his.spi.vo;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import lombok.Data;
@@ -123,29 +124,16 @@ public class SignatureVO {
     /**
      * 签名时刻
      */
+    /** 签名时间 */
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime signedTime;
 
     /**
-     * 时间来源（1-本机时钟 2-院内授时服务器 3-第三方TSA）
+     * 时间来源（1-本机时钟 2-院内授时服务器）
      */
     private Integer timeSource;
     /** 时间来源文案（由枚举 label 渲染） */
     private String timeSourceText;
-
-    /**
-     * 时间来源说明：不具备可信时间效力时必须显式说明
-     */
-    private String timeSourceNote;
-
-    /**
-     * 时间戳序列号（time_source=3 时有值）
-     */
-    private String tsaSerial;
-
-    /**
-     * TSA 授时时刻（time_source=3 时有值）
-     */
-    private LocalDateTime tsaTime;
 
     /**
      * 签名状态（1-有效 2-已作废）
@@ -163,6 +151,7 @@ public class SignatureVO {
     /**
      * 最近一次验签时间
      */
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime verifyTime;
     /**
      * 累计验签次数
@@ -176,6 +165,7 @@ public class SignatureVO {
     /**
      * 作废时间
      */
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime invalidTime;
     /**
      * 作废操作人姓名

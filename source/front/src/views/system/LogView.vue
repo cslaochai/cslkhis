@@ -424,6 +424,13 @@
                            @current-change="load" @size-change="load"/>
           </div>
         </el-tab-pane>
+
+        <!-- 签名记录（只读审计视图）：列表取数与渲染都在 SignatureAuditTab.vue，这里只控显隐与挂载 -->
+        <el-tab-pane label="签名记录" name="signAudit" lazy>
+          <div v-perm="'sign:audit:list'">
+            <SignatureAuditTab/>
+          </div>
+        </el-tab-pane>
       </el-tabs>
     </el-card>
 
@@ -467,6 +474,7 @@ import LogChangeDetail from './LogChangeDetail.vue';
 import LogDetail from './LogDetail.vue';
 import LogDraftDiffDetail from './LogDraftDiffDetail.vue';
 import AiAuditDetail from './AiAuditDetail.vue';
+import SignatureAuditTab from '@/views/sign/SignatureAuditTab.vue';
 import {
   AUDIT_STATUS,
   auditStatusTagType,
@@ -663,6 +671,8 @@ const load = async () => {
   }
 };
 const onTabChange = () => {
+  // 签名记录 tab 自带取数（lazy 挂载时自加载），不走这里共用的 load()
+  if (activeTab.value === 'signAudit') return;
   load();
 };
 const resetQuery = () => {

@@ -103,14 +103,14 @@ public class PrescriptionSignContentServiceImpl implements SignableContentServic
         if (scene == SignSceneEnum.RX_CREATE) {
             if (p.getDoctorSignId() != null) {
                 return "处方 " + p.getPrescriptionNo() + " 已有开方签名，不能重复签名；"
-                        + "如需修改，请先在「签名中心」作废该签名";
+                        + "如需修改，请先在「签名验签」作废该签名";
             }
             return null;
         }
         if (scene == SignSceneEnum.RX_AUDIT) {
             if (p.getAuditSignId() != null) {
                 return "处方 " + p.getPrescriptionNo() + " 已有审方签名，不能重复签名；"
-                        + "如需修改，请先在「签名中心」作废该签名";
+                        + "如需修改，请先在「签名验签」作废该签名";
             }
             // 本期没有独立的「处方提交」动作（医生开方落库即 prescription_status=1），
             // 所以 1-草稿与 2-已提交都视为"未审、可审"；已审核/已发药/已取消/已退药一律拒绝。

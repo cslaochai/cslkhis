@@ -20,7 +20,7 @@ import java.util.List;
  * <p>临床各域只拿「证书编号 + 公钥」完成验签，不持有证书档案行；
  * 签名一律走 {@link #signWithCert(Long, String, String)}（带 PIN 二次确认），
  * 私钥的解密与使用全部收在签名域内，绝不外发。
- * 证书台账的查询与运维（密钥生成、证书回填、吊销、分页）是签名中心自己的页面口径，不经本端口。
+ * 证书台账的查询与运维（密钥生成、证书回填、吊销、分页）是签名验签自己的页面口径，不经本端口。
  */
 public interface SignCertFacadeService {
 
@@ -105,12 +105,17 @@ public interface SignCertFacadeService {
      */
     String signAlgo();
 
-    // ---------- 证书台账运维（签名中心页面口径，跨模块经本端口暴露） ----------
+    // ---------- 证书台账运维（签名证书页面口径，跨模块经本端口暴露） ----------
 
     /**
      * 证书台账分页：按持有人、证书状态、签发方式与关键字过滤。
      */
     IPage<SignCertVO> listCertPage(SignCertPageQueryDTO query);
+
+    /**
+     * 按员工取当前有效证书：员工管理「签名设置」弹框只读展示用；无有效证书返回 null。
+     */
+    SignCertVO getActiveCertByEmp(Long empId);
 
     /**
      * 单张证书详情：含公钥 PEM、指纹与签发信息；证书不存在抛业务异常。

@@ -168,7 +168,7 @@ public class InpatientRecordVO implements Serializable {
     private String signStatusText;
 
     /**
-     * 当前有效签名ID（可跳转签名中心查看证据）
+     * 当前有效签名ID（可跳转签名验签页查看证据）
      */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long signId;

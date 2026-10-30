@@ -3,6 +3,7 @@ package com.his.medicaltech.controller;
 import com.his.common.base.Result;
 import com.his.medicaltech.dto.CdrQueryDTO;
 import com.his.medicaltech.service.CdrService;
+import com.his.medicaltech.vo.CdrClinicalSummaryVO;
 import com.his.medicaltech.vo.CdrEventTypeSelectListVO;
 import com.his.medicaltech.vo.CdrSummaryVO;
 import com.his.medicaltech.vo.CdrTimelineVO;
@@ -53,7 +54,7 @@ public class CdrController {
 
     @Operation(summary = "临床画像（过敏/慢病/危急值/异常检验/30天就诊/重复检查）")
     @GetMapping("/clinicalSummary")
-    public Result<java.util.Map<String, Object>> clinicalSummary(@Valid CdrQueryDTO dto) {
+    public Result<CdrClinicalSummaryVO> clinicalSummary(@Valid CdrQueryDTO dto) {
         return Result.success(cdrService.getClinicalSummary(dto));
     }
 }

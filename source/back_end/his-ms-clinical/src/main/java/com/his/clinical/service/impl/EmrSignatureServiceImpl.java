@@ -15,9 +15,7 @@ import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
 import com.his.spi.dto.SignCommandDTO;
 import com.his.spi.service.SignCertFacadeService;
-import com.his.spi.service.TsaStampFacadeService;
 import com.his.spi.vo.SignCertBriefVO;
-import com.his.spi.vo.TsaStampVO;
 import com.his.clinical.dto.SignaturePageQueryDTO;
 import com.his.clinical.entity.BizEmrSignature;
 import com.his.clinical.mapper.BizEmrSignatureMapper;
@@ -56,8 +54,6 @@ public class EmrSignatureServiceImpl extends ServiceImpl<BizEmrSignatureMapper, 
     private final SignatureStoreService signatureStoreService;
 
     private final RedisSequenceService redisSequenceService;
-
-    private final TsaStampFacadeService tsaStampFacadeService;
 
     private final List<SignableContentService> providers;
 
@@ -171,22 +167,8 @@ public class EmrSignatureServiceImpl extends ServiceImpl<BizEmrSignatureMapper, 
         e.setContentSnapshot(content);
         e.setSignedTime(now);
 
-        // 可信时间戳（G6）：配置了 TSA 且适配器在线，就在签名时刻之后盖一枚令牌。
-        // 盖章失败（网络/服务异常/序列号冲突）不允许签名失败：TSA 通道已收敛成 null，
-        // 此时落「本机时钟」并清空令牌字段——绝不留下"标称 TSA 却无令牌"的脏记录。
-        int effectiveTs = tsaStampFacadeService.effectiveTimeSource();
-        TsaStampVO stamp = effectiveTs == TimeSourceEnum.TSA.getCode() ? tsaStampFacadeService.stamp(digest) : null;
-        if (stamp != null) {
-            e.setTimeSource(TimeSourceEnum.TSA.getCode());
-            e.setTsaSerial(stamp.getSerial());
-            e.setTsaTime(stamp.getTsaTime());
-            e.setTsaToken(stamp.getTokenValue());
-        } else {
-            e.setTimeSource(TimeSourceEnum.LOCAL.getCode());
-            e.setTsaSerial(null);
-            e.setTsaTime(null);
-            e.setTsaToken(null);
-        }
+        // 签名时间一律取本机时钟
+        e.setTimeSource(TimeSourceEnum.LOCAL.getCode());
         e.setSignStatus(SignStatusEnum.VALID.getCode());
         e.setVerifyStatus(SignVerifyStatusEnum.UNCHECKED.getCode());
         e.setVerifyCount(0);
@@ -271,36 +253,6 @@ public class EmrSignatureServiceImpl extends ServiceImpl<BizEmrSignatureMapper, 
         vo.setContentMatched(contentMatched);
         vo.setDigestNow(digestNow);
 
-        // 断言三（仅 time_source=3 的行）：可信时间戳令牌
-        // 前两断言回答"签名证据是否完好、内容是否被改"；这一条回答"签名时刻是否可信"。
-        // 令牌校验失败不推翻签名本身，但「可信时间」的声称当场不成立 —— 结论级别至少警告。
-        Boolean tsaValid = null;
-        String tsaNote = null;
-        if (Objects.equals(TimeSourceEnum.TSA.getCode(), sig.getTimeSource())) {
-            boolean hasToken = TextUtil.hasText(sig.getTsaSerial())
-                    && sig.getTsaTime() != null
-                    && TextUtil.hasText(sig.getTsaToken());
-            if (!hasToken) {
-                tsaValid = false;
-                tsaNote = "签名记录标记为 TSA 时间来源，但缺少序列号/授时时刻/令牌（写入侧校验被绕过或数据被删改）";
-            } else {
-                try {
-                    tsaValid = tsaStampFacadeService.verifyToken(sig.getTsaSerial(), sig.getContentDigest(),
-                            sig.getTsaTime(), sig.getTsaToken());
-                } catch (Exception ex) {
-                    tsaValid = false;
-                    tsaNote = "时间戳令牌校验执行异常：" + ex.getMessage();
-                }
-                if (!Boolean.TRUE.equals(tsaValid) && tsaNote == null) {
-                    tsaNote = "时间戳令牌校验失败：令牌与摘要/时刻不一致、令牌被替换，或台账缺失";
-                }
-            }
-        }
-        vo.setTsaValid(tsaValid);
-        vo.setTsaSerial(sig.getTsaSerial());
-        vo.setTsaTime(sig.getTsaTime());
-        vo.setTsaNote(tsaNote);
-
         // 结论
         boolean invalidated = Objects.equals(SignStatusEnum.INVALID.getCode(), sig.getSignStatus());
         int level;
@@ -321,11 +273,6 @@ public class EmrSignatureServiceImpl extends ServiceImpl<BizEmrSignatureMapper, 
         } else {
             level = 1;
             conclusion = "验签通过：签名值有效，且内容自签名后未发生变更";
-        }
-        // 可信时间戳不成立：不推翻签名值与内容两个断言，但"时间可信"的声称必须降级为警告
-        if (Boolean.FALSE.equals(tsaValid)) {
-            level = Math.max(level, 2);
-            conclusion = conclusion + "；且可信时间戳校验不通过（" + tsaNote + "）";
         }
         vo.setConclusion(conclusion);
         vo.setConclusionLevel(level);
@@ -572,19 +519,6 @@ public class EmrSignatureServiceImpl extends ServiceImpl<BizEmrSignatureMapper, 
         coverages.sort(Comparator.comparing(SignatureSummaryVO.Coverage::getBizType));
         vo.setCoverages(coverages);
 
-        vo.setTsaAvailable(tsaStampFacadeService.available());
-        vo.setTsaName(tsaStampFacadeService.readyName());
-        vo.setTsaTokenCount(tsaStampFacadeService.countTokens());
-
-        TimeSourceEnum ts = TimeSourceEnum.fromCode(tsaStampFacadeService.effectiveTimeSource());
-        if (ts != null && ts == TimeSourceEnum.TSA) {
-            vo.setTimeSourceNote("签名时间来源：可信时间戳（" + (vo.getTsaName() == null ? "TSA" : vo.getTsaName())
-                    + " —— 令牌由 csssl 认证中心 TSA 独立 SM2 密钥签发，可对抗本机时钟篡改）");
-        } else if (ts != null && ts.trusted()) {
-            vo.setTimeSourceNote("签名时间来源：" + ts.getLabel());
-        } else {
-            vo.setTimeSourceNote("签名时间来源：本机时钟（**未接入可信时间戳 TSA**，签名时刻不具备对抗系统时间篡改的效力）");
-        }
         vo.setCertTrustNote("签名证书由 csssl 认证中心 CA 签发，信任根为院内 CA；"
                 + "私钥在院内集中托管（经 PBKDF2+AES-GCM 加密存储，不出 HIS）。"
                 + "⚠️ 集中托管不满足《电子签名法》第十三条「签名制作数据属于签名人专有、签署时仅由签名人控制」——"
@@ -594,7 +528,7 @@ public class EmrSignatureServiceImpl extends ServiceImpl<BizEmrSignatureMapper, 
         notes.add("签名是留痕动作：同一对象可以有多次签名，历史签名永不删除，作废只追加作废信息。");
         notes.add("「未签名」与「签名已失效」是两种不同的事实，页面分开统计，不互相回落。");
         notes.add("存量文书（签名能力上线前归档）一律记为未签名，**不补签**——补签等于伪造证据。");
-        notes.add("证书签发与可信时间戳由 CA 认证中心（csssl）承担，HIS 只做私钥托管与签名留痕；"
+        notes.add("证书签发由 CA 认证中心（csssl）承担，HIS 只做私钥托管与签名留痕；"
                 + "CA 只持有公钥与 CA 私钥，永远不接触医生私钥——签发方一旦能代签，证书即失去中立性。");
         vo.setNotes(notes);
         return vo;
@@ -697,10 +631,6 @@ public class EmrSignatureServiceImpl extends ServiceImpl<BizEmrSignatureMapper, 
         vo.setSignedTime(s.getSignedTime());
         vo.setTimeSource(s.getTimeSource());
         vo.setTimeSourceText(TimeSourceEnum.getLabel(s.getTimeSource()));
-        vo.setTsaSerial(s.getTsaSerial());
-        vo.setTsaTime(s.getTsaTime());
-        TimeSourceEnum ts = TimeSourceEnum.fromCode(s.getTimeSource());
-        vo.setTimeSourceNote(ts != null && ts.trusted() ? null : "不具备可信时间戳效力（系统时间可由本机修改）");
         vo.setSignStatus(s.getSignStatus());
         vo.setSignStatusText(SignStatusEnum.getLabel(s.getSignStatus()));
         vo.setVerifyStatus(s.getVerifyStatus());

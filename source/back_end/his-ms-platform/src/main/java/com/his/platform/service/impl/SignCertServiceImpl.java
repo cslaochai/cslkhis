@@ -15,8 +15,10 @@ import com.his.platform.config.SignProperties;
 import com.his.spi.dto.SignCertIssueDTO;
 import com.his.platform.dto.SignCertPageQueryDTO;
 import com.his.spi.dto.SignCertRevokeDTO;
+import com.his.platform.entity.SysEmployee;
 import com.his.platform.entity.SysSignCert;
 import com.his.platform.mapper.SignConfigMapper;
+import com.his.platform.mapper.SysEmployeeMapper;
 import com.his.platform.mapper.SysSignCertMapper;
 import com.his.platform.service.RedisSequenceService;
 import com.his.platform.service.SignCertService;
@@ -57,6 +59,8 @@ public class SignCertServiceImpl extends ServiceImpl<SysSignCertMapper, SysSignC
 
     private final SysSignCertMapper sysSignCertMapper;
 
+    private final SysEmployeeMapper sysEmployeeMapper;
+
     private final SignConfigMapper signConfigMapper;
 
     private final KeyProtectorUtil keyProtectorUtil;
@@ -96,7 +100,7 @@ public class SignCertServiceImpl extends ServiceImpl<SysSignCertMapper, SysSignC
         // CA 交互已改为线下人工，系统无法自动完成签发——此时必须说清该怎么办，而不是静默发一张无 CA 背书的证书
         throw new BusinessException("员工「" + (TextUtil.hasText(empName) ? empName : empId)
                 + "」没有有效的签名证书；证书签发需线下办理："
-                + "请在「签名中心 → 证书管理」先生成密钥对，把 CA 签发申请单线下送 CA 认证中心签发，再回填证书");
+                + "请在「组织与资源 → 签名证书」先生成密钥对，把 CA 签发申请单线下送 CA 认证中心签发，再回填证书");
     }
 
     /**
@@ -145,11 +149,11 @@ public class SignCertServiceImpl extends ServiceImpl<SysSignCertMapper, SysSignC
         if (!TextUtil.hasText(dto.getCertPem()) || !dto.getCertPem().contains("BEGIN CERTIFICATE")) {
             throw new BusinessException("证书内容不合法：应为 CA 签发的 PEM 文本（含 -----BEGIN CERTIFICATE----- 段）");
         }
+        // 证书文件本身是唯一事实源：序列号/签发者/主体 DN/有效期全部从贴入的 PEM 解析，
+        // 不让操作人手工抄写（抄错无从校验），也不再用「回填时刻+天数」推算有效期。
+        java.security.cert.X509Certificate x509 = PemCodecUtil.parseCertificate(dto.getCertPem());
         // 公钥一致性校验：CA 回执的证书必须是用这把公钥签的，否则回填了也验不过签
-        String certPublicKey = PemCodecUtil.publicKeyFromCertificate(dto.getCertPem());
-        if (certPublicKey == null) {
-            throw new BusinessException("无法从回填的证书中解析出公钥，请确认贴入的是完整的证书 PEM");
-        }
+        String certPublicKey = PemCodecUtil.toPem(x509.getPublicKey());
         if (!certPublicKey.trim().equals(cert.getPublicKey().trim())) {
             throw new BusinessException("回填的证书与本证书的公钥不一致（证书指纹 "
                     + SignCryptoUtil.fingerprintGroups(cert.getPublicKey()) + " ≠ "
@@ -157,13 +161,12 @@ public class SignCertServiceImpl extends ServiceImpl<SysSignCertMapper, SysSignC
                     + "请核对是否贴错了别的证书");
         }
 
-        int validDays = effectiveValidDays(dto.getValidDays());
-        LocalDateTime now = TimeUtil.nowSeconds();
         cert.setCertPem(dto.getCertPem());
-        cert.setCaSerial(TextUtil.hasText(dto.getCaSerial()) ? dto.getCaSerial() : null);
-        cert.setCaIssuer(TextUtil.hasText(dto.getCaIssuer()) ? dto.getCaIssuer() : null);
-        cert.setValidFrom(now);
-        cert.setValidTo(now.plusDays(validDays));
+        cert.setCaSerial(x509.getSerialNumber().toString(16));
+        cert.setCaIssuer(x509.getIssuerX500Principal().getName(javax.security.auth.x500.X500Principal.RFC2253));
+        cert.setCaSubjectDn(x509.getSubjectX500Principal().getName(javax.security.auth.x500.X500Principal.RFC2253));
+        cert.setValidFrom(LocalDateTime.ofInstant(x509.getNotBefore().toInstant(), java.time.ZoneId.systemDefault()));
+        cert.setValidTo(LocalDateTime.ofInstant(x509.getNotAfter().toInstant(), java.time.ZoneId.systemDefault()));
         cert.setCertStatus(CertStatusEnum.ACTIVE.getCode());
         if (TextUtil.hasText(dto.getRemark())) {
             cert.setRemark(dto.getRemark());
@@ -297,6 +300,12 @@ public class SignCertServiceImpl extends ServiceImpl<SysSignCertMapper, SysSignC
             throw new BusinessException("证书不存在");
         }
         return toVO(cert, true);
+    }
+
+    @Override
+    public SignCertVO getActiveCertVO(Long empId) {
+        SysSignCert cert = sysSignCertMapper.selectActiveByEmp(empId, TimeUtil.nowSeconds());
+        return cert == null ? null : toVO(cert, false);
     }
 
     @Override
@@ -454,12 +463,22 @@ public class SignCertServiceImpl extends ServiceImpl<SysSignCertMapper, SysSignC
         return vo;
     }
 
+    /** 工号回查（RA 申请与 Subject DN OU 取用）；员工已删除时返回 null，不阻塞证书展示 */
+    private String empCodeOf(Long empId) {
+        if (empId == null) {
+            return null;
+        }
+        SysEmployee emp = sysEmployeeMapper.selectById(empId);
+        return emp == null ? null : emp.getEmpCode();
+    }
+
     private SignCertVO toVO(SysSignCert c, boolean withPublicKey) {
         SignCertVO vo = new SignCertVO();
         vo.setId(c.getId());
         vo.setCertNo(c.getCertNo());
         vo.setEmpId(c.getEmpId());
         vo.setEmpName(c.getEmpName());
+        vo.setEmpCode(empCodeOf(c.getEmpId()));
         vo.setDeptId(c.getDeptId());
         vo.setDeptName(c.getDeptName());
         vo.setKeyAlgo(c.getKeyAlgo());
@@ -468,6 +487,7 @@ public class SignCertServiceImpl extends ServiceImpl<SysSignCertMapper, SysSignC
         vo.setKeyFingerprint(c.getKeyFingerprint());
         vo.setKeyFingerprintGroups(SignCryptoUtil.fingerprintGroups(c.getKeyFingerprint()));
         vo.setCaIssuer(c.getCaIssuer());
+        vo.setCaSubjectDn(c.getCaSubjectDn());
         vo.setCaSerial(c.getCaSerial());
         vo.setIssuedMode(c.getIssuedMode());
         vo.setIssuedModeText(CertIssuedModeEnum.getLabel(c.getIssuedMode()));

@@ -14,7 +14,7 @@
     <artifactId>his-ms-platform</artifactId>
     <packaging>jar</packaging>
     <name>his-ms-platform</name>
-    <description>平台域：组织/用户/角色/岗位/菜单权限/字典/参数/操作日志与审计/消息/工作台/科室·病区·诊室/设备台账与维护计量/电子签名（证书·TSA·令牌）</description>
+    <description>平台域：组织/用户/角色/岗位/菜单权限/字典/参数/操作日志与审计/消息/工作台/科室·病区·诊室/设备台账与维护计量/电子签名（证书）</description>
 
     <dependencies>
         <dependency>

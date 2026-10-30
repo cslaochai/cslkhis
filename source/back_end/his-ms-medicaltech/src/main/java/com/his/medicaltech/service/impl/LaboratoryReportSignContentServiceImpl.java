@@ -74,7 +74,7 @@ public class LaboratoryReportSignContentServiceImpl implements SignableContentSe
         if (scene == SignSceneEnum.REPORT_ISSUE) {
             if (r.getReportSignId() != null) {
                 return "检验报告 " + r.getRecordNo() + " 已有报告医师签名，不能重复签名；"
-                        + "如需修改，请先在「签名中心」作废该签名";
+                        + "如需修改，请先在「签名验签」作废该签名";
             }
             if (!resultReady) {
                 return "检验记录 " + r.getRecordNo() + " 当前是「" + statusText(status)
@@ -85,7 +85,7 @@ public class LaboratoryReportSignContentServiceImpl implements SignableContentSe
         if (scene == SignSceneEnum.REPORT_AUDIT) {
             if (r.getAuditSignId() != null) {
                 return "检验报告 " + r.getRecordNo() + " 已有审核医师签名，不能重复签名；"
-                        + "如需修改，请先在「签名中心」作废该签名";
+                        + "如需修改，请先在「签名验签」作废该签名";
             }
             if (!resultReady) {
                 return "检验记录 " + r.getRecordNo() + " 当前是「" + statusText(status)

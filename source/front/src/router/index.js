@@ -578,9 +578,16 @@ const routes = [
                 meta: {title: '单病种质控'}
             },
             {
-                path: 'signature-center',
-                name: 'SignatureCenter',
-                component: () => import('@/views/sign/SignatureCenterView.vue')
+                path: 'signature-verify',
+                name: 'SignatureVerify',
+                component: () => import('@/views/sign/SignatureVerifyView.vue'),
+                meta: {title: '签名验签'}
+            },
+            {
+                path: 'sign-cert',
+                name: 'SignatureCert',
+                component: () => import('@/views/sign/SignatureCertView.vue'),
+                meta: {title: '签名证书'}
             },
             {
                 path: 'health-record',

@@ -1,6 +1,6 @@
 <template>
-  <!-- ---------------- 签名详情抽屉 ---------------- -->
-  <el-drawer v-model="visible" size="60%" title="签名详情与验签">
+  <!-- ---------------- 签名详情弹框 ---------------- -->
+  <el-dialog v-model="visible" width="900px" top="6vh" title="签名详情与验签">
     <div v-loading="detailLoading">
       <template v-if="detail">
         <div class="flex flex-wrap items-center gap-4 text-sm">
@@ -29,9 +29,6 @@
               </el-tag>
             </p>
             <p class="text-amber-700">{{ text(detail.timeSourceNote) }}</p>
-            <p v-if="detail.tsaSerial" data-testid="g6-detail-tsaserial">
-              时间戳：{{ detail.tsaSerial }}（授时 {{ text(detail.tsaTime) }}）
-            </p>
             <p v-if="detail.prevSignId">上一次签名 ID：{{ detail.prevSignId }}（本次内容已包含其摘要）</p>
           </div>
         </div>
@@ -45,7 +42,7 @@
 
         <!-- 验签：两个断言分开展示，绝不合成一个"通过/不通过" -->
         <div class="mt-4 rounded-lg border border-slate-200 bg-white p-4">
-          <div class="flex flex-wrap items-center gap-3">
+          <div v-if="!readonly" v-perm="'sign:verify:edit'" class="flex flex-wrap items-center gap-3">
             <el-button :loading="verifying" data-testid="p5-sign-detail-verify" size="small" type="primary"
                        @click="doVerify">执行验签
             </el-button>
@@ -83,20 +80,6 @@
                   签名之后这份<b>病历被改过</b>。</p>
               </div>
             </div>
-            <!-- ③ 可信时间戳：只有 time_source=3 的行有断言；失败不推翻①②，但"时间可信"不成立 -->
-            <div
-                v-if="verifyResult.tsaValid !== null && verifyResult.tsaValid !== undefined"
-                :class="verifyResult.tsaValid ? 'border-emerald-200 bg-emerald-50' : 'border-amber-200 bg-amber-50'"
-                class="rounded border px-3 py-2 text-xs"
-            >
-              <p :class="verifyResult.tsaValid ? 'text-emerald-700' : 'text-amber-700'" class="font-medium"
-                 data-testid="g6-verify-tsavalid">
-                ③ 可信时间戳：{{ verifyResult.tsaValid ? '通过' : '不通过' }}
-              </p>
-              <p class="mt-1 text-slate-600">序列号 {{ text(verifyResult.tsaSerial) }} · 授时时刻
-                {{ text(verifyResult.tsaTime) }}</p>
-              <p v-if="verifyResult.tsaNote" class="mt-1 text-slate-600">{{ verifyResult.tsaNote }}</p>
-            </div>
             <div class="rounded border border-slate-200 bg-slate-50 px-3 py-2 text-xs leading-6">
               <p>签名时摘要：<span class="break-all font-mono">{{ text(verifyResult.digestAtSign) }}</span></p>
               <p>当前重算：<span class="break-all font-mono"
@@ -116,11 +99,10 @@
         </div>
 
         <!-- 作废 -->
-        <div v-if="detail.canInvalidate" class="mt-4 rounded-lg border border-red-100 bg-red-50 p-4">
+        <div v-if="!readonly && detail.canInvalidate" v-perm="'sign:verify:edit'" class="mt-4 rounded-lg border border-red-100 bg-red-50 p-4">
           <p class="text-xs font-medium text-red-800">作废这条签名</p>
           <p class="mt-1 text-xs leading-5 text-red-700">
-            作废不会删除任何历史记录：签名值、被签内容快照、签名时间全部保留，只追加作废人 / 时间 / 理由。
-            作废后内容锁定解除，该文书可再次编辑并重新签名。理由必填 —— 事后要能回答「是谁撤了这份签名、为什么」。
+            作废不删历史：只追加作废人 / 时间 / 理由，并解除内容锁定，文书可重新编辑后再次签名。
           </p>
           <el-input v-model="invalidReason" class="mt-2" data-testid="p5-sign-invalid-reason"
                     placeholder="作废理由（必填）"/>
@@ -128,7 +110,7 @@
                      type="danger" @click="doInvalidate">确认作废
           </el-button>
         </div>
-        <div v-else-if="detail.actionHint"
+        <div v-else-if="!readonly && detail.actionHint"
              class="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs text-slate-500">
           {{ detail.actionHint }}
         </div>
@@ -139,7 +121,7 @@
         </div>
       </template>
     </div>
-  </el-drawer>
+  </el-dialog>
 </template>
 
 <script setup>
@@ -150,8 +132,10 @@ import {text, timeSourceTag} from '@/lib/sign';
 
 const props = defineProps({
   modelValue: {type: Boolean, default: false},
-  // 当前查看的签名记录 id，抽屉打开时按 id 自取详情
+  // 当前查看的签名记录 id，弹框打开时按 id 自取详情
   id: {type: [String, Number], default: null},
+  // 只读模式（日志审计等纯查看入口）：不出现「执行验签」按钮、作废区块与操作提示
+  readonly: {type: Boolean, default: false},
 });
 const emit = defineEmits(['update:modelValue', 'saved']);
 

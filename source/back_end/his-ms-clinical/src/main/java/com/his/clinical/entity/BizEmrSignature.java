@@ -133,24 +133,9 @@ public class BizEmrSignature extends BaseEntity {
     private LocalDateTime signedTime;
 
     /**
-     * 时间来源（1-本机时钟 2-院内授时服务器 3-第三方TSA）
+     * 时间来源（1-本机时钟 2-院内授时服务器）
      */
     private Integer timeSource;
-
-    /**
-     * 第三方时间戳序列号（time_source=3 时必填）
-     */
-    private String tsaSerial;
-
-    /**
-     * TSA 授时时刻（time_source=3 时必填；与 tsa_serial/tsa_token 三列同生共死）
-     */
-    private LocalDateTime tsaTime;
-
-    /**
-     * 时间戳令牌（TSA 私钥对「序列号|摘要|时刻」的签名，Base64；time_source=3 时必填）
-     */
-    private String tsaToken;
 
     /**
      * 签名状态（1-有效 2-已作废）

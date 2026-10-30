@@ -15,7 +15,7 @@ public class SignProperties {
 
     /**
      * 签名主口令（派生私钥存储密钥的输入）。随环境变：dev 在 application-dev.yml 内联真值，
-     * 生产由环境变量 HIS_SIGN_SECRET 注入；未配置时证书签发与可信时间入口直接拒绝。
+     * 生产由环境变量 HIS_SIGN_SECRET 注入；未配置时证书签发入口直接拒绝。
      */
     private String masterSecret;
 
@@ -40,43 +40,10 @@ public class SignProperties {
     private int timeSource = 1;
 
     /**
-     * csssl 认证中心对接地址（如 http://localhost:8092/ssl）。
-     * 仅用于可信时间戳（TSA）通道；证书签发为线下人工，不经此地址。
-     */
-    private String caBaseUrl;
-
-    /**
-     * csssl 请求超时（毫秒）
-     */
-    private int caTimeoutMs = 5000;
-
-    /**
      * 新签发证书的密钥算法：RSA2048（默认，兼容既有链路）或 SM2（国密，对齐 WS/T 847 医学电子签名要求）。
      * 影响密钥生成、签名算法（SHA256withRSA / SM3withSM2）与指纹摘要；历史证书按各自行内算法继续工作。
      */
     private String keyAlgorithm = "RSA2048";
-
-    /**
-     * csssl 接口路径（his.sign.ca-paths.*），相对 ca-base-url
-     */
-    private CaPaths caPaths = new CaPaths();
-
-    /**
-     * csssl 各能力的接口路径：与 CA 侧 REST 路由契约一一对应
-     */
-    @Data
-    public static class CaPaths {
-
-        /**
-         * 可信时间戳盖章路径
-         */
-        private String tsaStamp = "/tsa/stamp";
-
-        /**
-         * 可信时间戳验签公钥获取路径
-         */
-        private String tsaPublicKey = "/tsa/publicKey";
-    }
 
     /**
      * 概要：拿最终生效的口令（配置项为空时读环境变量）

@@ -267,6 +267,7 @@
       <el-form-item label="旧密码">
         <el-input
             v-model="passwordForm.oldPassword"
+            autocomplete="current-password"
             placeholder="请输入旧密码"
             show-password
             type="password"
@@ -275,6 +276,7 @@
       <el-form-item label="新密码">
         <el-input
             v-model="passwordForm.newPassword"
+            autocomplete="new-password"
             placeholder="请输入新密码（至少6位）"
             show-password
             type="password"
@@ -283,6 +285,7 @@
       <el-form-item label="确认密码">
         <el-input
             v-model="passwordForm.confirmPassword"
+            autocomplete="new-password"
             placeholder="请再次输入新密码"
             show-password
             type="password"

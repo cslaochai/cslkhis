@@ -1,33 +1,5 @@
 <template>
   <div class="space-y-6">
-    <!-- 标题 -->
-    <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-      <div>
-        <h1 class="text-xl font-semibold text-slate-900">病案质控工作台</h1>
-        <p class="mt-1 max-w-4xl text-sm text-slate-500">
-          按
-          <el-text class="mx-1" size="small">完整性 / 规范性 / 逻辑性</el-text>
-          三个维度对门诊病历与住院文书做规则质控，每条问题都定位到具体字段并给出整改建议。
-        </p>
-      </div>
-      <el-button :icon="Refresh" @click="refreshAll">刷新</el-button>
-    </div>
-
-    <!-- 口径说明 -->
-    <div class="rounded-lg border border-blue-100 bg-blue-50 px-4 py-3 text-xs leading-6 text-slate-700">
-      <p><span class="font-medium text-slate-900">得分与结论是两件事：</span>得分是 100 分制扣分（甲级≥90 / 乙级75~89 / 丙级&lt;75），结论只是「通过
-        / 不通过」。命中任何<b>重要</b>及以上的问题即不通过，所以「80 分但不通过」不是矛盾。</p>
-      <p><span class="font-medium text-slate-900">有否决项命中必定判为丙级：</span>缺主诉 / 缺现病史 / 缺诊断 / 缺过敏史
-        / 记录类文书无正文 / 性别与诊断矛盾 / 生命体征越界 —— 这些是一票否决项。</p>
-      <p><span class="font-medium text-slate-900">必填项规则按文书类型限定：</span>只有入院记录与门诊病历要求主诉、现病史、过敏史；手术记录、会诊记录、转科记录、输血记录<b>本来就不需要</b>，不会被误报。
-      </p>
-      <p><span class="font-medium text-slate-900">平均分与甲级率只统计「综合质控」（qc_type=0）：</span>完整性 / 规范性 /
-        逻辑性单独出单时，分数只代表那一个维度（缺主诉属完整性，单独跑逻辑性就看不到），混在一起会把甲级率抬高。单量类数字（总数
-        / 待处理 / 通过 / 不通过）统计全部质控单。</p>
-      <p><span class="font-medium text-slate-900">得分显示为「—」表示该单没有得分</span>（旧版质控，或 qc_type=4 的 AI
-        内涵质控），不计入平均分与甲级率，不要当成满分通过。</p>
-    </div>
-
     <!-- 概览 -->
     <div v-if="overview" v-loading="overviewLoading" class="grid grid-cols-2 gap-4 lg:grid-cols-5"
          data-testid="p5-qc-overview">

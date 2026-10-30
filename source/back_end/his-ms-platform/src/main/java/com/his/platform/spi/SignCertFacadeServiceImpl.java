@@ -152,6 +152,17 @@ public class SignCertFacadeServiceImpl implements SignCertFacadeService {
     }
 
     @Override
+    public SignCertVO getActiveCertByEmp(Long empId) {
+        com.his.platform.vo.SignCertVO inner = signCertService.getActiveCertVO(empId);
+        if (inner == null) {
+            return null;
+        }
+        SignCertVO vo = new SignCertVO();
+        BeanUtils.copyProperties(inner, vo);
+        return vo;
+    }
+
+    @Override
     public SignCaApplyVO keygenCert(SignCertKeygenDTO dto) {
         // 操作人在 web 层补；Facade 路径无登录态，操作人留空，签发事实仍落库
         return signCertService.keygen(dto, null, null);

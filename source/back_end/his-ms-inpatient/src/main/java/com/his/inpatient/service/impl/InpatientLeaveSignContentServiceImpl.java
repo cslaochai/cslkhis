@@ -94,7 +94,7 @@ public class InpatientLeaveSignContentServiceImpl extends ServiceImpl<BizInpatie
         }
         if (Objects.equals(ObjectSignStatusEnum.SIGNED.getCode(), l.getSignStatus())) {
             return "请假单 " + l.getLeaveNo() + " 已签名（签名即锁定），不能重复签名；"
-                    + "如需修改，请先在「签名中心」作废该签名（作废会留痕并解除锁定）";
+                    + "如需修改，请先在「签名验签」作废该签名（作废会留痕并解除锁定）";
         }
         if (!Objects.equals(LeaveStatusEnum.PENDING.getCode(), l.getLeaveStatus())) {
             return "请假单 " + l.getLeaveNo() + " 当前为「" + LeaveStatusEnum.getLabel(l.getLeaveStatus(), "—")

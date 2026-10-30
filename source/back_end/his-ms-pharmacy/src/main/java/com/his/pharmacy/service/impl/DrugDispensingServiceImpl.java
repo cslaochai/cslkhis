@@ -62,6 +62,8 @@ public class DrugDispensingServiceImpl extends ServiceImpl<BizDrugDispensingMapp
         Long pharmacistId = pharmacist.getEmployeeId();
         String pharmacistName = pharmacist.getRealName();
         BizDrugDispensing dispensing = requirePending(dispensingId);
+        // ⓪ 发药签名闸门：无签结诊的待补签处方不放行
+        assertPrescriptionSigned(dispensing.getPrescriptionId());
         // ① 麻精限量闸门（按处方整体判一次）
         assertPrescriptionQuota(dispensing.getPrescriptionId(), overLimitReason);
         // ② 双人复核闸门（复核人姓名服务端反查，且不得与发药人同人）
@@ -83,6 +85,8 @@ public class DrugDispensingServiceImpl extends ServiceImpl<BizDrugDispensingMapp
         CurrentUser pharmacist = requireCurrentPharmacist();
         Long pharmacistId = pharmacist.getEmployeeId();
         String pharmacistName = pharmacist.getRealName();
+        // ⓪ 发药签名闸门：无签结诊的待补签处方整单不放行
+        assertPrescriptionSigned(prescriptionId);
         // ① 麻精限量闸门：整单一次判定，任一管制明细超限整单不发
         assertPrescriptionQuota(prescriptionId, overLimitReason);
         List<BizDrugDispensing> pendingList = this.lambdaQuery()
@@ -104,6 +108,20 @@ public class DrugDispensingServiceImpl extends ServiceImpl<BizDrugDispensingMapp
         // 整单发完，必然全部发出
         markPrescriptionDispensed(prescriptionId, pharmacistId, pharmacistName);
         return true;
+    }
+
+    /**
+     * 发药签名闸门：处方未完成医师电子签名（无签结诊的「待补签」单）不放行，
+     * 医生补签（签名ID 回填）后本闸门自动放行。
+     */
+    private void assertPrescriptionSigned(Long prescriptionId) {
+        PrescriptionPharmacyVO rx = prescriptionFacade.findPrescription(prescriptionId);
+        if (rx == null) {
+            throw new BusinessException("处方不存在");
+        }
+        if (rx.getDoctorSignId() == null) {
+            throw new BusinessException("该处方无医师电子签名（待补签），暂不能发药，请联系医生补签后再发");
+        }
     }
 
     /**

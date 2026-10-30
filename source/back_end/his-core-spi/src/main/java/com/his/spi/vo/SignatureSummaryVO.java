@@ -1,5 +1,6 @@
 package com.his.spi.vo;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.Data;
 
 import java.time.LocalDateTime;
@@ -79,27 +80,8 @@ public class SignatureSummaryVO {
     private List<Coverage> coverages;
 
     /** 全院最近一次签名时刻 */
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime lastSignTime;
-
-    /**
-     * 时间来源说明（本期为本机时钟，页面必须原样展示）
-     */
-    private String timeSourceNote;
-
-    /**
-     * TSA 适配器是否在线
-     */
-    private Boolean tsaAvailable;
-
-    /**
-     * TSA 适配器名称
-     */
-    private String tsaName;
-
-    /**
-     * 时间戳令牌台账条数
-     */
-    private Long tsaTokenCount;
 
     /**
      * 证书信任级别说明

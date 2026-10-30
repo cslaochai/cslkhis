@@ -7,18 +7,7 @@ his:
     iterations: 120000
     # 证书默认有效期（天）
     default-valid-days: 365
-    # 默认时间来源：1-本机时钟 2-院内授时服务器 3-第三方TSA
-    # 本期未接入 2/3，即使这里填 2 或 3 也会被运行期降级成 1 并在日志里告警（不谎报可信时间）
+    # 默认时间来源：1-本机时钟（签名时刻一律取服务端本机时钟）
     time-source: 1
     # 新签发证书的密钥算法：SM2（国密，默认，对齐 WS/T 847）或 RSA2048（兼容既有链路）
     key-algorithm: ${HIS_SIGN_KEY_ALGO:SM2}
-    # csssl 认证中心对接地址：仅用于可信时间戳（TSA）通道。
-    # 证书签发为线下人工，不经此地址。
-    ca-base-url: ""
-    ca-timeout-ms: 5000
-    # csssl 接口路径（相对 ca-base-url），与 CA 侧 REST 路由契约一致
-    ca-paths:
-      tsa-stamp: /tsa/stamp
-      tsa-public-key: /tsa/publicKey
-    # 可信时间戳（TSA）统一由 csssl 认证中心提供：HIS 侧不自建 TSA、不自签时间戳令牌。
-    # csssl 不可用时签名时间来源降级本机时钟（不谎报可信时间）

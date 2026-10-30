@@ -708,7 +708,7 @@ public class CdrServiceImpl implements CdrService {
     }
 
     @Override
-    public Map<String, Object> getClinicalSummary(CdrQueryDTO dto) {
+    public CdrClinicalSummaryVO getClinicalSummary(CdrQueryDTO dto) {
         Long pid = dto.getPatientId();
         List<Long> ids = resolveIds(pid);
 
@@ -718,13 +718,13 @@ public class CdrServiceImpl implements CdrService {
         String allergyText = cdrMapper.selectLatestAllergyHistory(ids);
         boolean allergyPositive = TextUtil.hasText(allergyText)
                 && !"无".equals(allergyText.trim()) && !"无过敏".equals(allergyText.trim());
-        List<Map<String, Object>> allergies = new ArrayList<>();
+        List<CdrClinicalSummaryVO.AllergyItem> allergies = new ArrayList<>();
         if (allergyPositive) {
-            Map<String, Object> a = new HashMap<>();
-            a.put("allergenName", allergyText.length() > 30 ? allergyText.substring(0, 30) : allergyText);
-            a.put("allergySeverity", null);
-            a.put("allergySymptoms", null);
-            a.put("source", "病历");
+            CdrClinicalSummaryVO.AllergyItem a = new CdrClinicalSummaryVO.AllergyItem();
+            a.setAllergenName(allergyText.length() > 30 ? allergyText.substring(0, 30) : allergyText);
+            a.setAllergySeverity(null);
+            a.setAllergySymptoms(null);
+            a.setSource("病历");
             allergies.add(a);
         }
 
@@ -754,19 +754,23 @@ public class CdrServiceImpl implements CdrService {
 
         // ④ 重复检查（30天内同一项目 >=2 次）
         List<Map<String, Object>> repeatRows = cdrMapper.selectRepeatInspections(ids, since30d);
-        List<Map<String, Object>> repeatExams = new ArrayList<>();
+        List<CdrClinicalSummaryVO.RepeatExamItem> repeatExams = new ArrayList<>();
         for (Map<String, Object> row : repeatRows) {
-            Map<String, Object> r = new HashMap<>();
-            r.put("itemName", row.get("itemName"));
-            r.put("count", row.get("cnt"));
+            CdrClinicalSummaryVO.RepeatExamItem r = new CdrClinicalSummaryVO.RepeatExamItem();
+            r.setItemName((String) row.get("itemName"));
+            r.setCount(((Number) row.get("cnt")).intValue());
             repeatExams.add(r);
         }
 
         // ⑤ 危急值/异常检验：暂未接入检验结果明细，返回 0（后续接 biz_laboratory_record）
-        Map<String, Object> criticalValues = Map.of(
-                "totalCount", 0, "openCount", 0, "items", Collections.emptyList());
-        Map<String, Object> abnormalLabs = Map.of(
-                "abnormalCount", 0, "unjudgedCount", 0, "items", Collections.emptyList());
+        CdrClinicalSummaryVO.CriticalValueBlock criticalValues = new CdrClinicalSummaryVO.CriticalValueBlock();
+        criticalValues.setTotalCount(0);
+        criticalValues.setOpenCount(0);
+        criticalValues.setItems(Collections.emptyList());
+        CdrClinicalSummaryVO.AbnormalLabBlock abnormalLabs = new CdrClinicalSummaryVO.AbnormalLabBlock();
+        abnormalLabs.setAbnormalCount(0);
+        abnormalLabs.setUnjudgedCount(0);
+        abnormalLabs.setItems(Collections.emptyList());
 
         // ⑥ 警告
         List<String> warnings = new ArrayList<>();
@@ -777,18 +781,19 @@ public class CdrServiceImpl implements CdrService {
             warnings.add("慢病标签：" + String.join("、", chronicTags) + "，用药注意相互作用");
         }
 
-        Map<String, Object> result = new HashMap<>();
-        result.put("allergyPositive", allergyPositive);
-        result.put("allergies", allergies);
-        result.put("chronicTags", chronicTags);
-        result.put("criticalValues", criticalValues);
-        result.put("abnormalLabs", abnormalLabs);
-        result.put("visits30d", Map.of(
-                "outpatientCount", outpatientCount,
-                "emergencyCount", emergencyCount,
-                "inpatientCount", inpatientCount));
-        result.put("repeatExams", repeatExams);
-        result.put("warnings", warnings);
+        CdrClinicalSummaryVO result = new CdrClinicalSummaryVO();
+        result.setAllergyPositive(allergyPositive);
+        result.setAllergies(allergies);
+        result.setChronicTags(chronicTags);
+        result.setCriticalValues(criticalValues);
+        result.setAbnormalLabs(abnormalLabs);
+        CdrClinicalSummaryVO.VisitStatBlock visits30d = new CdrClinicalSummaryVO.VisitStatBlock();
+        visits30d.setOutpatientCount(outpatientCount);
+        visits30d.setEmergencyCount(emergencyCount);
+        visits30d.setInpatientCount(inpatientCount);
+        result.setVisits30d(visits30d);
+        result.setRepeatExams(repeatExams);
+        result.setWarnings(warnings);
         return result;
     }
 }

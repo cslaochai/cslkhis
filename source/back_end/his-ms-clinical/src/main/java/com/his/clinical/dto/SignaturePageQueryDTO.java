@@ -47,7 +47,7 @@ public class SignaturePageQueryDTO extends PageParam {
     private Integer verifyStatus;
 
     /**
-     * 时间来源（1-本机时钟 2-院内授时服务器 3-第三方TSA）
+     * 时间来源（1-本机时钟 2-院内授时服务器）
      */
     private Integer timeSource;
 

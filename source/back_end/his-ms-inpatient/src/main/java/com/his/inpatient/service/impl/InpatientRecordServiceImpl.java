@@ -82,7 +82,7 @@ public class InpatientRecordServiceImpl extends ServiceImpl<BizInpatientRecordMa
             return null;
         }
         return "本文书已于 " + r.getSignedTime() + " 完成电子签名（签名即锁定），内容不可再修改；"
-                + "如确需更正，请先在「签名中心」作废该签名，再修改并重新提交";
+                + "如确需更正，请先在「签名验签」作废该签名，再修改并重新提交";
     }
 
     private static String asText(Object v) {
@@ -222,7 +222,7 @@ public class InpatientRecordServiceImpl extends ServiceImpl<BizInpatientRecordMa
         if (Objects.equals(1, record.getSignStatus())) {
             throw new BusinessException("病历文书 " + record.getRecordNo()
                     + " 已由 " + record.getDoctorName() + " 签名（" + record.getSignedTime()
-                    + "），签名即锁定，不允许修改；如确需更正，请先在「签名中心」作废该签名"
+                    + "），签名即锁定，不允许修改；如确需更正，请先在「签名验签」作废该签名"
                     + "（作废会留痕并解除锁定），改完重新提交");
         }
         if (dto.getRecordType() != null && !Objects.equals(dto.getRecordType(), record.getRecordType())) {

@@ -96,6 +96,7 @@ public class PharmacyPrescriptionFacadeServiceImpl implements PharmacyPrescripti
         vo.setDeptName(rx.getDeptName());
         vo.setDoctorId(rx.getDoctorId());
         vo.setDoctorName(rx.getDoctorName());
+        vo.setDoctorSignId(rx.getDoctorSignId());
         vo.setAuditBy(rx.getAuditBy());
         vo.setPatientId(rx.getPatientId());
         vo.setPatientNo(rx.getPatientNo());
