@@ -110,9 +110,6 @@
           </el-select>
         </el-form-item>
       </div>
-      <div class="-mt-2 mb-3 text-xs text-gray-400">
-        医生归属科室 + 医疗组，护士归属病区；两者都可留空，不影响岗位授权与数据权限。
-      </div>
       <!-- 签名笔迹：员工档案预维护，结诊处方签名与检查检验报告审核时直接引用（不每次手写） -->
       <el-form-item label-width="0">
         <div class="w-full">
