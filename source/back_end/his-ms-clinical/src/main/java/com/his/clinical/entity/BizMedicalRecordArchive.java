@@ -104,6 +104,42 @@ public class BizMedicalRecordArchive extends BaseEntity {
     private LocalDateTime sealTime;
 
     /**
+     * 纸质签名核验状态（0-未核验 1-已核验）
+     */
+    private Integer paperVerifyStatus;
+
+    /**
+     * 纸质签名件编号（纸质病历号/档案号）
+     */
+    private String paperCertNo;
+
+    /**
+     * 纸质签名核验人ID
+     */
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long paperVerifyById;
+
+    /**
+     * 纸质签名核验人姓名
+     */
+    private String paperVerifyByName;
+
+    /**
+     * 纸质签名核验时间
+     */
+    private LocalDateTime paperVerifyTime;
+
+    /**
+     * 纸质签名核验说明
+     */
+    private String paperVerifyRemark;
+
+    /**
+     * 归档签名方式（0-未确定 1-电子签名 2-纸质签名核验）
+     */
+    private Integer signMethod;
+
+    /**
      * 删除标志（0-正常 1-删除）
      */
     private Integer delFlag;

@@ -77,7 +77,7 @@ public class SignCertVO {
     private String keyFingerprintGroups;
 
     /**
-     * CA 签发申请主体 DN（CN=姓名, O=机构, OU=科室）；证书已回填时取证书里的实际主体
+     * CA 签发申请主体 DN（CN=姓名, O=机构, OU=员工编号）；证书已回填时取证书里的实际主体
      */
     private String caSubjectDn;
 

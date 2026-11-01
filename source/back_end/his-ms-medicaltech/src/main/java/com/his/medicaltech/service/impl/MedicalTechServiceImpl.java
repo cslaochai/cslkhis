@@ -573,7 +573,6 @@ public class MedicalTechServiceImpl extends ServiceImpl<BizInspectionRecordMappe
             throw new BusinessException("检验记录不存在");
         }
         deptScopeService.assertDeptAccessible(record.getLaboratoryDeptId());
-
         record.setExecuteTime(LocalDateTime.now());
         record.setExecuteBy(executeBy);
         record.setDiagnosis(diagnosis);

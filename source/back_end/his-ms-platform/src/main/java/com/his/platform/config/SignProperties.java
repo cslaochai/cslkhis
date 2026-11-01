@@ -5,6 +5,9 @@ import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * 签名能力配置（his.sign.*）。
  */
@@ -126,11 +129,21 @@ public class SignProperties {
         private Paths paths = new Paths();
 
         /**
-         * 三项都配齐才允许发起在线申请；缺任一项都按「未接入」处理并给出配置提示
+         * 列出当前缺失的接入凭证配置项；三项（base-url / app-id / app-secret）都配齐时返回 null。
+         * 用于报错 / 状态提示时明确告知「具体缺哪一项」，不让运维去猜。
          */
-        public boolean configured() {
-            return enabled && TextUtil.hasText(baseUrl)
-                    && TextUtil.hasText(appId) && TextUtil.hasText(appSecret);
+        public String missingCredentialParams() {
+            List<String> missing = new ArrayList<>();
+            if (!TextUtil.hasText(baseUrl)) {
+                missing.add("his.sign.ca.base-url");
+            }
+            if (!TextUtil.hasText(appId)) {
+                missing.add("his.sign.ca.app-id");
+            }
+            if (!TextUtil.hasText(appSecret)) {
+                missing.add("his.sign.ca.app-secret");
+            }
+            return missing.isEmpty() ? null : String.join("、", missing);
         }
     }
 

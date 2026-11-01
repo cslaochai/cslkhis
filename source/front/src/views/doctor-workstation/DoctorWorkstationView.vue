@@ -96,6 +96,15 @@
           >{{ f.label }}
           </el-button>
         </div>
+        <!-- 我的待补签：无签结诊后本人未签的病历/处方/申请单，走自助补签（原因 + PIN，全程留痕） -->
+        <div class="px-4 pb-2">
+          <el-button class="!w-full" plain size="small" type="warning" @click="openMyPending">
+            我的待补签
+            <el-tag v-if="myPendingList.length" class="ml-1" size="small" type="danger">
+              {{ myPendingList.length }}
+            </el-tag>
+          </el-button>
+        </div>
         <!-- 患者列表 -->
         <div v-loading="loading" class="flex-1 overflow-y-auto">
           <div v-for="row in filteredQueue" :key="row.id"
@@ -2243,6 +2252,49 @@
   <SignPinDialog ref="pinDialogRef" v-model="pinDialogVisible"/>
   <UnsignedSignAlertDialog ref="unsignedSignAlertRef"/>
 
+  <!-- ================= 我的待补签（本人自助补签：原因 + PIN + 审计留痕） ================= -->
+  <el-dialog v-model="myPendingVisible" destroy-on-close title="我的待补签" width="880px">
+    <p class="mb-2 text-xs text-slate-500">
+      仅列出您本人书写、尚未电子签名的门诊病历、处方与检查/检验申请单。补签须填写原因并输入签名 PIN，
+      签名人只能是本人，成功与失败都会写审计日志。
+    </p>
+    <el-table v-loading="myPendingLoading" :data="myPendingList" border max-height="380" size="small">
+      <el-table-column label="类型" min-width="96" prop="bizTypeText"/>
+      <el-table-column label="单号" min-width="150" prop="bizNo"/>
+      <el-table-column label="患者" min-width="90" prop="patientName"/>
+      <el-table-column label="科室" min-width="100" prop="deptName"/>
+      <el-table-column label="业务状态" min-width="90" prop="bizStatusText"/>
+      <el-table-column label="就诊日期" min-width="100" prop="visitDate"/>
+      <el-table-column fixed="right" label="操作" width="80">
+        <template #default="{ row }">
+          <el-button link size="small" type="primary" @click="openMakeup(row)">补签</el-button>
+        </template>
+      </el-table-column>
+    </el-table>
+    <div v-if="!myPendingLoading && myPendingList.length === 0" class="py-8 text-center text-sm text-slate-400">
+      当前没有待补签文书
+    </div>
+    <template #footer>
+      <el-button @click="myPendingVisible = false">关闭</el-button>
+      <el-button type="primary" @click="loadMyPending">刷新</el-button>
+    </template>
+  </el-dialog>
+
+  <el-dialog v-model="makeupReasonVisible" append-to-body destroy-on-close title="补签原因" width="520px">
+    <div v-if="makeupTarget" class="mb-3 rounded bg-slate-50 px-3 py-2 text-xs text-slate-600">
+      <p>对象：{{ makeupTarget.bizTypeText }} · {{ makeupTarget.bizNo }}</p>
+      <p class="mt-0.5">患者：{{ makeupTarget.patientName || '—' }} · 科室：{{ makeupTarget.deptName || '—' }}</p>
+    </div>
+    <el-input v-model="makeupReason" maxlength="200" placeholder="请写明补签原因（如：结诊时证书未签发、网络中断等），将写入签名备注与审计日志"
+              rows="3" show-word-limit type="textarea"/>
+    <template #footer>
+      <el-button @click="makeupReasonVisible = false">取消</el-button>
+      <el-button :loading="makeupSubmitting" type="primary" @click="submitMakeup">
+        下一步：输入签名 PIN
+      </el-button>
+    </template>
+  </el-dialog>
+
   <!-- ================= 开住院证（门诊 → 住院的入口） ================= -->
   <DoctorWorkstationAdmissionAdd
       v-model="orderDialogVisible"
@@ -2383,7 +2435,7 @@ import PageActionBar from '@/components/his/PageActionBar.vue';
 import OrderPanel from '@/components/his/OrderPanel.vue';
 import SignPinDialog from '@/components/his/SignPinDialog.vue';
 import UnsignedSignAlertDialog from '@/components/his/UnsignedSignAlertDialog.vue';
-import {getSignPreCheck} from '@/api/signature';
+import {getMyPendingSigns, getSignPreCheck, makeupSign} from '@/api/signature';
 import DoctorWorkstationAdmissionAdd from './DoctorWorkstationAdmissionAdd.vue';
 import DoctorWorkstationAdmissionList from './DoctorWorkstationAdmissionList.vue';
 import RxSignDialog from './RxSignDialog.vue';
@@ -4891,8 +4943,11 @@ const handleComplete = async () => {
     </div>`;
   }
   if (signSkipped) {
-    // 无有效证书：普通确认框换成全屏不可绕过的强提示，确认后直接提交（跳过 PIN 与签名板）
-    await unsignedSignAlertRef.value.open({stateText: signCheckStateText, message: signCheckMessage});
+    // 无有效证书：普通确认框换成强提示弹框，确认后直接提交（跳过 PIN 与签名板）；取消则本次不结诊
+    const continued = await unsignedSignAlertRef.value.open({stateText: signCheckStateText, message: signCheckMessage});
+    if (!continued) {
+      return;
+    }
   } else {
     try {
       await ElMessageBox.confirm(`<div class="space-y-2">
@@ -5370,8 +5425,71 @@ const pendingSubmitData = ref(null);
 // 软签二次确认：PIN 由签名人本人输入，服务端校验通过才解密私钥
 const pinDialogRef = ref(null);
 const pinDialogVisible = ref(false);
+// 无有效证书时的全屏强提示（不可绕过），确认后才放行无签结诊
+const unsignedSignAlertRef = ref(null);
 // 本次结诊要不要弹 PIN：签名预检给的 pinRequired（免输入窗口内为 false），跨签名板弹框带到提交那一步
 const pendingPinRequired = ref(true);
+
+// ========== 我的待补签（医生自助补签：原因 + PIN + 审计留痕） ==========
+const myPendingVisible = ref(false);
+const myPendingLoading = ref(false);
+const myPendingList = ref([]);
+const makeupReasonVisible = ref(false);
+const makeupTarget = ref(null);
+const makeupReason = ref('');
+const makeupSubmitting = ref(false);
+
+const loadMyPending = async () => {
+  myPendingLoading.value = true;
+  try {
+    const res = await getMyPendingSigns();
+    myPendingList.value = res.data || [];
+  } catch (error) {
+    console.error('加载我的待补签失败', error);
+  } finally {
+    myPendingLoading.value = false;
+  }
+};
+
+const openMyPending = () => {
+  myPendingVisible.value = true;
+  loadMyPending();
+};
+
+const openMakeup = (row) => {
+  makeupTarget.value = row;
+  makeupReason.value = '';
+  makeupReasonVisible.value = true;
+};
+
+const submitMakeup = async () => {
+  if (!makeupTarget.value) return;
+  const reason = makeupReason.value.trim();
+  if (!reason) {
+    ElMessage.warning('补签必须写原因 —— 事后要能回答「这次为什么没签、是谁补的」');
+    return;
+  }
+  // 先收集原因，再弹 PIN：取消 PIN 就视为放弃本次补签，不发请求
+  const pin = await pinDialogRef.value?.askPin();
+  if (!pin) return;
+  makeupSubmitting.value = true;
+  try {
+    await makeupSign({
+      bizType: makeupTarget.value.bizType,
+      bizId: makeupTarget.value.bizId,
+      reason,
+      pin,
+    });
+    ElMessage.success('补签完成，签名人已记为本人');
+    makeupReasonVisible.value = false;
+    await loadMyPending();
+  } catch (error) {
+    // 全局拦截器已提示原因（对象不属于本人 / PIN 错误等），这里只保留弹框便于修改
+    console.error('补签失败', error);
+  } finally {
+    makeupSubmitting.value = false;
+  }
+};
 
 const buildPrescriptionPayload = () => {
   return prescriptionList.value
@@ -6068,6 +6186,8 @@ onMounted(() => {
   loadAllDrugs();
   loadAllInspectionItems();
   loadAllLaboratoryItems();
+  // 待补签数量进页面就刷新一次：无签结诊留下的欠签文书要能被医生第一眼看到
+  loadMyPending();
   refreshTimer = setInterval(loadData, 30000);
 });
 onUnmounted(() => {

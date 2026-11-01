@@ -3,7 +3,7 @@ package com.his.common.enums;
 import org.apache.commons.lang3.StringUtils;
 
 /**
- * CA 在线申请单状态（sys_sign_cert.ca_apply_status）。
+ * CA 在线申请单状态（sys_sign_ca_apply.apply_status，一次申请一行）。
  *
  * <p>前五个与 csssl 对外申请单 status 逐字一致；FAILED 是 HIS 本地提交失败
  * （CA 不可达 / 凭证错误 / 模板不匹配），用于页面提示「可重试」，CA 侧不存在该状态。

@@ -3,6 +3,7 @@ package com.his.clinical.controller;
 import com.his.common.base.PageResult;
 import com.his.common.base.Result;
 import com.his.clinical.dto.ArchivePageQueryDTO;
+import com.his.clinical.dto.PaperSignVerifyDTO;
 import com.his.clinical.service.MedicalRecordArchiveService;
 import com.his.clinical.vo.BizMedicalRecordArchiveVO;
 import com.his.clinical.vo.MedicalRecordArchiveCountVO;
@@ -44,6 +45,18 @@ public class MedicalRecordArchiveController {
     @GetMapping("/getById")
     public Result<BizMedicalRecordArchiveVO> getById(@RequestParam Long id) {
         return Result.success(medicalRecordArchiveService.getArchiveDetail(id));
+    }
+
+    /**
+     * 纸质签名核验登记：医师无电子证书时，病案管理科核对纸质病历手写签名后登记。
+     * 纸质核验只作归档替代凭证，不回写病历电子签名状态；登记后归档即可放行。
+     */
+    @PreAuthorize("hasAuthority('emr:archive:edit')")
+    @Operation(summary = "纸质签名核验登记")
+    @PostMapping("/paperVerify")
+    public Result<Void> paperVerify(@Valid @RequestBody PaperSignVerifyDTO dto) {
+        boolean success = medicalRecordArchiveService.verifyPaperSign(dto);
+        return success ? Result.success("纸质签名核验登记成功", null) : Result.error("纸质签名核验登记失败");
     }
 
     /**

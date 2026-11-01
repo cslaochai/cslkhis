@@ -10,6 +10,11 @@ export function getArchiveDetail(id) {
   return request.get('/charge/archive/getById', { params: { id } })
 }
 
+// 纸质签名核验登记（医师无电子证书时的替代凭证，不回写电子签名状态）
+export function verifyPaperSign(data) {
+  return request.post('/charge/archive/paperVerify', data)
+}
+
 // 归档病历
 export function archiveRecord(id) {
   return request.post('/charge/archive/archive', null, { params: { id } })

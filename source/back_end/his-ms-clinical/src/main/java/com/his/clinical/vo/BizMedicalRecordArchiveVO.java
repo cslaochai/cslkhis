@@ -114,6 +114,37 @@ public class BizMedicalRecordArchiveVO {
     private LocalDateTime sealTime;
 
     /**
+     * 纸质签名核验状态：0-未核验 1-已核验；已核验时可作为归档的替代签名凭证
+     */
+    private Integer paperVerifyStatus;
+
+    /**
+     * 纸质签名件编号（纸质病历号/档案号）
+     */
+    private String paperCertNo;
+
+    /**
+     * 纸质签名核验人姓名
+     */
+    private String paperVerifyByName;
+
+    /**
+     * 纸质签名核验时间
+     */
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private LocalDateTime paperVerifyTime;
+
+    /**
+     * 纸质签名核验说明
+     */
+    private String paperVerifyRemark;
+
+    /**
+     * 归档签名方式：0-未确定 1-电子签名 2-纸质签名核验
+     */
+    private Integer signMethod;
+
+    /**
      * 创建人
      */
     private String createBy;

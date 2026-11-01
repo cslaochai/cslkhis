@@ -4,7 +4,6 @@
     <div class="flex items-center justify-between mb-3">
       <div>
         <h2 class="text-lg font-semibold text-slate-800">病案归档工作台</h2>
-        <p class="mt-1 text-sm text-slate-500">病历归档（1→2）与封存（2→3）单向流转；封存为法律动作，不可解封</p>
       </div>
       <el-button :icon="Bell" @click="doNotifyOverdue">补跑超期提醒</el-button>
     </div>
@@ -86,6 +85,17 @@
             </el-tag>
           </template>
         </el-table-column>
+        <el-table-column label="签名方式" min-width="150">
+          <template #default="{ row }">
+            <el-tag v-if="row.signStatus === 1" effect="plain" size="small" type="success">电子签名</el-tag>
+            <el-tag v-else-if="row.paperVerifyStatus === 1" effect="plain" size="small" type="info">纸质核验</el-tag>
+            <el-tag v-else effect="plain" size="small" type="danger">待补签</el-tag>
+            <div v-if="row.paperVerifyStatus === 1" class="mt-1 text-xs text-slate-400">
+              {{ row.paperVerifyByName || '—' }} · {{ row.paperVerifyTime || '—' }}
+            </div>
+            <div v-if="row.paperCertNo" class="text-xs text-slate-400">件号 {{ row.paperCertNo }}</div>
+          </template>
+        </el-table-column>
         <el-table-column label="归档/封存时间" min-width="160">
           <template #default="{ row }">
             <div v-if="row.archiveTime" class="text-xs text-slate-600">归档 {{ row.archiveTime }}</div>
@@ -93,9 +103,18 @@
             <span v-if="!row.archiveTime && !row.sealTime" class="text-xs text-slate-400">—</span>
           </template>
         </el-table-column>
-        <el-table-column fixed="right" label="操作" width="200">
+        <el-table-column fixed="right" label="操作" width="260">
           <template #default="{ row }">
             <el-button :icon="Document" link size="small" type="primary" @click="openDetail(row)">详情</el-button>
+            <el-button
+                v-if="canPaperVerify(row)"
+                v-perm="'emr:archive:edit'"
+                :data-testid="`arc-paper-verify-${row.id}`" :icon="EditPen" link
+                size="small"
+                type="primary"
+                @click="openPaperVerify(row)"
+            >纸质核验
+            </el-button>
             <el-button
                 v-if="canArchive(row)"
                 v-perm="'emr:archive:edit'"
@@ -137,6 +156,34 @@
       </div>
     </el-card>
 
+    <!-- 纸质签名核验登记：医师无电子证书时的替代凭证，只登记核验事实，不改病历电子签名状态 -->
+    <el-dialog v-model="paperVerifyVisible" :close-on-click-modal="false" title="纸质签名核验登记" width="560px">
+      <el-alert :closable="false" show-icon type="warning">
+        <template #title>
+          登记的是纸质签名核验凭证，不会把病历改成「已电子签名」。登记后归档按「纸质签名已核验」放行，纸质原件或扫描件须随病案保存。
+        </template>
+      </el-alert>
+      <el-form ref="paperVerifyFormRef" :model="paperVerifyForm" :rules="paperVerifyRules" class="mt-3" label-width="100px">
+        <el-form-item label="患者/病历">
+          <span class="text-sm text-slate-700">
+            {{ paperVerifyRow?.patientName || '—' }} / {{ paperVerifyRow?.recordNo || paperVerifyRow?.archiveNo || '—' }}
+          </span>
+        </el-form-item>
+        <el-form-item label="纸质件编号" prop="paperCertNo">
+          <el-input v-model="paperVerifyForm.paperCertNo" maxlength="64" placeholder="纸质病历号/档案号"
+                    show-word-limit/>
+        </el-form-item>
+        <el-form-item label="核验说明" prop="remark">
+          <el-input v-model="paperVerifyForm.remark" :rows="3" maxlength="500" placeholder="核对纸质签名与系统内容一致的范围和结论"
+                    show-word-limit type="textarea"/>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="paperVerifyVisible = false">取消</el-button>
+        <el-button :loading="paperVerifyLoading" type="primary" @click="submitPaperVerify">登记核验</el-button>
+      </template>
+    </el-dialog>
+
     <!-- 详情 -->
     <MedicalRecordArchiveDetail v-model="detailVisible" :id="detailId" :status-options="statusOptions"/>
   </div>
@@ -145,13 +192,14 @@
 <script setup>
 import {onMounted, reactive, ref} from 'vue';
 import {ElMessage, ElMessageBox} from 'element-plus';
-import {Bell, Box, Document, Lock, Refresh, Search} from '@element-plus/icons-vue';
+import {Bell, Box, Document, EditPen, Lock, Refresh, Search} from '@element-plus/icons-vue';
 import {
   archiveRecord,
   getArchiveList,
   getArchiveStatusCount,
   notifyArchiveOverdue,
-  sealRecord
+  sealRecord,
+  verifyPaperSign
 } from '@/api/archive';
 import {getDictDataMapList} from '@/api/system';
 import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination';
@@ -310,6 +358,51 @@ const doSeal = async (row) => {
     
   } finally {
     actionLoading.value = false;
+  }
+};
+// ---------------- 纸质签名核验登记 ----------------
+const paperVerifyVisible = ref(false);
+const paperVerifyLoading = ref(false);
+const paperVerifyRow = ref(null);
+const paperVerifyFormRef = ref(null);
+const paperVerifyForm = reactive({paperCertNo: '', remark: ''});
+const paperVerifyRules = {
+  paperCertNo: [{required: true, message: '请填写纸质签名件编号', trigger: 'blur'}],
+  remark: [{required: true, message: '请填写核验说明', trigger: 'blur'}],
+};
+/** 仅「待归档 + 未电子签名 + 未纸质核验」的行可登记；已归档/已核验不再提供入口 */
+const canPaperVerify = (row) => Number(row.archiveStatus) === 1
+    && Number(row.signStatus) !== 1
+    && Number(row.paperVerifyStatus) !== 1;
+const openPaperVerify = (row) => {
+  paperVerifyRow.value = row;
+  paperVerifyForm.paperCertNo = '';
+  paperVerifyForm.remark = '';
+  paperVerifyVisible.value = true;
+};
+const submitPaperVerify = async () => {
+  if (!paperVerifyFormRef.value)
+    return;
+  try {
+    await paperVerifyFormRef.value.validate();
+  } catch {
+    return;
+  }
+  paperVerifyLoading.value = true;
+  try {
+    const res = await verifyPaperSign({
+      archiveId: paperVerifyRow.value.id,
+      paperCertNo: paperVerifyForm.paperCertNo,
+      remark: paperVerifyForm.remark,
+    });
+    if (res.code === 200) {
+      ElMessage.success('纸质签名核验登记成功');
+      paperVerifyVisible.value = false;
+      await reloadAll();
+    }
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+  } finally {
+    paperVerifyLoading.value = false;
   }
 };
 /** 补跑超期提醒：把"门诊病历超 3 天未归档"的提醒重新生成（日常由定时任务 08:00 跑） */

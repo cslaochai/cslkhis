@@ -53,6 +53,18 @@ export function invalidateSignature(signId, reason) {
     return request.post('/emr/signature/invalidate', {signId, reason})
 }
 
+// ---------------- 医生自助补签（仅本人名下未签对象） ----------------
+
+// 我的待补签：只返回当前登录医生本人书写、尚未电子签名的病历/处方/检查检验申请单
+export function getMyPendingSigns() {
+    return request.get('/emr/signature/myPending')
+}
+
+// 医生自助补签：服务端校验对象归属本人，签名人强制本人；必须写原因并输入签名 PIN
+export function makeupSign(params) {
+    return request.post('/emr/signature/myMakeup', params)
+}
+
 // ---------------- 签名证书（CA 线下人工签发） ----------------
 
 // 证书分页
@@ -75,7 +87,7 @@ export function keygenSignCert(params) {
     return request.post('/emr/signCert/keygen', params)
 }
 
-// CA 通道状态（在线申请是否接入、模板与算法是否匹配）
+// CA 通道状态（在线申请是否启用、接入凭证是否配置完整）
 export function getSignCaStatus() {
     return request.get('/emr/signCert/caStatus')
 }

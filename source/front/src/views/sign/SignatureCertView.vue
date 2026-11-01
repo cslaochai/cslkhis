@@ -82,18 +82,17 @@
               <div class="text-xs text-slate-400">{{ row.lastUsedTime || '未使用' }}</div>
             </template>
           </el-table-column>
-          <el-table-column fixed="right" label="操作" width="150">
+          <el-table-column fixed="right" label="操作" width="200">
             <template #default="{ row }">
               <el-button link size="small" type="primary" @click="openCertDetail(row)">详情</el-button>
               <el-button
                   v-if="row.certStatus === 0"
-                  v-perm="'sign:cert:edit'"
-                  :loading="refreshingCertId === row.id"
                   link
                   size="small"
                   type="primary"
-                  @click="onRefreshCa(row)"
-              >刷新CA
+                  data-testid="p5-sign-progress-open"
+                  @click="openProgress(row)"
+              >申请进度
               </el-button>
               <el-button
                   v-if="row.canRevoke"
@@ -133,6 +132,9 @@
     <!-- ---------------- 办理证书（子组件 SignatureCenterCertIssue） ---------------- -->
     <SignatureCenterCertIssue v-model="issueVisible" @saved="onIssueSaved"/>
 
+    <!-- ---------------- 申请进度（流程图，子组件 SignatureCertApplyFlow） ---------------- -->
+    <SignatureCertApplyFlow :id="progressId" v-model="progressVisible" @saved="onIssueSaved"/>
+
     <!-- ---------------- 吊销证书 ---------------- -->
     <el-dialog v-model="revokeVisible" title="吊销签名证书" width="480px">
       <p class="text-sm">证书：<b>{{ revokeForm.certNo }}</b></p>
@@ -152,11 +154,12 @@
 import {onMounted, reactive, ref} from 'vue';
 import {Search} from '@element-plus/icons-vue';
 import {ElMessage} from 'element-plus';
-import {getSignatureQueryOptions, getSignCertList, refreshSignCaApply, revokeSignCert,} from '@/api/signature';
+import {getSignatureQueryOptions, getSignCertList, revokeSignCert,} from '@/api/signature';
 import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination';
 import {caApplyTagType, num} from '@/lib/sign';
 import SignatureCenterCertDetail from './SignatureCenterCertDetail.vue';
 import SignatureCenterCertIssue from './SignatureCenterCertIssue.vue';
+import SignatureCertApplyFlow from './SignatureCertApplyFlow.vue';
 // ---------------- 下拉选项 ----------------
 const options = ref({});
 // ---------------- 证书 ----------------
@@ -175,8 +178,9 @@ const certDetailVisible = ref(false);
 const certDetailId = ref(null);
 // 办理证书（子组件 SignatureCenterCertIssue）
 const issueVisible = ref(false);
-// 待 CA 签发行刷新状态
-const refreshingCertId = ref(null);
+// 申请进度（子组件 SignatureCertApplyFlow，流程图）
+const progressVisible = ref(false);
+const progressId = ref(null);
 // 吊销证书
 const revokeVisible = ref(false);
 const revoking = ref(false);
@@ -214,26 +218,12 @@ const openCertDetail = (row) => {
   certDetailId.value = row.id;
   certDetailVisible.value = true;
 };
-const onRefreshCa = async (row) => {
-  refreshingCertId.value = row.id;
-  try {
-    const res = await refreshSignCaApply(row.id);
-    const data = res.data || {};
-    if (data.certStatus === 1) {
-      ElMessage.success(`CA 已签发，证书已生效 ${data.certNo || ''}`);
-    } else {
-      ElMessage.success(`CA 状态：${data.applyStatusText || data.applyStatus || '未知'}`);
-      if (data.applyMessage) ElMessage.info(data.applyMessage);
-    }
-    await loadCertList();
-  } catch (e) {
-    console.error('刷新 CA 申请状态失败', e);
-  } finally {
-    refreshingCertId.value = null;
-  }
-};
 const openIssue = () => {
   issueVisible.value = true;
+};
+const openProgress = (row) => {
+  progressId.value = row.id;
+  progressVisible.value = true;
 };
 const onIssueSaved = async () => {
   await loadCertList();

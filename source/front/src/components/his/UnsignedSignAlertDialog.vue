@@ -1,22 +1,24 @@
 <template>
-  <el-dialog v-model="visible" fullscreen append-to-body :show-close="false"
+  <el-dialog v-model="visible" width="600px" align-center append-to-body :show-close="false"
              :close-on-click-modal="false" :close-on-press-escape="false"
              class="unsigned-sign-alert" data-testid="unsigned-sign-alert-dialog">
-    <div class="alert-wrap">
-      <div class="alert-card">
-        <div class="alert-icon">!</div>
-        <h2 class="alert-title">电子签名证书不可用提醒</h2>
-        <div class="alert-body">
-          <p>{{ reasonText }}</p>
-          <p>本次结诊可以继续，但本次<b>病历、处方及检查检验申请单将无法完成医师电子签名</b>，
-            进入「待补签」状态。</p>
-          <ul>
-            <li>该病历的<b>病案归档</b>与相关处方的<b>药房发药</b>将被系统拦截，直至补签完成；</li>
-            <li>请立即<b>改走线下纸质签名</b>：手写签名后交病案管理岗人工核验；</li>
-            <li>系统已同步提醒信息科与医务科，请尽快办理或换发软签证书后完成补签。</li>
-          </ul>
-        </div>
-        <el-button type="warning" size="large" class="alert-btn" :disabled="countdown > 0"
+    <div class="alert-card">
+      <div class="alert-icon">!</div>
+      <h2 class="alert-title">电子签名证书不可用提醒</h2>
+      <div class="alert-body">
+        <p>{{ reasonText }}</p>
+        <p>本次结诊可以继续，本次<b>病历、处方及检查检验申请单</b>将标记为「待补签」，
+          但<b>不会阻断患者就医</b>。</p>
+        <ul>
+          <li><b>检查、检验</b>与<b>药房发药</b>照常进行，患者缴费后可正常去做、正常取药；</li>
+          <li>处方按《处方管理办法》的纸质路径处理：打印纸质处方由您手写签名或加盖签章，药师核对后发放；</li>
+          <li><b>病案归档</b>会被拦截，直至补签完成（或病案管理岗核验纸质签名）后放行；</li>
+          <li>系统已同步提醒信息科与医务科，请尽快办理或换发软签证书。</li>
+        </ul>
+      </div>
+      <div class="alert-actions">
+        <el-button size="large" data-testid="unsigned-sign-alert-cancel" @click="onCancel">取消，返回修改</el-button>
+        <el-button type="warning" size="large" :disabled="countdown > 0"
                    data-testid="unsigned-sign-alert-confirm" @click="onConfirm">
           {{ countdown > 0 ? `确认已知晓（${countdown}s）` : '确认已知晓' }}
         </el-button>
@@ -28,7 +30,7 @@
 <script setup>
 import {ref, onBeforeUnmount} from 'vue';
 
-// 不可绕过的强提示：无 cancel、无 ESC、无点遮罩关闭，医生确认后才放行结诊
+// 结诊前的无证书强提示：遮罩挂在当前页面之上，不铺满整屏；确认才放行无签结诊，取消则本次不结诊
 const visible = ref(false);
 const countdown = ref(0);
 // 不可用原因（未办理 / CA 未签发 / 已过期）由结诊签名预检给出，组件不再自己猜
@@ -36,10 +38,16 @@ const reasonText = ref('经系统核验，您名下当前没有有效的电子�
 let timer = null;
 let resolver = null;
 
+/**
+ * 打开强提示。
+ * @returns {Promise<boolean>} true=确认继续无签结诊；false=取消，本次不结诊
+ */
 const open = (precheck) => {
   reasonText.value = (precheck && precheck.message)
       || '经系统核验，您名下当前没有有效的电子签名证书。';
   visible.value = true;
+  // 确认按钮 3 秒倒计时，避免误点；取消不受限
+  clearInterval(timer);
   countdown.value = 3;
   timer = setInterval(() => {
     if (countdown.value > 0) countdown.value--;
@@ -50,14 +58,21 @@ const open = (precheck) => {
   });
 };
 
-const onConfirm = () => {
-  if (countdown.value > 0) return;
+const settle = (confirmed) => {
+  clearInterval(timer);
   visible.value = false;
   if (resolver) {
-    resolver();
+    resolver(confirmed);
     resolver = null;
   }
 };
+
+const onConfirm = () => {
+  if (countdown.value > 0) return;
+  settle(true);
+};
+
+const onCancel = () => settle(false);
 
 onBeforeUnmount(() => clearInterval(timer));
 
@@ -65,41 +80,36 @@ defineExpose({open});
 </script>
 
 <style scoped>
-.unsigned-sign-alert :deep(.el-dialog) {
-  background: #fff7ed;
+.unsigned-sign-alert :deep(.el-dialog__header) {
+  display: none;
 }
 
-.alert-wrap {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
+.unsigned-sign-alert :deep(.el-dialog) {
+  padding: 0;
+  border-radius: 12px;
+  overflow: hidden;
 }
 
 .alert-card {
-  width: 560px;
-  background: #fff;
-  border-radius: 12px;
-  padding: 32px 40px;
+  padding: 28px 32px 24px;
   text-align: center;
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
 }
 
 .alert-icon {
-  width: 56px;
-  height: 56px;
-  margin: 0 auto 16px;
+  width: 52px;
+  height: 52px;
+  margin: 0 auto 14px;
   border-radius: 50%;
   background: #f59e0b;
   color: #fff;
-  font-size: 32px;
+  font-size: 30px;
   font-weight: 700;
-  line-height: 56px;
+  line-height: 52px;
 }
 
 .alert-title {
-  margin: 0 0 16px;
-  font-size: 20px;
+  margin: 0 0 14px;
+  font-size: 19px;
   color: #1f2937;
 }
 
@@ -108,7 +118,7 @@ defineExpose({open});
   font-size: 14px;
   color: #475569;
   line-height: 1.9;
-  margin-bottom: 24px;
+  margin-bottom: 22px;
 }
 
 .alert-body ul {
@@ -116,7 +126,14 @@ defineExpose({open});
   padding-left: 20px;
 }
 
-.alert-btn {
-  width: 220px;
+.alert-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+.alert-actions :deep(.el-button) {
+  width: 200px;
+  margin-left: 0;
 }
 </style>

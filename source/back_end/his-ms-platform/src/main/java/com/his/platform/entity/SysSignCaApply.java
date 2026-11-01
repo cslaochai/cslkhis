@@ -48,7 +48,7 @@ public class SysSignCaApply extends BaseEntity {
     private String templateCode;
 
     /**
-     * 证书主体 DN（CN=姓名, O=机构, OU=科室）
+     * 证书主体 DN（CN=姓名, O=机构, OU=员工编号）
      */
     private String subjectDn;
 

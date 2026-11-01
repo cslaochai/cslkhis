@@ -89,7 +89,8 @@ public class LaboratoryApplySignContentServiceImpl extends ServiceImpl<BizLabora
 
     @Override
     public String blockReason(SignSubject subject, SignSceneEnum scene) {
-        if (scene != SignSceneEnum.APPLY_CREATE) {
+        // 补签（MAKEUP）签的是「开单医师」这一环，与申请开立签名同规则，签名场景如实记为「补签」
+        if (scene != SignSceneEnum.APPLY_CREATE && scene != SignSceneEnum.MAKEUP) {
             return "检验申请单只支持「申请开立签名」场景，当前场景「" + scene.getLabel() + "」不适用";
         }
         BizLaboratoryApply a = bizLaboratoryApplyMapper.selectById(subject.bizId());

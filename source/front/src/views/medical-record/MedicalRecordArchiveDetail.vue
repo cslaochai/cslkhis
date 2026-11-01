@@ -19,6 +19,15 @@
       </el-descriptions-item>
       <el-descriptions-item label="归档时间">{{ detail.archiveTime || '—' }}</el-descriptions-item>
       <el-descriptions-item label="封存时间">{{ detail.sealTime || '—' }}</el-descriptions-item>
+      <el-descriptions-item label="签名方式">
+        <el-tag v-if="detail.signStatus === 1" effect="plain" size="small" type="success">电子签名</el-tag>
+        <el-tag v-else-if="detail.paperVerifyStatus === 1" effect="plain" size="small" type="info">纸质签名核验</el-tag>
+        <el-tag v-else effect="plain" size="small" type="danger">待补签</el-tag>
+      </el-descriptions-item>
+      <el-descriptions-item label="纸质件编号">{{ detail.paperCertNo || '—' }}</el-descriptions-item>
+      <el-descriptions-item label="纸质核验人">{{ detail.paperVerifyByName || '—' }}</el-descriptions-item>
+      <el-descriptions-item label="纸质核验时间">{{ detail.paperVerifyTime || '—' }}</el-descriptions-item>
+      <el-descriptions-item :span="2" label="纸质核验说明">{{ detail.paperVerifyRemark || '—' }}</el-descriptions-item>
       <el-descriptions-item label="备注">{{ detail.remark || '—' }}</el-descriptions-item>
     </el-descriptions>
   </el-dialog>

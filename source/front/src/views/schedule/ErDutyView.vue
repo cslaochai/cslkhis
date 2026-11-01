@@ -8,28 +8,19 @@
         </div>
         <div class="toolbar-right">
           <el-date-picker
-            v-model="queryDate"
-            type="date"
-            value-format="YYYY-MM-DD"
-            format="YYYY-MM-DD"
-            placeholder="选择日期"
-            :clearable="false"
-            style="width: 160px"
-            @change="load"
+              v-model="queryDate"
+              type="date"
+              value-format="YYYY-MM-DD"
+              format="YYYY-MM-DD"
+              placeholder="选择日期"
+              :clearable="false"
+              style="width: 160px"
+              @change="load"
           />
           <el-button :icon="Printer" :loading="printing" data-testid="er-duty-print" @click="printDuty">打印</el-button>
           <el-button :icon="Refresh" :loading="loading" @click="load">刷新</el-button>
         </div>
       </div>
-
-      <el-alert
-        title="值班表全院公开是《医疗质量安全核心制度》要求：本页为只读视图，排班/审核请在「岗位出勤」「排班审批中心」操作。"
-        type="info"
-        :closable="false"
-        show-icon
-        style="margin-bottom: 12px"
-      />
-
       <el-table :data="rows" v-loading="loading" border stripe empty-text="当日暂无已发布的急诊值班排班">
         <el-table-column label="科室" width="140">
           <template #default="{ row }">{{ row.deptName || row.orgName || '-' }}</template>
@@ -54,10 +45,10 @@
 </template>
 
 <script setup>
-import {ref, onMounted} from 'vue'
-import {Refresh, Printer} from '@element-plus/icons-vue'
+import {onMounted, ref} from 'vue'
+import {Printer, Refresh} from '@element-plus/icons-vue'
 import {ElMessage} from 'element-plus'
-import {getErDutyPublic, getErDutyPdf} from '@/api/staffSchedule'
+import {getErDutyPdf, getErDutyPublic} from '@/api/staffSchedule'
 
 const queryDate = ref(new Date().toISOString().slice(0, 10))
 const rows = ref([])
@@ -108,6 +99,7 @@ onMounted(load)
 .er-duty-view {
   padding: 16px;
 }
+
 .toolbar {
   display: flex;
   align-items: center;
@@ -116,20 +108,24 @@ onMounted(load)
   gap: 8px;
   margin-bottom: 12px;
 }
+
 .toolbar-left {
   display: flex;
   align-items: baseline;
   gap: 10px;
 }
+
 .page-title {
   font-size: 16px;
   font-weight: 700;
   color: #1f2937;
 }
+
 .page-subtitle {
   font-size: 12.5px;
   color: #6b7280;
 }
+
 .toolbar-right {
   display: flex;
   align-items: center;

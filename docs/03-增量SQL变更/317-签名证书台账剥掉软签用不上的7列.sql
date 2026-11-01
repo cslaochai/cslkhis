@@ -1,5 +1,5 @@
 -- ============================================================================
--- 316-签名证书台账（sys_sign_cert）剥掉软签用不上的 7 列
+-- 317-签名证书台账（sys_sign_cert）剥掉软签用不上的 7 列
 -- ============================================================================
 -- 背景：
 --   sys_sign_cert 的表结构是按「本地自签 + 外部 CA 回执 + 硬件 UKey」三条路一起铺的，
@@ -32,7 +32,7 @@
 -- ⚠ 执行顺序：先发已改好的后端（实体已删这 7 个字段），再执行本脚本；
 --   反过来执行时旧版后端读这些列会报 Unknown column。
 -- ⚠ 删列不可逆，执行前先备份：
---   CREATE TABLE sys_sign_cert_bak316 AS SELECT * FROM sys_sign_cert;
+--   CREATE TABLE sys_sign_cert_bak317 AS SELECT * FROM sys_sign_cert;
 -- ============================================================================
 
 -- ---------------- 前置核对：7 列还在吗 ----------------
@@ -79,4 +79,4 @@ WHERE table_name = 'sys_sign_cert'
 --     ADD COLUMN `ca_apply_attempt` int NOT NULL DEFAULT '0' COMMENT 'CA申请提交次数' AFTER `ca_apply_status`,
 --     ADD COLUMN `ca_applied_at` datetime DEFAULT NULL COMMENT '最近一次提交CA时间' AFTER `ca_apply_attempt`,
 --     ADD COLUMN `ca_issuer` varchar(128) COMMENT '签发CA名称（外部CA模式回执）' AFTER `ca_serial`;
--- 元数据 3 行按本文件 git 历史（316 提交前的 sys_ai_qa_column.sql）重新 INSERT 即可。
+-- 元数据 3 行按本文件 git 历史（改名前的 sys_ai_qa_column.sql）重新 INSERT 即可。

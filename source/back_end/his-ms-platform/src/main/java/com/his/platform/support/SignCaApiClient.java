@@ -112,14 +112,10 @@ public class SignCaApiClient {
         }
     }
 
-    public boolean enabled() {
-        return signProperties.getCa().configured();
-    }
-
     // ---------------- 报文收发 ----------------
 
     /**
-     * 当前是否已接入：未配置时给出「缺哪几项」的明确提示，不让调用方自己猜
+     * 当前是否已接入：enabled 决定「是否接入」；凭证缺失时逐条报出缺了哪几项，不让调用方自己猜
      */
     public void requireEnabled() {
         SignProperties.Ca ca = signProperties.getCa();
@@ -127,10 +123,10 @@ public class SignCaApiClient {
             throw new BusinessException("HIS 未启用 CA 在线申请（his.sign.ca.enabled=false），"
                     + "请改用「生成密钥对 → 线下送 CA 签发 → 回填证书」人工流程");
         }
-        if (!TextUtil.hasText(ca.getBaseUrl()) || !TextUtil.hasText(ca.getAppId())
-                || !TextUtil.hasText(ca.getAppSecret())) {
-            throw new BusinessException("CA 接入凭证未配置完整：请在 HIS 配置中填写 "
-                    + "his.sign.ca.base-url / app-id / app-secret（由 CA 侧建租户时颁发）");
+        String missing = ca.missingCredentialParams();
+        if (missing != null) {
+            throw new BusinessException("CA 在线申请已启用，但接入凭证未配置：" + missing
+                    + "（由 CA 侧建租户时颁发）；请补全后再提交在线申请");
         }
     }
 

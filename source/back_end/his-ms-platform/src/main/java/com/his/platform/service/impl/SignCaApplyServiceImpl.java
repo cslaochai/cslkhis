@@ -14,7 +14,10 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * CA 申请流水服务实现：流水只增不删，状态与时刻就地回写当次那一行。
@@ -96,6 +99,31 @@ public class SignCaApplyServiceImpl extends ServiceImpl<SysSignCaApplyMapper, Sy
                 .eq(SysSignCaApply::getCertId, certId)
                 .orderByDesc(SysSignCaApply::getId)
                 .last("LIMIT 1"));
+    }
+
+    @Override
+    public Map<Long, SysSignCaApply> latestOf(Collection<Long> certIds) {
+        Map<Long, SysSignCaApply> result = new HashMap<>();
+        if (certIds == null || certIds.isEmpty()) {
+            return result;
+        }
+        // id 越大越新：按 id 倒序扫一遍，各证书第一次出现的那行就是最新一条
+        List<SysSignCaApply> rows = sysSignCaApplyMapper.selectList(new LambdaQueryWrapper<SysSignCaApply>()
+                .in(SysSignCaApply::getCertId, certIds)
+                .orderByDesc(SysSignCaApply::getId));
+        for (SysSignCaApply row : rows) {
+            result.putIfAbsent(row.getCertId(), row);
+        }
+        return result;
+    }
+
+    @Override
+    public void updateMessage(SysSignCaApply apply, String caMessage) {
+        if (apply == null) {
+            return;
+        }
+        apply.setCaMessage(TextUtil.cut(caMessage, MESSAGE_MAX_LEN));
+        sysSignCaApplyMapper.updateById(apply);
     }
 
     @Override

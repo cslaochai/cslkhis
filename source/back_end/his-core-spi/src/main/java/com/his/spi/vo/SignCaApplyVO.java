@@ -31,7 +31,7 @@ public class SignCaApplyVO implements Serializable {
     private String empName;
 
     /**
-     * CA 签发申请单主体 DN（CN=姓名, O=机构, OU=科室）
+     * CA 签发申请单主体 DN（CN=姓名, O=机构, OU=员工编号）
      */
     private String subjectDn;
 

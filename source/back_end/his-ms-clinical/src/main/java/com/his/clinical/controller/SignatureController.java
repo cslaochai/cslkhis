@@ -4,6 +4,7 @@ import com.his.clinical.dto.*;
 import com.his.clinical.dto.SignaturePageQueryDTO;
 import com.his.clinical.service.EmrSignatureService;
 import com.his.clinical.service.SignatureCenterService;
+import com.his.clinical.vo.MyPendingSignVO;
 import com.his.clinical.vo.ObjectSignatureVO;
 import com.his.clinical.vo.SignatureOptionsVO;
 import com.his.clinical.vo.SignatureSummaryVO;
@@ -131,6 +132,28 @@ public class SignatureController {
     @PostMapping("/emr/signature/sign")
     public Result<SignatureVO> sign(@Valid @RequestBody SignatureSignDTO dto) {
         return Result.success(signatureCenterService.sign(dto, dto.getPin()));
+    }
+
+    /**
+     * 医生「我的待补签」：只列当前登录医生本人书写、尚未电子签名的门诊病历/处方/检查检验申请单。
+     * <p>只要求登录不收员工ID：医生岗位拿不到签名核查的管理岗权限码，自助入口必须是本人接口。
+     */
+    @Operation(summary = "我的待补签（仅当前登录医生本人的未签对象）")
+    @PreAuthorize("isAuthenticated()")
+    @GetMapping("/emr/signature/myPending")
+    public Result<List<MyPendingSignVO>> myPending() {
+        return Result.success(signatureCenterService.listMyPendingSigns());
+    }
+
+    /**
+     * 医生自助补签：签名人强制为当前登录医生本人，对象必须属于本人，必须写补签原因并输入签名 PIN；
+     * 成功与失败都写审计日志。
+     */
+    @Operation(summary = "医生自助补签（限本人对象；必须写原因 + 签名PIN）")
+    @PreAuthorize("isAuthenticated()")
+    @PostMapping("/emr/signature/myMakeup")
+    public Result<SignatureVO> myMakeup(@Valid @RequestBody MyMakeupSignDTO dto) {
+        return Result.success(signatureCenterService.makeupSign(dto));
     }
 
     /**

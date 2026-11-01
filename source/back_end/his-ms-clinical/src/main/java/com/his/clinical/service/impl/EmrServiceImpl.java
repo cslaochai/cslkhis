@@ -1725,7 +1725,7 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
         //    有 id 更新），结诊提交（isSubmit=true）时统一电子签名（内容最终确认、签名即锁定）。
         //    无签结诊（signCheck 判出的「没办证 / CA 未签发 / 已过期」）不整体回滚（旧行为是签名失败→结诊失败），
         //    改为「业务照常、签名留白」——申请单/病历/处方保持未签名锚点进入「待补签」半拦截态，
-        //    归档与发药按未签名锚点拦截，医生侧提示走线下纸质签名，催办消息在事务提交后发给信息与医务两端。
+        //    归档按未签名锚点拦截，检查检验与发药照常放行（处方走纸质签名路径），医生侧提示走线下纸质签名，催办消息在事务提交后发给信息与医务两端。
         final boolean signSkipped = isSubmit && !Boolean.TRUE.equals(signCheck.getSignable());
         ensureInspectionApplies(recordSaveDTO.getRegistId(), appointInfo, patientInfo,
                 recordSaveDTO.getInspectionApplies(), isSubmit && !signSkipped, pin);
@@ -1804,7 +1804,7 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
             //     同时也必须在"已提交状态落库之后"：签名服务是从库里读对象状态做放行判断的，
             //     只改内存对象没用（住院病历那边实测被这条拦过）。
             //     无签结诊（signSkipped）时不签：病历/处方/申请单留未签名锚点，
-            //     后续由归档（archive）与发药（dispense）按锚点拦截，等补签后放行。
+            //     后续由归档（archive）按锚点拦截，等补签后放行；检查检验与发药不拦。
             if (signSkipped) {
                 bizMedicalRecord.setSignStatus(ObjectSignStatusEnum.UNSIGNED.getCode());
                 this.updateById(bizMedicalRecord);
@@ -1891,7 +1891,8 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
             String title = "病历待补签提醒";
             String content = String.format(
                     "医生 %s 于 %s 在 %s 提交的病历（病历号 %s，患者 %s）结诊时无可用电子签名证书（%s），"
-                            + "病历与处方未完成电子签名，已锁定「待补签」，归档与发药已被拦截；"
+                            + "病历、处方及检查检验申请单均未完成电子签名，已锁定「待补签」；"
+                            + "仅病案归档被拦截，检查、检验与药房发药照常进行；"
                             + "本次已提示该医生改走线下纸质签名并交病案管理岗人工核验。"
                             + "请信息科尽快为其办理或换发软签证书，医务科跟进补签与核验。",
                     doctorName == null ? "未知" : doctorName,

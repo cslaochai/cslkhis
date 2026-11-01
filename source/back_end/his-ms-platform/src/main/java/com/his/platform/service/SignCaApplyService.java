@@ -4,7 +4,9 @@ import com.his.platform.entity.SysSignCaApply;
 import com.his.platform.entity.SysSignCert;
 import com.his.platform.support.SignCaApiClient;
 
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 签名证书 CA 申请流水服务：一次向 CA 发起的申请记一行，提交、审核、签发、回填各阶段的时刻都留痕。
@@ -30,7 +32,7 @@ public interface SignCaApplyService {
      *
      * <p>用于提交与刷新两条路径拿到申请单详情后回写流水。
      *
-     * @param caMessage 本次回执对外的说明，与证书行上留的「CA 说明」同源
+     * @param caMessage 本次回执对外的说明，列表与详情的「CA 说明」都读这一列
      */
     void recordCaResult(SysSignCaApply apply, SignCaApiClient.CaApplication app, String caMessage);
 
@@ -47,13 +49,25 @@ public interface SignCaApplyService {
     void markBound(SysSignCaApply apply, String caIssuer);
 
     /**
-     * 按证书取最近一次申请：刷新状态与回填证书时定位当前挂着的那一单。
+     * 按证书取最近一次申请：证书台账的「CA 申请」列、刷新状态与回填证书都按这一条对上号。
      *
-     * <p>证书行只留「当前挂哪张单」的指针，各阶段的时刻与原因都在流水行上，读回来要按这一条对上号。
+     * <p>申请单号 / 状态 / 回执说明的唯一事实在流水行上，证书行不再留副本。
      *
      * @return 最近一次申请流水；该证书从未发起过在线申请时返回 null
      */
     SysSignCaApply latestOf(Long certId);
+
+    /**
+     * 批量取各证书最近一次申请（证书ID → 最新流水行）：台账分页每行要展示申请列，
+     * 逐行 latestOf 会放大成 N+1，这里一次查询按证书分组取 id 最大行。
+     */
+    Map<Long, SysSignCaApply> latestOf(Collection<Long> certIds);
+
+    /**
+     * 就地更新回执说明：CA 已签发但回填成功 / 失败这类「不改变申请状态」的后续进展，
+     * 补记在这一单的说明里，列表与详情读到的还是同一条流水。
+     */
+    void updateMessage(SysSignCaApply apply, String caMessage);
 
     /**
      * 按证书取全部申请流水（最近一次在前）：证书详情的「CA 申请记录」时间线。

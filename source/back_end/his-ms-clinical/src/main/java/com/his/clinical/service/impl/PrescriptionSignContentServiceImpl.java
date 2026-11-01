@@ -100,7 +100,9 @@ public class PrescriptionSignContentServiceImpl implements SignableContentServic
                 || Objects.equals(PrescriptionStatusEnum.RETURNED.getCode(), status)) {
             return "处方 " + p.getPrescriptionNo() + " 已" + rxStatusText(status) + "，不能签名";
         }
-        if (scene == SignSceneEnum.RX_CREATE) {
+        // 补签（MAKEUP）签的是「开方医师」这一环：与开方签名共用同一套放行与锚点规则，
+        // 只是签名场景如实记为「补签」，审计上能看出是事后补的。
+        if (scene == SignSceneEnum.RX_CREATE || scene == SignSceneEnum.MAKEUP) {
             if (p.getDoctorSignId() != null) {
                 return "处方 " + p.getPrescriptionNo() + " 已有开方签名，不能重复签名；"
                         + "如需修改，请先在「签名验签」作废该签名";
