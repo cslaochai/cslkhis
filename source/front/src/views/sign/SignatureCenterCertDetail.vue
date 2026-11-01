@@ -12,13 +12,10 @@
       <div class="mt-3 rounded-lg border border-slate-200 bg-white p-3 text-xs leading-6">
         <p>算法组合：{{ certDetail.keyAlgo }} / {{ certDetail.digestAlgo }} / {{ certDetail.signAlgo }}</p>
         <p>申请主体 DN：<span class="font-mono">{{ text(certDetail.caSubjectDn) }}</span></p>
-        <p>CA 签发：{{ text(certDetail.caIssuer) || (certDetail.caApplyNo ? '待 CA 签发' : '未回填（待线下送 CA 签发）') }}<span
-            v-if="certDetail.caSerial" class="text-slate-500"> · 序列号 {{ certDetail.caSerial }}</span></p>
+        <p>CA 签发：<span v-if="certDetail.caSerial" class="font-mono">序列号 {{ certDetail.caSerial }}</span>
+          <span v-else>{{ certDetail.caApplyNo ? '待 CA 签发' : '未回填（待线下送 CA 签发）' }}</span></p>
         <p v-if="certDetail.caApplyNo">CA 申请单：<span class="font-mono">{{ certDetail.caApplyNo }}</span> ·
-          {{ text(certDetail.caApplyStatusText) }}<span v-if="certDetail.caAppliedAt"
-                                                        class="text-slate-500"> · 提交于 {{
-              certDetail.caAppliedAt
-            }}</span></p>
+          {{ text(certDetail.caApplyStatusText) }}</p>
         <p v-if="certDetail.caLastMessage" class="text-slate-600">CA 说明：{{ certDetail.caLastMessage }}</p>
         <p>状态：{{ certDetail.certStatusText }}<span v-if="certDetail.expired"
                                                      class="text-red-600"> · 已过有效期</span></p>
@@ -31,6 +28,32 @@
           <p class="text-red-700">吊销：{{ text(certDetail.revokeTime) }} · {{ text(certDetail.revokeByName) }}</p>
           <p class="text-red-700">理由：{{ text(certDetail.revokeReason) }}</p>
         </template>
+      </div>
+      <div class="mt-3 rounded-lg border border-slate-200 bg-white p-3">
+        <p class="text-xs font-medium text-slate-900">CA 申请记录</p>
+        <p v-if="!caApplies.length" class="mt-2 text-xs text-slate-500">
+          未向 CA 发起过在线申请；这张证书走线下送 CA 签发。
+        </p>
+        <div v-for="item in caApplies" :key="item.applySeq"
+             class="mt-2 border-t border-slate-100 pt-2 text-xs leading-6 first:mt-1 first:border-t-0 first:pt-1">
+          <p class="flex flex-wrap items-center gap-2">
+            <span class="font-medium">第 {{ num(item.applySeq) }} 次申请</span>
+            <el-tag v-if="item.applyStatus" :type="caApplyTagType(item.applyStatus)" size="small">{{
+                text(item.applyStatusText)
+              }}</el-tag>
+            <span v-if="item.applyNo" class="font-mono text-slate-500">{{ item.applyNo }}</span>
+          </p>
+          <p class="text-slate-600">提交 {{ text(item.submittedAt) }}
+            <span v-if="item.reviewedAt"> · 审核 {{ text(item.reviewedAt) }}</span>
+            <span v-if="item.issuedAt"> · 签发 {{ text(item.issuedAt) }}</span>
+            <span v-if="item.boundAt"> · 回填生效 {{ text(item.boundAt) }}</span>
+          </p>
+          <p v-if="item.caMessage" class="text-slate-600">CA 说明：{{ item.caMessage }}</p>
+          <p v-if="item.caIssuer" class="text-slate-500">签发 CA：<span class="font-mono">{{
+              text(item.caIssuer)
+            }}</span></p>
+          <p class="text-slate-500">操作人：{{ text(item.operatorName) }}</p>
+        </div>
       </div>
       <div class="mt-3 rounded-lg border border-slate-200 bg-white p-3">
         <div class="flex items-center justify-between">
@@ -54,8 +77,8 @@
 <script setup>
 import {computed, ref, watch} from 'vue';
 import {ElMessage} from 'element-plus';
-import {getSignCertDetail} from '@/api/signature';
-import {num, text} from '@/lib/sign';
+import {getSignCertDetail, listSignCaApplies} from '@/api/signature';
+import {caApplyTagType, num, text} from '@/lib/sign';
 
 const props = defineProps({
   modelValue: {type: Boolean, default: false},
@@ -70,15 +93,19 @@ const visible = computed({
 });
 
 const certDetail = ref(null);
+const caApplies = ref([]);
 
 watch(visible, async (open) => {
   if (!open || !props.id) return;
   certDetail.value = null;
+  caApplies.value = [];
   try {
     const res = await getSignCertDetail(props.id);
     certDetail.value = res.data;
-  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */ {
-
+    const applies = await listSignCaApplies(props.id);
+    caApplies.value = applies.data || [];
+  } catch (e) {
+    console.error('加载签名证书详情失败', e);
   }
 });
 

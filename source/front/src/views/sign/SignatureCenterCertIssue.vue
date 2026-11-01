@@ -32,16 +32,10 @@
       <el-form-item label="签名PIN" required>
         <el-input v-model="form.pin" autocomplete="new-password" data-testid="p5-sign-issue-pin" name="certPin"
                   placeholder="4-32 位，签名时由本人输入" show-password/>
-        <div class="text-xs text-slate-500 mt-1">PIN 是软签的二次确认口令：私钥本地加密托管，签名时须本人输入 PIN
-          才能解密。只存哈希，明文不入库。
-        </div>
       </el-form-item>
       <el-form-item label="备注">
         <el-input v-model="form.remark" data-testid="p5-sign-issue-remark" placeholder="可空"/>
       </el-form-item>
-      <div v-if="caStatus" :class="caStatus.available ? 'text-slate-500' : 'text-amber-600'" class="pl-[90px] text-xs">
-        {{ caStatus.hint }}
-      </div>
     </el-form>
 
     <!-- 第二步：CA 申请单状态（在线轮询；未接入/失败时转线下） -->
@@ -60,7 +54,6 @@
           <el-tag :type="statusTagType(applyInfo?.applyStatus)" size="small">
             {{ applyInfo?.applyStatusText || applyInfo?.applyStatus || '—' }}
           </el-tag>
-          <span v-if="applyInfo?.appliedAt" class="ml-3 text-xs text-slate-400">提交于 {{ applyInfo.appliedAt }}</span>
         </el-form-item>
         <el-form-item v-if="applyInfo?.online" label="状态说明">
           <span class="text-xs text-slate-600">{{ applyInfo?.applyMessage || '—' }}</span>
@@ -113,7 +106,7 @@
 <script setup>
 import {computed, nextTick, reactive, ref, watch} from 'vue';
 import {ElMessage} from 'element-plus';
-import {bindSignCert, getSignCaStatus, keygenSignCert, refreshSignCaApply, submitSignCaApply,} from '@/api/signature';
+import {bindSignCert, keygenSignCert, refreshSignCaApply, submitSignCaApply,} from '@/api/signature';
 import {getEmployeeList} from '@/api/system';
 
 const props = defineProps({
@@ -132,7 +125,6 @@ const empOptions = ref([]);
 const empLoading = ref(false);
 const step = ref(0);
 const applyInfo = ref(null);
-const caStatus = ref(null);
 const form = reactive({
   empId: undefined,
   empName: '',
@@ -233,7 +225,6 @@ watch(visible, (open) => {
   });
   step.value = 0;
   applyInfo.value = null;
-  caStatus.value = null;
   form.empId = undefined;
   form.empName = '';
   form.deptId = undefined;
@@ -243,17 +234,7 @@ watch(visible, (open) => {
   bindForm.certId = undefined;
   bindForm.certPem = '';
   searchEmp('');
-  loadCaStatus();
 });
-
-const loadCaStatus = async () => {
-  try {
-    const res = await getSignCaStatus();
-    caStatus.value = res.data || null;
-  } catch (e) {
-    console.error('加载 CA 通道状态失败', e);
-  }
-};
 
 const onEmpChange = (empId) => {
   const emp = empOptions.value.find((e) => String(e.id) === String(empId));

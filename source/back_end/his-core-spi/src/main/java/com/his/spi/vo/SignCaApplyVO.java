@@ -1,10 +1,8 @@
 package com.his.spi.vo;
 
-import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.Data;
 
 import java.io.Serializable;
-import java.time.LocalDateTime;
 
 /**
  * CA 签发申请结果：在线申请（csssl RA）的申请单状态，或线下人工送 CA 的申请单凭证。
@@ -81,12 +79,6 @@ public class SignCaApplyVO implements Serializable {
      * CA 申请单状态文案
      */
     private String applyStatusText;
-
-    /**
-     * 最近一次提交 CA 的时间
-     */
-    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
-    private LocalDateTime appliedAt;
 
     /**
      * CA 最近一次状态说明 / 提交失败原因

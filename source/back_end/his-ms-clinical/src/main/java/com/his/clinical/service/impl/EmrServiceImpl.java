@@ -1533,6 +1533,16 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
             assertNoSubmitVeto(bizMedicalRecord);
         }
 
+        // 结诊签名预检（同样放在任何写入之前）：证书状态分三类走，不能只看「有没有可用证书」。
+        //   没办过证 / 办了还没发下来 / 证书过期 —— 业务照常提交，电子签名留白进「待补签」，
+        //     界面提示医生改走线下纸质签名，并向信息科、医务科发催办消息；
+        //   证书已吊销 —— 签名能力是被处置废止的，放行等于架空吊销，直接拦下本次结诊让医生重新办证。
+        final SignPreCheckVO signCheck = isSubmit
+                ? signCertFacadeService.preCheckForSign(bizMedicalRecord.getDoctorId()) : null;
+        if (signCheck != null && Boolean.TRUE.equals(signCheck.getCertRevoked())) {
+            throw new BusinessException(signCheck.getCheckMessage());
+        }
+
         // 用实体自身是否有 id 判断新增/更新，不再看 DTO：按 registId 兜底命中的既有病历也要走更新
         if (bizMedicalRecord.getId() != null) {
             this.updateById(bizMedicalRecord);
@@ -1713,11 +1723,10 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
         //    申请单不是病历的附属物：每次保存病历都重建申请单，会把已缴费的单子删掉、
         //    把执行记录的 apply_id 删成悬空。这里同步前端提交的申请单数组（无 id 新增、
         //    有 id 更新），结诊提交（isSubmit=true）时统一电子签名（内容最终确认、签名即锁定）。
-        //    无签结诊预检：医生没有有效签名证书时不再整体回滚（旧行为是签名失败→结诊失败），
+        //    无签结诊（signCheck 判出的「没办证 / CA 未签发 / 已过期」）不整体回滚（旧行为是签名失败→结诊失败），
         //    改为「业务照常、签名留白」——申请单/病历/处方保持未签名锚点进入「待补签」半拦截态，
-        //    归档与发药按未签名锚点拦截，预警在事务提交后发给持吊销处置权的角色。
-        final boolean signSkipped = isSubmit
-                && signCertFacadeService.getActiveCertByEmp(bizMedicalRecord.getDoctorId()) == null;
+        //    归档与发药按未签名锚点拦截，医生侧提示走线下纸质签名，催办消息在事务提交后发给信息与医务两端。
+        final boolean signSkipped = isSubmit && !Boolean.TRUE.equals(signCheck.getSignable());
         ensureInspectionApplies(recordSaveDTO.getRegistId(), appointInfo, patientInfo,
                 recordSaveDTO.getInspectionApplies(), isSubmit && !signSkipped, pin);
         backfillApplyRecord(recordSaveDTO.getRegistId(), recordId, bizMedicalRecord.getRecordNo());
@@ -1799,8 +1808,10 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
             if (signSkipped) {
                 bizMedicalRecord.setSignStatus(ObjectSignStatusEnum.UNSIGNED.getCode());
                 this.updateById(bizMedicalRecord);
+                // operation 列只有 50 字符，证书现状放 newValue（文本列），别拼进操作名撑爆
                 addRecordLog(recordId, bizMedicalRecord.getRecordNo(),
-                        "结诊提交（无有效电子签名证书，签名待补签）", null, null, "已提交，待补签");
+                        "结诊提交（无可用电子签名证书，签名待补签）",
+                        null, null, "已提交，待补签（" + signCheck.getCertStateText() + "）");
             } else {
                 signOutpatientRecord(bizMedicalRecord, pin);
 
@@ -1837,7 +1848,7 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
                             log.error("[结诊收尾] 发布事件失败 recordId={}", submittedRecordId, ex);
                         }
                         if (signSkipped) {
-                            sendUnsignedSignAlert(submittedRecordId, alertRecordNo, alertPatientName,
+                            sendUnsignedSignAlert(signCheck, submittedRecordId, alertRecordNo, alertPatientName,
                                     alertDeptName, alertDoctorName);
                         }
                     }
@@ -1846,7 +1857,7 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
                 // 极端情况：没有事务同步（被非事务上下文调用），直接同步跑保底
                 asyncAfterSubmit(submittedRecordId, submittedOperator);
                 if (signSkipped) {
-                    sendUnsignedSignAlert(submittedRecordId, alertRecordNo, alertPatientName,
+                    sendUnsignedSignAlert(signCheck, submittedRecordId, alertRecordNo, alertPatientName,
                             alertDeptName, alertDoctorName);
                 }
             }
@@ -1856,40 +1867,60 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
     }
 
     /**
-     * 无签结诊预警：发给持有签名证书吊销处置权（sign:cert:revoke）的人员（医务科）。
+     * 无签结诊催办：发给办证（sign:cert:edit，信息科）与处置（sign:cert:revoke，医务科）两边的人。
      *
      * <p>每天每份病历最多一条（countSentSince 按天判重），重复结诊/补跑不刷屏；
-     * 接收人按权限圈定而非写死角色名，权限授给谁谁就收。
+     * 接收人按权限码圈定而非写死角色名，权限授给谁谁就收。
+     *
+     * @param signCheck 结诊签名预检结论，证书现状（没办证/过期/未签发）直接取它，不再重查一遍
      */
-    private void sendUnsignedSignAlert(Long recordId, String recordNo, String patientName,
-                                       String deptName, String doctorName) {
+    private void sendUnsignedSignAlert(SignPreCheckVO signCheck, Long recordId, String recordNo,
+                                       String patientName, String deptName, String doctorName) {
         try {
             LocalDateTime sinceToday = LocalDate.now().atStartOfDay();
             if (sysMessageService.countSentSince(BizTypeEnum.SIGN.getType(), recordId, sinceToday) > 0) {
                 return;
             }
-            List<EmployeeBriefVO> receivers = systemFacadeService.listEmployeesByPermission("sign:cert:revoke");
+            List<EmployeeBriefVO> receivers = distinctReceivers(
+                    systemFacadeService.listEmployeesByPermission("sign:cert:edit"),
+                    systemFacadeService.listEmployeesByPermission("sign:cert:revoke"));
             if (receivers.isEmpty()) {
-                log.warn("[无签结诊预警] 无接收人（无人持有 sign:cert:revoke 权限），预警未发出 recordId={}", recordId);
+                log.warn("[无签结诊催办] 无接收人（无人持有 sign:cert:edit / sign:cert:revoke 权限），消息未发出 recordId={}", recordId);
                 return;
             }
             String title = "病历待补签提醒";
             String content = String.format(
-                    "医生 %s 于 %s 在 %s 提交的病历（病历号 %s，患者 %s）结诊时无有效电子签名证书，" +
-                            "病历与处方未完成电子签名，已锁定「待补签」，归档与发药已被拦截，" +
-                            "请在 2 个工作日内跟进补签或人工核验。",
+                    "医生 %s 于 %s 在 %s 提交的病历（病历号 %s，患者 %s）结诊时无可用电子签名证书（%s），"
+                            + "病历与处方未完成电子签名，已锁定「待补签」，归档与发药已被拦截；"
+                            + "本次已提示该医生改走线下纸质签名并交病案管理岗人工核验。"
+                            + "请信息科尽快为其办理或换发软签证书，医务科跟进补签与核验。",
                     doctorName == null ? "未知" : doctorName,
                     LocalDate.now(),
                     deptName == null ? "未知" : deptName,
                     recordNo,
-                    patientName == null ? "未知" : patientName);
+                    patientName == null ? "未知" : patientName,
+                    signCheck.getCertStateText());
             for (EmployeeBriefVO receiver : receivers) {
                 sysMessageService.sendSystemMessage(receiver.getId(), receiver.getEmpName(),
                         title, content, BizTypeEnum.SIGN.getType(), recordId);
             }
         } catch (Exception ex) {
-            log.error("[无签结诊预警] 发送失败 recordId={}", recordId, ex);
+            log.error("[无签结诊催办] 发送失败 recordId={}", recordId, ex);
         }
+    }
+
+    /**
+     * 两个权限码的接收人合并去重（同一个人可能两边都有权限，只发一条）。
+     */
+    private List<EmployeeBriefVO> distinctReceivers(List<EmployeeBriefVO> issuers, List<EmployeeBriefVO> handlers) {
+        Map<Long, EmployeeBriefVO> byEmpId = new LinkedHashMap<>();
+        for (EmployeeBriefVO receiver : issuers) {
+            byEmpId.putIfAbsent(receiver.getId(), receiver);
+        }
+        for (EmployeeBriefVO receiver : handlers) {
+            byEmpId.putIfAbsent(receiver.getId(), receiver);
+        }
+        return new ArrayList<>(byEmpId.values());
     }
 
     /**

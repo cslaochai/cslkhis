@@ -415,6 +415,39 @@ CREATE TABLE `sys_role_menu`
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='角色菜单关联';
 
 -- ----------------------------
+-- sys_sign_ca_apply  签名证书CA申请记录
+-- ----------------------------
+CREATE TABLE `sys_sign_ca_apply`
+(
+    `id`                  bigint       NOT NULL COMMENT '主键ID',
+    `cert_id`             bigint       NOT NULL COMMENT '证书ID',
+    `cert_no`             varchar(32)  NOT NULL COMMENT '证书编号',
+    `apply_seq`           int         NOT NULL DEFAULT '1' COMMENT '第几次申请',
+    `external_request_id` varchar(64)  NOT NULL COMMENT 'HIS侧申请请求号',
+    `apply_no`            varchar(32) COMMENT 'CA申请单号',
+    `template_code`       varchar(64) COMMENT 'CA证书模板编码',
+    `subject_dn`          varchar(255) COMMENT '证书主体DN',
+    `apply_status`        varchar(16)  NOT NULL COMMENT 'CA申请状态（PENDING-待审核 APPROVED-审核通过待签发 ISSUED-已签发 REJECTED-已驳回 CANCELLED-已撤销 FAILED-提交失败）',
+    `ca_message`          varchar(500) COMMENT 'CA回执说明',
+    `ca_issuer`           varchar(128) COMMENT '签发CA名称',
+    `submitted_at`        datetime     NOT NULL DEFAULT (now()) COMMENT '提交CA时间',
+    `reviewed_at`         datetime COMMENT 'CA审核时间',
+    `issued_at`           datetime COMMENT 'CA签发时间',
+    `bound_at`            datetime COMMENT '证书回填生效时间',
+    `create_by`           varchar(64)  NOT NULL COMMENT '创建人',
+    `create_time`         datetime     NOT NULL DEFAULT (now()) COMMENT '创建时间',
+    `update_by`           varchar(64)  NOT NULL COMMENT '更新人',
+    `update_time`         datetime     NOT NULL DEFAULT (now()) COMMENT '更新时间',
+    `del_flag`            tinyint      NOT NULL DEFAULT '0' COMMENT '删除标志（0-正常 1-已删除）',
+    `create_by_id`        bigint       NOT NULL COMMENT '创建人ID',
+    `update_by_id`        bigint       NOT NULL COMMENT '更新人ID',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_ext_request_id` (`external_request_id`),
+    KEY                   `idx_caapply_cert` (`cert_id`,`submitted_at`),
+    KEY                   `idx_caapply_apply_no` (`apply_no`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='签名证书CA申请记录';
+
+-- ----------------------------
 -- sys_sign_cert  电子签名证书
 -- ----------------------------
 CREATE TABLE `sys_sign_cert`
@@ -426,8 +459,6 @@ CREATE TABLE `sys_sign_cert`
     `dept_id`               bigint COMMENT '所属科室ID（快照）',
     `dept_name`             varchar(64) COMMENT '所属科室名称（快照）',
     `key_algo`              varchar(16) NOT NULL DEFAULT 'RSA2048' COMMENT '密钥算法',
-    `digest_algo`           varchar(16) NOT NULL DEFAULT 'SHA256' COMMENT '摘要算法',
-    `sign_algo`             varchar(32) NOT NULL DEFAULT 'SHA256withRSA' COMMENT '签名算法',
     `public_key`            text        NOT NULL COMMENT '公钥',
     `key_fingerprint`       varchar(64) NOT NULL DEFAULT '' COMMENT '公钥指纹',
     `protected_private_key` text        NOT NULL COMMENT '私钥密文',
@@ -439,18 +470,14 @@ CREATE TABLE `sys_sign_cert`
     `valid_to`              datetime    NOT NULL DEFAULT (now()) COMMENT '失效时间',
     `revoke_reason`         varchar(200) COMMENT '吊销原因',
     `revoke_time`           datetime COMMENT '吊销时间',
-    `revoke_by`             bigint COMMENT '吊销操作人员工ID',
     `revoke_by_name`        varchar(64) COMMENT '吊销操作人姓名',
     `last_used_time`        datetime COMMENT '最近一次使用时间',
     `sign_count`            int         NOT NULL DEFAULT '0' COMMENT '累计签名次数',
     `pin_hash`              varchar(128)         DEFAULT NULL COMMENT '签名PIN哈希（PBKDF2派生，明文不入库）',
     `pin_salt`              varchar(64)          DEFAULT NULL COMMENT 'PIN哈希派生盐（Base64）',
     `pin_iterations`        int                  DEFAULT NULL COMMENT 'PIN哈希派生迭代次数',
-    `ca_subject_dn`         varchar(255)         DEFAULT NULL COMMENT 'CA签发申请单主体DN（线下送CA时用）',
     `ca_apply_no`           varchar(32)          DEFAULT NULL COMMENT 'CA在线申请单号',
     `ca_apply_status`       varchar(16)          DEFAULT NULL COMMENT 'CA申请单状态（PENDING-待审核 APPROVED-已批准待签发 ISSUED-已签发 REJECTED-已驳回 CANCELLED-已撤销 FAILED-提交失败）',
-    `ca_apply_attempt`      int         NOT NULL DEFAULT '0' COMMENT 'CA申请提交次数',
-    `ca_applied_at`         datetime             DEFAULT NULL COMMENT '最近一次提交CA时间',
     `ca_last_message`       varchar(500)         DEFAULT NULL COMMENT 'CA最近一次状态说明或提交失败原因',
     `create_by`             varchar(64) NOT NULL COMMENT '创建人',
     `create_time`           datetime    NOT NULL DEFAULT (now()) COMMENT '创建时间',
@@ -458,9 +485,8 @@ CREATE TABLE `sys_sign_cert`
     `update_time`           datetime    NOT NULL DEFAULT (now()) COMMENT '更新时间',
     `del_flag`              tinyint     NOT NULL DEFAULT '0' COMMENT '删除标志（0-正常 1-删除）',
     `remark`                varchar(500) COMMENT '备注',
-    `cert_pem`              text COMMENT 'CA签发的证书链PEM（外部CA模式）',
-    `ca_serial`             varchar(64) COMMENT 'CA证书序列号（外部CA模式回执）',
-    `ca_issuer`             varchar(128) COMMENT '签发CA名称（外部CA模式回执）',
+    `cert_pem`              text COMMENT 'CA签发的证书链PEM留痕（外部CA模式）',
+    `ca_serial`             varchar(64) COMMENT 'CA证书序列号（与CA侧同一张证书的唯一凭据）',
     `create_by_id`          bigint      NOT NULL COMMENT '创建人ID',
     `update_by_id`          bigint      NOT NULL COMMENT '更新人ID',
     PRIMARY KEY (`id`),

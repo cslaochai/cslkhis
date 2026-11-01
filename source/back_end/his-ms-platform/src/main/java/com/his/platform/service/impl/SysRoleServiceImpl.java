@@ -7,6 +7,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.TextUtil;
+import com.his.common.utils.UserUtils;
 import com.his.platform.dto.RoleMenuUpsertDTO;
 import com.his.platform.dto.SysRolePageQueryDTO;
 import com.his.platform.dto.SysRoleQueryDTO;
@@ -23,10 +24,12 @@ import com.his.platform.service.SysRoleService;
 import com.his.platform.service.UserIdentityCache;
 import com.his.platform.vo.RoleSelectListVO;
 import com.his.platform.vo.RoleVO;
+import com.his.spi.service.IdempotentGuardService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 
+import java.time.Duration;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -39,12 +42,23 @@ public class SysRoleServiceImpl extends ServiceImpl<SysRoleMapper, SysRole> impl
      */
     private static final String SYSTEM_ADMIN_ROLE_CODE = "10012";
 
+    /**
+     * 全量刷新缓存的防重场景标识
+     */
+    private static final String REFRESH_ALL_SCENE = "roleCacheRefresh";
+
+    /**
+     * 全量刷新缓存的防重窗口：清缓存本身是毫秒级动作，窗口只为挡住连点
+     */
+    private static final Duration REFRESH_ALL_WINDOW = Duration.ofSeconds(30);
+
     private final SysRoleMapper sysRoleMapper;
     private final SysRoleMenuMapper sysRoleMenuMapper;
     private final SysMenuMapper sysMenuMapper;
     private final RedisSequenceService redisSequenceService;
     private final RolePermissionCache rolePermissionCache;
     private final UserIdentityCache userIdentityCache;
+    private final IdempotentGuardService idempotentGuardService;
 
     @Override
     public PageResult<RoleVO> listPage(SysRolePageQueryDTO queryDTO) {
@@ -171,15 +185,21 @@ public class SysRoleServiceImpl extends ServiceImpl<SysRoleMapper, SysRole> impl
     }
 
     @Override
-    public void refreshPermissionCache(Long roleId) {
-        SysRole role = sysRoleMapper.selectById(roleId);
-        if (role == null) {
-            throw new BusinessException("角色不存在");
+    public void refreshAllPermissionCache() {
+        // 防重：全量清的是两份缓存（角色权限 + 账号身份），连点只让第一次真跑，
+        // 名额带 TTL 且不释放，所以窗口内的重复点击一律被挡成「刚刚已刷新过」。
+        if (!idempotentGuardService.tryAcquire(REFRESH_ALL_SCENE, operatorKey(), REFRESH_ALL_WINDOW)) {
+            throw new BusinessException("权限缓存刚刚已刷新过，请 " + REFRESH_ALL_WINDOW.toSeconds() + " 秒后再试");
         }
-        // 角色权限缓存：下个请求按最新授权重查
-        rolePermissionCache.invalidate(role.getRoleCode());
-        // 持有该角色的账号身份缓存：精准失效，避免旧权限残留（覆盖直接改库 / TTL 未到期场景）
-        userIdentityCache.invalidateByRoleId(roleId);
+        rolePermissionCache.invalidateAll();
+        userIdentityCache.invalidateAll();
+    }
+
+    /**
+     * 防重键按操作人分：管理员各自连点互不影响，但一个人连点只生效一次。
+     */
+    private String operatorKey() {
+        return String.valueOf(UserUtils.getCurrentUser().getUserId());
     }
 
     /**

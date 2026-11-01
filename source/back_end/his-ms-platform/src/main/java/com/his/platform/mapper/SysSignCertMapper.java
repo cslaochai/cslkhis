@@ -22,4 +22,13 @@ public interface SysSignCertMapper extends BaseMapper<SysSignCert> {
             + "AND cert_status = 1 AND valid_from <= #{now} AND valid_to >= #{now} "
             + "ORDER BY id DESC LIMIT 1")
     SysSignCert selectActiveByEmp(@Param("empId") Long empId, @Param("now") LocalDateTime now);
+
+    /**
+     * 取员工名下最近一张证书，不限状态与有效期。
+     *
+     * <p>预检要区分「从没办过证」「证书过期了」「证书被吊销」三种情形——过期行在
+     * {@link #selectActiveByEmp} 里查不出来（cert_status 仍是 1），只按可用证书判就分不开。
+     */
+    @Select("SELECT * FROM sys_sign_cert WHERE del_flag = 0 AND emp_id = #{empId} ORDER BY id DESC LIMIT 1")
+    SysSignCert selectLatestByEmp(@Param("empId") Long empId);
 }

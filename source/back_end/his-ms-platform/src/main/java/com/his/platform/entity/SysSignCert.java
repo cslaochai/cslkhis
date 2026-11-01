@@ -47,16 +47,6 @@ public class SysSignCert extends BaseEntity {
     private String keyAlgo;
 
     /**
-     * 摘要算法（SHA256）
-     */
-    private String digestAlgo;
-
-    /**
-     * 签名算法（SHA256withRSA）
-     */
-    private String signAlgo;
-
-    /**
      * 公钥（PEM）
      */
     private String publicKey;
@@ -82,12 +72,12 @@ public class SysSignCert extends BaseEntity {
     private Integer keyIterations;
 
     /**
-     * 签发方式（1-人工签发 2-系统自动签发）
+     * 签发方式（1-人工签发 2-系统自动签发 3-CA在线签发）
      */
     private Integer issuedMode;
 
     /**
-     * 证书状态（1-有效 2-已吊销）
+     * 证书状态（0-待CA签发 1-有效 2-已吊销）
      */
     private Integer certStatus;
 
@@ -108,10 +98,6 @@ public class SysSignCert extends BaseEntity {
      * 吊销时间
      */
     private LocalDateTime revokeTime;
-    /**
-     * 吊销操作人员工ID
-     */
-    private Long revokeBy;
     /**
      * 吊销操作人姓名
      */
@@ -142,11 +128,6 @@ public class SysSignCert extends BaseEntity {
     private Integer pinIterations;
 
     /**
-     * CA 签发申请单中的 Subject DN（线下送 CA 时用；CA 回填证书后仍保留备查）
-     */
-    private String caSubjectDn;
-
-    /**
      * CA 在线申请单号（csssl applyNo；线下人工流程为空）
      */
     private String caApplyNo;
@@ -155,16 +136,6 @@ public class SysSignCert extends BaseEntity {
      * CA 申请单状态（PENDING/APPROVED/ISSUED/REJECTED/CANCELLED；FAILED 为 HIS 本地提交失败）
      */
     private String caApplyStatus;
-
-    /**
-     * 已提交次数：externalRequestId = certNo（首次）/ certNo-2、certNo-3…（驳回或提交失败后重提）
-     */
-    private Integer caApplyAttempt;
-
-    /**
-     * 最近一次提交 CA 的时间
-     */
-    private LocalDateTime caAppliedAt;
 
     /**
      * CA 最近一次状态说明 / 提交失败原因（页面直接展示，截断到列宽）
@@ -188,12 +159,7 @@ public class SysSignCert extends BaseEntity {
     private String certPem;
 
     /**
-     * CA 证书序列号（远程 CA 模式回执）
+     * CA 证书序列号（与 CA 侧同一张证书的唯一凭据）
      */
     private String caSerial;
-
-    /**
-     * 签发 CA 名称（issuer，远程 CA 模式回执）
-     */
-    private String caIssuer;
 }

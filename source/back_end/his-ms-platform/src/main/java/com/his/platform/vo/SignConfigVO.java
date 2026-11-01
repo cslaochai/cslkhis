@@ -16,4 +16,7 @@ public class SignConfigVO {
 
     /** 缺证书时是否自动签发（0-关闭，非 0-开启） */
     private Integer certAutoIssue;
+
+    /** 签名 PIN 校验通过后的免输入时长（分钟，0-每次签名都要输入） */
+    private Integer pinTtlMinutes;
 }

@@ -9,6 +9,7 @@ import com.his.clinical.vo.SignatureOptionsVO;
 import com.his.clinical.vo.SignatureSummaryVO;
 import com.his.common.base.PageResult;
 import com.his.common.base.Result;
+import com.his.common.utils.UserUtils;
 import com.his.spi.dto.*;
 import com.his.spi.service.SignCertFacadeService;
 import com.his.spi.vo.*;
@@ -178,6 +179,16 @@ public class SignatureController {
     }
 
     /**
+     * 一张证书的 CA 申请流水：第几次申请、走到哪一步、提交/审核/签发/回填各阶段的时刻与 CA 说明。
+     */
+    @Operation(summary = "签名证书 CA 申请记录（时间线）")
+    @PreAuthorize("hasAnyAuthority('sign:cert:list', 'org:employee:list')")
+    @GetMapping("/emr/signCert/caApplyList")
+    public Result<List<SignCaApplyRecordVO>> signCertCaApplyList(@RequestParam Long certId) {
+        return Result.success(signCertFacadeService.listCaApplies(certId));
+    }
+
+    /**
      * 按员工取当前有效证书：员工管理「签名设置」弹框用（只读，人事侧也可看）。
      */
     @Operation(summary = "按员工取当前有效签名证书（只读）")
@@ -185,6 +196,33 @@ public class SignatureController {
     @GetMapping("/emr/signCert/getByEmp")
     public Result<SignCertVO> signCertByEmp(@RequestParam Long empId) {
         return Result.success(signCertFacadeService.getActiveCertByEmp(empId));
+    }
+
+    /**
+     * 本人签名预检：当前登录员工这次能不能完成电子签名、需不需要输入签名 PIN。
+     * 用于医生站结诊前决定「无签结诊强提示」与 PIN 弹框。
+     *
+     * <p>只要求登录且不收员工ID：证书台账的权限码是管理岗口径，普通医生拿不到；
+     * 「本人看自己」的签名状态必须能查得到，否则提示整段静默失效。
+     */
+    @Operation(summary = "本人签名预检（能否电子签名 / 是否需要输入签名PIN）")
+    @PreAuthorize("isAuthenticated()")
+    @GetMapping("/emr/signCert/preCheck")
+    public Result<SignPreCheckVO> signCertPreCheck() {
+        return Result.success(signCertFacadeService.preCheckForSign(UserUtils.getCurrentUser().getEmployeeId()));
+    }
+
+    /**
+     * 本人换签名 PIN：当前口令校验通过才允许换成新口令。
+     * 用于首次软签前把建号下发的初始口令换成签名人自己的口令；证书行取自登录态，不收员工ID，
+     * 与预检同理——管理岗权限码普通医生拿不到，改口令的入口必须是本人接口。
+     */
+    @Operation(summary = "本人修改签名PIN")
+    @PreAuthorize("isAuthenticated()")
+    @PostMapping("/emr/signCert/changePin")
+    public Result<Void> signCertChangePin(@Valid @RequestBody SignPinChangeDTO dto) {
+        signCertFacadeService.changeOwnPin(dto);
+        return Result.success();
     }
 
     /**

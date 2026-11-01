@@ -7,8 +7,11 @@ import com.his.platform.vo.SignCertVO;
 import com.his.spi.dto.SignCertBindDTO;
 import com.his.spi.dto.SignCertKeygenDTO;
 import com.his.spi.dto.SignCertRevokeDTO;
+import com.his.spi.dto.SignPinChangeDTO;
+import com.his.spi.vo.SignCaApplyRecordVO;
 import com.his.spi.vo.SignCaApplyVO;
 import com.his.spi.vo.SignCaStatusVO;
+import com.his.spi.vo.SignPreCheckVO;
 
 import java.util.List;
 
@@ -65,9 +68,23 @@ public interface SignCertService {
     SignCertVO getById(Long id);
 
     /**
+     * 一张证书的 CA 申请流水（最近一次在前）：第几次申请、走到哪一步、提交/审核/签发/回填各阶段的时刻与 CA 说明。
+     * 用于证书详情抽屉里的「CA 申请记录」时间线。
+     */
+    List<SignCaApplyRecordVO> caApplyHistory(Long certId);
+
+    /**
      * 按员工取当前有效证书：员工管理「签名设置」弹框只读展示用；无有效证书返回 null。
      */
     SignCertVO getActiveCertVO(Long empId);
+
+    /**
+     * 签名预检：给出签名人当前能不能完成电子签名、PIN 是否还需要本人输入。
+     *
+     * <p>用于结诊等业务动作发起签名前的分支：没证书或证书过期时业务照常提交、签名留白并提示走
+     * 线下纸质签名；证书被吊销时业务应拦下让签名人重新办证，而不是静默少一道签名。
+     */
+    SignPreCheckVO preCheckForSign(Long empId);
 
     /**
      * 证书台账分页：按持有人、证书状态、算法与有效期等条件筛选。
@@ -86,9 +103,16 @@ public interface SignCertService {
     String privatePemOf(SysSignCert cert);
 
     /**
-     * 软签签名：校验签名人 PIN → 解密私钥 → 签名。PIN 错误一律拒绝，不解密私钥。
+     * 软签签名：校验签名人 PIN（或命中本人的 PIN 免输入窗口）→ 解密私钥 → 签名。PIN 错误一律拒绝，不解密私钥。
      */
     String signWithPin(SysSignCert cert, String content, String pin);
+
+    /**
+     * 签名人本人换掉自己的签名 PIN：验当前口令 → 用新口令重算哈希落库。
+     *
+     * <p>用于首次软签前把建号下发的初始口令换成签名人自己的口令；证书行按当前登录人的员工ID定位。
+     */
+    void changeOwnPin(SignPinChangeDTO dto);
 
     /**
      * 有效证书总数 / 自动签发数等统计给概览用

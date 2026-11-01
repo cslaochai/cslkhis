@@ -57,9 +57,10 @@ public interface SysRoleService {
     void saveRoleMenu(RoleMenuUpsertDTO upsertDTO);
 
     /**
-     * 手动刷新角色权限缓存：失效该角色的权限缓存（his:perm:role:{roleCode}）
-     * 以及持有该角色的所有账号身份缓存（his:user:identity:{username}）。
-     * 用于「角色管理」页「刷新缓存」按钮，覆盖绕过服务层直接改库 / TTL 未到期时的强制刷新。
+     * 一键刷新全部角色的权限缓存：清掉全部角色权限缓存与全部账号身份缓存。
+     * 用于「角色管理」页工具区的「刷新全部缓存」按钮，覆盖批量改授权、旁路改库后的整体收口。
+     *
+     * <p>同一操作人在防重窗口内重复点击只清一次，第二次直接报「刚刚已刷新过」。
      */
-    void refreshPermissionCache(Long roleId);
+    void refreshAllPermissionCache();
 }

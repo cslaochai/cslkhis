@@ -75,11 +75,7 @@ public class SignCertVO {
     private String keyFingerprintGroups;
 
     /**
-     * CA 签发者（issuer）；为空表示尚未线下送 CA 签发
-     */
-    private String caIssuer;
-    /**
-     * CA 签发申请主体 DN（CN=姓名, O=机构, OU=科室）；线下送 CA 申请时连同公钥一起提交
+     * CA 签发申请主体 DN（CN=姓名, O=机构, OU=科室）；证书已回填时取证书里的实际主体
      */
     private String caSubjectDn;
     /**
@@ -100,12 +96,6 @@ public class SignCertVO {
      * CA 申请单状态文案（由枚举 label 渲染）
      */
     private String caApplyStatusText;
-
-    /**
-     * 最近一次提交 CA 的时间
-     */
-    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
-    private LocalDateTime caAppliedAt;
 
     /**
      * CA 最近一次状态说明 / 提交失败原因

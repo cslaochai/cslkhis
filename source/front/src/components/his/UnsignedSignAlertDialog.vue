@@ -7,13 +7,13 @@
         <div class="alert-icon">!</div>
         <h2 class="alert-title">电子签名证书不可用提醒</h2>
         <div class="alert-body">
-          <p>经系统核验，您名下当前<b>没有有效的电子签名证书</b>（未配置或已被吊销）。</p>
+          <p>{{ reasonText }}</p>
           <p>本次结诊可以继续，但本次<b>病历、处方及检查检验申请单将无法完成医师电子签名</b>，
             进入「待补签」状态。</p>
           <ul>
             <li>该病历的<b>病案归档</b>与相关处方的<b>药房发药</b>将被系统拦截，直至补签完成；</li>
-            <li>系统已同步提醒医务科，请在 <b>2 个工作日内</b>联系医务科完成补签；</li>
-            <li>如需立即合规归档，请在补签前按纸质病历流程手写签名后交病案管理岗人工核验。</li>
+            <li>请立即<b>改走线下纸质签名</b>：手写签名后交病案管理岗人工核验；</li>
+            <li>系统已同步提醒信息科与医务科，请尽快办理或换发软签证书后完成补签。</li>
           </ul>
         </div>
         <el-button type="warning" size="large" class="alert-btn" :disabled="countdown > 0"
@@ -31,10 +31,14 @@ import {ref, onBeforeUnmount} from 'vue';
 // 不可绕过的强提示：无 cancel、无 ESC、无点遮罩关闭，医生确认后才放行结诊
 const visible = ref(false);
 const countdown = ref(0);
+// 不可用原因（未办理 / CA 未签发 / 已过期）由结诊签名预检给出，组件不再自己猜
+const reasonText = ref('经系统核验，您名下当前没有有效的电子签名证书。');
 let timer = null;
 let resolver = null;
 
-const open = () => {
+const open = (precheck) => {
+  reasonText.value = (precheck && precheck.message)
+      || '经系统核验，您名下当前没有有效的电子签名证书。';
   visible.value = true;
   countdown.value = 3;
   timer = setInterval(() => {

@@ -52,8 +52,7 @@
           </el-table-column>
           <el-table-column label="CA 签发" width="150">
             <template #default="{ row }">
-              <span v-if="row.caIssuer" class="text-xs text-slate-600">{{ row.caIssuer }}</span>
-              <el-tag v-else-if="row.caApplyStatus" :type="caStatusTagType(row.caApplyStatus)" size="small">
+              <el-tag v-if="row.caApplyStatus" :type="caApplyTagType(row.caApplyStatus)" size="small">
                 {{ row.caApplyStatusText || row.caApplyStatus }}
               </el-tag>
               <span v-else class="text-xs text-slate-400">待线下送 CA</span>
@@ -155,7 +154,7 @@ import {Search} from '@element-plus/icons-vue';
 import {ElMessage} from 'element-plus';
 import {getSignatureQueryOptions, getSignCertList, refreshSignCaApply, revokeSignCert,} from '@/api/signature';
 import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination';
-import {num} from '@/lib/sign';
+import {caApplyTagType, num} from '@/lib/sign';
 import SignatureCenterCertDetail from './SignatureCenterCertDetail.vue';
 import SignatureCenterCertIssue from './SignatureCenterCertIssue.vue';
 // ---------------- 下拉选项 ----------------
@@ -214,12 +213,6 @@ const loadCertList = async () => {
 const openCertDetail = (row) => {
   certDetailId.value = row.id;
   certDetailVisible.value = true;
-};
-const caStatusTagType = (status) => {
-  if (status === 'ISSUED' || status === 'APPROVED') return 'success';
-  if (status === 'PENDING') return 'warning';
-  if (status === 'FAILED' || status === 'REJECTED') return 'danger';
-  return 'info';
 };
 const onRefreshCa = async (row) => {
   refreshingCertId.value = row.id;

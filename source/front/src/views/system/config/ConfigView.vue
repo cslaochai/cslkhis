@@ -123,6 +123,13 @@
             <el-form-item label="缺证书自动签发" prop="certAutoIssue">
               <el-switch v-model="signConfig.certAutoIssue" :active-value="1" :inactive-value="0"/>
             </el-form-item>
+            <el-form-item label="签名PIN免输入（分钟）" prop="pinTtlMinutes">
+              <el-input-number v-model="signConfig.pinTtlMinutes" :min="0" :max="1440" controls-position="right"/>
+              <div class="ml-3 text-xs text-slate-400 leading-relaxed">
+                一次输入通过后，这段时间内继续签名不再要 PIN，每次签名自动续期；<br/>
+                填 0 表示每次签名都必须重新输入 PIN。
+              </div>
+            </el-form-item>
             <el-form-item>
               <el-button v-perm="'system:config:add'" :icon="Check" :loading="saving" type="primary"
                          @click="handleSaveSign">保存配置
@@ -131,26 +138,9 @@
           </el-form>
         </el-tab-pane>
 
-        <!-- ==================== DRG 分组方案 ==================== -->
-        <el-tab-pane label="DRG 分组方案" name="drg">
-          <el-form ref="drgFormRef" :model="drgConfig" :rules="drgRules" class="max-w-xl" label-width="160px">
-            <el-form-item label="结算默认版本" prop="version">
-              <el-select v-model="drgConfig.version" style="width: 260px">
-                <el-option label="chs-drg-2.0" value="chs-drg-2.0"/>
-                <el-option label="3.0" value="3.0"/>
-              </el-select>
-            </el-form-item>
-            <el-form-item>
-              <el-button v-perm="'system:config:add'" :icon="Check" :loading="saving" type="primary"
-                         @click="handleSaveDrg">保存配置
-              </el-button>
-            </el-form-item>
-          </el-form>
-        </el-tab-pane>
-
-        <!-- ==================== 医保付费 ==================== -->
+        <!-- ==================== 医保付费（先选付费方式，再选对应版本） ==================== -->
         <el-tab-pane label="医保付费" name="medpay">
-          <el-form ref="medpayFormRef" :model="medpayConfig" :rules="medpayRules" class="max-w-xl" label-width="160px">
+          <el-form ref="medpayFormRef" :model="medpayConfig" :rules="medpayRules" class="max-w-xl" label-width="180px">
             <el-form-item label="住院结算主付费方式" prop="mode">
               <el-select v-model="medpayConfig.mode" style="width: 260px">
                 <el-option label="DRG（按病组付费）" value="DRG"/>
@@ -158,13 +148,21 @@
               </el-select>
               <div class="form-tip">主结算方式由统筹区确定（医保发〔2025〕18号按病种付费办法），DRG/DIP 二选一</div>
             </el-form-item>
-            <el-form-item label="DIP 病种库默认版本" prop="dipVersion">
+            <el-form-item v-if="medpayConfig.mode === 'DRG'" label="DRG 分组方案版本" prop="drgVersion">
+              <el-select v-model="medpayConfig.drgVersion" style="width: 260px">
+                <el-option label="chs-drg-2.0" value="chs-drg-2.0"/>
+                <el-option label="3.0" value="3.0"/>
+              </el-select>
+              <div class="form-tip">DRG 模拟与结算均按该版本入组</div>
+            </el-form-item>
+            <el-form-item v-if="medpayConfig.mode === 'DIP'" label="DIP 病种库默认版本" prop="dipVersion">
               <el-select v-model="medpayConfig.dipVersion" style="width: 260px">
                 <el-option label="2.0" value="2.0"/>
                 <el-option label="3.0" value="3.0"/>
               </el-select>
+              <div class="form-tip">DIP 模拟与结算均按该病种库版本入组</div>
             </el-form-item>
-            <el-form-item label="DIP 点值（元/分值）" prop="pointValue">
+            <el-form-item v-if="medpayConfig.mode === 'DIP'" label="DIP 点值（元/分值）" prop="pointValue">
               <el-input v-model="medpayConfig.pointValue" placeholder="不填表示未配置，结算金额不计算" style="width: 260px"/>
             </el-form-item>
             <el-form-item>
@@ -180,7 +178,7 @@
 </template>
 
 <script lang="js" setup>
-import {onMounted, reactive, ref} from 'vue'
+import {computed, onMounted, reactive, ref} from 'vue'
 import {ElMessage} from 'element-plus'
 import {Check} from '@element-plus/icons-vue'
 import {
@@ -306,10 +304,11 @@ const handleSaveInpatient = async () => {
 
 // ---------------- 电子签名 ----------------
 const signFormRef = ref()
-const signConfig = ref({timeSource: 1, certValidDays: undefined, certAutoIssue: 1})
+const signConfig = ref({timeSource: 1, certValidDays: undefined, certAutoIssue: 1, pinTtlMinutes: 30})
 const signRules = {
   timeSource: [{required: true, message: '请选择签名时间来源', trigger: 'change'}],
   certValidDays: [{required: true, message: '请输入证书有效期', trigger: 'blur'}],
+  pinTtlMinutes: [{required: true, message: '请输入签名PIN免输入时长', trigger: 'blur'}],
 }
 const handleSaveSign = async () => {
   await signFormRef.value.validate()
@@ -324,41 +323,32 @@ const handleSaveSign = async () => {
   }
 }
 
-// ---------------- DRG 分组方案 ----------------
-const drgFormRef = ref()
-const drgConfig = ref({version: '3.0'})
-const drgRules = {
-  version: [{required: true, message: '请选择结算默认版本', trigger: 'change'}],
-}
-const handleSaveDrg = async () => {
-  await drgFormRef.value.validate()
-  saving.value = true
-  try {
-    const res = await saveDrgDefaultVersion(drgConfig.value.version)
-    if (res.code === 200) {
-      ElMessage.success('DRG 结算默认版本保存成功')
-      loadDrgConfig()
-    }
-  } finally {
-    saving.value = false
-  }
-}
-
-// ---------------- 医保付费 ----------------
+// ---------------- 医保付费（付费方式 + 对应版本 / 点值） ----------------
 const medpayFormRef = ref()
-const medpayConfig = ref({mode: 'DRG', dipVersion: '2.0', pointValue: ''})
-const medpayRules = {
+const medpayConfig = ref({mode: 'DRG', drgVersion: '3.0', dipVersion: '2.0', pointValue: ''})
+const medpayRules = computed(() => ({
   mode: [{required: true, message: '请选择住院结算主付费方式', trigger: 'change'}],
-  dipVersion: [{required: true, message: '请选择 DIP 病种库默认版本', trigger: 'change'}],
-}
+  drgVersion: medpayConfig.value.mode === 'DRG'
+    ? [{required: true, message: '请选择 DRG 分组方案版本', trigger: 'change'}] : [],
+  dipVersion: medpayConfig.value.mode === 'DIP'
+    ? [{required: true, message: '请选择 DIP 病种库默认版本', trigger: 'change'}] : [],
+}))
 const handleSaveMedpay = async () => {
   await medpayFormRef.value.validate()
   saving.value = true
   try {
-    const res = await saveDipMedpayConfig(medpayConfig.value)
+    // 主方式 + DIP 参数（mode 切到 DRG 时 DIP 参数仍保留，便于后续切换）
+    const res = await saveDipMedpayConfig({
+      mode: medpayConfig.value.mode,
+      dipVersion: medpayConfig.value.dipVersion || '2.0',
+      pointValue: medpayConfig.value.pointValue || '',
+    })
     if (res.code === 200) {
+      if (medpayConfig.value.drgVersion) {
+        await saveDrgDefaultVersion(medpayConfig.value.drgVersion)
+      }
       ElMessage.success('医保付费参数保存成功')
-      loadMedpayConfig()
+      await loadMedpayConfig()
     }
   } finally {
     saving.value = false
@@ -367,16 +357,12 @@ const handleSaveMedpay = async () => {
 
 // ---------------- 加载 ----------------
 const loadMedpayConfig = async () => {
-  const res = await dipMedpayConfig()
-  if (res.code === 200 && res.data) {
-    medpayConfig.value = {...medpayConfig.value, ...res.data}
+  const [medpay, drg] = await Promise.all([dipMedpayConfig(), getDrgDefaultVersion()])
+  if (medpay.code === 200 && medpay.data) {
+    medpayConfig.value = {...medpayConfig.value, ...medpay.data}
   }
-}
-
-const loadDrgConfig = async () => {
-  const res = await getDrgDefaultVersion()
-  if (res.code === 200 && res.data) {
-    drgConfig.value.version = res.data.dbVersion || '3.0'
+  if (drg.code === 200 && drg.data) {
+    medpayConfig.value.drgVersion = drg.data.dbVersion || '3.0'
   }
 }
 
@@ -401,7 +387,7 @@ const loadConfig = async () => {
     if (sign.code === 200 && sign.data) {
       signConfig.value = {...signConfig.value, ...sign.data}
     }
-    await Promise.all([loadDrgConfig(), loadMedpayConfig()])
+    await loadMedpayConfig()
   } catch (e) {
     console.error('加载参数配置失败', e)
   } finally {

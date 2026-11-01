@@ -65,6 +65,11 @@ export function getSignCertDetail(id) {
     return request.get('/emr/signCert/getById', {params: {id}})
 }
 
+// 证书的 CA 申请记录（第几次申请、走到哪一步、各阶段时间）
+export function listSignCaApplies(certId) {
+    return request.get('/emr/signCert/caApplyList', {params: {certId}})
+}
+
 // 生成签名密钥对（在线申请：自动提交 CA；未接入时返回线下申请单）
 export function keygenSignCert(params) {
     return request.post('/emr/signCert/keygen', params)
@@ -98,4 +103,14 @@ export function revokeSignCert(certId, reason) {
 // 按员工查签名证书（员工管理「签名设置」只读弹框用；无证书返回空）
 export function getSignCertByEmp(empId) {
     return request.get('/emr/signCert/getByEmp', {params: {empId}})
+}
+
+// 本人签名预检：当前登录人能不能电子签名、要不要输 PIN、不能签的原因
+export function getSignPreCheck() {
+    return request.get('/emr/signCert/preCheck')
+}
+
+// 本人修改签名PIN：验当前口令后换成新口令（首次软签前把建号下发的初始口令换掉）
+export function changeSignPin(params) {
+    return request.post('/emr/signCert/changePin', params)
 }

@@ -31,8 +31,10 @@ his:
     master-secret: ${HIS_SIGN_SECRET:}
     # 证书主体 O（机构名），必须与 CA 侧租户登记的「证书主体O」一致
     organization: ${HIS_SIGN_ORG:长沙市麓康医院}
-    # CA 在线申请：缺任一项凭证退回线下送 CA 流程
+    # CA 在线申请：生产默认走在线签发。关掉它=每张证书都靠线下送 CA 回填；
+    # 开着就必须注入齐 base-url / app-id / app-secret，缺任一项送单直接报错
     ca:
+      enabled: ${HIS_SIGN_CA_ENABLED:true}
       base-url: ${HIS_SIGN_CA_BASE_URL:}
       app-id: ${HIS_SIGN_CA_APP_ID:}
       app-secret: ${HIS_SIGN_CA_APP_SECRET:}

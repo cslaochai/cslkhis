@@ -224,19 +224,6 @@
                          @open-detail="showPatientDetail = true">
         </PatientBriefBar>
 
-        <!-- 医保与收费（紧凑条，替代原 drawer） -->
-        <div v-if="currentPatient.queueStatus == 3 && insuranceInfo"
-             class="flex shrink-0 items-center gap-4 rounded-md bg-blue-50 px-3 py-1.5 text-xs">
-          <span class="text-slate-600">{{ insuranceInfo.medicalInsuranceType || '自费' }}</span>
-          <span class="text-slate-600">报销 <b class="text-emerald-600">{{
-              insuranceInfo.coverageRatio || 0
-            }}%</b></span>
-          <span class="text-slate-600">医保支付 ¥{{ (insuranceInfo.insurancePay || 0).toFixed(2) }}</span>
-          <span class="ml-auto text-slate-600">自付 <b class="text-red-600">¥{{
-              (insuranceInfo.selfPay || 0).toFixed(2)
-            }}</b></span>
-        </div>
-
         <div class="relative flex min-h-0 flex-1 gap-3">
           <div class="flex min-h-0 min-w-0 flex-1 flex-col gap-3">
             <div class="flex min-h-0 flex-1 gap-3">
@@ -1451,6 +1438,24 @@
                   </div>
                 </template>
               </div>
+              <!-- 医保拆分：与上方预估同源（estimateInsurance 实时算），医生开单时即看到统筹/自付各多少 -->
+              <div v-if="insuranceInfo"
+                   class="mt-2 space-y-1 border-t border-slate-100 pt-2 text-xs">
+                <div class="flex items-center justify-between">
+                  <span class="text-slate-500">{{ insuranceInfo.medicalInsuranceType || '自费' }}</span>
+                  <span class="text-slate-400">报销 {{ insuranceInfo.coverageRatio || 0 }}%</span>
+                </div>
+                <div class="flex items-center justify-between">
+                  <span class="text-slate-500">统筹支付</span>
+                  <span class="font-medium text-emerald-600">¥{{
+                      (insuranceInfo.insurancePay || 0).toFixed(2)
+                    }}</span>
+                </div>
+                <div class="flex items-center justify-between">
+                  <span class="font-medium text-slate-700">个人自付</span>
+                  <span class="font-bold text-red-600">¥{{ (insuranceInfo.selfPay || 0).toFixed(2) }}</span>
+                </div>
+              </div>
               <div class="mt-1 text-[10px] text-slate-400">
                 结算金额以收费端为准
               </div>
@@ -2378,7 +2383,7 @@ import PageActionBar from '@/components/his/PageActionBar.vue';
 import OrderPanel from '@/components/his/OrderPanel.vue';
 import SignPinDialog from '@/components/his/SignPinDialog.vue';
 import UnsignedSignAlertDialog from '@/components/his/UnsignedSignAlertDialog.vue';
-import {getSignCertByEmp} from '@/api/signature';
+import {getSignPreCheck} from '@/api/signature';
 import DoctorWorkstationAdmissionAdd from './DoctorWorkstationAdmissionAdd.vue';
 import DoctorWorkstationAdmissionList from './DoctorWorkstationAdmissionList.vue';
 import RxSignDialog from './RxSignDialog.vue';
@@ -4832,14 +4837,36 @@ const handleComplete = async () => {
     }
     return;
   }
-  // 无签结诊强提示（P5.7）：医生证书被吊销/未配置时业务照常、电子签名留白。
-  // 证书查询失败不拦结诊（由后端预检兜底判 signSkipped），查询成功且无有效证书才走强提示。
+  // 结诊前签名预检（本人接口，医生角色不需要证书管理权限）：
+  // 已吊销 → 当场拦下不许提交；没办证 / CA 未签发 / 已过期 → 业务照走、电子签名留白并催办。
+  // pinRequired=false 表示 PIN 免输入窗口内，后端这次不再核验 PIN，前端不必弹框。
   let signSkipped = false;
+  let signRevokedMessage = '';
+  let signCheckMessage = '';
+  let signCheckStateText = '';
+  pendingPinRequired.value = true;
   try {
-    const empRes = await getEmployeeCurrent();
-    const certRes = await getSignCertByEmp(empRes.data?.id);
-    signSkipped = !(certRes.code === 200 && !!certRes.data);
-  } catch (error) /* 证书查询失败不拦结诊，后端预检兜底 */ {
+    const preRes = await getSignPreCheck();
+    const pre = preRes.data || {};
+    signRevokedMessage = pre.certRevoked ? (pre.checkMessage || '签名证书已被吊销，请到信息科重新办理签名。') : '';
+    signSkipped = pre.signable !== true;
+    pendingPinRequired.value = pre.pinRequired !== false;
+    signCheckMessage = pre.checkMessage || '';
+    signCheckStateText = pre.certStateText || '';
+  } catch (error) {
+    // 预检失败不拦结诊：后端结诊事务里还会自己预检一次（吊销照样报错、无证书照样留白催办）
+    console.error('签名预检失败，本次结诊按有证书处理', error);
+  }
+  if (signRevokedMessage) {
+    try {
+      await ElMessageBox.alert(signRevokedMessage, '电子签名不可用', {
+        type: 'error',
+        confirmButtonText: '我知道了',
+      });
+    } catch (dismiss) {
+      /* 点关闭等价于点「我知道了」，本次结诊同样不发 */
+    }
+    return;
   }
   // 检查各项状态（包括暂存的检查检验）
   const hasPrescriptions = prescriptionForm.details.length > 0;
@@ -4865,7 +4892,7 @@ const handleComplete = async () => {
   }
   if (signSkipped) {
     // 无有效证书：普通确认框换成全屏不可绕过的强提示，确认后直接提交（跳过 PIN 与签名板）
-    await unsignedSignAlertRef.value.open();
+    await unsignedSignAlertRef.value.open({stateText: signCheckStateText, message: signCheckMessage});
   } else {
     try {
       await ElMessageBox.confirm(`<div class="space-y-2">
@@ -4962,9 +4989,9 @@ const doSubmitRecord = async (submitData, forceSubmit = false, knownPin = null, 
   try {
     // 结诊这一次请求里后端要签病历+处方+检查+检验多份，弹一次 PIN 复用于全部签名；
     // 用户取消 → 中止本次结诊，一个请求都不发。
-    // 无签结诊（signSkipped）时后端不签名，PIN 置空串直接过。
-    pin = pin ?? (signSkipped ? '' : await pinDialogRef.value.askPin());
-    if (!pin && !signSkipped) {
+    // 免输时长窗口内（预检 pinRequired=false）不弹框：后端凭窗口放行，PIN 传空串。
+    pin = pin ?? ((signSkipped || !pendingPinRequired.value) ? '' : await pinDialogRef.value.askPin());
+    if (!pin && !signSkipped && pendingPinRequired.value) {
       ElMessage.info('已取消签名，本次结诊未提交');
       return;
     }
@@ -5343,6 +5370,8 @@ const pendingSubmitData = ref(null);
 // 软签二次确认：PIN 由签名人本人输入，服务端校验通过才解密私钥
 const pinDialogRef = ref(null);
 const pinDialogVisible = ref(false);
+// 本次结诊要不要弹 PIN：签名预检给的 pinRequired（免输入窗口内为 false），跨签名板弹框带到提交那一步
+const pendingPinRequired = ref(true);
 
 const buildPrescriptionPayload = () => {
   return prescriptionList.value

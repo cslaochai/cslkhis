@@ -144,13 +144,15 @@ public class SysConfigServiceImpl extends ServiceImpl<SysConfigMapper, SysConfig
     public SignConfigVO getSignConfig() {
         List<String> keys = List.of(SystemConfigKeyConst.SIGN_TIME_SOURCE,
                 SystemConfigKeyConst.SIGN_CERT_VALID_DAYS,
-                SystemConfigKeyConst.SIGN_CERT_AUTO_ISSUE);
+                SystemConfigKeyConst.SIGN_CERT_AUTO_ISSUE,
+                SystemConfigKeyConst.SIGN_PIN_TTL_MINUTES);
         Map<String, String> valueByKey = selectValues(keys);
 
         SignConfigVO vo = new SignConfigVO();
         vo.setTimeSource(toInt(valueByKey, SystemConfigKeyConst.SIGN_TIME_SOURCE));
         vo.setCertValidDays(toInt(valueByKey, SystemConfigKeyConst.SIGN_CERT_VALID_DAYS));
         vo.setCertAutoIssue(toInt(valueByKey, SystemConfigKeyConst.SIGN_CERT_AUTO_ISSUE));
+        vo.setPinTtlMinutes(toInt(valueByKey, SystemConfigKeyConst.SIGN_PIN_TTL_MINUTES));
         return vo;
     }
 
@@ -163,6 +165,8 @@ public class SysConfigServiceImpl extends ServiceImpl<SysConfigMapper, SysConfig
                 String.valueOf(upsertDTO.getCertValidDays()));
         setConfigValue(SystemConfigKeyConst.SIGN_CERT_AUTO_ISSUE, "缺证书时自动签发",
                 String.valueOf(upsertDTO.getCertAutoIssue()));
+        setConfigValue(SystemConfigKeyConst.SIGN_PIN_TTL_MINUTES, "签名PIN免输入时长（分钟）",
+                String.valueOf(upsertDTO.getPinTtlMinutes()));
     }
 
     /**

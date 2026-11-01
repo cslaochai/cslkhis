@@ -12,9 +12,7 @@
           </p>
           <p>算法组合：{{ cert.keyAlgo }} / {{ cert.digestAlgo }} / {{ cert.signAlgo }}</p>
           <p>有效期：{{ text(cert.validFrom) }} ~ {{ text(cert.validTo) }}</p>
-          <p>CA 签发：{{ text(cert.caIssuer) }}<span v-if="cert.caSerial" class="text-slate-500"> · 序列号 {{
-              cert.caSerial
-            }}</span></p>
+          <p v-if="cert.caSerial">CA 证书序列号：<span class="font-mono">{{ cert.caSerial }}</span></p>
           <p>公钥指纹：<span class="break-all font-mono">{{ text(cert.keyFingerprintGroups || cert.keyFingerprint) }}</span></p>
           <p>累计签名：{{ num(cert.signCount) }} 次 · 最近使用 {{ text(cert.lastUsedTime) }}</p>
           <p v-if="cert.remark">备注：{{ text(cert.remark) }}</p>

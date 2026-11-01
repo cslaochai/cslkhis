@@ -44,17 +44,6 @@ public interface SysUserMapper extends BaseMapper<SysUser> {
     List<String> selectPermissionsByRoleCode(@Param("roleCode") String roleCode);
 
     /**
-     * 通过角色ID查询持有该角色的所有院内账号用户名（去重）。
-     * 链路：sys_user.emp_id → sys_employee.id → sys_employee_post.employee_id，按 role_id 过滤。
-     * 用于角色权限变更后精准失效其名下账号的身份缓存（而非全量 invalidateAll）。
-     */
-    @Select("SELECT DISTINCT u.user_name FROM sys_user u " +
-            "INNER JOIN sys_employee e ON u.emp_id = e.id " +
-            "INNER JOIN sys_employee_post p ON e.id = p.employee_id " +
-            "WHERE p.role_id = #{roleId}")
-    List<String> selectUserNamesByRoleId(@Param("roleId") Long roleId);
-
-    /**
      * 持有指定权限码的全部员工ID（去重）。
      * 链路：sys_menu.permission → sys_role_menu → sys_employee_post.employee_id。
      * 用于「谁有处置权就通知谁」的预警接收人圈定（如无签结诊告警发给医务科）。

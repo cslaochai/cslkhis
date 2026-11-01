@@ -9,6 +9,7 @@ import com.his.common.exception.BusinessException;
 import com.his.common.util.SensitiveMaskUtil;
 import com.his.common.util.TextUtil;
 import com.his.common.utils.UserUtils;
+import com.his.platform.constant.SignConst;
 import com.his.platform.dto.EmployeeQueryDTO;
 import com.his.platform.dto.EmployeeUpsertDTO;
 import com.his.platform.entity.SysDepartment;
@@ -52,12 +53,6 @@ public class SysEmployeeServiceImpl extends ServiceImpl<SysEmployeeMapper, SysEm
     private final DeptScopeService deptScopeService;
     private final UserIdentityCache userIdentityCache;
     private final SignCertService signCertService;
-
-    /**
-     * 建号自动造钥时的初始签名 PIN：与系统演示口令同口径，供线下送 CA 与首次软签过渡；
-     * 目前无改 PIN 功能，签名上线时需一并补「重置 PIN」。
-     */
-    private static final String INITIAL_SIGN_PIN = "123456";
 
     @Override
     public PageResult<EmployeeVO> listPage(EmployeeQueryDTO queryDTO) {
@@ -246,8 +241,8 @@ public class SysEmployeeServiceImpl extends ServiceImpl<SysEmployeeMapper, SysEm
         kdto.setEmpName(emp.getEmpName());
         kdto.setDeptId(primaryPost != null ? primaryPost.getDeptId() : null);
         kdto.setDeptName(primaryPost != null ? primaryPost.getDeptName() : null);
-        kdto.setPin(INITIAL_SIGN_PIN);
-        kdto.setRemark("建号自动生成（初始签名PIN " + INITIAL_SIGN_PIN + "）；CA 申请单见 组织与资源-签名证书");
+        kdto.setPin(SignConst.INITIAL_SIGN_PIN);
+        kdto.setRemark("建号自动生成，初始签名 PIN 由信息科线下告知本人，首次签名前必须改掉；CA 申请单见 组织与资源-签名证书");
         var current = UserUtils.getCurrentUser();
         signCertService.keygen(kdto, current != null ? current.getUserId() : null,
                 current != null ? current.getUsername() : null);

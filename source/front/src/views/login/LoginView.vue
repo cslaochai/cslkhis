@@ -103,7 +103,7 @@
             v-model="credKeyword"
             class="cred-filter"
             clearable
-            placeholder="按角色 / 科室 / 姓名 / 账号筛选（模糊匹配）"
+            placeholder="按角色 / 科室 / 姓名 / 账号 / 能做什么筛选（模糊匹配）"
             prefix-icon="Search"
         />
         <el-table :data="sortedCredRows" border max-height="62vh" size="small" :span-method="credSpanMethod">
@@ -239,6 +239,13 @@ const credRows = [
     dept: '信息科 / 设备科',
     ability: '切「系统管理员」= 同 admin；切「医技人员」= 只做检查检验与报告'
   },
+  // 签名证书固定账号（信息科管理员）：台账查询 + 办理（CA在线申请/回填）；吊销处置归医务科（分权）
+  {
+    accounts: ['jiangjunjie ( 蒋俊杰 )'],
+    role: '信息科管理员',
+    dept: '信息科',
+    ability: '签名证书：台账查询、办理（生成密钥对 / CA 在线申请 / 状态刷新 / 证书回填）、CA 通道状态自检；吊销不在本岗（医务科处置，分权）'
+  },
   // 手术麻醉链：这些人默认岗位是「医生」（落在自己科室），登录后要切「麻醉医师」/「手术室护士」才能做本岗动作
   {
     accounts: ['yuanheyu ( 袁和玉 )', 'liusiqi ( 刘思琪 )', 'jiangna ( 江娜 )', 'chenyihang ( 陈亦航 )'],
@@ -343,7 +350,7 @@ const credRows = [
   },
 ]
 
-// 凭据关键词筛选（纯前端）：角色 / 科室 / 账号列（含姓名与登录名）模糊匹配，不查后端
+// 凭据关键词筛选（纯前端）：角色 / 科室 / 账号列（含姓名与登录名）/ 能做什么 模糊匹配，不查后端
 const credKeyword = ref('')
 const filteredCredRows = computed(() => {
   const kw = credKeyword.value.trim().toLowerCase()
@@ -351,7 +358,7 @@ const filteredCredRows = computed(() => {
     return credRows
   }
   return credRows.filter((row) => {
-    const hay = [row.role, row.dept, ...row.accounts].join(' ').toLowerCase()
+    const hay = [row.role, row.dept, row.ability, ...row.accounts].join(' ').toLowerCase()
     return hay.includes(kw)
   })
 })

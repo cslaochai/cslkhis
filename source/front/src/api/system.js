@@ -328,9 +328,10 @@ export function saveRoleMenu(data) {
     return request.post('/system/role/saveRoleMenu', data)
 }
 
-// 刷新角色权限缓存：失效该角色的权限缓存与持有该角色账号的身份缓存（覆盖直接改库 / TTL 未到期场景）
-export function refreshRolePermissionCache(roleId) {
-    return request.post('/system/role/refreshPermissionCache', null, {params: {roleId}})
+// 一键刷新全部角色的权限缓存：清掉全部角色权限缓存与全部账号身份缓存（覆盖直接改库 / TTL 未到期场景）
+// 后端按操作人做 30 秒防重，连点只生效一次
+export function refreshAllRolePermissionCache() {
+    return request.post('/system/role/refreshAllPermissionCache')
 }
 
 // ========== 菜单管理 ==========

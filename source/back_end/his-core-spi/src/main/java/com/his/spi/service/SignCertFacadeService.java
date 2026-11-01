@@ -5,6 +5,7 @@ import com.his.spi.dto.SignCertBindDTO;
 import com.his.spi.dto.SignCertKeygenDTO;
 import com.his.spi.dto.SignCertPageQueryDTO;
 import com.his.spi.dto.SignCertRevokeDTO;
+import com.his.spi.dto.SignPinChangeDTO;
 import com.his.spi.vo.*;
 
 import java.time.LocalDateTime;
@@ -79,10 +80,29 @@ public interface SignCertFacadeService {
      *
      * @param certId  证书ID
      * @param content 待签内容
-     * @param pin     签名人本次输入的 PIN；为空或错误一律拒绝签名
+     * @param pin     签名人本次输入的 PIN；窗口外的空 PIN 一律拒绝签名
      * @return Base64 签名值
      */
     String signWithCert(Long certId, String content, String pin);
+
+    /**
+     * 签名预检：证书能不能用于本次签名、PIN 是否还需本人输入。
+     *
+     * <p>用于业务动作（结诊、开立、执行等）发起签名前决定放行还是拦下：无证书与已过期属于
+     * 「业务照做、签名留白，改走线下纸质签名并催办办证」，已吊销属于「签名能力被废止，必须重新办证」。
+     * 空 PIN 能不能签由 PIN 免输入窗口决定，判定口径都在签名域内。
+     *
+     * @param empId 签名人员工ID
+     */
+    SignPreCheckVO preCheckForSign(Long empId);
+
+    /**
+     * 签名人本人换掉自己的签名 PIN（当前口令校验通过才允许换）。
+     *
+     * <p>用于首次软签前把建号自动造钥时下发的初始口令换成签名人自己的口令；证书行按当前登录人
+     * 定位，不经参数传入，别人拿不到改口令的入口。
+     */
+    void changeOwnPin(SignPinChangeDTO dto);
 
     /**
      * 用公钥验签。
@@ -117,6 +137,14 @@ public interface SignCertFacadeService {
      * 单张证书详情：含公钥 PEM、指纹与签发信息；证书不存在抛业务异常。
      */
     SignCertVO getCertDetail(Long certId);
+
+    /**
+     * 一张证书的 CA 申请流水（最近一次在前）：第几次申请、当前走到哪一步、提交/审核/签发/回填各阶段的时刻。
+     *
+     * <p>用于证书详情里回答「这张证办到哪一步了、什么时候走到那一步的」；证书行只留当前挂着的申请单，
+     * 每一次尝试的过程与 CA 的说明都在这条流水上。
+     */
+    List<SignCaApplyRecordVO> listCaApplies(Long certId);
 
     /**
      * 生成签名密钥对并返回「CA 签发申请单」（在线申请自动提交；未接入时走线下流程）。

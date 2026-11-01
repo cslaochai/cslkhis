@@ -20,6 +20,9 @@
         <!-- 主操作区：新增/批量等动作统一靠右，与查询条件视觉分离 -->
         <div class="flex shrink-0 items-start gap-3">
           <el-button v-perm="'system:role:add'" :icon="Plus" type="primary" @click="handleAdd">新增角色</el-button>
+          <el-button v-perm="'system:role:add'" :icon="RefreshRight" :loading="refreshingCache"
+                     @click="handleRefreshAllCache">刷新全部缓存
+          </el-button>
         </div>
       </div>
     </el-card>
@@ -50,10 +53,9 @@
           </template>
         </el-table-column>
         <el-table-column label="创建时间" prop="createTime" width="180"/>
-        <el-table-column fixed="right" label="操作" width="400">
+        <el-table-column fixed="right" label="操作" width="330">
           <template #default="{ row }">
             <el-button :icon="Setting" link type="primary" @click="handleConfigMenu(row)">菜单权限</el-button>
-            <el-button :icon="RefreshRight" link type="warning" @click="handleRefreshCache(row)">刷新缓存</el-button>
             <el-button v-perm="'system:workbench:config'" :icon="Grid" link type="primary"
                        @click="handleConfigWorkbench(row)">工作台配置
             </el-button>
@@ -94,7 +96,7 @@
 import {onMounted, reactive, ref} from 'vue'
 import {ElMessage, ElMessageBox} from 'element-plus'
 import {Delete, Edit, Grid, Plus, Refresh, RefreshRight, Search, Setting} from '@element-plus/icons-vue'
-import {deleteRole, getRoleListPage, refreshRolePermissionCache} from '@/api/system'
+import {deleteRole, getRoleListPage, refreshAllRolePermissionCache} from '@/api/system'
 import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination'
 import {useTableMaxHeight} from '@/lib/useTableMaxHeight'
 import RoleEdit from '@/views/system/role/RoleEdit.vue'
@@ -127,6 +129,9 @@ const menuRole = ref(null)
 // 工作台配置弹框：只把当前行交给 RoleWorkbenchEdit（卡片勾选 + 登录落点）
 const workbenchDialogVisible = ref(false)
 const workbenchRole = ref(null)
+
+// 一键刷新全部角色缓存：后端按操作人 30 秒防重，连点只生效一次
+const refreshingCache = ref(false)
 
 // 表格展示口径：只有 1 是全院
 const dataScopeLabel = (v) => (v === 1 ? '全部数据（全院）' : '按岗位科室')
@@ -197,19 +202,27 @@ const handleConfigMenu = (row) => {
   menuDialogVisible.value = true
 }
 
-const handleRefreshCache = async (row) => {
+const handleRefreshAllCache = async () => {
   try {
     await ElMessageBox.confirm(
-      `确定要刷新角色 "${row.roleName}" 的权限缓存吗？刷新后该角色及持有该角色的所有账号将立即按最新授权收口（菜单/功能权限即时生效）。`,
-      '刷新权限缓存',
+      '确定要刷新全部角色的权限缓存吗？刷新后所有角色及其持有账号立即按最新授权收口（菜单/功能权限即时生效）。',
+      '刷新全部权限缓存',
       {type: 'warning'}
     )
-    const res = await refreshRolePermissionCache(row.id)
-    if (res.code === 200) {
-      ElMessage.success('权限缓存刷新成功')
-    }
-  } catch (error)  /* 取消不提示；错误已由全局拦截器统一提示 */{
+  } catch (error)  /* 取消不提示 */{
+    return
+  }
 
+  refreshingCache.value = true
+  try {
+    const res = await refreshAllRolePermissionCache()
+    if (res.code === 200) {
+      ElMessage.success('全部角色权限缓存已刷新')
+    }
+  } catch (error) {
+    console.error('刷新全部权限缓存失败', error)
+  } finally {
+    refreshingCache.value = false
   }
 }
 

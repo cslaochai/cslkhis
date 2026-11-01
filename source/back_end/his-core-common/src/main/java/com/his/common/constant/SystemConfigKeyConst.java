@@ -72,11 +72,10 @@ public interface SystemConfigKeyConst {
      */
     public static final String ADMISSION_ORDER_VALID_DAYS = "admission_order.valid_days";
 
-    // ===== 电子签名 / 可信时间戳（sign_config 表） =====
+    // ===== 电子签名 / 可信时间戳（sys_config 表，sign. 前缀键） =====
 
     /**
      * 签名时间来源：1=本机时钟 2=院内授时 3=第三方 TSA。
-     * <p>注意：这是 sign_config 表的 key（非 sys_config），但同样收口到本类统一管理。
      */
     public static final String SIGN_TIME_SOURCE = "sign.time_source";
 
@@ -89,6 +88,11 @@ public interface SystemConfigKeyConst {
      * 证书自动签发开关（true/false 或 1/0）。
      */
     public static final String SIGN_CERT_AUTO_ISSUE = "sign.cert.auto_issue";
+
+    /**
+     * 软签签名 PIN 的免输入时长（分钟）：一次校验通过后，这段时间内继续签名不必再输 PIN。
+     */
+    public static final String SIGN_PIN_TTL_MINUTES = "sign.pin.ttl_minutes";
 
     // ===== 医院基础信息（sys_config 表） =====
 

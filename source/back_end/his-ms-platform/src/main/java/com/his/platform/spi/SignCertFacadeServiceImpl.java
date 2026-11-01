@@ -12,6 +12,7 @@ import com.his.spi.dto.SignCertBindDTO;
 import com.his.spi.dto.SignCertKeygenDTO;
 import com.his.spi.dto.SignCertPageQueryDTO;
 import com.his.spi.dto.SignCertRevokeDTO;
+import com.his.spi.dto.SignPinChangeDTO;
 import com.his.spi.service.SignCertFacadeService;
 import com.his.spi.vo.*;
 import lombok.RequiredArgsConstructor;
@@ -57,8 +58,9 @@ public class SignCertFacadeServiceImpl implements SignCertFacadeService {
         brief.setId(cert.getId());
         brief.setCertNo(cert.getCertNo());
         brief.setPublicKey(cert.getPublicKey());
-        brief.setDigestAlgo(cert.getDigestAlgo());
-        brief.setSignAlgo(cert.getSignAlgo());
+        // 摘要/签名算法由密钥算法现算：证书行只存 key_algo 一个事实，签名的留痕列由这里喂值
+        brief.setDigestAlgo(SignCryptoUtil.digestAlgoFor(cert.getKeyAlgo()));
+        brief.setSignAlgo(SignCryptoUtil.signAlgoFor(cert.getKeyAlgo()));
         return brief;
     }
 
@@ -67,6 +69,16 @@ public class SignCertFacadeServiceImpl implements SignCertFacadeService {
         // 私钥的解密与使用全部收在签名域内：调用方只拿到签名值，私钥不出本模块
         SysSignCert cert = sysSignCertMapper.selectById(certId);
         return signCertService.signWithPin(cert, content, pin);
+    }
+
+    @Override
+    public SignPreCheckVO preCheckForSign(Long empId) {
+        return signCertService.preCheckForSign(empId);
+    }
+
+    @Override
+    public void changeOwnPin(SignPinChangeDTO dto) {
+        signCertService.changeOwnPin(dto);
     }
 
     @Override
@@ -124,9 +136,9 @@ public class SignCertFacadeServiceImpl implements SignCertFacadeService {
     // ---------- 证书台账运维 ----------
 
     @Override
-    public IPage<SignCertVO> listCertPage(SignCertPageQueryDTO query) {
+    public IPage<SignCertVO> listCertPage(SignCertPageQueryDTO queryDTO) {
         com.his.platform.dto.SignCertPageQueryDTO inner = new com.his.platform.dto.SignCertPageQueryDTO();
-        BeanUtils.copyProperties(query, inner);
+        BeanUtils.copyProperties(queryDTO, inner);
         IPage<com.his.platform.vo.SignCertVO> page = signCertService.listPage(inner);
         Page<SignCertVO> result = new Page<>(page.getCurrent(), page.getSize(), page.getTotal());
         List<SignCertVO> rows = new ArrayList<>(page.getRecords().size());
@@ -145,6 +157,11 @@ public class SignCertFacadeServiceImpl implements SignCertFacadeService {
         SignCertVO vo = new SignCertVO();
         BeanUtils.copyProperties(inner, vo);
         return vo;
+    }
+
+    @Override
+    public List<SignCaApplyRecordVO> listCaApplies(Long certId) {
+        return signCertService.caApplyHistory(certId);
     }
 
     @Override
