@@ -53,6 +53,9 @@
           <el-table-column label="CA 签发" width="150">
             <template #default="{ row }">
               <span v-if="row.caIssuer" class="text-xs text-slate-600">{{ row.caIssuer }}</span>
+              <el-tag v-else-if="row.caApplyStatus" :type="caStatusTagType(row.caApplyStatus)" size="small">
+                {{ row.caApplyStatusText || row.caApplyStatus }}
+              </el-tag>
               <span v-else class="text-xs text-slate-400">待线下送 CA</span>
             </template>
           </el-table-column>
@@ -80,9 +83,19 @@
               <div class="text-xs text-slate-400">{{ row.lastUsedTime || '未使用' }}</div>
             </template>
           </el-table-column>
-          <el-table-column fixed="right" label="操作" width="130">
+          <el-table-column fixed="right" label="操作" width="150">
             <template #default="{ row }">
               <el-button link size="small" type="primary" @click="openCertDetail(row)">详情</el-button>
+              <el-button
+                  v-if="row.certStatus === 0"
+                  v-perm="'sign:cert:edit'"
+                  :loading="refreshingCertId === row.id"
+                  link
+                  size="small"
+                  type="primary"
+                  @click="onRefreshCa(row)"
+              >刷新CA
+              </el-button>
               <el-button
                   v-if="row.canRevoke"
                   v-perm="'sign:cert:revoke'"
@@ -116,7 +129,7 @@
     </div>
 
     <!-- ---------------- 证书详情（子组件 SignatureCenterCertDetail） ---------------- -->
-    <SignatureCenterCertDetail v-model="certDetailVisible" :id="certDetailId"/>
+    <SignatureCenterCertDetail :id="certDetailId" v-model="certDetailVisible"/>
 
     <!-- ---------------- 办理证书（子组件 SignatureCenterCertIssue） ---------------- -->
     <SignatureCenterCertIssue v-model="issueVisible" @saved="onIssueSaved"/>
@@ -140,11 +153,7 @@
 import {onMounted, reactive, ref} from 'vue';
 import {Search} from '@element-plus/icons-vue';
 import {ElMessage} from 'element-plus';
-import {
-  getSignatureQueryOptions,
-  getSignCertList,
-  revokeSignCert,
-} from '@/api/signature';
+import {getSignatureQueryOptions, getSignCertList, refreshSignCaApply, revokeSignCert,} from '@/api/signature';
 import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination';
 import {num} from '@/lib/sign';
 import SignatureCenterCertDetail from './SignatureCenterCertDetail.vue';
@@ -167,6 +176,8 @@ const certDetailVisible = ref(false);
 const certDetailId = ref(null);
 // 办理证书（子组件 SignatureCenterCertIssue）
 const issueVisible = ref(false);
+// 待 CA 签发行刷新状态
+const refreshingCertId = ref(null);
 // 吊销证书
 const revokeVisible = ref(false);
 const revoking = ref(false);
@@ -176,8 +187,8 @@ const loadOptions = async () => {
   try {
     const res = await getSignatureQueryOptions();
     options.value = res.data || {};
-  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
-    
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */ {
+
   }
 };
 const loadCertList = async () => {
@@ -193,8 +204,8 @@ const loadCertList = async () => {
     const res = await getSignCertList(params);
     certList.value = res.data?.records || [];
     certTotal.value = Number(res.data?.total ?? 0);
-  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
-    
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */ {
+
   } finally {
     certLoading.value = false;
   }
@@ -203,6 +214,30 @@ const loadCertList = async () => {
 const openCertDetail = (row) => {
   certDetailId.value = row.id;
   certDetailVisible.value = true;
+};
+const caStatusTagType = (status) => {
+  if (status === 'ISSUED' || status === 'APPROVED') return 'success';
+  if (status === 'PENDING') return 'warning';
+  if (status === 'FAILED' || status === 'REJECTED') return 'danger';
+  return 'info';
+};
+const onRefreshCa = async (row) => {
+  refreshingCertId.value = row.id;
+  try {
+    const res = await refreshSignCaApply(row.id);
+    const data = res.data || {};
+    if (data.certStatus === 1) {
+      ElMessage.success(`CA 已签发，证书已生效 ${data.certNo || ''}`);
+    } else {
+      ElMessage.success(`CA 状态：${data.applyStatusText || data.applyStatus || '未知'}`);
+      if (data.applyMessage) ElMessage.info(data.applyMessage);
+    }
+    await loadCertList();
+  } catch (e) {
+    console.error('刷新 CA 申请状态失败', e);
+  } finally {
+    refreshingCertId.value = null;
+  }
 };
 const openIssue = () => {
   issueVisible.value = true;
@@ -227,8 +262,8 @@ const submitRevoke = async () => {
     ElMessage.success('已吊销');
     revokeVisible.value = false;
     await loadCertList();
-  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
-    
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */ {
+
   } finally {
     revoking.value = false;
   }

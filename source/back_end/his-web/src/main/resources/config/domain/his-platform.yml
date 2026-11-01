@@ -7,7 +7,30 @@ his:
     iterations: 120000
     # 证书默认有效期（天）
     default-valid-days: 365
+    # 缺证书时自动签发（可被系统参数 sign.cert.auto_issue 覆盖）
+    auto-issue-cert: true
     # 默认时间来源：1-本机时钟（签名时刻一律取服务端本机时钟）
     time-source: 1
     # 新签发证书的密钥算法：SM2（国密，默认，对齐 WS/T 847）或 RSA2048（兼容既有链路）
     key-algorithm: ${HIS_SIGN_KEY_ALGO:SM2}
+    # CA 在线申请（csssl 对外 RA API）：地址与租户 App ID/密钥随环境变，落 profile 文件；这里只管固定契约
+    ca:
+      enabled: true
+      # CA 证书模板编码（模板的 algorithm 必须与 key-algorithm 一致）
+      template-code: DOCTOR_SIGN
+      # 申请人类别：INSTITUTION-单位 / PERSON-个人
+      applicant-type: INSTITUTION
+      # 建立连接超时（毫秒）
+      connect-timeout-ms: 3000
+      # 单次请求超时（毫秒）
+      request-timeout-ms: 10000
+      # 下载证书时是否带链（叶子 + SUB_CA + 根）
+      chain: true
+      # CA 对外接口路径（相对 base-url）：只写路径，{applyNo} 为路径占位符；
+      # 查询参数（externalRequestId、chain）由客户端拼装，不写进地址
+      paths:
+        templates: /ca/api/v1/templates
+        applications: /ca/api/v1/applications
+        application-detail: /ca/api/v1/applications/{applyNo}
+        cancel: /ca/api/v1/applications/{applyNo}/cancel
+        certificate: /ca/api/v1/applications/{applyNo}/certificate

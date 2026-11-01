@@ -1,11 +1,11 @@
 package com.his.clinical.support;
 
+import com.his.clinical.entity.BizMedicalRecord;
+import com.his.common.enums.InpatientRecordTypeEnum;
+import com.his.common.enums.QcRecordSourceEnum;
 import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
-import com.his.clinical.entity.BizMedicalRecord;
-import com.his.common.enums.QcRecordSourceEnum;
 import com.his.spi.vo.InpatientRecordBriefVO;
-import com.his.common.enums.InpatientRecordTypeEnum;
 import lombok.Data;
 
 import java.math.BigDecimal;
@@ -43,6 +43,11 @@ public class QcSnapshot {
     private Integer recordType;
 
     private Integer recordStatus;
+
+    /**
+     * 电子签名状态（0-未签名 1-已签名）；门诊病历为 null（不适用）
+     */
+    private Integer signStatus;
 
     private String chiefComplaint;
 
@@ -85,6 +90,30 @@ public class QcSnapshot {
     private LocalDateTime submitTime;
 
     private LocalDateTime archiveTime;
+
+    /**
+     * 入院时间（住院登记）
+     */
+    private LocalDateTime admissionTime;
+
+    /**
+     * 出院时间（未出院为 null）
+     */
+    private LocalDateTime dischargeTime;
+
+    /**
+     * 病案首页主诊断
+     */
+    private String mainDiagnosisName;
+
+    private String mainDiagnosisCode;
+
+    /**
+     * 病案首页入院途径 / 离院方式
+     */
+    private Integer admitWay;
+
+    private Integer dischargeWay;
 
     /**
      * 门诊病历快照
@@ -143,6 +172,8 @@ public class QcSnapshot {
         s.doctorName = r.getDoctorName();
         s.recordType = r.getRecordType();
         s.recordStatus = r.getRecordStatus();
+        // 电子签名：0 未签名 / 1 已签名；门诊病历无此列（签章走另一套），保持 null 即不适用
+        s.signStatus = r.getSignStatus();
         s.chiefComplaint = r.getChiefComplaint();
         s.presentIllness = r.getPresentIllness();
         s.pastHistory = r.getPastHistory();
@@ -161,6 +192,13 @@ public class QcSnapshot {
         s.recordTime = r.getRecordTime();
         s.submitTime = r.getSubmitTime();
         s.archiveTime = r.getArchiveTime();
+        // 时限规则要入院/出院时间，首页规则要首页关键项；两者都来自住院侧补出的字段
+        s.admissionTime = r.getAdmissionTime();
+        s.dischargeTime = r.getDischargeTime();
+        s.mainDiagnosisName = r.getMainDiagnosisName();
+        s.mainDiagnosisCode = r.getMainDiagnosisCode();
+        s.admitWay = r.getAdmitWay();
+        s.dischargeWay = r.getDischargeWay();
         return s;
     }
 

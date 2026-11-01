@@ -4,62 +4,20 @@ import cn.hutool.json.JSONUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.his.common.constant.DictTypeConst;
-import com.his.common.enums.AdmissionOrderStatusEnum;
-import com.his.common.enums.AdmitStatusEnum;
-import com.his.common.enums.BedAllocateStatusEnum;
-import com.his.common.enums.BedStatusEnum;
-import com.his.common.enums.BedWaitStatusEnum;
-import com.his.common.enums.BizTypeEnum;
-import com.his.common.enums.NursingAssessTypeEnum;
-import com.his.common.enums.SummaryStatusEnum;
+import com.his.common.enums.*;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
 import com.his.common.vo.DeptRefVO;
-import com.his.inpatient.entity.BizAdmission;
-import com.his.inpatient.entity.BizAdmissionOrder;
-import com.his.inpatient.entity.BizBedAllocate;
-import com.his.inpatient.entity.BizBedWait;
-import com.his.inpatient.entity.BizInpatientOperation;
-import com.his.inpatient.entity.BizInpatientOrder;
-import com.his.inpatient.entity.BizInpatientRecord;
-import com.his.inpatient.entity.BizInpatientSummary;
-import com.his.inpatient.entity.BizNursingAssessment;
-import com.his.inpatient.entity.BizNursingRecord;
-import com.his.inpatient.entity.SysBed;
-import com.his.inpatient.mapper.BedCenterMapper;
-import com.his.inpatient.mapper.BizAdmissionMapper;
-import com.his.inpatient.mapper.BizAdmissionOrderMapper;
-import com.his.inpatient.mapper.BizBedWaitMapper;
-import com.his.inpatient.mapper.BizInpatientOperationMapper;
-import com.his.inpatient.mapper.BizInpatientOrderMapper;
-import com.his.inpatient.mapper.BizInpatientRecordMapper;
-import com.his.inpatient.mapper.BizInpatientSummaryMapper;
-import com.his.inpatient.mapper.BizNursingAssessmentMapper;
-import com.his.inpatient.mapper.BizNursingRecordMapper;
-import com.his.inpatient.mapper.SysBedMapper;
+import com.his.inpatient.entity.*;
+import com.his.inpatient.mapper.*;
 import com.his.inpatient.support.SummaryOperationSeq;
 import com.his.inpatient.vo.InpatientAdmitNotifyPayloadVO;
 import com.his.spi.dto.ClosedLoopRecordDTO;
 import com.his.spi.dto.InpatientAdmitDTO;
 import com.his.spi.dto.SurgeryOperationDTO;
-import com.his.spi.service.DictCacheService;
-import com.his.spi.service.InpatientFacadeService;
-import com.his.spi.service.PatientFacadeService;
-import com.his.spi.service.PatientVisitFacadeService;
-import com.his.spi.service.RedisSequenceService;
-import com.his.spi.service.SysMessageService;
-import com.his.spi.vo.AdmissionBriefVO;
-import com.his.spi.vo.AdmissionVO;
-import com.his.spi.vo.BedVO;
-import com.his.spi.vo.ClosedLoopRecordVO;
-import com.his.spi.vo.InpatientRecordBriefVO;
-import com.his.spi.vo.NursingAssessmentVO;
-import com.his.spi.vo.NursingVitalFactVO;
-import com.his.spi.vo.PatientMasterVO;
-import com.his.spi.vo.SurgeryOperationVO;
-import com.his.spi.vo.WardNursingFactsVO;
-import com.his.spi.vo.WardVO;
+import com.his.spi.service.*;
+import com.his.spi.vo.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
@@ -69,11 +27,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -441,7 +395,38 @@ public class InpatientFacadeServiceImpl implements InpatientFacadeService {
         }
         InpatientRecordBriefVO vo = new InpatientRecordBriefVO();
         BeanUtils.copyProperties(e, vo);
+        // 时限类与病案首页类质控要读住院登记与首页，文书本身没有这两个时间与首页字段
+        fillAdmissionAndSummary(e.getAdmissionId(), vo);
         return vo;
+    }
+
+    /**
+     * 补入院时间、出院时间与病案首页关键项。首页/登记缺失时留空，
+     * 由质控规则判「未填写」而不是在这里猜默认值。
+     */
+    private void fillAdmissionAndSummary(Long admissionId, InpatientRecordBriefVO vo) {
+        if (admissionId == null) {
+            return;
+        }
+        BizAdmission admission = bizAdmissionMapper.selectById(admissionId);
+        if (admission != null) {
+            vo.setAdmissionTime(admission.getAdmitTime());
+            vo.setDischargeTime(admission.getDischargeTime());
+        }
+        BizInpatientSummary summary = bizInpatientSummaryMapper.selectOne(new LambdaQueryWrapper<BizInpatientSummary>()
+                .eq(BizInpatientSummary::getAdmissionId, admissionId)
+                .last("LIMIT 1"));
+        if (summary == null) {
+            return;
+        }
+        vo.setMainDiagnosisName(summary.getMainDiagnosisName());
+        vo.setMainDiagnosisCode(summary.getMainDiagnosisCode());
+        vo.setAdmitWay(summary.getAdmitWay() != null ? summary.getAdmitWay()
+                : (admission == null ? null : admission.getAdmitWay()));
+        vo.setDischargeWay(summary.getDischargeWay());
+        if (vo.getDischargeTime() == null) {
+            vo.setDischargeTime(summary.getDischargeTime());
+        }
     }
 
     // ---------- 护理事实面 ----------

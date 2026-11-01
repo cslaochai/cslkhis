@@ -92,6 +92,32 @@ public class SignCertVO {
     private String caSerial;
 
     /**
+     * CA 在线申请单号（csssl applyNo；线下人工流程为空）
+     */
+    private String caApplyNo;
+
+    /**
+     * CA 申请单状态码（PENDING/APPROVED/ISSUED/REJECTED/CANCELLED/FAILED）
+     */
+    private String caApplyStatus;
+
+    /**
+     * CA 申请单状态文案（由枚举 label 渲染）
+     */
+    private String caApplyStatusText;
+
+    /**
+     * 最近一次提交 CA 的时间
+     */
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private LocalDateTime caAppliedAt;
+
+    /**
+     * CA 最近一次状态说明 / 提交失败原因
+     */
+    private String caLastMessage;
+
+    /**
      * 签发方式（1-人工签发 2-系统自动签发）
      */
     private Integer issuedMode;

@@ -8,7 +8,10 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 /**
- * 门诊自动质控补扫的触发器（质控域自取，不靠结诊方来回调）。
+ * 自动质控补扫触发器（质控域自取，不靠结诊方来回调）。
+ *
+ * <p>门诊侧兜的是「结诊收尾丢失」，住院侧兜的是「提交后没人跑引擎」——
+ * 住院文书原先是纯人工质控，这里补上之后，提交过的住院文书会在 10 分钟内被自动跑一遍。
  */
 @Slf4j
 @Component
@@ -24,9 +27,10 @@ public class QcAutoRescanTrigger {
         try {
             SystemOperatorContext.bindSystemTask();
             qualityControlService.autoRescanOutpatientQc(BATCH_LIMIT);
+            qualityControlService.autoRescanInpatientQc(BATCH_LIMIT);
         } catch (Exception e) {
             // 定时任务失败只记日志：补齐是兜底路径，不能拖住调度线程
-            log.error("[质控补扫] 门诊自动质控补扫失败：{}", e.getMessage(), e);
+            log.error("[质控补扫] 自动质控补扫失败：{}", e.getMessage(), e);
         } finally {
             SystemOperatorContext.clear();
         }

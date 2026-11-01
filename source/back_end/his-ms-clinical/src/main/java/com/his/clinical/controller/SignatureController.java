@@ -1,20 +1,17 @@
 package com.his.clinical.controller;
 
-import com.his.spi.vo.SignVerifyVO;
-import com.his.spi.vo.SignatureVO;
-import com.his.spi.service.SignCertFacadeService;
-import com.his.spi.dto.SignCertBindDTO;
-import com.his.spi.dto.SignCertKeygenDTO;
-import com.his.spi.dto.SignCertPageQueryDTO;
-import com.his.spi.dto.SignCertRevokeDTO;
-import com.his.spi.vo.SignCaApplyVO;
-import com.his.spi.vo.SignCertVO;
-import com.his.common.base.PageResult;
-import com.his.common.base.Result;
 import com.his.clinical.dto.*;
+import com.his.clinical.dto.SignaturePageQueryDTO;
 import com.his.clinical.service.EmrSignatureService;
 import com.his.clinical.service.SignatureCenterService;
-import com.his.clinical.vo.*;
+import com.his.clinical.vo.ObjectSignatureVO;
+import com.his.clinical.vo.SignatureOptionsVO;
+import com.his.clinical.vo.SignatureSummaryVO;
+import com.his.common.base.PageResult;
+import com.his.common.base.Result;
+import com.his.spi.dto.*;
+import com.his.spi.service.SignCertFacadeService;
+import com.his.spi.vo.*;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -146,7 +143,17 @@ public class SignatureController {
         return Result.success(signatureCenterService.invalidate(dto));
     }
 
-    // ---------- 签名证书（CA 线下人工签发：生成密钥对 → 线下送 CA → 回填证书） ----------
+    // ---------- 签名证书（CA 在线申请：生成密钥对 → 自动提交 → 签发后自动回填；可转线下） ----------
+
+    /**
+     * CA 通道状态：在线申请是否接入、模板与算法是否匹配；未接入时提示线下兜底。
+     */
+    @Operation(summary = "签名 CA 通道状态（在线申请接入自检）")
+    @PreAuthorize("hasAnyAuthority('sign:cert:list', 'sign:cert:edit', 'org:employee:list')")
+    @GetMapping("/emr/signCert/caStatus")
+    public Result<SignCaStatusVO> signCertCaStatus() {
+        return Result.success(signCertFacadeService.caStatus());
+    }
 
     /**
      * 证书台账分页（按持有人、状态、签发方式与关键字过滤）。
@@ -181,15 +188,34 @@ public class SignatureController {
     }
 
     /**
-     * 生成签名密钥对：返回「CA 签发申请单」（Subject DN + 公钥 PEM），供管理员线下送 CA 人工签发。
-     *
-     * <p>私钥在 HIS 本地生成并加密托管，全程不出 HIS；本接口不调用任何 CA 接口。
+     * 生成签名密钥对：私钥本地生成并加密托管，接入 CA 在线申请时立即提交申请；
+     * 未接入或提交失败时返回线下送 CA 的申请单（Subject DN + 公钥 PEM）。
      */
     @PreAuthorize("hasAuthority('sign:cert:edit')")
-    @Operation(summary = "生成签名密钥对（返回 CA 签发申请单，线下送 CA 人工签发）")
+    @Operation(summary = "生成签名密钥对（在线自动提交 CA 申请；未接入时返回线下申请单）")
     @PostMapping("/emr/signCert/keygen")
     public Result<SignCaApplyVO> signCertKeygen(@Valid @RequestBody SignCertKeygenDTO dto) {
         return Result.success(signCertFacadeService.keygenCert(dto));
+    }
+
+    /**
+     * 提交 / 重试 CA 在线申请：已提交待审核时等价于刷新状态，不重复建单。
+     */
+    @PreAuthorize("hasAuthority('sign:cert:edit')")
+    @Operation(summary = "提交或重试 CA 在线申请")
+    @PostMapping("/emr/signCert/caSubmit")
+    public Result<SignCaApplyVO> signCertCaSubmit(@Valid @RequestBody SignCertCaDTO dto) {
+        return Result.success(signCertFacadeService.submitCaApply(dto.getCertId()));
+    }
+
+    /**
+     * 刷新 CA 申请状态：CA 已签发则自动下载证书链、校验公钥并回填生效。
+     */
+    @PreAuthorize("hasAuthority('sign:cert:edit')")
+    @Operation(summary = "刷新 CA 申请状态（已签发自动下载回填）")
+    @PostMapping("/emr/signCert/caRefresh")
+    public Result<SignCaApplyVO> signCertCaRefresh(@Valid @RequestBody SignCertCaDTO dto) {
+        return Result.success(signCertFacadeService.refreshCaApply(dto.getCertId()));
     }
 
     /**

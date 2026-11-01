@@ -1,11 +1,10 @@
 package com.his.clinical.controller;
 
-import com.his.common.base.PageResult;
-import com.his.common.base.Result;
 import com.his.clinical.dto.*;
 import com.his.clinical.service.QualityControlService;
-import com.his.clinical.vo.QcIssueVO;
 import com.his.clinical.vo.*;
+import com.his.common.base.PageResult;
+import com.his.common.base.Result;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -55,6 +54,16 @@ public class QualityControlController {
     @GetMapping("/getOverview")
     public Result<QcOverviewVO> getOverview() {
         return Result.success(qualityControlService.getOverview());
+    }
+
+    /**
+     * 病案质量指标看板：通过率、甲级率、时限达标率、首页完整率与科室排名。
+     * 用于「指标」页签，口径写在页面上，不允许只给数字不说口径。
+     */
+    @Operation(summary = "病案质量指标（通过率/甲级率/时限达标率/首页完整率/科室排名）")
+    @GetMapping("/indicators")
+    public Result<QcIndicatorVO> indicators(@RequestParam(required = false) Integer days) {
+        return Result.success(qualityControlService.getIndicators(days));
     }
 
     /**

@@ -81,6 +81,55 @@ public enum QcRuleEnum {
             "补记就诊科室与就诊日期，否则无法归集到科室质控统计",
             "门诊病历须载明就诊科室与就诊时间，用于科室质控与统计"),
 
+    // 时限性（住院）
+
+    F06("F06", "入院记录未在 24 小时内完成", QcDimensionEnum.REGULARITY, QcSeverityEnum.MAJOR,
+            QcScopeEnum.INPATIENT, "入院记录完成时限", false,
+            "入院记录须在入院后 24 小时内完成；超时须在病程记录中说明原因并尽快补记",
+            "《病历书写基本规范》第十一条：入院记录应在患者入院后 24 小时内完成"),
+
+    F07("F07", "首次病程记录未在 8 小时内完成", QcDimensionEnum.REGULARITY, QcSeverityEnum.MAJOR,
+            QcScopeEnum.INPATIENT, "首次病程完成时限", false,
+            "首次病程记录须在入院后 8 小时内完成，内容含病例特点、拟诊讨论与诊疗计划",
+            "《病历书写基本规范》第十二条：首次病程记录应在患者入院后 8 小时内完成"),
+
+    F08("F08", "出院记录未在出院后 24 小时内完成", QcDimensionEnum.REGULARITY, QcSeverityEnum.MAJOR,
+            QcScopeEnum.INPATIENT, "出院记录完成时限", false,
+            "出院记录须在出院后 24 小时内完成，写明入院情况、诊疗经过、出院诊断与出院医嘱",
+            "《病历书写基本规范》第十三条：出院记录应在患者出院后 24 小时内完成"),
+
+    F09("F09", "文书提交滞后超过 48 小时", QcDimensionEnum.REGULARITY, QcSeverityEnum.MINOR,
+            QcScopeEnum.INPATIENT, "文书提交时限", false,
+            "文书完成后应及时提交；长时间挂草稿会绕过上级审核与归档",
+            "《电子病历应用管理规范（试行）》要求电子病历在规定时限内完成并提交，不得长期滞留草稿态"),
+
+    // 病案首页
+
+    F10("F10", "病案首页主诊断未填写", QcDimensionEnum.COMPLETENESS, QcSeverityEnum.FATAL,
+            QcScopeEnum.INPATIENT, "首页主诊断", false,
+            "在病案首页补填主要诊断；主诊断缺失时 DRG/DIP 无法入组，属否决项",
+            "《住院病案首页数据填写质量规范（暂行）》：主要诊断是首页核心必填项，直接决定分组入组"),
+
+    F11("F11", "病案首页主诊断缺 ICD 编码", QcDimensionEnum.COMPLETENESS, QcSeverityEnum.MAJOR,
+            QcScopeEnum.INPATIENT, "首页主诊断编码", false,
+            "为主诊断选择 ICD-10 编码；只有名称的首页不能用于结算清单与分组",
+            "医保结算清单与 DRG/DIP 分组均以 ICD 编码为入组依据"),
+
+    F12("F12", "病案首页入院途径未填写", QcDimensionEnum.COMPLETENESS, QcSeverityEnum.MAJOR,
+            QcScopeEnum.INPATIENT, "入院途径", false,
+            "补填入院途径（急诊/门诊/转院/其他）；入院登记时未选途径的须在首页补齐",
+            "《住院病案首页数据填写质量规范（暂行）》：入院途径为必填项"),
+
+    F13("F13", "已出院但病案首页离院方式未填写", QcDimensionEnum.COMPLETENESS, QcSeverityEnum.MAJOR,
+            QcScopeEnum.INPATIENT, "离院方式", false,
+            "出院时须填写离院方式（医嘱离院/转院/死亡/自动离院等），未填的首页不得归档",
+            "《住院病案首页数据填写质量规范（暂行）》：离院方式为必填项，且与死亡标志存在逻辑关联"),
+
+    F14("F14", "已提交病历未完成电子签名", QcDimensionEnum.REGULARITY, QcSeverityEnum.MAJOR,
+            QcScopeEnum.INPATIENT, "电子签名", false,
+            "由书写医师完成电子签名后再提交；未签名的电子病历不具备法律效力，不得归档",
+            "《电子病历应用管理规范（试行）》：电子病历须经可靠电子签名确认，未签名病历不得作为归档病案"),
+
     // 逻辑性
 
     L01("L01", "性别与诊断矛盾", QcDimensionEnum.LOGIC, QcSeverityEnum.FATAL,

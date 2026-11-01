@@ -162,7 +162,8 @@
                 <template #default="{ row }">
                   <!-- 0 = 无问题，是引擎的取值（不是"没质控"）。用 v-if="row.severityMax" 会因为 0 在 JS 里是 falsy
                        而整格渲染成「—」，满分的病历看起来像数据缺失。 -->
-                  <el-tag v-if="row.severityMax !== null && row.severityMax !== undefined" :type="severityTag(row.severityMax)"
+                  <el-tag v-if="row.severityMax !== null && row.severityMax !== undefined"
+                          :type="severityTag(row.severityMax)"
                           size="small">{{ row.severityMaxText }}
                   </el-tag>
                   <span v-else class="text-xs text-slate-400">—</span>
@@ -179,10 +180,13 @@
                   <div class="text-xs text-slate-400">{{ row.qcTime || '—' }}</div>
                 </template>
               </el-table-column>
-              <el-table-column fixed="right" label="操作" width="80">
+              <el-table-column fixed="right" label="操作" width="130">
                 <template #default="{ row }">
                   <el-button :data-testid="`p5-qc-open-${row.qcNo}`" link size="small" type="primary"
                              @click.stop="openDetail(row)">明细
+                  </el-button>
+                  <el-button v-if="hasPermission('qc:recordQc:edit')" :loading="aiLoading" link size="small"
+                             type="warning" @click.stop="runAiQc(row)">AI复核
                   </el-button>
                 </template>
               </el-table-column>
@@ -300,7 +304,8 @@
             <el-checkbox v-model="candQuery.onlyUnQced" data-testid="p5-qc-cand-onlyunqced"
                          @change="() => { candQuery.pageNum = 1; loadCandidates() }">只看未质控
             </el-checkbox>
-            <el-input v-model="candQuery.keyword" clearable data-testid="p5-qc-cand-keyword" placeholder="病历号 / 患者姓名"
+            <el-input v-model="candQuery.keyword" clearable data-testid="p5-qc-cand-keyword"
+                      placeholder="病历号 / 患者姓名"
                       style="width: 200px" @keyup.enter="() => { candQuery.pageNum = 1; loadCandidates() }">
               <template #prefix>
                 <el-icon>
@@ -363,7 +368,8 @@
               </el-table-column>
               <el-table-column fixed="right" label="操作" width="100">
                 <template #default="{ row }">
-                  <el-button v-perm="'qc:recordQc:add'" :data-testid="`p5-qc-run-${row.recordNo}`" :loading="qcRunning" link
+                  <el-button v-perm="'qc:recordQc:add'" :data-testid="`p5-qc-run-${row.recordNo}`" :loading="qcRunning"
+                             link
                              size="small" type="primary"
                              @click.stop="runQc(row)">执行质控
                   </el-button>
@@ -461,7 +467,8 @@
 
       <!-- ---------------- 规则清单 ---------------- -->
       <el-tab-pane label="规则清单" name="rules">
-        <div v-if="emptyRules.length" class="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-800"
+        <div v-if="emptyRules.length"
+             class="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-800"
              data-testid="p5-qc-empty-alert">
           <div class="flex items-start gap-2">
             <el-icon class="mt-0.5">
@@ -537,10 +544,60 @@
           </div>
         </div>
       </el-tab-pane>
+
+      <!-- ---------------- 指标看板（P3-6） ---------------- -->
+      <el-tab-pane label="指标" lazy name="indicator">
+        <QcIndicatorView/>
+      </el-tab-pane>
+
+      <!-- ---------------- 数据质量（原 605 全院数据质量监测，P2 并入院历质控） ---------------- -->
+      <el-tab-pane v-if="hasPermission('qc:dataQuality:list')" label="数据质量" lazy name="dataQuality">
+        <DataQualityView/>
+      </el-tab-pane>
     </el-tabs>
 
     <!-- 质控单明细抽屉 -->
-    <MedicalRecordQcDetail v-model="drawerVisible" :id="qcDetailId" @saved="onQcHandled"/>
+    <MedicalRecordQcDetail :id="qcDetailId" v-model="drawerVisible" @saved="onQcHandled"/>
+
+    <!-- ============== AI 内涵质控结果（P3-5） ============== -->
+    <el-dialog v-model="aiDialog" title="AI 内涵质控结果" width="820px">
+      <div v-if="aiResult">
+        <p v-if="aiResult.degraded"
+           class="mb-3 rounded border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+          本次未经过大模型（{{ aiResult.degradeReason || '模型不可用' }}），以下只是必填项规则结论，不代表已完成内涵审查。
+        </p>
+        <div class="mb-3 text-sm">
+          <span class="font-medium">{{ aiResult.summary }}</span>
+          <span class="ml-2 text-xs text-slate-400">
+            问题 {{ aiResult.issueCount }} 项 · 最高严重度 {{ aiResult.maxSeverity }} · 耗时 {{ aiResult.latencyMs }}ms
+          </span>
+        </div>
+        <el-table :data="aiResult.issues || []" max-height="420" size="small">
+          <el-table-column label="严重度" width="80">
+            <template #default="{ row }">
+              <el-tag :type="severityTag(row.severity)" size="small">
+                {{ row.severity === 3 ? '否决' : row.severity === 2 ? '重要' : '提示' }}
+              </el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column label="来源" width="80">
+            <template #default="{ row }">{{ row.source === 'LLM' ? '模型' : '规则' }}</template>
+          </el-table-column>
+          <el-table-column label="字段" prop="fieldName" width="120"/>
+          <el-table-column label="问题" min-width="240" prop="errorDetail" show-overflow-tooltip/>
+          <el-table-column label="整改建议" min-width="240" prop="suggestion" show-overflow-tooltip/>
+          <template #empty>
+            <div class="py-4 text-sm text-slate-400">AI 未给出问题</div>
+          </template>
+        </el-table>
+        <p v-if="aiResult.qcNo" class="mt-2 text-xs text-slate-500">
+          结果已写入质控单 {{ aiResult.qcNo }}，可在「质控单」页签按类型「AI内涵质控」查看。
+        </p>
+      </div>
+      <template #footer>
+        <el-button @click="aiDialog = false">关闭</el-button>
+      </template>
+    </el-dialog>
 
     <!-- ============== 发起三级质控流转弹窗 ============== -->
     <el-dialog v-model="startDialog" data-testid="g18-start-dialog" title="发起三级质控流转" width="780px">
@@ -574,7 +631,7 @@
     </el-dialog>
 
     <!-- ============== 三级质控流转详情抽屉（时间线 + 分级操作） ============== -->
-    <MedicalRecordQcFlowDetail v-model="flowDrawer" :id="flowRowId" @saved="reloadFlow"/>
+    <MedicalRecordQcFlowDetail :id="flowRowId" v-model="flowDrawer" @saved="reloadFlow"/>
   </div>
 </template>
 
@@ -585,6 +642,10 @@ import {ElMessage} from 'element-plus';
 import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination';
 import MedicalRecordQcDetail from './MedicalRecordQcDetail.vue';
 import MedicalRecordQcFlowDetail from './MedicalRecordQcFlowDetail.vue';
+import DataQualityView from './DataQualityView.vue';
+import QcIndicatorView from './QcIndicatorView.vue';
+import {hasPermission} from '@/lib/permission';
+import {executeEmrQc} from '@/api/ai';
 import {dimColor, num, scoreText, severityTag} from '@/lib/quality';
 import {
   executeQualityControl,
@@ -665,8 +726,8 @@ const loadOverview = async () => {
   try {
     const res = await getQualityControlOverview();
     overview.value = res.data;
-  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
-    
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */ {
+
   } finally {
     overviewLoading.value = false;
   }
@@ -690,8 +751,8 @@ const loadQcList = async () => {
     const res = await getQualityControlList(params);
     qcList.value = res.data?.records || [];
     qcTotal.value = Number(res.data?.total ?? 0);
-  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
-    
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */ {
+
   } finally {
     qcLoading.value = false;
   }
@@ -715,8 +776,8 @@ const loadCandidates = async () => {
     const res = await listQcCandidatePage(params);
     candList.value = res.data?.records || [];
     candTotal.value = Number(res.data?.total ?? 0);
-  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
-    
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */ {
+
   } finally {
     candLoading.value = false;
   }
@@ -726,8 +787,8 @@ const loadRules = async () => {
   try {
     const res = await listQcRuleMetric();
     ruleList.value = res.data || [];
-  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
-    
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */ {
+
   } finally {
     ruleLoading.value = false;
   }
@@ -736,8 +797,8 @@ const loadDicts = async () => {
   try {
     const res = await getQcTypeDict();
     qcTypeOptions.value = res.data || [];
-  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
-    
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */ {
+
   }
 };
 const refreshAll = async () => {
@@ -752,6 +813,29 @@ const openDetail = (row) => {
 const onQcHandled = async () => {
   await Promise.all([loadQcList(), loadOverview()]);
 };
+// ---------------- AI 内涵质控（P3-5） ----------------
+const aiDialog = ref(false);
+const aiLoading = ref(false);
+const aiResult = ref(null);
+
+// AI 只吃病历主键，由服务端回读原文；落库后列表按 qcType=4 另起一张质控单，不覆盖规则质控结果
+async function runAiQc(row) {
+  if (!row?.recordId) {
+    ElMessage.warning('该质控单没有关联病历ID，无法执行 AI 复核');
+    return;
+  }
+  aiLoading.value = true;
+  aiResult.value = null;
+  try {
+    const res = await executeEmrQc({recordId: row.recordId, saveResult: true});
+    aiResult.value = res.data || null;
+    aiDialog.value = true;
+    await Promise.all([loadQcList(), loadOverview()]);
+  } finally {
+    aiLoading.value = false;
+  }
+}
+
 // ---------------- 执行质控 ----------------
 const runQc = async (row) => {
   qcRunning.value = true;
@@ -764,8 +848,8 @@ const runQc = async (row) => {
     lastResult.value = res.data;
     ElMessage.success(`${row.recordNo}：${res.data?.score ?? '—'} 分 / ${res.data?.gradeText ?? '—'}级 / ${res.data?.qcResultText ?? ''}`);
     await Promise.all([loadQcList(), loadCandidates(), loadOverview(), loadRules()]);
-  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
-    
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */ {
+
   } finally {
     qcRunning.value = false;
   }
@@ -789,8 +873,8 @@ const runBatch = async () => {
     ElMessage.success(`已质控 ${results.length} 份，其中 ${failed} 份不通过`);
     candTableRef.value?.clearSelection?.();
     await Promise.all([loadQcList(), loadCandidates(), loadOverview(), loadRules()]);
-  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
-    
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */ {
+
   } finally {
     qcRunning.value = false;
   }
@@ -838,8 +922,8 @@ const loadFlowList = async () => {
     const res = await getQcFlowListPage(params);
     flowList.value = res.data?.records || [];
     flowTotal.value = Number(res.data?.total ?? 0);
-  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
-    
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */ {
+
   } finally {
     flowLoading.value = false;
   }
@@ -864,8 +948,8 @@ const loadStartCandidates = async () => {
     const res = await listQcCandidatePage(params);
     startList.value = res.data?.records || [];
     startTotal.value = Number(res.data?.total ?? 0);
-  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
-    
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */ {
+
   } finally {
     startLoading.value = false;
   }
@@ -885,8 +969,8 @@ const submitStart = async () => {
     ElMessage.success('已发起，进入科级待审');
     startDialog.value = false;
     await loadFlowList();
-  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
-    
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */ {
+
   }
 };
 // 详情抽屉（含时间线 + 分级操作，见 MedicalRecordQcFlowDetail.vue）

@@ -8,7 +8,8 @@ import org.apache.commons.lang3.StringUtils;
 public enum CertIssuedModeEnum {
 
     MANUAL(1, "人工签发"),
-    AUTO(2, "系统自动签发");
+    AUTO(2, "系统自动签发"),
+    ONLINE(3, "CA在线签发");
 
     private final int code;
     private final String label;
@@ -16,14 +17,6 @@ public enum CertIssuedModeEnum {
     CertIssuedModeEnum(int code, String label) {
         this.code = code;
         this.label = label;
-    }
-
-    public int getCode() {
-        return code;
-    }
-
-    public String getLabel() {
-        return label;
     }
 
     public static CertIssuedModeEnum fromCode(Integer code) {
@@ -49,5 +42,13 @@ public enum CertIssuedModeEnum {
     public static String getLabel(Integer code, String defaultValue) {
         CertIssuedModeEnum item = fromCode(code);
         return item == null ? defaultValue : item.label;
+    }
+
+    public int getCode() {
+        return code;
+    }
+
+    public String getLabel() {
+        return label;
     }
 }

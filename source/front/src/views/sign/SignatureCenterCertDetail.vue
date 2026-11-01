@@ -5,13 +5,21 @@
       <div class="text-sm">
         <p>证书编号：<b>{{ certDetail.certNo }}</b></p>
         <p class="mt-1">持有人：<b>{{ certDetail.empName }}</b>（{{ text(certDetail.deptName) }}）</p>
-        <p>员工编号：<span class="font-mono" data-testid="p5-sign-cert-detail-empcode">{{ text(certDetail.empCode) }}</span></p>
+        <p>员工编号：<span class="font-mono" data-testid="p5-sign-cert-detail-empcode">{{
+            text(certDetail.empCode)
+          }}</span></p>
       </div>
       <div class="mt-3 rounded-lg border border-slate-200 bg-white p-3 text-xs leading-6">
         <p>算法组合：{{ certDetail.keyAlgo }} / {{ certDetail.digestAlgo }} / {{ certDetail.signAlgo }}</p>
         <p>申请主体 DN：<span class="font-mono">{{ text(certDetail.caSubjectDn) }}</span></p>
-        <p>CA 签发：{{ text(certDetail.caIssuer) || '未回填（待线下送 CA 签发）' }}<span
+        <p>CA 签发：{{ text(certDetail.caIssuer) || (certDetail.caApplyNo ? '待 CA 签发' : '未回填（待线下送 CA 签发）') }}<span
             v-if="certDetail.caSerial" class="text-slate-500"> · 序列号 {{ certDetail.caSerial }}</span></p>
+        <p v-if="certDetail.caApplyNo">CA 申请单：<span class="font-mono">{{ certDetail.caApplyNo }}</span> ·
+          {{ text(certDetail.caApplyStatusText) }}<span v-if="certDetail.caAppliedAt"
+                                                        class="text-slate-500"> · 提交于 {{
+              certDetail.caAppliedAt
+            }}</span></p>
+        <p v-if="certDetail.caLastMessage" class="text-slate-600">CA 说明：{{ certDetail.caLastMessage }}</p>
         <p>状态：{{ certDetail.certStatusText }}<span v-if="certDetail.expired"
                                                      class="text-red-600"> · 已过有效期</span></p>
         <p>有效期：{{ text(certDetail.validFrom) }} ~ {{ text(certDetail.validTo) }}</p>
@@ -27,15 +35,17 @@
       <div class="mt-3 rounded-lg border border-slate-200 bg-white p-3">
         <div class="flex items-center justify-between">
           <p class="text-xs font-medium text-slate-900">公钥（PEM）</p>
-          <el-button v-if="certDetail.publicKey" size="small" type="primary" link
-                     data-testid="p5-sign-cert-copy-apply" @click="copyApplyMaterial">复制 CA 申请材料（DN + 公钥）</el-button>
+          <el-button v-if="certDetail.publicKey" data-testid="p5-sign-cert-copy-apply" link size="small"
+                     type="primary" @click="copyApplyMaterial">复制 CA 申请材料（DN + 公钥）
+          </el-button>
         </div>
         <pre
             class="mt-2 max-h-64 overflow-auto whitespace-pre-wrap rounded bg-slate-50 p-3 font-mono text-xs leading-5 text-slate-700"
             data-testid="p5-sign-cert-publickey">{{
             text(certDetail.publicKey)
           }}</pre>
-        <p class="mt-2 text-xs text-slate-500">私钥以主口令加密后托管，任何接口都不会回显私钥。复制的内容可直接在 CA 平台「证书申请」里提交。</p>
+        <p class="mt-2 text-xs text-slate-500">私钥以主口令加密后托管，任何接口都不会回显私钥。复制的内容可直接在 CA
+          平台「证书申请」里提交。</p>
       </div>
     </template>
   </el-drawer>
@@ -67,7 +77,7 @@ watch(visible, async (open) => {
   try {
     const res = await getSignCertDetail(props.id);
     certDetail.value = res.data;
-  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */ {
 
   }
 });

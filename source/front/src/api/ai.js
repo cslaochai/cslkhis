@@ -25,6 +25,14 @@ export function predictIcd10(params) {
 
 // ========== 病历内涵质控 ==========
 
+// 单份病历内涵质控（必填项规则 + 大模型内涵审查，可写入 biz_quality_control）
+// params: { recordId, saveResult? }  recordId 为住院文书ID或门诊病历ID，只传主键由服务端回读原文
+// 铁律：data.degraded=true 表示模型未参与（仅规则结论），界面必须显示 degradeReason，
+// 不能把「模型没参与」渲染成「这份病历没问题」；data.qcId / qcNo 为落库后的质控单标识。
+export function executeEmrQc(params) {
+    return request.post('/ai/emrQc/execute', params)
+}
+
 // ========== 调用审计 ==========
 
 // 分页查询 AI 调用审计

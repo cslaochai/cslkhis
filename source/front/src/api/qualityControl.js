@@ -22,49 +22,56 @@ import request from './request'
 
 // 质控单分页（recordSource / qcType / qcStatus / qcResult / keyword 可空）
 export function getQualityControlList(params) {
-  return request.post('/emr/qualityControl/listPage', params)
+    return request.post('/emr/qualityControl/listPage', params)
 }
 
 // 质控单详情（含问题明细）
 export function getQualityControlDetail(id) {
-  return request.get('/emr/qualityControl/getById', { params: { id } })
+    return request.get('/emr/qualityControl/getById', {params: {id}})
 }
 
 // 质控概览（总数 / 通过数 / 平均分 / 甲级率 / 维度分布）
 export function getQualityControlOverview() {
-  return request.get('/emr/qualityControl/getOverview')
+    return request.get('/emr/qualityControl/getOverview')
+}
+
+// 病案质量指标看板（days 为统计窗口天数，默认 30）
+// 口径由后端算出并随接口说明：通过率 / 甲级率 / 时限达标率 / 首页完整率 / 科室排名。
+// 比率字段为 null 表示分母为 0（没有数据），不是 0 分。
+export function getQcIndicators(days) {
+    return request.get('/emr/qualityControl/indicators', {params: days ? {days} : {}})
 }
 
 // 规则清单与命中统计（含从未命中的规则）
 export function listQcRuleMetric(dimension) {
-  return request.get('/emr/qualityControl/listRuleMetric', {
-    params: dimension ? { dimension } : {},
-  })
+    return request.get('/emr/qualityControl/listRuleMetric', {
+        params: dimension ? {dimension} : {},
+    })
 }
 
 // 待质控病历候选分页（必须先选 recordSource）
 export function listQcCandidatePage(params) {
-  return request.get('/emr/qualityControl/listCandidatePage', { params })
+    return request.get('/emr/qualityControl/listCandidatePage', {params})
 }
 
 // 质控类型字典（0-综合 1~3-三维度 4-AI内涵质控）
 export function getQcTypeDict() {
-  return request.get('/emr/qualityControl/qcTypeDict')
+    return request.get('/emr/qualityControl/qcTypeDict')
 }
 
 // 执行质控（单份病历）
 export function executeQualityControl(params) {
-  return request.post('/emr/qualityControl/executeQc', params)
+    return request.post('/emr/qualityControl/executeQc', params)
 }
 
 // 执行质控（批量）
 export function executeQualityControlBatch(params) {
-  return request.post('/emr/qualityControl/executeQcBatch', params)
+    return request.post('/emr/qualityControl/executeQcBatch', params)
 }
 
 // 处理质控问题（整改完成 / 忽略）
 export function handleQualityControl(id, params) {
-  return request.post('/emr/qualityControl/handleQc', { id, ...params })
+    return request.post('/emr/qualityControl/handleQc', {id, ...params})
 }
 
 // ---------- 病历三级质控流转（G18） ----------
@@ -73,40 +80,40 @@ export function handleQualityControl(id, params) {
 
 // 发起流转（进入科级待审）
 export function startQcFlow(data) {
-  return request.post('/recordQcFlow/start', data)
+    return request.post('/recordQcFlow/start', data)
 }
 
 // 当前级审核通过（科级/病案室；医务处须走 finalQcFlow）
 export function approveQcFlow(data) {
-  return request.post('/recordQcFlow/approve', data)
+    return request.post('/recordQcFlow/approve', data)
 }
 
 // 当前级退回整改（defectDetail / requirement 必填）
 export function returnQcFlow(data) {
-  return request.post('/recordQcFlow/return', data)
+    return request.post('/recordQcFlow/return', data)
 }
 
 // 科室整改提交（回到退回发生级待审）
 export function resubmitQcFlow(data) {
-  return request.post('/recordQcFlow/resubmit', data)
+    return request.post('/recordQcFlow/resubmit', data)
 }
 
 // 医务处终审（grade 必填：1甲/2乙/3丙，终态）
 export function finalQcFlow(data) {
-  return request.post('/recordQcFlow/finalApprove', data)
+    return request.post('/recordQcFlow/finalApprove', data)
 }
 
 // 流转单分页
 export function getQcFlowListPage(params) {
-  return request.post('/recordQcFlow/listPage', params)
+    return request.post('/recordQcFlow/listPage', params)
 }
 
 // 流转单详情
 export function getQcFlowDetail(id) {
-  return request.get('/recordQcFlow/getDetailById', { params: { id } })
+    return request.get('/recordQcFlow/getDetailById', {params: {id}})
 }
 
 // 流转时间线（动作升序）
 export function getQcFlowActions(flowId) {
-  return request.get('/recordQcFlow/listActions', { params: { flowId } })
+    return request.get('/recordQcFlow/listActions', {params: {flowId}})
 }

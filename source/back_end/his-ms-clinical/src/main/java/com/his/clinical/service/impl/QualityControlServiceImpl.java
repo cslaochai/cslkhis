@@ -2,10 +2,6 @@ package com.his.clinical.service.impl;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.his.common.base.PageResult;
-import com.his.common.constant.DictTypeConst;
-import com.his.common.enums.*;
-import com.his.common.exception.BusinessException;
 import com.his.clinical.dto.QcCandidatePageQueryDTO;
 import com.his.clinical.dto.QcExecuteDTO;
 import com.his.clinical.dto.QcPageQueryDTO;
@@ -16,29 +12,31 @@ import com.his.clinical.mapper.BizMedicalRecordMapper;
 import com.his.clinical.mapper.BizQualityControlMapper;
 import com.his.clinical.service.QcStoreService;
 import com.his.clinical.service.QualityControlService;
-import com.his.clinical.vo.QcIssueVO;
-import com.his.clinical.vo.QcResultVO;
+import com.his.clinical.support.QcOperator;
 import com.his.clinical.support.QcRuleEngine;
 import com.his.clinical.support.QcSnapshot;
-import com.his.clinical.support.QcOperator;
 import com.his.clinical.vo.*;
-import com.his.spi.service.InpatientFacadeService;
-import com.his.spi.vo.InpatientRecordBriefVO;
+import com.his.common.base.PageResult;
+import com.his.common.constant.DictTypeConst;
 import com.his.common.entity.CurrentUser;
-import com.his.common.enums.BizTypeEnum;
+import com.his.common.enums.*;
+import com.his.common.exception.BusinessException;
+import com.his.common.utils.UserUtils;
 import com.his.spi.service.DeptScopeService;
 import com.his.spi.service.DictCacheService;
+import com.his.spi.service.InpatientFacadeService;
 import com.his.spi.service.SysMessageService;
-import com.his.common.utils.UserUtils;
+import com.his.spi.vo.InpatientRecordBriefVO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.*;
-import com.his.common.enums.QcRuleEnum;
 
 /**
  * 病案质控服务实现
@@ -115,7 +113,24 @@ public class QualityControlServiceImpl extends ServiceImpl<BizQualityControlMapp
         return score >= 75 ? "乙" : "丙";
     }
 
-    /** 质控单/问题明细本身无科室列：按 record_source + record_id 反查病历归属科室后校验 */
+    private static long nvl(Long value) {
+        return value == null ? 0L : value;
+    }
+
+    /**
+     * 比率：分母为 0 时返回 null —— 没有数据不等于 0 分，页面必须区分「无数据」与「全不合格」。
+     */
+    private static BigDecimal rate(long numerator, long denominator) {
+        if (denominator <= 0) {
+            return null;
+        }
+        return BigDecimal.valueOf(numerator).multiply(BigDecimal.valueOf(100))
+                .divide(BigDecimal.valueOf(denominator), 1, RoundingMode.HALF_UP);
+    }
+
+    /**
+     * 质控单/问题明细本身无科室列：按 record_source + record_id 反查病历归属科室后校验
+     */
     private void assertRecordDeptAccessible(String recordSource, Long recordId) {
         if (QcRecordSourceEnum.fromCode(recordSource) == QcRecordSourceEnum.OUTPATIENT) {
             BizMedicalRecord record = bizMedicalRecordMapper.selectById(recordId);
@@ -331,6 +346,95 @@ public class QualityControlServiceImpl extends ServiceImpl<BizQualityControlMapp
         }
         log.info("[质控补扫] 近 {} 天漏单 {} 份，补跑成功 {} 份", RESCAN_WINDOW_DAYS, recordIds.size(), done);
         return done;
+    }
+
+    @Override
+    public int autoRescanInpatientQc(int limit) {
+        List<Long> recordIds = baseMapper.selectInpatientRecordsWithoutAutoQc(
+                List.of(QcTriggerSourceEnum.AUTO_RESCAN.getCode()),
+                List.of(RecordStatusEnum.SUBMITTED.getCode(), RecordStatusEnum.ARCHIVED.getCode()),
+                LocalDateTime.now().minusDays(RESCAN_WINDOW_DAYS), limit);
+        if (recordIds.isEmpty()) {
+            return 0;
+        }
+        QcOperator rescanOperator = new QcOperator(SYSTEM_RESCAN_EMPLOYEE_ID, SYSTEM_RESCAN_OPERATOR);
+        int done = 0;
+        for (Long recordId : recordIds) {
+            try {
+                QcSystemExecuteDTO dto = new QcSystemExecuteDTO();
+                dto.setRecordSource(QcRecordSourceEnum.INPATIENT.getCode());
+                dto.setRecordId(recordId);
+                dto.setTriggerSource(QcTriggerSourceEnum.AUTO_RESCAN);
+                dto.setOperator(rescanOperator);
+                executeQcBySystem(dto);
+                done++;
+            } catch (Exception ex) {
+                // 单份失败不拖垮整批：下一轮判据仍是「没有自动质控单」，会被重新捞回来
+                log.error("[质控补扫] 住院文书补跑质控失败 recordId={}", recordId, ex);
+            }
+        }
+        log.info("[质控补扫] 住院侧近 {} 天漏单 {} 份，补跑成功 {} 份", RESCAN_WINDOW_DAYS, recordIds.size(), done);
+        return done;
+    }
+
+    @Override
+    public QcIndicatorVO getIndicators(Integer days) {
+        int window = days == null || days <= 0 ? 30 : Math.min(days, 365);
+        LocalDateTime since = LocalDateTime.now().minusDays(window).toLocalDate().atStartOfDay();
+
+        QcIndicatorVO vo = baseMapper.selectQcIndicator(since);
+        if (vo == null) {
+            vo = new QcIndicatorVO();
+        }
+        long total = nvl(vo.getTotalQc());
+        long pass = nvl(vo.getPassQc());
+        vo.setDays(window);
+        vo.setTotalQc(total);
+        vo.setPassQc(pass);
+        vo.setVetoQc(nvl(vo.getVetoQc()));
+        vo.setPassRate(rate(pass, total));
+        vo.setGradeARate(rate(nvl(vo.getGradeAQc()), total));
+
+        QcIndicatorVO inpatient = baseMapper.countInpatientQc(since);
+        long inpatientQc = inpatient == null ? 0L : nvl(inpatient.getInpatientQc());
+        QcIndicatorVO deadline = baseMapper.countDeadlineViolation(since);
+        long violation = deadline == null ? 0L : nvl(deadline.getDeadlineViolation());
+        vo.setInpatientQc(inpatientQc);
+        vo.setDeadlineViolation(violation);
+        vo.setDeadlineRate(rate(inpatientQc - violation, inpatientQc));
+
+        QcIndicatorVO summary = baseMapper.selectSummaryIndicator();
+        long summaryTotal = summary == null ? 0L : nvl(summary.getSummaryTotal());
+        long summaryComplete = summary == null ? 0L : nvl(summary.getSummaryComplete());
+        vo.setSummaryTotal(summaryTotal);
+        vo.setSummaryComplete(summaryComplete);
+        vo.setSummaryCompleteRate(rate(summaryComplete, summaryTotal));
+
+        QcIndicatorVO archive = baseMapper.selectArchiveIndicator();
+        long archiveTotal = archive == null ? 0L : nvl(archive.getArchiveTotal());
+        long archiveOnTime = archive == null ? 0L : nvl(archive.getArchiveOnTime());
+        vo.setArchiveTotal(archiveTotal);
+        vo.setArchiveOnTime(archiveOnTime);
+        vo.setArchiveRate(rate(archiveOnTime, archiveTotal));
+
+        QcIndicatorVO sign = baseMapper.selectSignIndicator();
+        long signTotal = sign == null ? 0L : nvl(sign.getSignTotal());
+        long signDone = sign == null ? 0L : nvl(sign.getSignDone());
+        vo.setSignTotal(signTotal);
+        vo.setSignDone(signDone);
+        vo.setSignRate(rate(signDone, signTotal));
+
+        List<QcDeptIndicatorVO> depts = baseMapper.selectDeptIndicator(since);
+        if (depts == null) {
+            depts = new ArrayList<>();
+        }
+        for (QcDeptIndicatorVO d : depts) {
+            d.setTotalQc(nvl(d.getTotalQc()));
+            d.setPassQc(nvl(d.getPassQc()));
+            d.setPassRate(rate(d.getPassQc(), d.getTotalQc()));
+        }
+        vo.setDeptRanks(depts);
+        return vo;
     }
 
     private BizQualityControlVO doExecuteQc(String recordSource, Long recordId, Integer qcType,

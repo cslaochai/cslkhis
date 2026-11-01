@@ -13,11 +13,7 @@ import com.his.spi.dto.SignCertKeygenDTO;
 import com.his.spi.dto.SignCertPageQueryDTO;
 import com.his.spi.dto.SignCertRevokeDTO;
 import com.his.spi.service.SignCertFacadeService;
-import com.his.spi.vo.SignCaApplyVO;
-import com.his.spi.vo.SignCaStatusVO;
-import com.his.spi.vo.SignCertBriefVO;
-import com.his.spi.vo.SignCertSelectListVO;
-import com.his.spi.vo.SignCertVO;
+import com.his.spi.vo.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
@@ -169,6 +165,16 @@ public class SignCertFacadeServiceImpl implements SignCertFacadeService {
     }
 
     @Override
+    public SignCaApplyVO submitCaApply(Long certId) {
+        return signCertService.applyToCa(certId, null, null);
+    }
+
+    @Override
+    public SignCaApplyVO refreshCaApply(Long certId) {
+        return signCertService.refreshCa(certId, null, null);
+    }
+
+    @Override
     public SignCertVO bindCert(SignCertBindDTO dto) {
         com.his.platform.vo.SignCertVO inner = signCertService.bind(dto, null, null);
         SignCertVO vo = new SignCertVO();
@@ -202,12 +208,6 @@ public class SignCertFacadeServiceImpl implements SignCertFacadeService {
 
     @Override
     public SignCaStatusVO caStatus() {
-        SignCaStatusVO vo = new SignCaStatusVO();
-        vo.setCaMode("offline");
-        vo.setAvailable(true);
-        vo.setHint("CA 交互为线下人工：HIS 本地生成密钥对（私钥加密托管、不出 HIS），"
-                + "管理员把「CA 签发申请单」线下送 CA 认证中心人工签发，再回填证书；"
-                + "全程不调用任何 CA 接口");
-        return vo;
+        return signCertService.caStatus();
     }
 }

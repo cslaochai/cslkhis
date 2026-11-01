@@ -147,6 +147,31 @@ public class SysSignCert extends BaseEntity {
     private String caSubjectDn;
 
     /**
+     * CA 在线申请单号（csssl applyNo；线下人工流程为空）
+     */
+    private String caApplyNo;
+
+    /**
+     * CA 申请单状态（PENDING/APPROVED/ISSUED/REJECTED/CANCELLED；FAILED 为 HIS 本地提交失败）
+     */
+    private String caApplyStatus;
+
+    /**
+     * 已提交次数：externalRequestId = certNo（首次）/ certNo-2、certNo-3…（驳回或提交失败后重提）
+     */
+    private Integer caApplyAttempt;
+
+    /**
+     * 最近一次提交 CA 的时间
+     */
+    private LocalDateTime caAppliedAt;
+
+    /**
+     * CA 最近一次状态说明 / 提交失败原因（页面直接展示，截断到列宽）
+     */
+    private String caLastMessage;
+
+    /**
      * 逻辑删除标志（0 未删除 1 已删除）
      */
     @TableLogic

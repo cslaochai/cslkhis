@@ -5,11 +5,7 @@ import com.his.spi.dto.SignCertBindDTO;
 import com.his.spi.dto.SignCertKeygenDTO;
 import com.his.spi.dto.SignCertPageQueryDTO;
 import com.his.spi.dto.SignCertRevokeDTO;
-import com.his.spi.vo.SignCaApplyVO;
-import com.his.spi.vo.SignCaStatusVO;
-import com.his.spi.vo.SignCertBriefVO;
-import com.his.spi.vo.SignCertSelectListVO;
-import com.his.spi.vo.SignCertVO;
+import com.his.spi.vo.*;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -123,12 +119,23 @@ public interface SignCertFacadeService {
     SignCertVO getCertDetail(Long certId);
 
     /**
-     * 生成签名密钥对并返回「CA 签发申请单」（CA 线下签发流程第一步）。
+     * 生成签名密钥对并返回「CA 签发申请单」（在线申请自动提交；未接入时走线下流程）。
      *
-     * <p>私钥在 HIS 本地生成并加密托管，全程不出 HIS；管理员把申请单上的 Subject DN 与公钥 PEM
-     * 线下送 CA 认证中心人工签发，CA 返回证书 PEM 后用 {@link #bindCert(SignCertBindDTO)} 回填。
+     * <p>私钥在 HIS 本地生成并加密托管，全程不出 HIS；在线模式直接向 CA 提交申请，
+     * 线下模式由管理员把 Subject DN 与公钥 PEM 送 CA 人工签发，再用
+     * {@link #bindCert(SignCertBindDTO)} 回填。
      */
     SignCaApplyVO keygenCert(SignCertKeygenDTO dto);
+
+    /**
+     * 提交/重试 CA 在线申请（幂等键为 certNo）。
+     */
+    SignCaApplyVO submitCaApply(Long certId);
+
+    /**
+     * 刷新 CA 申请状态：CA 已签发则自动下载证书链并回填生效。
+     */
+    SignCaApplyVO refreshCaApply(Long certId);
 
     /**
      * 回填 CA 线下签发的证书（CA 线下签发流程第二步）：校验证书公钥与本地密钥对一致后转为有效。

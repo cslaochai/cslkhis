@@ -1,0 +1,382 @@
+package com.his.platform.support;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.his.common.exception.BusinessException;
+import com.his.common.util.TextUtil;
+import com.his.platform.config.SignProperties;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Component;
+
+import javax.crypto.Cipher;
+import javax.crypto.Mac;
+import javax.crypto.spec.GCMParameterSpec;
+import javax.crypto.spec.SecretKeySpec;
+import java.net.URI;
+import java.net.URLEncoder;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.SecureRandom;
+import java.time.Duration;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.Base64;
+import java.util.List;
+import java.util.UUID;
+
+/**
+ * csssl 认证中心对外 API 客户端（在线证书申请 RA）。
+ *
+ * <p>鉴权：HMAC-SHA256 覆盖 appId、时间戳、随机数、方法、路径（含查询串）与请求体哈希；
+ * 写请求体再套一层 AES-256-GCM 整包加密（密钥由接入密钥派生），先加密后签名。
+ * CA 按 App ID 反查租户，URL 与报文都不携带 tenantKey。</p>
+ *
+ * <p>本类是 HIS 侧唯一知道 CA 报文形状的地方：业务层只拿到 {@link CaApplication} 等记录对象。</p>
+ */
+@Slf4j
+@Component
+public class SignCaApiClient {
+
+    private static final String HEADER_APP_ID = "X-App-Id";
+    private static final String HEADER_TIMESTAMP = "X-Timestamp";
+    private static final String HEADER_NONCE = "X-Nonce";
+    private static final String HEADER_SIGNATURE = "X-Signature";
+    private static final String BODY_KDF_LABEL = "|csssl-api-body-enc-v1";
+    private static final int IV_LEN = 12;
+    private static final int TAG_BITS = 128;
+    private static final DateTimeFormatter TS = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+
+    private final SignProperties signProperties;
+    private final ObjectMapper objectMapper;
+    private final HttpClient httpClient;
+    private final SecureRandom random = new SecureRandom();
+
+    public SignCaApiClient(SignProperties signProperties, ObjectMapper objectMapper) {
+        this.signProperties = signProperties;
+        this.objectMapper = objectMapper;
+        SignProperties.Ca ca = signProperties.getCa();
+        this.httpClient = HttpClient.newBuilder()
+                .connectTimeout(Duration.ofMillis(ca.getConnectTimeoutMs()))
+                .build();
+    }
+
+    private static String hmacHex(String secret, String canonical) throws Exception {
+        Mac mac = Mac.getInstance("HmacSHA256");
+        mac.init(new SecretKeySpec(secret.getBytes(StandardCharsets.UTF_8), "HmacSHA256"));
+        return hex(mac.doFinal(canonical.getBytes(StandardCharsets.UTF_8)));
+    }
+
+    private static String sha256Hex(byte[] data) throws Exception {
+        return hex(MessageDigest.getInstance("SHA-256").digest(data));
+    }
+
+    // ---------------- 业务接口 ----------------
+
+    private static String hex(byte[] bytes) {
+        StringBuilder sb = new StringBuilder(bytes.length * 2);
+        for (byte b : bytes) {
+            sb.append(Character.forDigit((b >> 4) & 0xF, 16)).append(Character.forDigit(b & 0xF, 16));
+        }
+        return sb.toString();
+    }
+
+    private static String encodePath(String value) {
+        return URLEncoder.encode(value, StandardCharsets.UTF_8).replace("+", "%20");
+    }
+
+    private static String abbreviate(String text) {
+        if (text == null) {
+            return "";
+        }
+        return text.length() <= 120 ? text : text.substring(0, 120) + "...";
+    }
+
+    private static String text(JsonNode node, String field) {
+        JsonNode value = node.path(field);
+        return value.isMissingNode() || value.isNull() ? null : value.asText();
+    }
+
+    private static LocalDateTime time(JsonNode node, String field) {
+        String value = text(node, field);
+        if (!TextUtil.hasText(value)) {
+            return null;
+        }
+        try {
+            return LocalDateTime.parse(value.trim().replace('T', ' '), TS);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    public boolean enabled() {
+        return signProperties.getCa().configured();
+    }
+
+    // ---------------- 报文收发 ----------------
+
+    /**
+     * 当前是否已接入：未配置时给出「缺哪几项」的明确提示，不让调用方自己猜
+     */
+    public void requireEnabled() {
+        SignProperties.Ca ca = signProperties.getCa();
+        if (!ca.isEnabled()) {
+            throw new BusinessException("HIS 未启用 CA 在线申请（his.sign.ca.enabled=false），"
+                    + "请改用「生成密钥对 → 线下送 CA 签发 → 回填证书」人工流程");
+        }
+        if (!TextUtil.hasText(ca.getBaseUrl()) || !TextUtil.hasText(ca.getAppId())
+                || !TextUtil.hasText(ca.getAppSecret())) {
+            throw new BusinessException("CA 接入凭证未配置完整：请在 HIS 配置中填写 "
+                    + "his.sign.ca.base-url / app-id / app-secret（由 CA 侧建租户时颁发）");
+        }
+    }
+
+    public List<CaTemplate> listTemplates() {
+        JsonNode data = call("GET", path(signProperties.getCa().getPaths().getTemplates(), "templates"), null);
+        List<CaTemplate> list = new ArrayList<>();
+        if (data != null && data.isArray()) {
+            for (JsonNode node : data) {
+                list.add(new CaTemplate(
+                        text(node, "templateCode"), text(node, "templateName"),
+                        text(node, "certType"), text(node, "algorithm"),
+                        node.path("validityDays").isNumber() ? node.path("validityDays").asInt() : null));
+            }
+        }
+        return list;
+    }
+
+    public CaApplication submit(CaSubmitPayload payload) {
+        String body;
+        try {
+            body = objectMapper.writeValueAsString(payload);
+        } catch (Exception e) {
+            throw new BusinessException("构造 CA 申请报文失败：" + e.getMessage());
+        }
+        return toApplication(call("POST", path(signProperties.getCa().getPaths().getApplications(), "applications"), body));
+    }
+
+    public CaApplication detailByApplyNo(String applyNo) {
+        String pathAndQuery = withApplyNo(
+                signProperties.getCa().getPaths().getApplicationDetail(), applyNo, "application-detail");
+        return toApplication(call("GET", pathAndQuery, null));
+    }
+
+    public CaApplication detailByExternalRequestId(String externalRequestId) {
+        String pathAndQuery = withQuery(
+                path(signProperties.getCa().getPaths().getApplications(), "applications"),
+                "externalRequestId", externalRequestId);
+        return toApplication(call("GET", pathAndQuery, null));
+    }
+
+    // ---------------- 加解密与签名 ----------------
+
+    public CaApplication cancel(String applyNo, String reason) {
+        String body;
+        try {
+            body = objectMapper.writeValueAsString(new CaCancelPayload(reason));
+        } catch (Exception e) {
+            throw new BusinessException("构造 CA 撤销报文失败：" + e.getMessage());
+        }
+        String pathAndQuery = withApplyNo(
+                signProperties.getCa().getPaths().getCancel(), applyNo, "cancel");
+        return toApplication(call("POST", pathAndQuery, body));
+    }
+
+    /**
+     * 下载已签发证书（叶子 + SUB_CA + 根，或仅叶子）
+     */
+    public CertificateDownload download(String applyNo, boolean chain) {
+        String pathAndQuery = withQuery(
+                withApplyNo(signProperties.getCa().getPaths().getCertificate(), applyNo, "certificate"),
+                "chain", String.valueOf(chain));
+        HttpResponse<String> resp = send("GET", pathAndQuery, null);
+        if (resp.statusCode() / 100 != 2) {
+            throw new BusinessException(errorMessage(resp));
+        }
+        return new CertificateDownload(resp.body(),
+                resp.headers().firstValue("X-Serial-Hex").orElse(null),
+                resp.headers().firstValue("X-Fingerprint-Sha256").orElse(null),
+                resp.headers().firstValue("X-Not-After").orElse(null));
+    }
+
+    /**
+     * 取配置的接口路径模板；漏配即报错并指出具体的 his.sign.ca.paths.* 键，不用代码里的默认路径兜底
+     */
+    private String path(String configured, String name) {
+        if (!TextUtil.hasText(configured)) {
+            throw new BusinessException("CA 接口路径未配置：his.sign.ca.paths." + name);
+        }
+        return configured;
+    }
+
+    private String withApplyNo(String template, String applyNo, String name) {
+        return path(template, name).replace("{applyNo}", encodePath(applyNo));
+    }
+
+    /**
+     * 追加查询参数：配置里只写路径，查询串在调用点拼装
+     */
+    private static String withQuery(String path, String name, String value) {
+        return path + "?" + name + "=" + encodePath(value);
+    }
+
+    private JsonNode call(String method, String pathAndQuery, String plainJson) {
+        HttpResponse<String> resp = send(method, pathAndQuery, plainJson);
+        if (resp.statusCode() / 100 != 2) {
+            throw new BusinessException(errorMessage(resp));
+        }
+        try {
+            JsonNode root = objectMapper.readTree(resp.body());
+            int code = root.path("code").asInt(500);
+            if (code != 200) {
+                throw new BusinessException("CA 返回失败（code=" + code + "）：" + root.path("message").asText());
+            }
+            return root.path("data");
+        } catch (BusinessException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new BusinessException("CA 响应不是预期的 JSON：" + abbreviate(resp.body()));
+        }
+    }
+
+    private HttpResponse<String> send(String method, String pathAndQuery, String plainJson) {
+        requireEnabled();
+        SignProperties.Ca ca = signProperties.getCa();
+        String base = ca.getBaseUrl().endsWith("/")
+                ? ca.getBaseUrl().substring(0, ca.getBaseUrl().length() - 1) : ca.getBaseUrl();
+        URI uri = URI.create(base + pathAndQuery);
+        String canonicalPath = uri.getRawPath() + (uri.getRawQuery() == null ? "" : "?" + uri.getRawQuery());
+
+        String body = "";
+        try {
+            if (plainJson != null) {
+                body = encryptEnvelope(ca.getAppSecret(), plainJson);
+            }
+            String ts = String.valueOf(System.currentTimeMillis());
+            String nonce = UUID.randomUUID().toString().replace("-", "");
+            String canonical = ca.getAppId() + "\n" + ts + "\n" + nonce + "\n"
+                    + method + "\n" + canonicalPath + "\n" + sha256Hex(body.getBytes(StandardCharsets.UTF_8));
+            String signature = hmacHex(ca.getAppSecret(), canonical);
+
+            HttpRequest.Builder builder = HttpRequest.newBuilder(uri)
+                    .timeout(Duration.ofMillis(ca.getRequestTimeoutMs()))
+                    .header(HEADER_APP_ID, ca.getAppId())
+                    .header(HEADER_TIMESTAMP, ts)
+                    .header(HEADER_NONCE, nonce)
+                    .header(HEADER_SIGNATURE, signature);
+            if (plainJson == null) {
+                builder.method(method, HttpRequest.BodyPublishers.noBody());
+            } else {
+                builder.header("Content-Type", "application/json;charset=UTF-8")
+                        .method(method, HttpRequest.BodyPublishers.ofString(body, StandardCharsets.UTF_8));
+            }
+            return httpClient.send(builder.build(), HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+        } catch (BusinessException e) {
+            throw e;
+        } catch (java.net.http.HttpTimeoutException e) {
+            throw new BusinessException("CA 认证中心响应超时（" + ca.getRequestTimeoutMs() + "ms）："
+                    + base + "，请确认 CA 服务状态后重试");
+        } catch (java.net.ConnectException e) {
+            throw new BusinessException("CA 认证中心不可达：" + base + "（连接被拒绝，请确认服务已启动且地址正确）");
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new BusinessException("CA 请求被中断，请重试");
+        } catch (Exception e) {
+            log.warn("调用 CA 接口失败 method={} path={} err={}", method, pathAndQuery, e.toString());
+            throw new BusinessException("调用 CA 接口失败：" + e.getMessage());
+        }
+    }
+
+    // ---------------- 响应映射 ----------------
+
+    /**
+     * 业务错误取 CA 统一响应体里的 message；拿不到就回状态码，绝不把整包 HTML/堆栈抛给操作员
+     */
+    private String errorMessage(HttpResponse<String> resp) {
+        String message = null;
+        try {
+            JsonNode root = objectMapper.readTree(resp.body());
+            message = root.path("message").asText(null);
+        } catch (Exception ignored) {
+            // 非 JSON 错误页（网关/代理）按状态码兜底
+        }
+        String prefix = switch (resp.statusCode()) {
+            case 401 -> "CA 认证失败（App ID 或接入密钥不正确）";
+            case 403 -> "CA 拒绝访问（来源地址不在白名单或证书校验未通过）";
+            case 409 -> "CA 申请状态冲突";
+            case 429 -> "CA 请求过于频繁，请稍后重试";
+            case 503 -> "CA 对外 API 暂未开放";
+            default -> "CA 返回 HTTP " + resp.statusCode();
+        };
+        return TextUtil.hasText(message) ? prefix + "：" + message : prefix;
+    }
+
+    private String encryptEnvelope(String secret, String plainJson) throws Exception {
+        byte[] key = MessageDigest.getInstance("SHA-256")
+                .digest((secret + BODY_KDF_LABEL).getBytes(StandardCharsets.UTF_8));
+        byte[] iv = new byte[IV_LEN];
+        random.nextBytes(iv);
+        Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
+        cipher.init(Cipher.ENCRYPT_MODE, new SecretKeySpec(key, "AES"), new GCMParameterSpec(TAG_BITS, iv));
+        byte[] encrypted = cipher.doFinal(plainJson.getBytes(StandardCharsets.UTF_8));
+        byte[] combined = new byte[iv.length + encrypted.length];
+        System.arraycopy(iv, 0, combined, 0, iv.length);
+        System.arraycopy(encrypted, 0, combined, iv.length, encrypted.length);
+        String encData = Base64.getEncoder().encodeToString(combined);
+        return objectMapper.createObjectNode().put("encData", encData).toString();
+    }
+
+    private CaApplication toApplication(JsonNode node) {
+        if (node == null || node.isMissingNode() || node.isNull()) {
+            throw new BusinessException("CA 未返回申请单信息");
+        }
+        CaCertificate certificate = null;
+        JsonNode certNode = node.path("certificate");
+        if (certNode.isObject()) {
+            certificate = new CaCertificate(
+                    text(certNode, "serialHex"), text(certNode, "subjectDn"), text(certNode, "issuerDn"),
+                    text(certNode, "algorithm"), time(certNode, "notBefore"), time(certNode, "notAfter"),
+                    text(certNode, "fingerprintSha256"), text(certNode, "certPem"), text(certNode, "chainPem"));
+        }
+        return new CaApplication(
+                text(node, "applyNo"), text(node, "externalRequestId"), text(node, "status"),
+                text(node, "statusText"), time(node, "submittedAt"), time(node, "reviewedAt"),
+                text(node, "reviewedByName"), text(node, "reviewComment"), time(node, "issuedAt"),
+                certificate, node.path("idempotentReplay").asBoolean(false));
+    }
+
+    // ---------------- 报文记录 ----------------
+
+    /**
+     * 申请提交报文（字段名与 CA 契约逐字一致）
+     */
+    public record CaSubmitPayload(String externalRequestId, String applicantType, String applicantName,
+                                  String subjectDn, String templateCode, String publicKeyPem,
+                                  String san, String description, String externalEmployeeId,
+                                  String externalEmployeeCode, String externalDeptName) {
+    }
+
+    public record CaCancelPayload(String reason) {
+    }
+
+    public record CaTemplate(String templateCode, String templateName, String certType,
+                             String algorithm, Integer validityDays) {
+    }
+
+    public record CaCertificate(String serialHex, String subjectDn, String issuerDn, String algorithm,
+                                LocalDateTime notBefore, LocalDateTime notAfter,
+                                String fingerprintSha256, String certPem, String chainPem) {
+    }
+
+    public record CaApplication(String applyNo, String externalRequestId, String status, String statusText,
+                                LocalDateTime submittedAt, LocalDateTime reviewedAt, String reviewedByName,
+                                String reviewComment, LocalDateTime issuedAt, CaCertificate certificate,
+                                boolean idempotentReplay) {
+    }
+
+    public record CertificateDownload(String pem, String serialHex, String fingerprintSha256, String notAfter) {
+    }
+}

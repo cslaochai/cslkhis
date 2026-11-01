@@ -2,12 +2,13 @@ package com.his.platform.service;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.his.platform.dto.SignCertPageQueryDTO;
+import com.his.platform.entity.SysSignCert;
+import com.his.platform.vo.SignCertVO;
 import com.his.spi.dto.SignCertBindDTO;
 import com.his.spi.dto.SignCertKeygenDTO;
 import com.his.spi.dto.SignCertRevokeDTO;
-import com.his.platform.entity.SysSignCert;
-import com.his.platform.vo.SignCertVO;
 import com.his.spi.vo.SignCaApplyVO;
+import com.his.spi.vo.SignCaStatusVO;
 
 import java.util.List;
 
@@ -30,6 +31,21 @@ public interface SignCertService {
      * <p>私钥本地生成并加密托管（不出 HIS），申请单带 Subject DN 与公钥 PEM，供管理员线下送 CA 人工签发。
      */
     SignCaApplyVO keygen(SignCertKeygenDTO dto, Long operatorId, String operatorName);
+
+    /**
+     * 提交（或失败后重试）CA 在线申请：externalRequestId 按 certNo 幂等，CA 签发后自动下载回填。
+     */
+    SignCaApplyVO applyToCa(Long certId, Long operatorId, String operatorName);
+
+    /**
+     * 刷新 CA 申请单状态：CA 已签发则下载证书链并自动回填生效。
+     */
+    SignCaApplyVO refreshCa(Long certId, Long operatorId, String operatorName);
+
+    /**
+     * CA 通道自检：在线模式探测模板与算法是否匹配；未接入时给出线下兜底口径。
+     */
+    SignCaStatusVO caStatus();
 
     /**
      * 回填 CA 线下签发的证书（CA 线下签发第二步）：校验证书公钥与本地密钥对一致后转为有效状态。

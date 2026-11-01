@@ -463,6 +463,37 @@ const routes = [
                 component: () => import('@/views/medical-record/CodingTaskView.vue'),
                 meta: {title: '编码任务池'}
             },
+            // ---- 一种菜单多 tab 的合并页（见 施工手册/病历与质量安全-模块重构施工蓝图.md P2） ----
+            {
+                path: 'medical-record-center',
+                name: 'MedicalRecordCenter',
+                component: () => import('@/views/module-center/RecordReviewCenterView.vue'),
+                meta: {title: '病历查阅与审核'}
+            },
+            {
+                path: 'archive-center',
+                name: 'ArchiveCenter',
+                component: () => import('@/views/module-center/ArchiveCenterView.vue'),
+                meta: {title: '病案管理'}
+            },
+            {
+                path: 'specialty-qc',
+                name: 'SpecialtyQcCenter',
+                component: () => import('@/views/module-center/SpecialtyQcCenterView.vue'),
+                meta: {title: '专项质控'}
+            },
+            {
+                path: 'medical-safety',
+                name: 'MedicalSafetyCenter',
+                component: () => import('@/views/module-center/MedicalSafetyCenterView.vue'),
+                meta: {title: '医疗安全'}
+            },
+            {
+                path: 'public-health-center',
+                name: 'PublicHealthCenter',
+                component: () => import('@/views/module-center/PublicHealthCenterView.vue'),
+                meta: {title: '公卫上报'}
+            },
             {
                 path: 'ward-dispense',
                 name: 'WardDispense',

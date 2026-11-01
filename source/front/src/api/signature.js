@@ -20,67 +20,82 @@ import request from './request'
 
 // 签名记录分页（bizType / signScene / signStatus / verifyStatus / timeSource / bizId / signerId / bizNo / keyword / beginTime / endTime 可空）
 export function getSignatureList(params) {
-  return request.get('/emr/signature/listPage', { params })
+    return request.get('/emr/signature/listPage', {params})
 }
 
 // 签名详情（含被签内容快照全文）
 export function getSignatureDetail(id) {
-  return request.get('/emr/signature/getById', { params: { id } })
+    return request.get('/emr/signature/getById', {params: {id}})
 }
 
 // 签名概览（有效/作废/未校验/验签失败 + 各类型覆盖率 + 时间来源与证书信任说明）
 export function getSignatureSummary() {
-  return request.get('/emr/signature/summary')
+    return request.get('/emr/signature/summary')
 }
 
 // 下拉选项（对象类型 / 场景 / 签名状态 / 验签状态 / 时间来源 / 证书状态 / 签发方式）
 export function getSignatureQueryOptions() {
-  return request.get('/emr/signature/queryOptions')
+    return request.get('/emr/signature/queryOptions')
 }
 
 // 按 ID 验签（写库：会回写核查结果）
 export function verifySignature(signId) {
-  return request.post('/emr/signature/verify', { signId })
+    return request.post('/emr/signature/verify', {signId})
 }
 
 // 按对象验签（含已作废签名）
 export function verifySignatureByBiz(bizType, bizId) {
-  return request.post('/emr/signature/verifyByBiz', { bizType, bizId })
+    return request.post('/emr/signature/verifyByBiz', {bizType, bizId})
 }
 
 // 作废签名（必须写理由；不改历史行，只追加作废信息并解除内容锁定）
 export function invalidateSignature(signId, reason) {
-  return request.post('/emr/signature/invalidate', { signId, reason })
+    return request.post('/emr/signature/invalidate', {signId, reason})
 }
 
 // ---------------- 签名证书（CA 线下人工签发） ----------------
 
 // 证书分页
 export function getSignCertList(params) {
-  return request.get('/emr/signCert/listPage', { params })
+    return request.get('/emr/signCert/listPage', {params})
 }
 
 // 证书详情（含公钥 PEM 与指纹）
 export function getSignCertDetail(id) {
-  return request.get('/emr/signCert/getById', { params: { id } })
+    return request.get('/emr/signCert/getById', {params: {id}})
 }
 
-// 生成签名密钥对（CA 线下签发第一步）：返回「CA 签发申请单」（Subject DN + 公钥 PEM），供线下送 CA 人工签发
+// 生成签名密钥对（在线申请：自动提交 CA；未接入时返回线下申请单）
 export function keygenSignCert(params) {
-  return request.post('/emr/signCert/keygen', params)
+    return request.post('/emr/signCert/keygen', params)
+}
+
+// CA 通道状态（在线申请是否接入、模板与算法是否匹配）
+export function getSignCaStatus() {
+    return request.get('/emr/signCert/caStatus')
+}
+
+// 提交/重试 CA 在线申请（已提交待审核时等价于刷新，不重复建单）
+export function submitSignCaApply(certId) {
+    return request.post('/emr/signCert/caSubmit', {certId})
+}
+
+// 刷新 CA 申请状态（已签发则自动下载证书链并回填生效）
+export function refreshSignCaApply(certId) {
+    return request.post('/emr/signCert/caRefresh', {certId})
 }
 
 // 回填 CA 线下签发的证书（CA 线下签发第二步）：校验证书公钥与本地密钥对一致后转为有效
 export function bindSignCert(params) {
-  return request.post('/emr/signCert/bind', params)
+    return request.post('/emr/signCert/bind', params)
 }
 
 // 吊销证书（必须写理由；吊销不删行）
 export function revokeSignCert(certId, reason) {
-  return request.post('/emr/signCert/revoke', { certId, reason })
+    return request.post('/emr/signCert/revoke', {certId, reason})
 }
 
 // 按员工查签名证书（员工管理「签名设置」只读弹框用；无证书返回空）
 export function getSignCertByEmp(empId) {
-  return request.get('/emr/signCert/getByEmp', { params: { empId } })
+    return request.get('/emr/signCert/getByEmp', {params: {empId}})
 }

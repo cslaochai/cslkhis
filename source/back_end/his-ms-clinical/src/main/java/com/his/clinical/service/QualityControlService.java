@@ -1,15 +1,14 @@
 package com.his.clinical.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
-import com.his.common.base.PageResult;
 import com.his.clinical.dto.QcCandidatePageQueryDTO;
 import com.his.clinical.dto.QcExecuteDTO;
 import com.his.clinical.dto.QcPageQueryDTO;
 import com.his.clinical.dto.QcSystemExecuteDTO;
 import com.his.clinical.entity.BizQualityControl;
 import com.his.clinical.support.QcSnapshot;
-import com.his.clinical.vo.QcIssueVO;
 import com.his.clinical.vo.*;
+import com.his.common.base.PageResult;
 
 import java.util.List;
 
@@ -59,6 +58,23 @@ public interface QualityControlService extends IService<BizQualityControl> {
      * @param limit 单次补扫的病历数上限
      */
     int autoRescanOutpatientQc(int limit);
+
+    /**
+     * 补扫漏掉自动质控的住院文书：窗口期内已提交/已归档、却没有自动质控单的文书。
+     *
+     * <p>住院侧原先只有人工质控，医生提交后没人跑引擎，这是流程缺口而不是配置问题。
+     * 判据与门诊一致（没有自动触发来源的质控单），落库触发来源同样记 3-定时补扫。
+     *
+     * @param limit 单次补扫的文书数上限
+     */
+    int autoRescanInpatientQc(int limit);
+
+    /**
+     * 病案质量指标看板：通过率、甲级率、时限达标率、首页完整率与科室排名。
+     *
+     * @param days 统计窗口（天），为空按 30 天，超过 365 按 365
+     */
+    QcIndicatorVO getIndicators(Integer days);
 
     /**
      * 批量执行质控（病案室月末批量质控）

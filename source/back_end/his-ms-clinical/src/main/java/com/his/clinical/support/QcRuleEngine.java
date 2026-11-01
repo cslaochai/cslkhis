@@ -1,10 +1,10 @@
 package com.his.clinical.support;
 
+import com.his.clinical.vo.QcIssueVO;
+import com.his.clinical.vo.QcResultVO;
 import com.his.common.enums.*;
 import com.his.common.support.ClinicalTextMatcher;
 import com.his.common.util.TextUtil;
-import com.his.clinical.vo.QcIssueVO;
-import com.his.clinical.vo.QcResultVO;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -12,7 +12,6 @@ import org.springframework.stereotype.Component;
 import java.math.BigDecimal;
 import java.util.*;
 import java.util.regex.Pattern;
-import com.his.common.enums.QcRuleEnum;
 
 /**
  * 病历形式质控规则引擎。
@@ -65,6 +64,17 @@ public class QcRuleEngine {
     private static final int DIASTOLIC_MIN = 20;
 
     private static final int DIASTOLIC_MAX = 200;
+
+    /**
+     * 时限阈值（分钟）：入院记录 24h、首次病程 8h、出院记录 24h、提交 48h
+     */
+    private static final long LIMIT_ENTRY_MINUTES = 24L * 60;
+
+    private static final long LIMIT_FIRST_COURSE_MINUTES = 8L * 60;
+
+    private static final long LIMIT_DISCHARGE_MINUTES = 24L * 60;
+
+    private static final long LIMIT_SUBMIT_MINUTES = 48L * 60;
 
     /**
      * 主诉里的持续时间要素
@@ -174,6 +184,24 @@ public class QcRuleEngine {
     }
 
     // 辅助
+
+    private static boolean isEntry(QcSnapshot s) {
+        return s.getRecordType() != null && s.getRecordType() == 1;
+    }
+
+    /**
+     * 文书完成时刻：优先取提交时间，未提交时退回记录时间。
+     */
+    private static java.time.LocalDateTime completedAt(QcSnapshot s) {
+        return s.getSubmitTime() != null ? s.getSubmitTime() : s.getRecordTime();
+    }
+
+    private static Long minutesBetween(java.time.LocalDateTime from, java.time.LocalDateTime to) {
+        if (from == null || to == null) {
+            return null;
+        }
+        return java.time.Duration.between(from, to).toMinutes();
+    }
 
     /**
      * 启动自检：规则的"存在性"必须能被观测到。
@@ -468,6 +496,99 @@ public class QcRuleEngine {
                         String.format("归档时间 %s 早于提交时间 %s", s.getArchiveTime(), s.getSubmitTime()),
                         "（见描述）"));
             }
+
+            // ---------------- 时限性：起点是入院/出院，终点是文书完成（提交）时刻 ----------------
+            // 入院记录的 record_time 存的是入院时间本身（见 InpatientRecordBriefVO 注释），
+            // 拿它当完成时刻会让 24h 规则永远命中不了，所以完成时刻取 submit_time，缺失才退回 record_time。
+
+            case F06 -> overtime(rule, s, 1, s.getAdmissionTime(), completedAt(s),
+                    LIMIT_ENTRY_MINUTES, "入院记录", "入院");
+
+            case F07 -> overtime(rule, s, 2, s.getAdmissionTime(), completedAt(s),
+                    LIMIT_FIRST_COURSE_MINUTES, "首次病程记录", "入院");
+
+            case F08 -> overtime(rule, s, 7, s.getDischargeTime(), completedAt(s),
+                    LIMIT_DISCHARGE_MINUTES, "出院记录", "出院");
+
+            case F09 -> {
+                Long minutes = minutesBetween(s.getRecordTime(), s.getSubmitTime());
+                // 记录时间晚于提交时间由 L04 负责，这里只管「正常顺序但拖太久」
+                if (minutes == null || minutes <= 0 || minutes <= LIMIT_SUBMIT_MINUTES) {
+                    yield Optional.empty();
+                }
+                yield Optional.of(QcIssueVO.of(rule,
+                        String.format("%s记录后 %.1f 小时才提交（要求 48 小时内）",
+                                s.recordTypeText(), minutes / 60.0),
+                        "（见描述）"));
+            }
+
+            // ---------------- 病案首页：挂在入院记录上，一个住院只判一次 ----------------
+
+            case F10 -> {
+                if (!isEntry(s) || TextUtil.hasText(s.getMainDiagnosisName())) {
+                    yield Optional.empty();
+                }
+                yield Optional.of(QcIssueVO.of(rule,
+                        "病案首页「主要诊断」未填写，DRG/DIP 无法入组", "（空）"));
+            }
+
+            case F11 -> {
+                if (!isEntry(s) || !TextUtil.hasText(s.getMainDiagnosisName())
+                        || TextUtil.hasText(s.getMainDiagnosisCode())) {
+                    yield Optional.empty();
+                }
+                yield Optional.of(QcIssueVO.of(rule,
+                        String.format("病案首页主诊断「%s」没有 ICD 编码", TextUtil.ellipsis(s.getMainDiagnosisName(), 40)),
+                        "（空）"));
+            }
+
+            case F12 -> {
+                if (!isEntry(s) || s.getAdmitWay() != null) {
+                    yield Optional.empty();
+                }
+                yield Optional.of(QcIssueVO.of(rule, "病案首页「入院途径」未填写，属必填项", "（空）"));
+            }
+
+            case F13 -> {
+                if (!isEntry(s) || s.getDischargeTime() == null || s.getDischargeWay() != null) {
+                    yield Optional.empty();
+                }
+                yield Optional.of(QcIssueVO.of(rule,
+                        String.format("患者已于 %s 出院，病案首页「离院方式」仍未填写", s.getDischargeTime()),
+                        "（空）"));
+            }
+
+            // 电子签名：已提交（2）或已归档（3）却未签名，等同于未生效的病历进了流转与归档
+            case F14 -> {
+                if (s.getRecordStatus() == null || s.getRecordStatus() < 2
+                        || s.getSignStatus() == null || s.getSignStatus() != 0) {
+                    yield Optional.empty();
+                }
+                yield Optional.of(QcIssueVO.of(rule,
+                        String.format("文书状态为%s但电子签名为「未签名」",
+                                s.getRecordStatus() == 3 ? "已归档" : "已提交"),
+                        "未签名"));
+            }
         };
+    }
+
+    /**
+     * 时限类规则的统一判定：只在指定文书类型上生效，起点/终点缺一不可判。
+     * 终点早于起点属于时间序矛盾（由 L04/L06 一类规则负责），这里不重复报。
+     */
+    private Optional<QcIssueVO> overtime(QcRuleEnum rule, QcSnapshot s, int recordType,
+                                         java.time.LocalDateTime from, java.time.LocalDateTime to,
+                                         long limitMinutes, String docName, String startName) {
+        if (s.getRecordType() == null || s.getRecordType() != recordType) {
+            return Optional.empty();
+        }
+        Long minutes = minutesBetween(from, to);
+        if (minutes == null || minutes <= 0 || minutes <= limitMinutes) {
+            return Optional.empty();
+        }
+        return Optional.of(QcIssueVO.of(rule,
+                String.format("%s完成于%s后 %.1f 小时（要求 %d 小时内）",
+                        docName, startName, minutes / 60.0, limitMinutes / 60),
+                "（见描述）"));
     }
 }

@@ -5,11 +5,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.his.clinical.dto.QcCandidatePageQueryDTO;
 import com.his.clinical.dto.QcPageQueryDTO;
 import com.his.clinical.entity.BizQualityControl;
-import com.his.clinical.vo.QcIssueVO;
-import com.his.clinical.vo.BizQualityControlVO;
-import com.his.clinical.vo.QcCandidateVO;
-import com.his.clinical.vo.QcOverviewVO;
-import com.his.clinical.vo.QcRuleMetricVO;
+import com.his.clinical.vo.*;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
@@ -305,5 +301,141 @@ public interface BizQualityControlMapper extends BaseMapper<BizQualityControl> {
                                           @Param("recordStatuses") List<Integer> recordStatuses,
                                           @Param("sinceTime") LocalDateTime sinceTime,
                                           @Param("limit") int limit);
+
+    /**
+     * 住院侧自动质控漏单候选：窗口期内已提交/已归档、却没有自动质控单的住院文书。
+     *
+     * <p>与门诊侧分开取数：住院文书挂在 biz_inpatient_record，且它的「该发生时点」
+     * 是文书提交（submit_time），不是结诊。
+     */
+    @Select("""
+            <script>
+            SELECT r.id
+            FROM biz_inpatient_record r
+            WHERE r.del_flag = 0
+              AND r.record_status IN <foreach collection="recordStatuses" item="s" open="(" separator="," close=")">#{s}</foreach>
+              AND r.submit_time &gt;= #{sinceTime}
+              AND NOT EXISTS (SELECT 1 FROM biz_quality_control q
+                              WHERE q.del_flag = 0
+                                AND q.record_source = 'INPATIENT'
+                                AND q.record_id = r.id
+                                AND q.trigger_source IN <foreach collection="triggerSources" item="t" open="(" separator="," close=")">#{t}</foreach>)
+            ORDER BY r.submit_time ASC, r.id ASC
+            LIMIT #{limit}
+            </script>
+            """)
+    List<Long> selectInpatientRecordsWithoutAutoQc(@Param("triggerSources") List<Integer> triggerSources,
+                                                   @Param("recordStatuses") List<Integer> recordStatuses,
+                                                   @Param("sinceTime") LocalDateTime sinceTime,
+                                                   @Param("limit") int limit);
+
+    /**
+     * 质控单汇总：窗口期内的总数、通过数、否决数、甲乙级数与平均分。
+     *
+     * <p>通过/等级口径与 {@code QcRuleEngine} 一致：最高严重度 &lt; 2 才算通过，
+     * 有否决项（=3）必为丙级，不参与甲乙级统计。
+     */
+    @Select("""
+            SELECT COUNT(*) AS totalQc,
+                   SUM(CASE WHEN severity_max < 2 THEN 1 ELSE 0 END) AS passQc,
+                   SUM(CASE WHEN severity_max >= 3 THEN 1 ELSE 0 END) AS vetoQc,
+                   SUM(CASE WHEN severity_max < 2 AND score >= 90 THEN 1 ELSE 0 END) AS gradeAQc,
+                   SUM(CASE WHEN severity_max < 2 AND score >= 75 AND score < 90 THEN 1 ELSE 0 END) AS gradeBQc,
+                   ROUND(AVG(score), 1) AS avgScore
+            FROM biz_quality_control
+            WHERE del_flag = 0
+              AND create_time >= #{since}
+            """)
+    QcIndicatorVO selectQcIndicator(@Param("since") LocalDateTime since);
+
+    /**
+     * 窗口期内跑过质控的住院文书数（时限达标率分母）。
+     */
+    @Select("""
+            SELECT COUNT(DISTINCT q.record_id) AS inpatientQc
+            FROM biz_quality_control q
+            WHERE q.del_flag = 0
+              AND q.record_source = 'INPATIENT'
+              AND q.create_time >= #{since}
+            """)
+    QcIndicatorVO countInpatientQc(@Param("since") LocalDateTime since);
+
+    /**
+     * 命中时限规则（F06 入院记录 24h / F07 首次病程 8h / F08 出院记录 24h）的住院文书数。
+     */
+    @Select("""
+            SELECT COUNT(DISTINCT q.record_id) AS deadlineViolation
+            FROM biz_quality_control q
+            JOIN biz_quality_control_issue i ON i.qc_id = q.id
+            WHERE q.del_flag = 0
+              AND q.record_source = 'INPATIENT'
+              AND q.create_time >= #{since}
+              AND i.rule_code IN ('F06', 'F07', 'F08')
+            """)
+    QcIndicatorVO countDeadlineViolation(@Param("since") LocalDateTime since);
+
+    /**
+     * 病案首页完整度：主诊断、主诊断编码、入院途径三项齐全的首页数。
+     */
+    @Select("""
+            SELECT COUNT(*) AS summaryTotal,
+                   SUM(CASE WHEN main_diagnosis_name IS NOT NULL AND main_diagnosis_name <> ''
+                             AND main_diagnosis_code IS NOT NULL AND main_diagnosis_code <> ''
+                             AND admit_way IS NOT NULL THEN 1 ELSE 0 END) AS summaryComplete
+            FROM biz_inpatient_summary
+            WHERE del_flag = 0
+            """)
+    QcIndicatorVO selectSummaryIndicator();
+
+    /**
+     * 科室排名：按质控单数降序，科室名取文书上的科室快照（质控单本身不存科室）。
+     */
+    @Select("""
+            SELECT COALESCE(r.dept_name, m.dept_name, '未知科室') AS deptName,
+                   COUNT(*) AS totalQc,
+                   SUM(CASE WHEN q.severity_max < 2 THEN 1 ELSE 0 END) AS passQc,
+                   ROUND(AVG(q.score), 1) AS avgScore
+            FROM biz_quality_control q
+            LEFT JOIN biz_inpatient_record r
+                   ON q.record_source = 'INPATIENT' AND r.id = q.record_id AND r.del_flag = 0
+            LEFT JOIN biz_medical_record m
+                   ON q.record_source = 'OUTPATIENT' AND m.id = q.record_id AND m.del_flag = 0
+            WHERE q.del_flag = 0
+              AND q.create_time >= #{since}
+            GROUP BY COALESCE(r.dept_name, m.dept_name, '未知科室')
+            ORDER BY totalQc DESC, deptName ASC
+            LIMIT 20
+            """)
+    List<QcDeptIndicatorVO> selectDeptIndicator(@Param("since") LocalDateTime since);
+
+    /**
+     * 7 日归档率：分母是已出院的病历（按住院登记 admission_id 去重），
+     * 分子是出院后 7 日内完成归档的。未归档的一律计入未达标，不从这里剔除，
+     * 否则拖两个月的病历反而抬高比率。
+     */
+    @Select("""
+            SELECT COUNT(DISTINCT r.admission_id) AS archiveTotal,
+                   COUNT(DISTINCT CASE WHEN r.archive_time IS NOT NULL
+                        AND TIMESTAMPDIFF(DAY, s.discharge_time, r.archive_time) <= 7
+                        THEN r.admission_id END) AS archiveOnTime
+            FROM biz_inpatient_record r
+            JOIN biz_inpatient_summary s
+                 ON s.admission_id = r.admission_id AND s.del_flag = 0
+            WHERE r.del_flag = 0
+              AND s.discharge_time IS NOT NULL
+            """)
+    QcIndicatorVO selectArchiveIndicator();
+
+    /**
+     * 签名完整率：已提交/已归档的住院文书里，完成电子签名的比例。
+     */
+    @Select("""
+            SELECT COUNT(*) AS signTotal,
+                   SUM(CASE WHEN sign_status = 1 THEN 1 ELSE 0 END) AS signDone
+            FROM biz_inpatient_record
+            WHERE del_flag = 0
+              AND record_status >= 2
+            """)
+    QcIndicatorVO selectSignIndicator();
 
 }
