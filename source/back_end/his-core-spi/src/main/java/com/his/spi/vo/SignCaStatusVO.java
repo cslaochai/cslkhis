@@ -31,6 +31,16 @@ public class SignCaStatusVO implements Serializable {
     private String appId;
 
     /**
+     * CA 服务地址（含 context-path，如 http://host:port/ssl）
+     */
+    private String baseUrl;
+
+    /**
+     * 接入密钥是否已配置（只回显布尔值，密钥本身绝不出服务端）
+     */
+    private Boolean appSecretConfigured;
+
+    /**
      * 在线申请使用的证书模板编码
      */
     private String templateCode;

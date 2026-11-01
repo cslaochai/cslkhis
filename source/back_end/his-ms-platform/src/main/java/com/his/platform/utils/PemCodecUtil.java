@@ -30,6 +30,8 @@ public final class PemCodecUtil {
     private static final String PUBLIC_FOOTER = "-----END PUBLIC KEY-----";
     private static final String PRIVATE_HEADER = "-----BEGIN PRIVATE KEY-----";
     private static final String PRIVATE_FOOTER = "-----END PRIVATE KEY-----";
+    private static final String CERT_HEADER = "-----BEGIN CERTIFICATE-----";
+    private static final String CERT_FOOTER = "-----END CERTIFICATE-----";
 
     /** RSA 算法 OID（1.2.840.113549.1.1.1） */
     private static final String OID_RSA = "1.2.840.113549.1.1.1";
@@ -41,6 +43,17 @@ public final class PemCodecUtil {
 
     public static String toPem(PublicKey key) {
         return wrap(PUBLIC_HEADER, PUBLIC_FOOTER, key.getEncoded());
+    }
+
+    /**
+     * X.509 证书 → PEM（用于把从压缩包解析出的证书对象重新序列化为 PEM 文本，供回填入库）。
+     */
+    public static String toPem(java.security.cert.X509Certificate cert) {
+        try {
+            return wrap(CERT_HEADER, CERT_FOOTER, cert.getEncoded());
+        } catch (java.security.cert.CertificateEncodingException e) {
+            throw new IllegalArgumentException("证书编码为 PEM 失败：" + e.getMessage(), e);
+        }
     }
 
     /**

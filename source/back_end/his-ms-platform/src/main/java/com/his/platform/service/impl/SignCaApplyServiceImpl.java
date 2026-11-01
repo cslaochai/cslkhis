@@ -102,6 +102,33 @@ public class SignCaApplyServiceImpl extends ServiceImpl<SysSignCaApplyMapper, Sy
     }
 
     @Override
+    public SysSignCaApply findByApplyNoOrExternal(String applyNo, String externalRequestId) {
+        if (TextUtil.hasText(applyNo)) {
+            SysSignCaApply row = sysSignCaApplyMapper.selectOne(new LambdaQueryWrapper<SysSignCaApply>()
+                    .eq(SysSignCaApply::getApplyNo, applyNo)
+                    .orderByDesc(SysSignCaApply::getId)
+                    .last("LIMIT 1"));
+            if (row != null) {
+                return row;
+            }
+        }
+        if (!TextUtil.hasText(externalRequestId)) {
+            return null;
+        }
+        return sysSignCaApplyMapper.selectOne(new LambdaQueryWrapper<SysSignCaApply>()
+                .eq(SysSignCaApply::getExternalRequestId, externalRequestId)
+                .orderByDesc(SysSignCaApply::getId)
+                .last("LIMIT 1"));
+    }
+
+    @Override
+    public void update(SysSignCaApply apply) {
+        if (apply != null) {
+            sysSignCaApplyMapper.updateById(apply);
+        }
+    }
+
+    @Override
     public Map<Long, SysSignCaApply> latestOf(Collection<Long> certIds) {
         Map<Long, SysSignCaApply> result = new HashMap<>();
         if (certIds == null || certIds.isEmpty()) {

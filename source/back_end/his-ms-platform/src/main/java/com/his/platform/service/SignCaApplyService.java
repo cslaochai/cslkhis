@@ -49,13 +49,23 @@ public interface SignCaApplyService {
     void markBound(SysSignCaApply apply, String caIssuer);
 
     /**
-     * 按证书取最近一次申请：证书台账的「CA 申请」列、刷新状态与回填证书都按这一条对上号。
+     * 按证书取最近一次申请：证书台账的「CA 申请」列、回填证书都按这一条对上号。
      *
      * <p>申请单号 / 状态 / 回执说明的唯一事实在流水行上，证书行不再留副本。
      *
      * @return 最近一次申请流水；该证书从未发起过在线申请时返回 null
      */
     SysSignCaApply latestOf(Long certId);
+
+    /**
+     * CA 推送回调定位流水：优先申请单号，找不到再按 HIS 幂等请求号反查。
+     */
+    SysSignCaApply findByApplyNoOrExternal(String applyNo, String externalRequestId);
+
+    /**
+     * 就地更新流水（状态推进、审核/签发时刻与说明）。只允许从推送入口推进状态。
+     */
+    void update(SysSignCaApply apply);
 
     /**
      * 批量取各证书最近一次申请（证书ID → 最新流水行）：台账分页每行要展示申请列，

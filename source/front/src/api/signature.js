@@ -97,14 +97,16 @@ export function submitSignCaApply(certId) {
     return request.post('/emr/signCert/caSubmit', {certId})
 }
 
-// 刷新 CA 申请状态（已签发则自动下载证书链并回填生效）
-export function refreshSignCaApply(certId) {
-    return request.post('/emr/signCert/caRefresh', {certId})
-}
-
-// 回填 CA 线下签发的证书（CA 线下签发第二步）：校验证书公钥与本地密钥对一致后转为有效
-export function bindSignCert(params) {
-    return request.post('/emr/signCert/bind', params)
+// 上传 CA 系统导出的证书文件回填证书：后端按内容嗅探（.pem/.crt/.cer/.der 直接解析，
+// .zip 按 password 解压），再从证书链里取公钥与本地密钥对一致的那张生效。
+// formData: { certId, password?, file }
+// request.js 实例默认 Content-Type: application/json，axios 1.x 对「FormData + JSON 头」会走
+// formDataToJSON 把文件序列化成 JSON 体，后端直接 MultipartException —— 请求级显式声明
+// multipart，axios 才会让浏览器自己带 boundary 发原始表单（与 ai.js/examImage.js 同款写法）。
+export function bindSignCertFile(formData) {
+    return request.post('/emr/signCert/bindFile', formData, {
+        headers: {'Content-Type': 'multipart/form-data'}
+    })
 }
 
 // 吊销证书（必须写理由；吊销不删行）

@@ -13,7 +13,6 @@ import javax.crypto.Mac;
 import javax.crypto.spec.GCMParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 import java.net.URI;
-import java.net.URLEncoder;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
@@ -23,9 +22,7 @@ import java.security.SecureRandom;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
 import java.util.Base64;
-import java.util.List;
 import java.util.UUID;
 
 /**
@@ -84,10 +81,6 @@ public class SignCaApiClient {
         return sb.toString();
     }
 
-    private static String encodePath(String value) {
-        return URLEncoder.encode(value, StandardCharsets.UTF_8).replace("+", "%20");
-    }
-
     private static String abbreviate(String text) {
         if (text == null) {
             return "";
@@ -130,20 +123,6 @@ public class SignCaApiClient {
         }
     }
 
-    public List<CaTemplate> listTemplates() {
-        JsonNode data = call("GET", path(signProperties.getCa().getPaths().getTemplates(), "templates"), null);
-        List<CaTemplate> list = new ArrayList<>();
-        if (data != null && data.isArray()) {
-            for (JsonNode node : data) {
-                list.add(new CaTemplate(
-                        text(node, "templateCode"), text(node, "templateName"),
-                        text(node, "certType"), text(node, "algorithm"),
-                        node.path("validityDays").isNumber() ? node.path("validityDays").asInt() : null));
-            }
-        }
-        return list;
-    }
-
     public CaApplication submit(CaSubmitPayload payload) {
         String body;
         try {
@@ -154,48 +133,35 @@ public class SignCaApiClient {
         return toApplication(call("POST", path(signProperties.getCa().getPaths().getApplications(), "applications"), body));
     }
 
-    public CaApplication detailByApplyNo(String applyNo) {
-        String pathAndQuery = withApplyNo(
-                signProperties.getCa().getPaths().getApplicationDetail(), applyNo, "application-detail");
-        return toApplication(call("GET", pathAndQuery, null));
-    }
-
-    public CaApplication detailByExternalRequestId(String externalRequestId) {
-        String pathAndQuery = withQuery(
-                path(signProperties.getCa().getPaths().getApplications(), "applications"),
-                "externalRequestId", externalRequestId);
-        return toApplication(call("GET", pathAndQuery, null));
-    }
-
     // ---------------- 加解密与签名 ----------------
 
+    /**
+     * 撤销申请：申请单号放在请求体内，URL 不暴露参数。
+     */
     public CaApplication cancel(String applyNo, String reason) {
         String body;
         try {
-            body = objectMapper.writeValueAsString(new CaCancelPayload(reason));
+            body = objectMapper.writeValueAsString(new CaCancelPayload(applyNo, reason));
         } catch (Exception e) {
             throw new BusinessException("构造 CA 撤销报文失败：" + e.getMessage());
         }
-        String pathAndQuery = withApplyNo(
-                signProperties.getCa().getPaths().getCancel(), applyNo, "cancel");
-        return toApplication(call("POST", pathAndQuery, body));
+        return toApplication(call("POST", path(signProperties.getCa().getPaths().getCancel(), "cancel"), body));
     }
 
     /**
-     * 下载已签发证书（叶子 + SUB_CA + 根，或仅叶子）
+     * 吊销已签发证书：证书序列号放在请求体内。
      */
-    public CertificateDownload download(String applyNo, boolean chain) {
-        String pathAndQuery = withQuery(
-                withApplyNo(signProperties.getCa().getPaths().getCertificate(), applyNo, "certificate"),
-                "chain", String.valueOf(chain));
-        HttpResponse<String> resp = send("GET", pathAndQuery, null);
-        if (resp.statusCode() / 100 != 2) {
-            throw new BusinessException(errorMessage(resp));
+    public void revoke(String serialHex, String reason) {
+        if (!TextUtil.hasText(serialHex)) {
+            throw new BusinessException("证书序列号为空，无法推送 CA 吊销");
         }
-        return new CertificateDownload(resp.body(),
-                resp.headers().firstValue("X-Serial-Hex").orElse(null),
-                resp.headers().firstValue("X-Fingerprint-Sha256").orElse(null),
-                resp.headers().firstValue("X-Not-After").orElse(null));
+        String body;
+        try {
+            body = objectMapper.writeValueAsString(new CaRevokePayload(serialHex, reason));
+        } catch (Exception e) {
+            throw new BusinessException("构造 CA 吊销报文失败：" + e.getMessage());
+        }
+        call("POST", path(signProperties.getCa().getPaths().getRevoke(), "revoke"), body);
     }
 
     /**
@@ -206,17 +172,6 @@ public class SignCaApiClient {
             throw new BusinessException("CA 接口路径未配置：his.sign.ca.paths." + name);
         }
         return configured;
-    }
-
-    private String withApplyNo(String template, String applyNo, String name) {
-        return path(template, name).replace("{applyNo}", encodePath(applyNo));
-    }
-
-    /**
-     * 追加查询参数：配置里只写路径，查询串在调用点拼装
-     */
-    private static String withQuery(String path, String name, String value) {
-        return path + "?" + name + "=" + encodePath(value);
     }
 
     private JsonNode call(String method, String pathAndQuery, String plainJson) {
@@ -355,11 +310,10 @@ public class SignCaApiClient {
                                   String externalEmployeeCode, String externalDeptName) {
     }
 
-    public record CaCancelPayload(String reason) {
+    public record CaCancelPayload(String applyNo, String reason) {
     }
 
-    public record CaTemplate(String templateCode, String templateName, String certType,
-                             String algorithm, Integer validityDays) {
+    public record CaRevokePayload(String serialHex, String reason) {
     }
 
     public record CaCertificate(String serialHex, String subjectDn, String issuerDn, String algorithm,
@@ -371,8 +325,5 @@ public class SignCaApiClient {
                                 LocalDateTime submittedAt, LocalDateTime reviewedAt, String reviewedByName,
                                 String reviewComment, LocalDateTime issuedAt, CaCertificate certificate,
                                 boolean idempotentReplay) {
-    }
-
-    public record CertificateDownload(String pem, String serialHex, String fingerprintSha256, String notAfter) {
     }
 }

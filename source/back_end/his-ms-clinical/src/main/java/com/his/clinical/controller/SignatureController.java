@@ -270,13 +270,16 @@ public class SignatureController {
     }
 
     /**
-     * 刷新 CA 申请状态：CA 已签发则自动下载证书链、校验公钥并回填生效。
+     * CA 主动推送申请单状态变更：HIS 不提供查询接口，审核/签发/撤销一律由 CA 推送。
+     *
+     * <p>接口匿名开放（CA 服务器不持有 HIS token），安全边界依靠网关来源限制与
+     * CA 推送限流过滤器；处理本身做幂等校验与状态机校验，同一状态重放不重复回填，
+     * 非法流转直接拒绝；status=ISSUED 且报文带证书 PEM 时自动校验公钥并回填生效。</p>
      */
-    @PreAuthorize("hasAuthority('sign:cert:edit')")
-    @Operation(summary = "刷新 CA 申请状态（已签发自动下载回填）")
-    @PostMapping("/emr/signCert/caRefresh")
-    public Result<SignCaApplyVO> signCertCaRefresh(@Valid @RequestBody SignCertCaDTO dto) {
-        return Result.success(signCertFacadeService.refreshCaApply(dto.getCertId()));
+    @Operation(summary = "CA 推送申请单状态（幂等 + 状态机 + 已签发自动回填）")
+    @PostMapping("/emr/signCert/caCallback")
+    public Result<SignCaPushResultVO> signCertCaCallback(@Valid @RequestBody SignCaPushDTO dto) {
+        return Result.success(signCertFacadeService.applyCaPush(dto));
     }
 
     /**
@@ -287,6 +290,27 @@ public class SignatureController {
     @PostMapping("/emr/signCert/bind")
     public Result<SignCertVO> signCertBind(@Valid @RequestBody SignCertBindDTO dto) {
         return Result.success(signCertFacadeService.bindCert(dto));
+    }
+
+    /**
+     * 上传 CA 系统导出的证书文件回填证书（CA 线下签发流程第二步）。
+     *
+     * <p>CA 侧产出的形态不统一（多数是含证书链的 .pem，也可能是带密码的 .zip），
+     * 后端按内容嗅探：ZIP 先按密码解包，否则直接解析文件本身；再取公钥与本地密钥对一致的那张生效。
+     * 证书（含链）存库，不落文件。
+     */
+    @PreAuthorize("hasAuthority('sign:cert:edit')")
+    @Operation(summary = "上传 CA 导出的证书文件回填证书")
+    @PostMapping("/emr/signCert/bindFile")
+    public Result<SignCertVO> signCertBindFile(
+            @RequestParam("file") org.springframework.web.multipart.MultipartFile file,
+            @RequestParam(value = "password", required = false) String password,
+            @RequestParam("certId") Long certId) {
+        try {
+            return Result.success(signCertFacadeService.bindCertFile(certId, password, file.getBytes()));
+        } catch (java.io.IOException e) {
+            return Result.error("读取上传文件失败：" + e.getMessage());
+        }
     }
 
     /**

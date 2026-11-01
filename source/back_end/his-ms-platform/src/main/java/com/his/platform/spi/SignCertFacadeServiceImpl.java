@@ -8,6 +8,7 @@ import com.his.platform.entity.SysSignCert;
 import com.his.platform.mapper.SysSignCertMapper;
 import com.his.platform.service.SignCertService;
 import com.his.platform.utils.SignCryptoUtil;
+import com.his.spi.dto.SignCaPushDTO;
 import com.his.spi.dto.SignCertBindDTO;
 import com.his.spi.dto.SignCertKeygenDTO;
 import com.his.spi.dto.SignCertPageQueryDTO;
@@ -187,13 +188,21 @@ public class SignCertFacadeServiceImpl implements SignCertFacadeService {
     }
 
     @Override
-    public SignCaApplyVO refreshCaApply(Long certId) {
-        return signCertService.refreshCa(certId, null, null);
+    public SignCaPushResultVO applyCaPush(SignCaPushDTO dto) {
+        return signCertService.applyCaPush(dto);
     }
 
     @Override
     public SignCertVO bindCert(SignCertBindDTO dto) {
         com.his.platform.vo.SignCertVO inner = signCertService.bind(dto, null, null);
+        SignCertVO vo = new SignCertVO();
+        BeanUtils.copyProperties(inner, vo);
+        return vo;
+    }
+
+    @Override
+    public SignCertVO bindCertFile(Long certId, String password, byte[] fileBytes) {
+        com.his.platform.vo.SignCertVO inner = signCertService.bindFile(certId, password, fileBytes, null, null);
         SignCertVO vo = new SignCertVO();
         BeanUtils.copyProperties(inner, vo);
         return vo;

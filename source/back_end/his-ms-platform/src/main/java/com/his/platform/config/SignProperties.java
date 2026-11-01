@@ -118,13 +118,14 @@ public class SignProperties {
         private int requestTimeoutMs;
 
         /**
-         * 下载证书时是否带链（叶子 + SUB_CA + 根）
+         * CA 状态推送回调的限流阈值：同一来源 IP 每分钟最多接收多少次，超出直接 429。
+         * HIS 只保留提交与吊销两个出站能力，状态流转一律由 CA 推送。
          */
-        private boolean chain;
+        private int callbackRateLimitPerMinute;
 
         /**
-         * 对外接口路径（相对 base-url，{applyNo} 为路径占位符）。
-         * 地址只写路径，查询参数由客户端拼装；默认值只写在 config/domain/his-platform.yml，代码不内联。
+         * 对外接口路径（相对 base-url）。地址只写路径，参数一律封装在请求体内；
+         * 默认值只写在 config/domain/his-platform.yml，代码不内联。
          */
         private Paths paths = new Paths();
 
@@ -154,28 +155,18 @@ public class SignProperties {
     public static class Paths {
 
         /**
-         * 模板列表
-         */
-        private String templates;
-
-        /**
          * 提交申请
          */
         private String applications;
 
         /**
-         * 按申请单号查询
-         */
-        private String applicationDetail;
-
-        /**
-         * 撤销申请
+         * 撤销申请（申请单号放在请求体内，URL 不暴露参数）
          */
         private String cancel;
 
         /**
-         * 下载已签发证书
+         * 吊销已签发证书（证书序列号放在请求体内）
          */
-        private String certificate;
+        private String revoke;
     }
 }

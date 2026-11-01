@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.his.platform.dto.SignCertPageQueryDTO;
 import com.his.platform.entity.SysSignCert;
 import com.his.platform.vo.SignCertVO;
+import com.his.spi.dto.SignCaPushDTO;
 import com.his.spi.dto.SignCertBindDTO;
 import com.his.spi.dto.SignCertKeygenDTO;
 import com.his.spi.dto.SignCertRevokeDTO;
@@ -11,6 +12,7 @@ import com.his.spi.dto.SignPinChangeDTO;
 import com.his.spi.vo.SignCaApplyRecordVO;
 import com.his.spi.vo.SignCaApplyVO;
 import com.his.spi.vo.SignCaStatusVO;
+import com.his.spi.vo.SignCaPushResultVO;
 import com.his.spi.vo.SignPreCheckVO;
 
 import java.util.List;
@@ -36,14 +38,14 @@ public interface SignCertService {
     SignCaApplyVO keygen(SignCertKeygenDTO dto, Long operatorId, String operatorName);
 
     /**
-     * 提交（或失败后重试）CA 在线申请：externalRequestId 按 certNo 幂等，CA 签发后自动下载回填。
+     * 提交（或失败后重试）CA 在线申请：externalRequestId 按 certNo 幂等，CA 状态变更由 CA 推送回 HIS。
      */
     SignCaApplyVO applyToCa(Long certId, Long operatorId, String operatorName);
 
     /**
-     * 刷新 CA 申请单状态：CA 已签发则下载证书链并自动回填生效。
+     * 接收 CA 推送的申请单状态变更：幂等校验 + 状态机流转；ISSUED 随报文带证书，校验公钥后自动回填生效。
      */
-    SignCaApplyVO refreshCa(Long certId, Long operatorId, String operatorName);
+    SignCaPushResultVO applyCaPush(SignCaPushDTO dto);
 
     /**
      * CA 通道自检：在线模式探测模板与算法是否匹配；未接入时给出线下兜底口径。
@@ -54,6 +56,12 @@ public interface SignCertService {
      * 回填 CA 线下签发的证书（CA 线下签发第二步）：校验证书公钥与本地密钥对一致后转为有效状态。
      */
     SignCertVO bind(SignCertBindDTO dto, Long operatorId, String operatorName);
+
+    /**
+     * 上传 CA 系统导出的「带密码压缩包（主体CN-时间戳.zip）」回填证书：
+     * 解压后取公钥与本地密钥对一致的证书，校验通过即转为有效状态。
+     */
+    SignCertVO bindFile(Long certId, String password, byte[] fileBytes, Long operatorId, String operatorName);
 
     /**
      * 吊销证书：必须写明理由，只改状态不删行——历史签名仍要靠它的公钥验通。

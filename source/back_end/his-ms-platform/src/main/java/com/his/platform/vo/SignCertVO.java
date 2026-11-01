@@ -132,6 +132,11 @@ public class SignCertVO {
     private LocalDateTime validTo;
 
     /**
+     * 有效期来源标记：true=申请时按有效天数估算的预期值（待 CA 签发），false=已由证书文件确定的真值。
+     */
+    private Boolean validityEstimated;
+
+    /**
      * 是否已过期（有效期过了但状态还是"有效"时要单独提示 —— 两个事实别混）
      */
     private Boolean expired;

@@ -139,6 +139,14 @@ public class SignCertVO {
     private LocalDateTime validTo;
 
     /**
+     * 有效期的来源标记：true=「申请时按有效天数估算」的预期值（证书待 CA 签发，CA 实际签发后会被覆盖）；
+     * false=已由 CA 签发证书文件的 notBefore/notAfter 确定的真值。
+     *
+     * <p>前端据此区分展示：预期值不许当真实有效期用（否则用户会以为证书当下就能签、或已过期）。
+     */
+    private Boolean validityEstimated;
+
+    /**
      * 是否已过期（有效期过了但状态还是"有效"时单独提示）
      */
     private Boolean expired;

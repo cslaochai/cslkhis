@@ -1,6 +1,7 @@
 package com.his.spi.service;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.his.spi.dto.SignCaPushDTO;
 import com.his.spi.dto.SignCertBindDTO;
 import com.his.spi.dto.SignCertKeygenDTO;
 import com.his.spi.dto.SignCertPageQueryDTO;
@@ -161,14 +162,24 @@ public interface SignCertFacadeService {
     SignCaApplyVO submitCaApply(Long certId);
 
     /**
-     * 刷新 CA 申请状态：CA 已签发则自动下载证书链并回填生效。
+     * 接收 CA 推送的申请单状态变更：幂等校验 + 状态机流转；ISSUED 随报文带证书，校验公钥后自动回填生效。
+     *
+     * <p>HIS 不主动查询 CA（对外只保留提交与吊销两个能力），状态事实一律以 CA 推送为准。</p>
      */
-    SignCaApplyVO refreshCaApply(Long certId);
+    SignCaPushResultVO applyCaPush(SignCaPushDTO dto);
 
     /**
      * 回填 CA 线下签发的证书（CA 线下签发流程第二步）：校验证书公钥与本地密钥对一致后转为有效。
      */
     SignCertVO bindCert(SignCertBindDTO dto);
+
+    /**
+     * 上传 CA 系统导出的证书文件回填（CA 线下签发流程第二步）。
+     *
+     * <p>按内容嗅探形态，不靠扩展名：带密码的 ZIP 先解包，否则把文件本身当证书解析；
+     * 解析出的证书链里取公钥与本地密钥对一致的那张生效。证书（含链）存库，不落文件。
+     */
+    SignCertVO bindCertFile(Long certId, String password, byte[] fileBytes);
 
     /**
      * 吊销证书：必须写明理由，只改状态不删行——历史签名仍要靠它的公钥验通。

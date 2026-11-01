@@ -24,13 +24,10 @@ his:
       connect-timeout-ms: 3000
       # 单次请求超时（毫秒）
       request-timeout-ms: 10000
-      # 下载证书时是否带链（叶子 + SUB_CA + 根）
-      chain: true
-      # CA 对外接口路径（相对 base-url）：只写路径，{applyNo} 为路径占位符；
-      # 查询参数（externalRequestId、chain）由客户端拼装，不写进地址
+      # CA 状态推送回调限流：同一来源 IP 每分钟最多接收次数，超出直接 429
+      callback-rate-limit-per-minute: 30
+      # CA 对外接口路径（相对 base-url）：只写路径，参数一律封装在请求体内，URL 不暴露申请单号/序列号
       paths:
-        templates: /ca/api/v1/templates
         applications: /ca/api/v1/applications
-        application-detail: /ca/api/v1/applications/{applyNo}
-        cancel: /ca/api/v1/applications/{applyNo}/cancel
-        certificate: /ca/api/v1/applications/{applyNo}/certificate
+        cancel: /ca/api/v1/applications/cancel
+        revoke: /ca/api/v1/certificates/revoke

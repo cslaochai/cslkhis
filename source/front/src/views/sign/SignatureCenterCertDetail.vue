@@ -19,7 +19,10 @@
         <p v-if="certDetail.caLastMessage" class="text-slate-600">CA 说明：{{ certDetail.caLastMessage }}</p>
         <p>状态：{{ certDetail.certStatusText }}<span v-if="certDetail.expired"
                                                      class="text-red-600"> · 已过有效期</span></p>
-        <p>有效期：{{ text(certDetail.validFrom) }} ~ {{ text(certDetail.validTo) }}</p>
+        <p v-if="certDetail.validityEstimated">有效期：<span class="text-slate-500">待 CA 签发，以 CA 实际签发证书为准</span>
+          <span class="text-slate-400">（申请预期 {{ text(certDetail.validFrom) }} ~ {{ text(certDetail.validTo) }}）</span></p>
+        <p v-else>有效期：{{ text(certDetail.validFrom) }} ~ {{ text(certDetail.validTo) }}
+          <span class="text-slate-400">（取自 CA 证书文件的 notBefore / notAfter，即 CA 实际签发的有效期）</span></p>
         <p>累计签名：{{ num(certDetail.signCount) }} 次 · 最近使用 {{ text(certDetail.lastUsedTime) }}</p>
         <p>公钥指纹：<span class="font-mono" data-testid="p5-sign-cert-detail-fp">{{
             text(certDetail.keyFingerprint)

@@ -70,10 +70,19 @@
               </div>
             </template>
           </el-table-column>
-          <el-table-column label="有效期" width="190">
+          <el-table-column label="有效期" width="200">
             <template #default="{ row }">
-              <div class="text-xs">{{ row.validFrom || '—' }}</div>
-              <div class="text-xs text-slate-400">至 {{ row.validTo || '—' }}</div>
+              <!-- 待 CA 签发时库里的有效期只是申请时按有效天数估算的预期值，
+                   真实有效期由 CA 签发证书文件的 notBefore/notAfter 决定，回填后被覆盖。
+                   validityEstimated=true 必须明示「预期」，绝不能当真值展示。 -->
+              <template v-if="row.validityEstimated">
+                <div class="text-xs text-slate-400">待 CA 签发</div>
+                <div class="text-xs text-slate-300">有效期以签发为准</div>
+              </template>
+              <template v-else>
+                <div class="text-xs">{{ row.validFrom || '—' }}</div>
+                <div class="text-xs text-slate-400">至 {{ row.validTo || '—' }}</div>
+              </template>
             </template>
           </el-table-column>
           <el-table-column label="使用情况" width="120">
@@ -82,7 +91,7 @@
               <div class="text-xs text-slate-400">{{ row.lastUsedTime || '未使用' }}</div>
             </template>
           </el-table-column>
-          <el-table-column fixed="right" label="操作" width="200">
+          <el-table-column fixed="right" label="操作" width="240">
             <template #default="{ row }">
               <el-button link size="small" type="primary" @click="openCertDetail(row)">详情</el-button>
               <el-button
@@ -93,6 +102,16 @@
                   data-testid="p5-sign-progress-open"
                   @click="openProgress(row)"
               >申请进度
+              </el-button>
+              <el-button
+                  v-if="row.certStatus === 0"
+                  v-perm="'sign:cert:edit'"
+                  data-testid="p5-sign-bind-open"
+                  link
+                  size="small"
+                  type="primary"
+                  @click="openBind(row)"
+              >回填证书
               </el-button>
               <el-button
                   v-if="row.canRevoke"
@@ -130,7 +149,7 @@
     <SignatureCenterCertDetail :id="certDetailId" v-model="certDetailVisible"/>
 
     <!-- ---------------- 办理证书（子组件 SignatureCenterCertIssue） ---------------- -->
-    <SignatureCenterCertIssue v-model="issueVisible" @saved="onIssueSaved"/>
+    <SignatureCenterCertIssue v-model="issueVisible" :bind-cert-id="issueBindId" @saved="onIssueSaved"/>
 
     <!-- ---------------- 申请进度（流程图，子组件 SignatureCertApplyFlow） ---------------- -->
     <SignatureCertApplyFlow :id="progressId" v-model="progressVisible" @saved="onIssueSaved"/>
@@ -178,6 +197,8 @@ const certDetailVisible = ref(false);
 const certDetailId = ref(null);
 // 办理证书（子组件 SignatureCenterCertIssue）
 const issueVisible = ref(false);
+// 回填模式：传入已存在证书 id（null = 新建密钥对流程）
+const issueBindId = ref(null);
 // 申请进度（子组件 SignatureCertApplyFlow，流程图）
 const progressVisible = ref(false);
 const progressId = ref(null);
@@ -219,6 +240,12 @@ const openCertDetail = (row) => {
   certDetailVisible.value = true;
 };
 const openIssue = () => {
+  issueBindId.value = null;
+  issueVisible.value = true;
+};
+// 回填已有证书（线下送 CA 签发后，把 CA 返回的证书 PEM 回填到这张「待 CA 签发」的证书上）
+const openBind = (row) => {
+  issueBindId.value = row.id;
   issueVisible.value = true;
 };
 const openProgress = (row) => {

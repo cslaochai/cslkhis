@@ -56,9 +56,6 @@
       <div class="mt-4 rounded-lg border border-slate-200 bg-white p-3">
         <div class="flex items-center justify-between">
           <p class="text-xs font-medium text-slate-900">CA 申请记录</p>
-          <el-button v-if="latestApply" :loading="refreshing" link size="small" type="primary"
-                     data-testid="p5-sign-flow-refresh" @click="refreshStatus">刷新状态
-          </el-button>
         </div>
         <p v-if="!caApplies.length" class="mt-2 text-xs text-slate-500">
           未向 CA 发起过在线申请；该证书走线下送 CA 签发后回填。
@@ -86,8 +83,8 @@
       </div>
 
       <p class="mt-3 text-xs text-slate-400">
-        说明：证书提交 CA 申请后进入「待审核」，CA 签发后需回填到本系统才会「生效」。线上申请可在上方「CA 申请记录」处刷新进度；
-        线下签发的证书在「办理签名证书」里粘贴证书 PEM 回填（见上方黄色指引）。
+        说明：证书提交 CA 申请后进入「待审核」；CA 审核、签发、撤销都会主动推送回本系统，已签发时随报文带回证书并自动回填生效，
+        无需人工刷新。线下签发的证书在「办理签名证书」里粘贴证书 PEM 回填（见上方黄色指引）。
       </p>
     </div>
   </el-dialog>
@@ -97,7 +94,7 @@
 import {computed, ref, watch} from 'vue';
 import {ElMessage} from 'element-plus';
 import {Right} from '@element-plus/icons-vue';
-import {getSignCertDetail, listSignCaApplies, refreshSignCaApply} from '@/api/signature';
+import {getSignCertDetail, listSignCaApplies} from '@/api/signature';
 import {caApplyTagType, num, text} from '@/lib/sign';
 
 const props = defineProps({
@@ -113,7 +110,6 @@ const visible = computed({
 });
 
 const loading = ref(false);
-const refreshing = ref(false);
 const certDetail = ref(null);
 const caApplies = ref([]);
 
@@ -167,7 +163,12 @@ const stages = computed(() => {
 
   let node3;
   if (active) {
-    node3 = {title: '回填生效', cls: 'success', tagType: 'success', statusText: '已生效', time: text(latest?.boundAt) || text(d.validFrom), note: ''};
+    // 已生效：validFrom/validTo 已被证书文件的 notBefore/notAfter 覆盖，是 CA 实际签发的有效期真值
+    node3 = {
+      title: '回填生效', cls: 'success', tagType: 'success', statusText: '已生效',
+      time: text(latest?.boundAt) || text(d.validFrom),
+      note: d.validFrom && d.validTo ? `有效期 ${text(d.validFrom)} ~ ${text(d.validTo)}（取自 CA 证书文件）` : ''
+    };
   } else if (latest && (latest.applyStatus === 'ISSUED' || latest.applyStatus === 'APPROVED')) {
     node3 = {title: '回填生效', cls: 'warning', tagType: 'warning', statusText: '待回填', time: '', note: 'CA 已签发，回填证书后即生效'};
   } else {
@@ -189,27 +190,6 @@ const loadData = async () => {
     console.error('加载证书申请进度失败', e);
   } finally {
     loading.value = false;
-  }
-};
-
-// 流程图内的「刷新状态」：重新拉取 CA 申请状态，已签发会自动回填生效
-const refreshStatus = async () => {
-  refreshing.value = true;
-  try {
-    const res = await refreshSignCaApply(props.id);
-    const data = res.data || {};
-    if (data.certStatus === 1) {
-      ElMessage.success(`CA 已签发，证书已生效 ${data.certNo || ''}`);
-    } else {
-      ElMessage.success(`CA 状态：${data.applyStatusText || data.applyStatus || '未知'}`);
-      if (data.applyMessage) ElMessage.info(data.applyMessage);
-    }
-    await loadData();
-    emit('saved');
-  } catch (e) {
-    console.error('刷新 CA 申请状态失败', e);
-  } finally {
-    refreshing.value = false;
   }
 };
 

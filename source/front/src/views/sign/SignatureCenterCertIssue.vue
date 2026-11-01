@@ -1,6 +1,6 @@
 <template>
   <!-- ---------------- 证书办理（优先 CA 在线申请，失败可转线下回填） ---------------- -->
-  <el-dialog v-model="visible" title="办理签名证书" width="680px" @closed="onClosed">
+  <el-dialog v-model="visible" :title="bindCertId ? '回填证书（CA 已签发）' : '办理签名证书'" width="680px" @closed="onClosed">
     <el-steps :active="step" align-center class="mb-4" finish-status="success">
       <el-step title="生成密钥对"/>
       <el-step title="CA 签发"/>
@@ -51,6 +51,11 @@
           <span class="text-xs leading-relaxed">{{ caAlertHint }}</span>
         </template>
       </el-alert>
+      <p v-if="!applyInfo?.online && caStatus?.appId" class="mb-3 pl-2 text-xs text-slate-500">
+        接入 App ID：<span class="font-mono">{{ caStatus.appId }}</span>
+        <span v-if="caStatus.baseUrl"> · CA 地址：<span class="font-mono">{{ caStatus.baseUrl }}</span></span>
+        · 接入密钥：{{ caStatus.appSecretConfigured ? '已配置' : '未配置' }}
+      </p>
       <el-form label-width="90px">
         <el-form-item label="证书编号">
           <el-input :model-value="applyInfo?.certNo || ''" readonly/>
@@ -77,14 +82,44 @@
       <p class="pl-2 text-xs text-slate-400">{{ applyInfo?.guide || '' }}</p>
     </div>
 
-    <!-- 第三步：线下回填 CA 签发的证书（兜底） -->
-    <el-form v-show="step === 2" label-width="90px">
-      <el-form-item label="证书 PEM" required>
-        <el-input v-model="bindForm.certPem" :rows="8" data-testid="p5-sign-bind-pem" placeholder="粘贴 CA 签发返回的证书 PEM（含 -----BEGIN CERTIFICATE----- 段）"
-                  type="textarea"/>
-      </el-form-item>
-      <p class="pl-2 text-xs text-slate-400">序列号、签发者、主体 DN、有效期均从证书文件解析，无需填写。</p>
-    </el-form>
+    <!-- 第三步：线下回填 CA 签发的证书（兜底 / 或回填已有证书） -->
+    <div v-show="step === 2">
+      <el-form label-width="90px">
+        <el-form-item v-if="displayDn" label="主体 DN">
+          <el-input :model-value="displayDn" data-testid="p5-sign-bind-dn" readonly/>
+        </el-form-item>
+        <el-form-item v-if="displayPubKey" label="本地公钥">
+          <el-input :model-value="displayPubKey" :rows="5" data-testid="p5-sign-bind-pubkey" readonly type="textarea"/>
+        </el-form-item>
+      </el-form>
+      <!-- 线下送 CA 一律走「上传 CA 导出的证书文件」：证书真值（序列号/签发者/主体 DN/
+           生效与失效时间）全部由后端从文件里解析，不接受手工粘贴，避免抄错或抄入伪值。
+           CA 侧产出形态不统一：多数是含证书链的 .pem，也可能是带密码的 .zip —— 后端按内容嗅探。 -->
+      <el-form label-width="90px">
+        <el-form-item label="证书文件" required>
+          <el-upload
+              :auto-upload="false"
+              :limit="1"
+              accept=".pem,.crt,.cer,.der,.zip"
+              :on-change="onZipChange"
+              :on-remove="onZipRemove"
+              :file-list="zipFileList"
+              data-testid="p5-sign-bind-zip">
+            <el-button plain type="primary">选择证书文件</el-button>
+            <template #tip>
+              <span class="text-xs text-slate-400">CA 系统「下载证书」得到的 .pem（可含整条链），或其导出的带密码 .zip</span>
+            </template>
+          </el-upload>
+        </el-form-item>
+        <el-form-item v-if="isZipFile" label="解压密码" required>
+          <el-input v-model="bindForm.zipPassword" data-testid="p5-sign-bind-zippwd" placeholder="压缩包由 CA 提供时填写其展示的解压密码"/>
+        </el-form-item>
+        <p class="pl-2 text-xs text-slate-400">
+          序列号、签发者、主体 DN 与生效/失效时间均从证书文件（notBefore / notAfter）解析，无需填写；
+          回填后列表展示的就是 CA 实际签发的有效期。若文件里同时有证书链，会自动挑公钥与本证书一致的那张。
+        </p>
+      </el-form>
+    </div>
 
     <template #footer>
       <el-button v-if="step === 0" :loading="submitting" data-testid="p5-sign-issue-submit" type="primary"
@@ -93,10 +128,6 @@
       </el-button>
       <template v-if="step === 1">
         <el-button v-if="canRetry" :loading="submitting" type="primary" @click="retrySubmit">重新提交</el-button>
-        <el-button v-if="applyInfo?.online && applyInfo?.certStatus !== 1" :loading="refreshing" type="primary"
-                   @click="refreshStatus">
-          刷新状态
-        </el-button>
         <el-button @click="step = 2">改为线下回填</el-button>
       </template>
       <el-button v-if="step === 2" :loading="submitting" data-testid="p5-sign-bind-submit" type="primary"
@@ -111,11 +142,13 @@
 <script setup>
 import {computed, onBeforeUnmount, reactive, ref, watch} from 'vue';
 import {ElMessage} from 'element-plus';
-import {bindSignCert, getSignCaStatus, keygenSignCert, refreshSignCaApply, submitSignCaApply,} from '@/api/signature';
+import {bindSignCertFile, getSignCaStatus, getSignCertDetail, keygenSignCert, submitSignCaApply,} from '@/api/signature';
 import {getEmployeeList} from '@/api/system';
 
 const props = defineProps({
   modelValue: {type: Boolean, default: false},
+  // 回填模式：传入已存在且「待 CA 签发」的证书 id，跳过密钥生成，直接走线下回填
+  bindCertId: {type: [String, Number], default: null},
 });
 const emit = defineEmits(['update:modelValue', 'saved']);
 
@@ -125,12 +158,15 @@ const visible = computed({
 });
 
 const submitting = ref(false);
-const refreshing = ref(false);
 const empOptions = ref([]);
 const empLoading = ref(false);
 const step = ref(0);
 const applyInfo = ref(null);
 const caStatus = ref(null);
+// 回填模式：加载已有证书的公钥 / 主体 DN 供用户核对（确认 CA 签的是本证书的公钥）
+const bindCertDetail = ref(null);
+// 回填模式下「上传证书压缩包」的文件列表（仅展示用，真实文件存在 bindForm.zipFile）
+const zipFileList = ref([]);
 const form = reactive({
   empId: undefined,
   empName: '',
@@ -141,12 +177,46 @@ const form = reactive({
 });
 const bindForm = reactive({
   certId: undefined,
-  certPem: ''
+  zipFile: null,
+  zipPassword: ''
 });
 
 let pollTimer = null;
 
 const canRetry = computed(() => ['FAILED', 'REJECTED', 'CANCELLED'].includes(applyInfo.value?.applyStatus));
+
+// 回填模式下展示的「主体 DN / 本地公钥」：优先取密钥生成流程的临时申请单，否则取已有证书详情
+const displayDn = computed(() => applyInfo.value?.subjectDn || bindCertDetail.value?.caSubjectDn || '');
+const displayPubKey = computed(() => applyInfo.value?.publicKeyPem || bindCertDetail.value?.publicKey || '');
+
+// 加载已有证书详情（回填模式下核对用）
+const loadBindCertDetail = async (certId) => {
+  try {
+    const res = await getSignCertDetail(certId);
+    bindCertDetail.value = res.data || null;
+  } catch (e) {
+    console.error('加载证书详情失败', e);
+  }
+};
+
+// 选择压缩包：el-upload 非自动上传，这里只把原生 File 暂存到 bindForm.zipFile
+const onZipChange = (file) => {
+  bindForm.zipFile = file.raw || null;
+  if (!bindForm.zipFile) {
+    ElMessage.warning('未读取到文件，请重新选择');
+  }
+};
+
+const onZipRemove = () => {
+  bindForm.zipFile = null;
+  bindForm.zipPassword = '';
+};
+
+// 只有 .zip 才需要解压密码（CA 侧多数直接给 .pem，无密码）
+const isZipFile = computed(() => {
+  const n = (bindForm.zipFile?.name || '').toLowerCase();
+  return n.endsWith('.zip');
+});
 
 // CA 通道真实状态：只认后端 caStatus 的 caMode（offline=未启用，online=已启用），
 // 不再用「有没有提交过申请」冒充「是否接入」。凭证缺失时由 hint 逐条列出缺了哪些参数。
@@ -219,12 +289,23 @@ const startPolling = () => {
       return;
     }
     try {
-      const res = await refreshSignCaApply(applyInfo.value.certId);
-      applyRefresh(res.data);
+      // HIS 已撤销 CA 查询权限：状态只能由 CA 推送，这里只读本地证书记录，
+      // 收到推送后本地的 certStatus / 申请状态才会变
+      const res = await getSignCertDetail(applyInfo.value.certId);
+      const d = res.data || {};
+      applyInfo.value = {
+        ...(applyInfo.value || {}),
+        certStatus: d.certStatus,
+        certStatusText: d.certStatusText,
+        applyNo: d.caApplyNo,
+        applyStatus: d.caApplyStatus,
+        applyStatusText: d.caApplyStatusText,
+        applyMessage: d.caLastMessage
+      };
       if (finishIfActive()) return;
-      if (['FAILED', 'REJECTED', 'CANCELLED'].includes(res.data?.applyStatus)) stopPolling();
+      if (['FAILED', 'REJECTED', 'CANCELLED', 'ISSUED'].includes(d.caApplyStatus)) stopPolling();
     } catch (e) {
-      console.error('刷新 CA 申请状态失败', e);
+      console.error('读取证书本地状态失败', e);
       stopPolling();
     }
   }, 5000);
@@ -313,10 +394,20 @@ watch(visible, (open) => {
   form.pin = '';
   form.remark = '';
   bindForm.certId = undefined;
-  bindForm.certPem = '';
+  bindForm.zipFile = null;
+  bindForm.zipPassword = '';
+  zipFileList.value = [];
   pinMasked.value = false;
   selectedEmp.value = null;
+  bindCertDetail.value = null;
   empSearchSeq += 1;
+  // 回填模式：传入了已有证书 id → 跳过密钥生成，直接进回填步骤并加载公钥/DN 供核对
+  if (props.bindCertId) {
+    step.value = 2;
+    bindForm.certId = props.bindCertId;
+    loadBindCertDetail(props.bindCertId);
+    return;
+  }
   loadCaStatus();
   empLoading.value = false;
   resetEmpOptions();
@@ -387,36 +478,31 @@ const retrySubmit = async () => {
   }
 };
 
-const refreshStatus = async () => {
-  refreshing.value = true;
-  try {
-    const res = await refreshSignCaApply(applyInfo.value.certId);
-    applyRefresh(res.data);
-    if (finishIfActive()) return;
-    ElMessage.success('已刷新 CA 申请状态');
-  } catch (e) {
-    console.error('刷新 CA 申请状态失败', e);
-  } finally {
-    refreshing.value = false;
-  }
-};
-
 const submitBind = async () => {
-  if (!bindForm.certPem || !bindForm.certPem.includes('BEGIN CERTIFICATE')) {
-    ElMessage.warning('请粘贴 CA 返回的完整证书 PEM');
+  // 线下送 CA 只认「CA 导出的证书文件」：序列号/签发者/主体 DN/生效与失效时间
+  // 全部由后端从文件里解析，不接受手工粘贴，避免抄错或抄入伪值。
+  if (!bindForm.zipFile) {
+    ElMessage.warning('请选择 CA 系统下载的证书文件(.pem/.crt/.cer/.der/.zip)');
+    return;
+  }
+  if (isZipFile.value && !bindForm.zipPassword) {
+    ElMessage.warning('上传的是压缩包，请输入解压密码');
     return;
   }
   submitting.value = true;
   try {
-    const res = await bindSignCert({
-      certId: bindForm.certId,
-      certPem: bindForm.certPem,
-    });
-    ElMessage.success(`证书已回填生效 ${res.data?.certNo || ''}`);
+    const fd = new FormData();
+    fd.append('certId', String(bindForm.certId));
+    if (isZipFile.value) fd.append('password', bindForm.zipPassword);
+    fd.append('file', bindForm.zipFile);
+    const res = await bindSignCertFile(fd);
+    // 有效期由证书文件的 notBefore/notAfter 解析，回填即覆盖申请时的预期值 —— 回显出来供核对
+    const d = res.data || {};
+    ElMessage.success(`证书已回填生效 ${d.certNo || ''}，有效期 ${d.validFrom || '—'} ~ ${d.validTo || '—'}`);
     emit('saved');
     visible.value = false;
   } catch (e) {
-    console.error('回填证书失败', e);
+    console.error('上传压缩包回填证书失败', e);
   } finally {
     submitting.value = false;
   }

@@ -51,6 +51,11 @@ public class SecurityConfig {
             // 注意：这里写的是去掉 context-path(/api) 后的内部路径，写 /api/pay/notify/** 等于没放行。
             "/pay/notify/**",
 
+            // CA 认证中心推送申请单状态变更。CA 服务器同样不持有 HIS token，
+            // 该端点由方案侧来源限制 + SignCaCallbackRateLimitFilter（每分钟限次，超出 429）保护，
+            // 业务侧再做幂等校验与状态机校验。
+            "/emr/signCert/caCallback",
+
             // Swagger API 文档
             "/doc.html",
             "/swagger-ui/**",

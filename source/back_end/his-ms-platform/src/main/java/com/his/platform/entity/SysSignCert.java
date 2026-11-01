@@ -82,11 +82,16 @@ public class SysSignCert extends BaseEntity {
     private Integer certStatus;
 
     /**
-     * 生效时间
+     * 生效时间。
+     *
+     * <p>口径：待 CA 签发（certStatus=0）时是「申请时按申请有效天数估算」的预期值，不是证书真值；
+     * CA 签发回填后由证书文件的 notBefore 覆盖（见 SignCertServiceImpl#bindCertificate）。
      */
     private LocalDateTime validFrom;
     /**
-     * 失效时间
+     * 失效时间。
+     *
+     * <p>口径同 validFrom：回填前为申请预期值，回填后由证书文件的 notAfter 覆盖。
      */
     private LocalDateTime validTo;
 
