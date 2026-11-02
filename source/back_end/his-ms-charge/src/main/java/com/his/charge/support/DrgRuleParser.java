@@ -4,7 +4,9 @@ import com.his.common.util.TextUtil;
 import lombok.NoArgsConstructor;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -49,7 +51,17 @@ public final class DrgRuleParser {
     /**
      * 恒真条件（官方写成 {@code 1}）：不带任何事实判断，只在同组前面的档位全不命中后才轮到它
      */
-    private static final DrgRule ALWAYS = (facts, scheme) -> true;
+    private static final DrgRule ALWAYS = new DrgRule() {
+        @Override
+        public boolean matches(DrgFacts facts, DrgScheme scheme) {
+            return true;
+        }
+
+        @Override
+        public Set<String> refs() {
+            return Set.of();
+        }
+    };
 
     /**
      * 编译规则原文；空白返回 null（空规则=该行不带条件，兜底语义由分组器按目录层级决定）。
@@ -82,6 +94,11 @@ public final class DrgRuleParser {
             }
             return false;
         }
+
+        @Override
+        public Set<String> refs() {
+            return union(parts);
+        }
     }
 
     private record All(List<DrgRule> parts) implements DrgRule {
@@ -94,19 +111,26 @@ public final class DrgRuleParser {
             }
             return true;
         }
+
+        @Override
+        public Set<String> refs() {
+            return union(parts);
+        }
     }
 
     /**
      * 码类变量落在引用集合内（多变量、多引用都按「任一命中」）
+     *
+     * <p>组件名不能叫 {@code refs}：record 会生成同名访问器，与接口的 {@link DrgRule#refs()} 撞名且返回类型不同。
      */
-    private record InRef(List<String> vars, List<String> refs, boolean negated) implements DrgRule {
+    private record InRef(List<String> vars, List<String> setRefs, boolean negated) implements DrgRule {
         @Override
         public boolean matches(DrgFacts facts, DrgScheme scheme) {
             boolean hit = false;
             outer:
             for (String var : vars) {
                 for (String code : facts.codes(var)) {
-                    for (String ref : refs) {
+                    for (String ref : setRefs) {
                         if (scheme.matchRef(ref, code, facts.mainDiag())) {
                             hit = true;
                             break outer;
@@ -117,6 +141,20 @@ public final class DrgRuleParser {
             // not in 取反：一个都没命中才算成立；该维度无值也算成立（无手术=主手术不在任何手术集合内）
             return negated != hit;
         }
+
+        /**
+         * MCC/CC 是目录级别伪集合，不作为缺失集合报出
+         */
+        @Override
+        public Set<String> refs() {
+            Set<String> all = new HashSet<>();
+            for (String ref : setRefs) {
+                if (!DrgScheme.REF_MCC.equals(ref) && !DrgScheme.REF_CC.equals(ref)) {
+                    all.add(ref);
+                }
+            }
+            return all;
+        }
     }
 
     private record Compare(String var, Cmp op, long operand) implements DrgRule {
@@ -124,6 +162,11 @@ public final class DrgRuleParser {
         public boolean matches(DrgFacts facts, DrgScheme scheme) {
             Integer actual = facts.number(var);
             return actual != null && op.test(actual, operand);
+        }
+
+        @Override
+        public Set<String> refs() {
+            return Set.of();
         }
     }
 
@@ -143,6 +186,19 @@ public final class DrgRuleParser {
             }
             return op.test(members.size(), operand);
         }
+
+        @Override
+        public Set<String> refs() {
+            return Set.of(setCode);
+        }
+    }
+
+    private static Set<String> union(List<DrgRule> parts) {
+        Set<String> all = new HashSet<>();
+        for (DrgRule part : parts) {
+            all.addAll(part.refs());
+        }
+        return all;
     }
 
     /**

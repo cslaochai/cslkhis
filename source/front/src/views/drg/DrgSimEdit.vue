@@ -94,7 +94,8 @@ const runSim = async () => {
     });
     const d = res?.data;
     simResult.value = d;
-    ElMessage.success(d?.simStatus === 1 ? `已入组 ${d.drgCode}` : '未入组（QY）');
+    ElMessage.success(d?.simStatus === 1 ? `已入组 ${d.drgCode}`
+        : d?.simStatus === 3 ? `歧义组 ${d.drgCode}（不计权重与盈亏）` : '未入组');
     emit('saved');
   } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
     

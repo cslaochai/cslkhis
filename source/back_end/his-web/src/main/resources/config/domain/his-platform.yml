@@ -26,8 +26,12 @@ his:
       request-timeout-ms: 10000
       # CA 状态推送回调限流：同一来源 IP 每分钟最多接收次数，超出直接 429
       callback-rate-limit-per-minute: 30
+      # CA 推送验签的时间戳允许偏差（秒）：超出即拒，防重放
+      callback-clock-skew-seconds: 300
+      # 只有确实部署在强制覆盖该头的受信代理之后才改 true。
+      callback-trust-forwarded-ip: false
       # CA 对外接口路径（相对 base-url）：只写路径，参数一律封装在请求体内，URL 不暴露申请单号/序列号
       paths:
-        applications: /ca/api/v1/applications
-        cancel: /ca/api/v1/applications/cancel
+        apply-sign: /ca/api/v1/apply/sign
+        cancel: /ca/api/v1/apply/cancel
         revoke: /ca/api/v1/certificates/revoke

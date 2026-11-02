@@ -130,7 +130,7 @@ public class SignCaApiClient {
         } catch (Exception e) {
             throw new BusinessException("构造 CA 申请报文失败：" + e.getMessage());
         }
-        return toApplication(call("POST", path(signProperties.getCa().getPaths().getApplications(), "applications"), body));
+        return toApplication(call("POST", path(signProperties.getCa().getPaths().getApplySign(), "applications"), body));
     }
 
     // ---------------- 加解密与签名 ----------------

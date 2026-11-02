@@ -39,6 +39,7 @@ import com.his.spi.vo.SignCaApplyRecordVO;
 import com.his.spi.vo.SignCaApplyVO;
 import com.his.spi.vo.SignCaStatusVO;
 import com.his.spi.vo.SignCaPushResultVO;
+import com.his.spi.vo.SignCertEmpTimelineVO;
 import com.his.spi.vo.SignPreCheckVO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -137,19 +138,10 @@ public class SignCertServiceImpl extends ServiceImpl<SysSignCertMapper, SysSignC
             return exist;
         }
         // CA 交互改为在线申请 + 线下兜底，系统仍无法在签名瞬间同步拿到证书——此时必须说清卡在哪一步
-        SysSignCert pending = sysSignCertMapper.selectOne(new LambdaQueryWrapper<SysSignCert>()
-                .eq(SysSignCert::getEmpId, empId)
-                .eq(SysSignCert::getCertStatus, CertStatusEnum.PENDING_CA.getCode())
-                .orderByDesc(SysSignCert::getId)
-                .last("LIMIT 1"));
+        SysSignCert pending = pendingCertOf(empId);
         if (pending != null) {
-            SysSignCaApply latestApply = signCaApplyService.latestOf(pending.getId());
-            String applyState = latestApply != null && TextUtil.hasText(latestApply.getApplyNo())
-                    ? "已提交 CA 申请（申请单 " + latestApply.getApplyNo() + "，当前状态："
-                    + CaApplyStatusEnum.getLabel(latestApply.getApplyStatus(), latestApply.getApplyStatus()) + "）"
-                    : "已生成密钥对，尚未完成 CA 签发";
             throw new BusinessException("员工「" + (TextUtil.hasText(empName) ? empName : empId)
-                    + "」的签名证书 " + pending.getCertNo() + " " + applyState
+                    + "」的签名证书 " + pending.getCertNo() + " " + pendingApplyStateText(pending)
                     + "；CA 审核签发后会主动推送回 HIS 并自动回填生效，无需人工刷新，签发完成后再签名");
         }
         throw new BusinessException("员工「" + (TextUtil.hasText(empName) ? empName : empId)
@@ -179,6 +171,15 @@ public class SignCertServiceImpl extends ServiceImpl<SysSignCertMapper, SysSignC
             throw new BusinessException("员工「" + dto.getEmpName() + "」已持有有效证书 "
                     + exist.getCertNo() + "（有效期至 " + exist.getValidTo() + "）；"
                     + "如需换新证书请先吊销原证书（吊销会留痕）");
+        }
+        // 唯一性校验：建号自动生成与手工办理两条路径都汇到 keygen，不拦在途证书
+        // 就会给同一个人攒出多张「待CA签发」，CA 侧也会收到重复申请单
+        SysSignCert pending = pendingCertOf(dto.getEmpId());
+        if (pending != null) {
+            throw new BusinessException("员工「" + dto.getEmpName() + "」已有一张待CA签发的证书 "
+                    + pending.getCertNo() + "（" + pendingApplyStateText(pending) + "）；"
+                    + "一人同刻只允许一张在途申请，请先在该证书上完成「回填证书」，"
+                    + "确认不再需要时先吊销再重新办理");
         }
         SysSignCert cert = doKeygen(dto.getEmpId(), dto.getEmpName(), dto.getDeptId(), dto.getDeptName(),
                 effectiveValidDays(null), dto.getPin(), dto.getRemark());
@@ -211,9 +212,10 @@ public class SignCertServiceImpl extends ServiceImpl<SysSignCertMapper, SysSignC
         java.security.cert.X509Certificate x509 = bindCertificate(cert, dto.getCertPem(),
                 TextUtil.hasText(dto.getRemark()) ? dto.getRemark()
                         : "CA 线下签发，证书由管理员人工回填（私钥本地生成并加密托管，未出 HIS）");
-        // 线下回填同样给最近一单打上「回填生效」的时刻；从没向 CA 送过单（纯人工流程）就没有流水行可记
+        // 线下回填同样给最近一单打上「回填生效」并翻「已签发」：没送过在线单（纯人工流程）
+        // 或送单失败/在途，都不影响「证书已由 CA 签发」这一事实成立
         SysSignCaApply apply = signCaApplyService.latestOf(cert.getId());
-        if (apply != null && TextUtil.hasText(apply.getApplyNo())) {
+        if (apply != null) {
             signCaApplyService.markBound(apply, issuerOf(x509));
         }
         sysSignCertMapper.updateById(cert);
@@ -247,9 +249,10 @@ public class SignCertServiceImpl extends ServiceImpl<SysSignCertMapper, SysSignC
         java.security.cert.X509Certificate x509 = extractCertFromFile(fileBytes, cert);
         bindCertificate(cert, PemCodecUtil.toPem(x509),
                 "CA 线下签发，证书由管理员上传 CA 导出的证书文件回填（私钥本地生成并加密托管，未出 HIS）");
-        // 线下回填同样给最近一单打上「回填生效」的时刻；从没向 CA 送过单（纯人工流程）就没有流水行可记
+        // 线下回填同样给最近一单打上「回填生效」并翻「已签发」：没送过在线单（纯人工流程）
+        // 或送单失败/在途，都不影响「证书已由 CA 签发」这一事实成立
         SysSignCaApply apply = signCaApplyService.latestOf(cert.getId());
-        if (apply != null && TextUtil.hasText(apply.getApplyNo())) {
+        if (apply != null) {
             signCaApplyService.markBound(apply, issuerOf(x509));
         }
         sysSignCertMapper.updateById(cert);
@@ -665,6 +668,30 @@ public class SignCertServiceImpl extends ServiceImpl<SysSignCertMapper, SysSignC
     }
 
     /**
+     * 员工名下「待CA签发」的在途证书（取最近一张兜底并发）：一人同刻只应有一张，
+     * 办理证书（{@link #keygen}）与签名前检查（{@link #ensureActiveCert}）都靠它拦重复申请。
+     */
+    private SysSignCert pendingCertOf(Long empId) {
+        return sysSignCertMapper.selectOne(new LambdaQueryWrapper<SysSignCert>()
+                .eq(SysSignCert::getEmpId, empId)
+                .eq(SysSignCert::getCertStatus, CertStatusEnum.PENDING_CA.getCode())
+                .orderByDesc(SysSignCert::getId)
+                .last("LIMIT 1"));
+    }
+
+    /**
+     * 在途证书的申请状态描述：已送 CA 报申请单号与当前状态；从没送过单只说密钥对已生成。
+     * 申请的时间线（谁申请、何时提交、CA 各环节回执）以 sys_sign_ca_apply 流水为准。
+     */
+    private String pendingApplyStateText(SysSignCert pending) {
+        SysSignCaApply latestApply = signCaApplyService.latestOf(pending.getId());
+        return latestApply != null && TextUtil.hasText(latestApply.getApplyNo())
+                ? "已提交 CA 申请（申请单 " + latestApply.getApplyNo() + "，当前状态："
+                + CaApplyStatusEnum.getLabel(latestApply.getApplyStatus(), latestApply.getApplyStatus()) + "）"
+                : "已生成密钥对，尚未完成 CA 签发";
+    }
+
+    /**
      * 生成密钥对并落库（状态=待CA签发）。
      *
      * <p>私钥在本机生成、经主口令加密后落库，全程不出 HIS；CA 认证中心只经手公钥。
@@ -851,6 +878,54 @@ public class SignCertServiceImpl extends ServiceImpl<SysSignCertMapper, SysSignC
             list.add(toApplyRecordVO(apply));
         }
         return list;
+    }
+
+    /**
+     * 员工证书操作时间线：CA 申请流水（按流水行冗余的 emp_id 直查）+ 吊销事件（证书行 revoke_* 派生）
+     * 合并成一条履历，按事件发生时间倒序——最近做了什么排最前。
+     *
+     * <p>吊销不落申请表（申请行的状态机只描述 CA 流程），从证书行派生事件即可：
+     * 吊销原因 / 操作人 / 时刻都在 revoke_* 三列上，不会丢。
+     */
+    @Override
+    public List<SignCertEmpTimelineVO> employeeOpTimeline(Long empId) {
+        if (empId == null) {
+            throw new BusinessException("员工ID不能为空");
+        }
+        List<SignCertEmpTimelineVO> timeline = new ArrayList<>();
+        for (SysSignCaApply apply : signCaApplyService.listByEmpId(empId)) {
+            SignCertEmpTimelineVO vo = new SignCertEmpTimelineVO();
+            vo.setEventType("CA_APPLY");
+            vo.setEventTime(apply.getSubmittedAt());
+            vo.setCertNo(apply.getCertNo());
+            vo.setApplySeq(apply.getApplySeq());
+            vo.setApplyNo(apply.getApplyNo());
+            vo.setApplyStatus(apply.getApplyStatus());
+            vo.setApplyStatusText(CaApplyStatusEnum.getLabel(apply.getApplyStatus(), apply.getApplyStatus()));
+            vo.setCaMessage(apply.getCaMessage());
+            vo.setCaIssuer(apply.getCaIssuer());
+            vo.setReviewedAt(apply.getReviewedAt());
+            vo.setIssuedAt(apply.getIssuedAt());
+            vo.setBoundAt(apply.getBoundAt());
+            vo.setOperatorName(apply.getCreateBy());
+            timeline.add(vo);
+        }
+        // 吊销事件：该员工名下证书行上打过 revoke_time 的都算一条（历史吊销留痕在此）
+        List<SysSignCert> certs = sysSignCertMapper.selectList(new LambdaQueryWrapper<SysSignCert>()
+                .eq(SysSignCert::getEmpId, empId)
+                .isNotNull(SysSignCert::getRevokeTime));
+        for (SysSignCert cert : certs) {
+            SignCertEmpTimelineVO vo = new SignCertEmpTimelineVO();
+            vo.setEventType("REVOKE");
+            vo.setEventTime(cert.getRevokeTime());
+            vo.setCertNo(cert.getCertNo());
+            vo.setRevokeReason(cert.getRevokeReason());
+            vo.setRevokeByName(cert.getRevokeByName());
+            timeline.add(vo);
+        }
+        // 事件时刻两类都非空（submitted_at NOT NULL、有 revoke_time 才成事件），直接倒序
+        timeline.sort((a, b) -> b.getEventTime().compareTo(a.getEventTime()));
+        return timeline;
     }
 
     /**
@@ -1260,11 +1335,17 @@ public class SignCertServiceImpl extends ServiceImpl<SysSignCertMapper, SysSignC
         vo.setKeyFingerprintGroups(SignCryptoUtil.fingerprintGroups(c.getKeyFingerprint()));
         vo.setCaSubjectDn(subjectDnOf(c));
         vo.setCaSerial(c.getCaSerial());
-        vo.setCaApplyNo(latestApply == null ? null : latestApply.getApplyNo());
-        vo.setCaApplyStatus(latestApply == null ? null : latestApply.getApplyStatus());
-        vo.setCaApplyStatusText(latestApply == null ? null
-                : CaApplyStatusEnum.getLabel(latestApply.getApplyStatus(), latestApply.getApplyStatus()));
-        vo.setCaLastMessage(latestApply == null ? null : latestApply.getCaMessage());
+        if (latestApply != null) {
+            vo.setCaApplyNo(latestApply.getApplyNo());
+            vo.setCaApplyStatus(latestApply.getApplyStatus());
+            vo.setCaApplyStatusText(CaApplyStatusEnum.getLabel(latestApply.getApplyStatus(), latestApply.getApplyStatus()));
+            vo.setCaLastMessage(latestApply.getCaMessage());
+        } else if (TextUtil.hasText(c.getCaSerial())) {
+            // 316 前的存量或纯线下流程：证书文件已回填但从未有在线申请流水，
+            // CA 列不能停在「待线下送 CA」，按「证书已由 CA 签发」的事实展示
+            vo.setCaApplyStatus(CaApplyStatusEnum.ISSUED.getCode());
+            vo.setCaApplyStatusText("已签发（线下回填，无在线申请单）");
+        }
         vo.setIssuedMode(c.getIssuedMode());
         vo.setIssuedModeText(CertIssuedModeEnum.getLabel(c.getIssuedMode()));
         vo.setCertStatus(c.getCertStatus());

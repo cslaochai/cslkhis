@@ -9,7 +9,11 @@ import lombok.Getter;
 public enum DrgSimStatusEnum {
 
     GROUPED(1, "已分组"),
-    UNGROUPED(2, "未分组");
+    UNGROUPED(2, "未分组"),
+    /**
+     * 歧义组：命中官方 ?QY 档（如 BQY），是合法结果码，但不计权重与盈亏
+     */
+    AMBIGUOUS(3, "歧义组");
 
     private final int code;
     private final String label;

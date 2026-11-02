@@ -212,6 +212,17 @@ public class SignatureController {
     }
 
     /**
+     * 员工证书操作时间线：该员工名下所有证书的 CA 申请流水（含重提）与吊销事件合并，按事件时间倒序。
+     * 全局查看某员工「申请了什么、送到 CA 没有、卡在哪、谁吊销的」一条履历看全。
+     */
+    @Operation(summary = "员工证书操作时间线（CA申请+吊销，按时间倒序）")
+    @PreAuthorize("hasAnyAuthority('sign:cert:list', 'org:employee:list')")
+    @GetMapping("/emr/signCert/empTimeline")
+    public Result<List<SignCertEmpTimelineVO>> signCertEmpTimeline(@RequestParam Long empId) {
+        return Result.success(signCertFacadeService.listEmployeeCertTimeline(empId));
+    }
+
+    /**
      * 按员工取当前有效证书：员工管理「签名设置」弹框用（只读，人事侧也可看）。
      */
     @Operation(summary = "按员工取当前有效签名证书（只读）")
@@ -272,8 +283,10 @@ public class SignatureController {
     /**
      * CA 主动推送申请单状态变更：HIS 不提供查询接口，审核/签发/撤销一律由 CA 推送。
      *
-     * <p>接口匿名开放（CA 服务器不持有 HIS token），安全边界依靠网关来源限制与
-     * CA 推送限流过滤器；处理本身做幂等校验与状态机校验，同一状态重放不重复回填，
+     * <p>接口匿名开放（CA 服务器不持有 HIS token），准入由三道边界把守：
+     * SignCaCallbackSignatureFilter 验 HMAC-SHA256 签名（含时间戳偏差与 nonce 去重）、
+     * SignCaCallbackRateLimitFilter 按来源 IP 限流、网关侧来源限制。
+     * 处理本身做幂等校验与状态机校验，同一状态重放不重复回填，
      * 非法流转直接拒绝；status=ISSUED 且报文带证书 PEM 时自动校验公钥并回填生效。</p>
      */
     @Operation(summary = "CA 推送申请单状态（幂等 + 状态机 + 已签发自动回填）")

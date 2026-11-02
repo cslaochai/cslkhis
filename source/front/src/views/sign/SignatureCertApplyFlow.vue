@@ -100,7 +100,13 @@ const stages = computed(() => {
 
   const node2 = active
     ? {title: 'CA 签发', cls: 'success', tagType: 'success', statusText: '已签发', time: '', note: '证书已由 CA 签发并回填'}
-    : {title: 'CA 签发', cls: 'info', tagType: 'info', statusText: '线下送签·待办理', time: '', note: '未发起在线申请，需线下送 CA 后回填'};
+    : (d.caApplyStatus
+        ? {
+          title: 'CA 签发', cls: 'info', tagType: 'info',
+          statusText: d.caApplyStatusText || '处理中', time: '',
+          note: d.caLastMessage || `在线申请单当前状态「${d.caApplyStatusText || d.caApplyStatus}」，等 CA 回执或线下回填`,
+        }
+        : {title: 'CA 签发', cls: 'info', tagType: 'info', statusText: '线下送签·待办理', time: '', note: '未发起在线申请，需线下送 CA 后回填'});
 
   let node3;
   if (active) {

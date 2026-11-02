@@ -1,15 +1,25 @@
 <template>
   <div>
-    <!-- 版本切换：2.0 数据未接入时，切到 chs-drg-2.0 模拟会判为未入组 -->
+    <!-- 版本切换：3.0 为官方机读规则；2.0 规则为院内推导，仅用于内部测算 -->
     <div class="flex items-center gap-2 mb-3">
       <span class="text-sm text-gray-500">分组方案版本</span>
       <el-select v-model="version" clearable placeholder="版本" style="width: 150px" @change="onVersionChange">
         <el-option label="chs-drg-2.0" value="chs-drg-2.0"/>
         <el-option label="3.0" value="3.0"/>
       </el-select>
-      <el-tag v-if="version === 'chs-drg-2.0'" type="warning" size="small">2.0 官方数据尚未接入，模拟将判为未入组（QY）
+      <el-tag v-if="version === 'chs-drg-2.0'" type="warning" size="small">2.0 规则为院内推导（verified=0），仅用于内部测算
       </el-tag>
     </div>
+
+    <!-- 方案健康检查：缺失集合/数量不符/未复核等风险直接亮出来 -->
+    <el-alert v-if="health?.warnings?.length" class="mb-3" :closable="false" show-icon type="warning"
+              :title="`方案 ${health.version} 存在 ${health.warnings.length} 项风险，不可直接用于正式结算`">
+      <template #default>
+        <ul class="text-xs leading-5">
+          <li v-for="w in health.warnings" :key="w">· {{ w }}</li>
+        </ul>
+      </template>
+    </el-alert>
 
     <!-- 汇总卡 -->
     <div class="grid grid-cols-4 gap-3 mb-3">
@@ -18,10 +28,12 @@
         <p class="text-2xl font-semibold mt-1 text-blue-600">{{ stat?.total ?? '—' }}</p>
       </div>
       <div class="bg-white rounded-lg border border-gray-100 p-4 shadow-sm" data-testid="drg-stat-grouped">
-        <p class="text-xs text-gray-500">已入组 / 未入组</p>
+        <p class="text-xs text-gray-500">已入组 / 未入组 / 歧义</p>
         <p class="text-2xl font-semibold mt-1 text-green-600">
           {{ stat?.grouped ?? '—' }} <span class="text-sm text-gray-400">/</span>
-          <span class="text-lg text-gray-500">{{ stat?.ungrouped ?? '—' }}</span></p>
+          <span class="text-lg text-gray-500">{{ stat?.ungrouped ?? '—' }}</span>
+          <span class="text-sm text-gray-400">/</span>
+          <span class="text-lg text-amber-600">{{ stat?.ambiguous ?? '—' }}</span></p>
       </div>
       <div class="bg-white rounded-lg border border-gray-100 p-4 shadow-sm" data-testid="drg-stat-profit">
         <p class="text-xs text-gray-500">入组结余合计</p>
@@ -128,10 +140,17 @@
 
     <!-- 组表 -->
     <div class="bg-white rounded-lg border border-gray-100 p-4 shadow-sm">
-      <p class="text-sm font-medium mb-3">DRG 细分组目录（{{ version || '3.0' }} 官方方案；权重与支付标准由统筹区医保局下发，未下发处显示
+      <p class="text-sm font-medium mb-3">DRG 细分组目录（{{ version || '3.0' }} 分组方案；权重与支付标准由统筹区医保局下发，未下发处显示
         —）</p>
       <el-table :data="groups" border data-testid="drg-group-table" max-height="280" stripe>
         <el-table-column label="组编码" prop="drgCode" width="90"/>
+        <el-table-column align="center" label="类型" width="90">
+          <template #default="{ row }">
+            <el-tag v-if="row.rowKind === 1" size="small" type="warning">歧义档</el-tag>
+            <el-tag v-else-if="row.rowKind === 2" size="small" type="info">未入组占位</el-tag>
+            <span v-else class="text-gray-400">—</span>
+          </template>
+        </el-table-column>
         <el-table-column label="组名称" min-width="240" prop="drgName" show-overflow-tooltip/>
         <el-table-column align="center" label="MDC" prop="mdcCode" width="70"/>
         <el-table-column align="center" label="ADRG" prop="adrgCode" width="80"/>
@@ -154,7 +173,7 @@
 import {onMounted, reactive, ref} from 'vue';
 import {ElMessage} from 'element-plus';
 import {Refresh, Search, VideoPlay} from '@element-plus/icons-vue';
-import {drgGroupList, drgResultListPage, drgSimulateBatch, drgSummaryList} from '@/api/drg';
+import {drgGroupList, drgResultListPage, drgSchemeHealth, drgSimulateBatch, drgSummaryList} from '@/api/drg';
 import {getDictDataMapList, getDrgDefaultVersion} from '@/api/system';
 import DrgSimEdit from './DrgSimEdit.vue';
 import {DICT_TYPE} from '@/lib/dict-cache';
@@ -174,9 +193,20 @@ const loadDicts = async () => {
 // ---------------- 版本切换 ----------------
 const version = ref('3.0');
 const onVersionChange = () => {
+  loadHealth();
   loadSummary();
   loadList();
   loadGroups();
+};
+// ---------------- 方案健康检查 ----------------
+const health = ref(null);
+const loadHealth = async () => {
+  try {
+    const res = await drgSchemeHealth(version.value);
+    health.value = res?.data || null;
+  } catch (e) {
+    console.error('加载方案健康检查失败', e);
+  }
 };
 // ---------------- 汇总 + 可模拟首页 ----------------
 const summaries = ref([]);
@@ -262,6 +292,7 @@ onMounted(async () => {
     console.error('加载 DRG 默认版本失败', e);
   }
   loadDicts();
+  loadHealth();
   loadSummary();
   loadList();
   loadGroups();

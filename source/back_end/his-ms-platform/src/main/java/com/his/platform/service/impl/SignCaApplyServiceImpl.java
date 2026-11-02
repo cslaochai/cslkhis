@@ -42,6 +42,9 @@ public class SignCaApplyServiceImpl extends ServiceImpl<SysSignCaApplyMapper, Sy
         SysSignCaApply apply = new SysSignCaApply();
         apply.setCertId(cert.getId());
         apply.setCertNo(cert.getCertNo());
+        // 员工维度冗余落行：履历按人直查，不随证书行后续变化改写历史单据
+        apply.setEmpId(cert.getEmpId());
+        apply.setEmpName(cert.getEmpName());
         apply.setApplySeq(seq);
         apply.setExternalRequestId(externalRequestId);
         apply.setTemplateCode(templateCode);
@@ -85,6 +88,11 @@ public class SignCaApplyServiceImpl extends ServiceImpl<SysSignCaApplyMapper, Sy
     public void markBound(SysSignCaApply apply, String caIssuer) {
         if (apply == null) {
             return;
+        }
+        // 证书回填生效=CA 签发事实成立（在线签发 CA 推送置 ISSUED 后走到这里；线下签发人工回填
+        // 原本只有 FAILED/PENDING 行），统一翻成「已签发」，列表 CA 列与申请进度才不会停在旧状态
+        if (!CaApplyStatusEnum.ISSUED.getCode().equals(apply.getApplyStatus())) {
+            apply.setApplyStatus(CaApplyStatusEnum.ISSUED.getCode());
         }
         apply.setCaIssuer(caIssuer);
         apply.setBoundAt(TimeUtil.nowSeconds());
@@ -158,6 +166,14 @@ public class SignCaApplyServiceImpl extends ServiceImpl<SysSignCaApplyMapper, Sy
         return sysSignCaApplyMapper.selectList(new LambdaQueryWrapper<SysSignCaApply>()
                 .eq(SysSignCaApply::getCertId, certId)
                 .orderByDesc(SysSignCaApply::getApplySeq)
+                .orderByDesc(SysSignCaApply::getId));
+    }
+
+    @Override
+    public List<SysSignCaApply> listByEmpId(Long empId) {
+        return sysSignCaApplyMapper.selectList(new LambdaQueryWrapper<SysSignCaApply>()
+                .eq(SysSignCaApply::getEmpId, empId)
+                .orderByDesc(SysSignCaApply::getSubmittedAt)
                 .orderByDesc(SysSignCaApply::getId));
     }
 }

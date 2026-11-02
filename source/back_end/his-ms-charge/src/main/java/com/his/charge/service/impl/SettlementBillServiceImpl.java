@@ -21,6 +21,7 @@ import com.his.charge.mapper.BizSettlementBillItemMapper;
 import com.his.charge.mapper.BizSettlementBillMapper;
 import com.his.charge.service.*;
 import com.his.charge.vo.*;
+import com.his.charge.service.DrgSimService;
 import com.his.spi.vo.PendingBillItemVO;
 import com.his.spi.vo.PendingBillVO;
 import com.his.common.base.PageResult;
@@ -94,6 +95,8 @@ public class SettlementBillServiceImpl extends ServiceImpl<BizSettlementBillMapp
     private final InsuranceChannelService insuranceChannelService;
 
     private final InsuranceProperties insuranceProperties;
+
+    private final DrgSimService drgSimService;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -170,6 +173,20 @@ public class SettlementBillServiceImpl extends ServiceImpl<BizSettlementBillMapp
         if (BillStatusEnum.PAID.getCode().equals(bill.getBillStatus())) {
             feeRecordService.markSettledByBill(bill.getId());
             sourceAdvanceService.advanceByBill(bill);
+        }
+
+        // DRG 分组自动触发：仅住院出院结算（encounter_type=2 + bill_type=DISCHARGE）才跑。
+        // 分组是可选增强，任何异常（首页未建、主诊断为空、规则引擎报错）都不能让结算回滚 ——
+        // 用 try-catch 包一层，分组链路自身也会对「首页不存在/主诊断为空」静默返回 null。
+        if (bill.getEncounterType() != null && bill.getEncounterType() == 2
+                && BillTypeEnum.DISCHARGE.getCode().equals(bill.getBillType())) {
+            try {
+                drgSimService.simulateByEncounter(bill.getEncounterId(), null);
+                log.info("[DRG分组] 出院结算账单 {} 患者 {} 自动分组完成（版本默认）", bill.getBillNo(), bill.getPatientName());
+            } catch (Exception e) {
+                log.error("[DRG分组] 出院结算账单 {} 患者 {} 自动分组异常，不阻断结算：{}",
+                        bill.getBillNo(), bill.getPatientName(), e.getMessage(), e);
+            }
         }
 
         log.info("[结算] 账单 {} 患者 {} 行 {} 应收 ¥{} 优惠 ¥{} 统筹 ¥{} 应缴 ¥{}",

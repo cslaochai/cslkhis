@@ -10,6 +10,8 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.Ordered;
+import org.springframework.core.annotation.Order;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
@@ -26,9 +28,15 @@ import java.util.concurrent.atomic.AtomicInteger;
  * <p>CA 推送端点匿名开放（CA 服务器不持有 HIS token），限流是防刷的第一道边界；
  * 计数放在内存里按「IP + 当前分钟」分桶，无需引入 Redis——单实例本系统足够，
  * 多实例部署时各实例独立计数（总量会放大，但仍能压住单实例被刷爆）。</p>
+ *
+ * <p><b>必须排在验签之前</b>（{@code HIGHEST_PRECEDENCE + 10}，验签为 {@code + 20}）：
+ * 验签失败会直接 {@code return}、不往下走链，若限流排在其后，伪造签名的请求既不计数也永不触发 429，
+ * 攻击者可用无效报文无限次压 SHA256 + HMAC（还要先 {@code readAllBytes()} 读满请求体），
+ * 限流反而只卡住了正常流量。先计数再验签，失败的请求同样计入分钟桶。</p>
  */
 @Slf4j
 @Component
+@Order(Ordered.HIGHEST_PRECEDENCE + 10)
 @RequiredArgsConstructor
 public class SignCaCallbackRateLimitFilter extends OncePerRequestFilter {
 
@@ -79,19 +87,32 @@ public class SignCaCallbackRateLimitFilter extends OncePerRequestFilter {
     }
 
     /**
-     * 取来源 IP：经过网关/反向代理时优先 X-Forwarded-For 的第一段，否则用连接的远端地址。
+     * 取来源 IP。
+     *
+     * <p>默认只认 {@code getRemoteAddr()}：本端点直连对外端口，客户端可以直接伪造
+     * {@code X-Forwarded-For} / {@code X-Real-IP}，按头取 IP 等于把限流键交给攻击者，
+     * 每次换个伪造值就能绕过分钟桶。只有 {@code his.sign.ca.callback-trust-forwarded-ip=true}
+     * （确认部署在强制覆盖该头的受信代理之后）才读头。</p>
+     *
+     * <p>读头时优先 {@code X-Real-IP}，其次取 {@code X-Forwarded-For} 的<b>最后一段</b>：
+     * nginx 的 {@code $proxy_add_x_forwarded_for} 把真实地址追加在末尾，
+     * 首段是客户端可自行塞入的内容，取首段正是常见的伪造入口。</p>
      */
     private String clientIp(HttpServletRequest request) {
-        String forwarded = request.getHeader("X-Forwarded-For");
-        if (TextUtil.hasText(forwarded)) {
-            String first = forwarded.split(",")[0].trim();
-            if (TextUtil.hasText(first)) {
-                return first;
-            }
+        if (!signProperties.getCa().isCallbackTrustForwardedIp()) {
+            return request.getRemoteAddr();
         }
         String realIp = request.getHeader("X-Real-IP");
         if (TextUtil.hasText(realIp)) {
             return realIp.trim();
+        }
+        String forwarded = request.getHeader("X-Forwarded-For");
+        if (TextUtil.hasText(forwarded)) {
+            String[] hops = forwarded.split(",");
+            String last = hops[hops.length - 1].trim();
+            if (TextUtil.hasText(last)) {
+                return last;
+            }
         }
         return request.getRemoteAddr();
     }

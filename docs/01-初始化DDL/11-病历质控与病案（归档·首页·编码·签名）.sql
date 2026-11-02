@@ -132,7 +132,7 @@ CREATE TABLE `biz_drg_sim_result` (
   `pay_standard` decimal(10,2) COMMENT '病组支付标准（元）',
   `actual_amount` decimal(10,2) COMMENT '实际住院费用',
   `profit_amount` decimal(10,2) COMMENT '盈亏 = 支付标准 - 实际费用',
-  `sim_status` tinyint NOT NULL DEFAULT '1' COMMENT '结果（1-已入组 2-未入组）',
+  `sim_status` tinyint NOT NULL DEFAULT '1' COMMENT '结果（1-已入组 2-未入组 3-歧义组）',
   `rule_note` varchar(300) COMMENT '命中规则说明',
   `create_by` varchar(64) NOT NULL COMMENT '创建人',
   `create_time` datetime NOT NULL DEFAULT (now()) COMMENT '创建时间',

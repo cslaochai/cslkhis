@@ -26,3 +26,13 @@ export function drgSummaryList(limit, version) {
 export function drgGroupList(version) {
   return request.get('/report/drg/group/list', { params: { version } })
 }
+
+// 方案健康检查（完整度 / 规则来源 / 复核状态 / 缺失集合）
+export function drgSchemeHealth(version) {
+  return request.get('/report/drg/scheme/health', { params: { version } })
+}
+
+// MDC 主诊断 ICD 前缀分布（实时聚合，仅用于目录页展示提示，不得用于业务）
+export function drgMdcDiagPrefixes(version, mdcCode) {
+  return request.get('/report/drg/mdc/diag-prefixes', { params: { version, mdcCode } })
+}

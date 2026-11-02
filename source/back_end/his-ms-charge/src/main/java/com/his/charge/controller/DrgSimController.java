@@ -5,6 +5,7 @@ import com.his.common.base.Result;
 import com.his.charge.config.DrgSchemeConfig;
 import com.his.charge.dto.DrgSimDTO;
 import com.his.charge.service.DrgSimService;
+import com.his.charge.vo.DrgDiagPrefixVO;
 import com.his.charge.vo.DrgSimVO;
 import com.his.charge.vo.DrgVersionVO;
 import io.swagger.v3.oas.annotations.Operation;
@@ -61,6 +62,27 @@ public class DrgSimController {
     @GetMapping("/group/list")
     public Result<List<DrgSimVO.GroupRow>> groupList(@RequestParam(required = false) String version) {
         return Result.success(drgSimService.groupList(version));
+    }
+
+    @Operation(summary = "分组方案健康检查（完整度/规则来源/复核状态/缺失集合）")
+    @GetMapping("/scheme/health")
+    public Result<DrgSimVO.SchemeHealth> schemeHealth(@RequestParam(required = false) String version) {
+        return Result.success(drgSimService.schemeHealth(version));
+    }
+
+    /**
+     * MDC 主诊断 ICD 前缀分布（实时聚合 biz_drg_set 的 DI_xxx 集合）。
+     *
+     * <p>仅用于前端目录页展示「这个MDC大致管哪类诊断」的提示，不得用于入组判定或任何业务逻辑 ——
+     * 入组以 biz_drg_set 的 DI_xxx 精确集合为准，这里只是前3位前缀的统计快照。
+     *
+     * <p>MDCA 先期分组无 DI 集合时返回空列表。
+     */
+    @Operation(summary = "MDC 主诊断 ICD 前缀分布（仅展示提示用，不得用于业务）")
+    @GetMapping("/mdc/diag-prefixes")
+    public Result<List<DrgDiagPrefixVO>> mdcDiagPrefixes(@RequestParam String version,
+                                                         @RequestParam String mdcCode) {
+        return Result.success(drgSimService.mdcDiagPrefixes(version, mdcCode));
     }
 
     @PreAuthorize("hasAnyAuthority('system:config:add')")

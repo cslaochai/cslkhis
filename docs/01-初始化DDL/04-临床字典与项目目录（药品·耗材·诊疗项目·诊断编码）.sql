@@ -1,5 +1,5 @@
 -- 领域：04-临床字典与项目目录（药品·耗材·诊疗项目·诊断编码）
--- 库：hn_biz_his    表数：27
+-- 库：hn_biz_his    表数：28
 -- 说明：DDL 快照（dev 库 SHOW CREATE TABLE 于 2026-10-25 导出，无 DROP / 无数据）。建表语句彼此独立，不含外键约束。
 -- 口径：姓名/名称快照列与操作人列（create_by·update_by·*_by·*_name·name）不留 DEFAULT，漏填直接报错；其余 NOT NULL 列保留库上的 DEFAULT。
 
@@ -72,6 +72,7 @@ CREATE TABLE `biz_drg_adrg` (
   `adrg_rule` varchar(2000) COMMENT 'ADRG 入组规则原文',
   `mdc_code` varchar(8) COMMENT '所属 MDC 编码',
   `sort_no` int COMMENT 'MDC 内排序',
+  `row_kind` tinyint NOT NULL DEFAULT '0' COMMENT '行类型（0-正常入组 1-QY 其他手术歧义组 2-00 该 MDC 未入组占位）',
   `version` varchar(32) COMMENT '分组方案版本',
   `source` varchar(64) COMMENT '来源',
   `status` tinyint NOT NULL DEFAULT '0' COMMENT '状态（1-启用 0-停用）',
@@ -122,6 +123,7 @@ CREATE TABLE `biz_drg_group` (
   `adrg_code` varchar(16) COMMENT 'ADRG 编码',
   `drg_rule` varchar(2000) COMMENT 'DRG 细分组规则原文',
   `sort_no` int COMMENT 'ADRG 内排序',
+  `row_kind` tinyint NOT NULL DEFAULT '0' COMMENT '行类型（0-正常入组 1-QY 歧义组 2-000 未入组占位）',
   `weight` decimal(10,4) COMMENT '权重',
   `pay_standard` decimal(10,2) COMMENT '病组支付标准（元）',
   `source` varchar(64) COMMENT '来源',
@@ -147,6 +149,10 @@ CREATE TABLE `biz_drg_mdc` (
   `mdc_code` varchar(8) NOT NULL COMMENT 'MDC 编码',
   `mdc_name` varchar(100) COMMENT 'MDC 名称',
   `mdc_rule` varchar(2000) COMMENT 'MDC 入组规则原文',
+  `pre_group_flag` tinyint NOT NULL DEFAULT '0' COMMENT '是否先期分组（1-是，按子 ADRG 优先判定；0-按本行规则判定）',
+  `group_step` tinyint NOT NULL DEFAULT '5' COMMENT '判定步序（1/2/3/4-先期分组，5-普通 MDC；同一 MDC 内再按 sort_no）',
+  `rule_source` varchar(16) NOT NULL DEFAULT 'OFFICIAL' COMMENT '规则来源（OFFICIAL-官方 INFERRED-院内推导 LOCAL-本地自建）',
+  `verified` tinyint NOT NULL DEFAULT '0' COMMENT '是否已复核（1-双人复核且回归一致 0-未复核）',
   `sort_no` int COMMENT '排序',
   `version` varchar(32) COMMENT '分组方案版本',
   `source` varchar(64) COMMENT '来源',
@@ -162,6 +168,38 @@ CREATE TABLE `biz_drg_mdc` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_mdc_code` (`mdc_code`,`version`,`del_flag`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='DRG 主要诊断大类目录';
+
+-- ----------------------------
+-- biz_drg_scheme  DRG 分组方案头
+-- ----------------------------
+CREATE TABLE `biz_drg_scheme` (
+  `id` bigint NOT NULL COMMENT '主键ID',
+  `version` varchar(32) NOT NULL COMMENT '分组方案版本（与 biz_drg_mdc/adrg/group/set/ccmcc 的 version 同值）',
+  `scheme_code` varchar(32) NOT NULL COMMENT '方案编码（如 CHS-DRG-3.0）',
+  `scheme_name` varchar(100) NOT NULL COMMENT '方案名称',
+  `standard_no` varchar(64) COMMENT '标准文号/发布文号',
+  `publish_date` date COMMENT '官方发布日期',
+  `effective_date` date COMMENT '统筹区执行日期',
+  `source_file` varchar(500) COMMENT '规则载体（官方 xlsx/PDF 文件名与发布批次）',
+  `rule_source` varchar(16) NOT NULL DEFAULT 'OFFICIAL' COMMENT '规则来源（OFFICIAL-官方机读规则 INFERRED-院内推导 LOCAL-本地自建）',
+  `verified` tinyint NOT NULL DEFAULT '0' COMMENT '是否已复核（1-双人复核且与官方分组器回归一致 0-未复核）',
+  `expected_mdc` int COMMENT '官方 MDC 真组数（不含伪行）',
+  `expected_adrg` int COMMENT '官方 ADRG 真组数（不含 QY/00 伪行）',
+  `expected_drg` int COMMENT '官方 DRG 真组数（不含 QY/000 伪行）',
+  `status` tinyint NOT NULL DEFAULT '0' COMMENT '状态（0-草稿 1-启用 2-停用）',
+  `is_default` tinyint NOT NULL DEFAULT '0' COMMENT '是否默认版本（1-是 0-否，同版本内唯一）',
+  `create_by` varchar(64) NOT NULL COMMENT '创建人',
+  `create_time` datetime NOT NULL DEFAULT (now()) COMMENT '创建时间',
+  `update_by` varchar(64) NOT NULL COMMENT '更新人',
+  `update_time` datetime NOT NULL DEFAULT (now()) COMMENT '更新时间',
+  `del_flag` tinyint NOT NULL DEFAULT '0' COMMENT '删除标志（0-正常 1-删除）',
+  `remark` varchar(500) COMMENT '备注',
+  `create_by_id` bigint NOT NULL COMMENT '创建人ID',
+  `update_by_id` bigint NOT NULL COMMENT '更新人ID',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_scheme_version` (`version`,`del_flag`),
+  KEY `idx_scheme_default` (`is_default`,`status`,`del_flag`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='DRG 分组方案头';
 
 -- ----------------------------
 -- biz_drg_set  DRG 分组码集合

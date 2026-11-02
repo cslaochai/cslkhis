@@ -28,6 +28,16 @@ public class SysSignCaApply extends BaseEntity {
     private String certNo;
 
     /**
+     * 员工ID（证书持有人，冗余落行：按员工全局查申请履历不用回 JOIN 证书表）
+     */
+    private Long empId;
+
+    /**
+     * 员工姓名（冗余落行：履历直接可读，证书行改不改名不影响历史单据）
+     */
+    private String empName;
+
+    /**
      * 第几次申请（同一张证书内递增，重提不换证书行）
      */
     private Integer applySeq;

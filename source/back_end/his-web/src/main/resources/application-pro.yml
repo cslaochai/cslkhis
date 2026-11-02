@@ -30,15 +30,15 @@ his:
     # 签名主口令：不注入即拒绝签发证书（私钥绝不明文落库）
     master-secret: ${HIS_SIGN_SECRET:}
     # 证书主体 O（机构名），必须与 CA 侧租户登记的「证书主体O」一致
-    organization: ${HIS_SIGN_ORG:长沙市麓康医院}
-    # CA 在线申请：App ID / 接入密钥由 CSSSL 建租户时颁发，直接写死在这里（不走环境变量）。
-    # 132 部署时 csssl-backend 映射到宿主 8012（容器内 8092），HIS 容器经 host.docker.internal 访问；
-    # HIS 对外只有「提交申请」与「吊销证书」两个出站调用，状态变更由 CA 推送到 /api/emr/signCert/caCallback
+    organization: ${HIS_SIGN_ORG:长沙麓康医院}
     ca:
       enabled: true
       base-url: http://host.docker.internal:8012/ssl
       app-id: app_a295062ed8c9f4177b888cceb6d7c5b9
       app-secret: sk_c78dd9c0e7a84d9ef545c30d063ff35fcc2bfd4db66616c6f680060cf52773d1
+      # CA 推送回调验签密钥（HMAC-SHA256）：必须与 CA 侧 SSL_HIS_PUSH_SECRET 同值
+      # **生产必须注入**；留空则回调端点拒绝一切推送（宁停摆，也不收来源不明的证书）
+      callback-secret: ${HIS_CA_PUSH_SECRET:}
   insurance:
     channel:
       # remote=调医保前置系统(csmig)；生产必须给真实前置机地址，localhost 默认值只够本机联调

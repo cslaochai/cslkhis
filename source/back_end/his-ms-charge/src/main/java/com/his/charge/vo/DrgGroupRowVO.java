@@ -50,6 +50,11 @@ public class DrgGroupRowVO implements Serializable {
     private Integer sortNo;
 
     /**
+     * 行类型（0-正常入组 1-QY 歧义组 2-未入组占位）
+     */
+    private Integer rowKind;
+
+    /**
      * 组权重（统筹区医保局下发，官方 3.0 包不含，未下发为 null）
      */
     private BigDecimal weight;

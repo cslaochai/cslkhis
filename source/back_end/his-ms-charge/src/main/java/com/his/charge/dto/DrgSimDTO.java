@@ -52,7 +52,7 @@ public class DrgSimDTO {
     @EqualsAndHashCode(callSuper = true)
     public static class ResultQuery extends PageParam {
         /**
-         * 1已入组 2未入组
+         * 1已入组 2未入组 3歧义组
          */
         private Integer simStatus;
         /**

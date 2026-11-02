@@ -210,7 +210,17 @@ public class SignCertFacadeServiceImpl implements SignCertFacadeService {
 
     @Override
     public void revokeCert(SignCertRevokeDTO dto) {
-        signCertService.revoke(dto, null, null);
+        // 吊销是处置留痕：revoke_by_name 必须落到真实操作人，严禁传 null 把吊销人弄丢
+        com.his.common.entity.CurrentUser user = com.his.common.utils.UserUtils.getCurrentUser();
+        if (user == null) {
+            throw new com.his.common.exception.BusinessException("当前用户信息不存在");
+        }
+        signCertService.revoke(dto, user.getEmployeeId(), user.getRealName());
+    }
+
+    @Override
+    public List<SignCertEmpTimelineVO> listEmployeeCertTimeline(Long empId) {
+        return signCertService.employeeOpTimeline(empId);
     }
 
     @Override

@@ -3,15 +3,18 @@ package com.his.charge.mapper;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.his.charge.entity.DrgSimResult;
 import com.his.charge.vo.CcMccRowVO;
+import com.his.charge.vo.DrgDiagPrefixVO;
 import com.his.charge.vo.DrgAdrgRowVO;
 import com.his.charge.vo.DrgGroupRowVO;
 import com.his.charge.vo.DrgMdcRowVO;
+import com.his.charge.vo.DrgSchemeRowVO;
 import com.his.charge.vo.DrgSetRowVO;
 import com.his.charge.vo.DrgSummaryListRowVO;
 import com.his.charge.vo.DrgSummaryRowVO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
+import org.apache.ibatis.annotations.Update;
 
 import java.util.List;
 
@@ -46,6 +49,14 @@ public interface DrgSimMapper extends BaseMapper<DrgSimResult> {
     @Select(SUMMARY_SELECT + " AND s.id = #{summaryId} LIMIT 1")
     DrgSummaryRowVO selectSummary(@Param("summaryId") Long summaryId);
 
+    /**
+     * 通过住院 encounterId（= 首页 admission_id）查病案首页。
+     *
+     * <p>一次住院只允许一份有效首页，直接 LIMIT 1；没有返回 null —— 由调用方决定是报错还是跳过。
+     */
+    @Select(SUMMARY_SELECT + " AND s.admission_id = #{encounterId} LIMIT 1")
+    DrgSummaryRowVO selectSummaryByEncounter(@Param("encounterId") Long encounterId);
+
     @Select(SUMMARY_SELECT + " ORDER BY s.id DESC LIMIT #{limit}")
     List<DrgSummaryRowVO> selectSummaries(@Param("limit") int limit);
 
@@ -70,18 +81,21 @@ public interface DrgSimMapper extends BaseMapper<DrgSimResult> {
      */
     @Select("""
             SELECT id, drg_code AS drgCode, drg_name AS drgName, mdc_code AS mdcCode, adrg_code AS adrgCode,
-                   drg_rule AS drgRule, sort_no AS sortNo, weight, pay_standard AS payStandard,
-                   source, version, status
+                   drg_rule AS drgRule, sort_no AS sortNo, row_kind AS rowKind,
+                   weight, pay_standard AS payStandard, source, version, status
               FROM biz_drg_group WHERE del_flag = 0 AND status = 1 AND version = #{version} ORDER BY sort_no, drg_code
             """)
     List<DrgGroupRowVO> groupList(@Param("version") String version);
 
     /**
-     * MDC 目录（按官方判定顺序，先期分组在最前）
+     * MDC 目录（官方判定顺序：先按 group_step 排先期分组，再按 sort_no）
      */
     @Select("""
-            SELECT mdc_code AS mdcCode, mdc_name AS mdcName, mdc_rule AS mdcRule, sort_no AS sortNo
-              FROM biz_drg_mdc WHERE del_flag = 0 AND status = 1 AND version = #{version} ORDER BY sort_no
+            SELECT mdc_code AS mdcCode, mdc_name AS mdcName, mdc_rule AS mdcRule,
+                   pre_group_flag AS preGroupFlag, group_step AS groupStep,
+                   rule_source AS ruleSource, verified, sort_no AS sortNo
+              FROM biz_drg_mdc WHERE del_flag = 0 AND status = 1 AND version = #{version}
+             ORDER BY group_step, sort_no
             """)
     List<DrgMdcRowVO> mdcList(@Param("version") String version);
 
@@ -90,10 +104,46 @@ public interface DrgSimMapper extends BaseMapper<DrgSimResult> {
      */
     @Select("""
             SELECT adrg_code AS adrgCode, adrg_name AS adrgName, adrg_rule AS adrgRule,
-                   mdc_code AS mdcCode, sort_no AS sortNo
+                   mdc_code AS mdcCode, sort_no AS sortNo, row_kind AS rowKind
               FROM biz_drg_adrg WHERE del_flag = 0 AND status = 1 AND version = #{version} ORDER BY sort_no
             """)
     List<DrgAdrgRowVO> adrgList(@Param("version") String version);
+
+    /**
+     * 分组方案头（标准来源、规则可信度、官方预期规模）
+     */
+    @Select("""
+            SELECT version, scheme_code AS schemeCode, scheme_name AS schemeName, standard_no AS standardNo,
+                   publish_date AS publishDate, effective_date AS effectiveDate, source_file AS sourceFile,
+                   rule_source AS ruleSource, verified,
+                   expected_mdc AS expectedMdc, expected_adrg AS expectedAdrg, expected_drg AS expectedDrg,
+                   status, is_default AS isDefault
+              FROM biz_drg_scheme WHERE del_flag = 0 AND version = #{version} LIMIT 1
+            """)
+    DrgSchemeRowVO scheme(@Param("version") String version);
+
+    /**
+     * 库内标记为默认且启用的方案版本（sys_config 未配置时兜底）
+     */
+    @Select("""
+            SELECT version FROM biz_drg_scheme
+             WHERE del_flag = 0 AND status = 1 AND is_default = 1
+             ORDER BY update_time DESC LIMIT 1
+            """)
+    String selectDefaultSchemeVersion();
+
+    /**
+     * 标记默认方案（同表内只允许一个 is_default=1，库内与运行时 sys_config 保持同口径）
+     */
+    @Update("""
+            UPDATE biz_drg_scheme
+               SET is_default = IF(version = #{version}, 1, 0),
+                   update_by = #{operator}, update_by_id = #{operatorId}, update_time = now()
+             WHERE del_flag = 0
+            """)
+    int markDefaultScheme(@Param("version") String version,
+                          @Param("operator") String operator,
+                          @Param("operatorId") Long operatorId);
 
     /**
      * 规则引用的码集合（集合编号 → 精确码，含 CC/MCC 排除组）
@@ -139,4 +189,28 @@ public interface DrgSimMapper extends BaseMapper<DrgSimResult> {
               FROM biz_drg_ccmcc WHERE del_flag = 0 AND status = 1 AND version = #{version}
             """)
     List<CcMccRowVO> ccmccList(@Param("version") String version);
+
+    /**
+     * 检查目标 DI 集合是否存在（MDCA 先期分组等特殊 MDC 没有主诊断集合）
+     */
+    @Select("""
+            SELECT COUNT(*) FROM biz_drg_set
+             WHERE del_flag = 0 AND status = 1 AND version = #{version} AND set_code = #{setCode}
+            """)
+    int diagPrefixExists(@Param("version") String version, @Param("setCode") String setCode);
+
+    /**
+     * 实时聚合 DI_xxx 集合的 ICD-10 前3位前缀分布（只读，仅用于前端目录页展示提示）。
+     *
+     * <p>ICD-10 编码的前3位是章节编号（如 G40=癫痫、G93=其他神经系统疾患），
+     * 直接对前3位分组统计即可，避免硬编码范围不准的问题。
+     */
+    @Select("""
+            SELECT SUBSTR(icd_code, 1, 3) AS prefix, COUNT(*) AS count
+              FROM biz_drg_set
+             WHERE del_flag = 0 AND status = 1 AND version = #{version} AND set_code = #{setCode}
+             GROUP BY SUBSTR(icd_code, 1, 3)
+             ORDER BY prefix
+            """)
+    List<DrgDiagPrefixVO> diagPrefixes(@Param("version") String version, @Param("setCode") String setCode);
 }

@@ -187,6 +187,12 @@ public interface SignCertFacadeService {
     void revokeCert(SignCertRevokeDTO dto);
 
     /**
+     * 员工证书操作时间线：该员工名下所有证书的 CA 申请流水（含重提）与吊销事件合并，按事件时间倒序。
+     * 用于「全局查看某员工的证书申请、吊销操作」一条履历看全。
+     */
+    List<SignCertEmpTimelineVO> listEmployeeCertTimeline(Long empId);
+
+    /**
      * 有效证书下拉选项：按员工姓名 / 证书号模糊查有效证书，供证书与签发人选择。
      */
     List<SignCertSelectListVO> listActiveCertOptions(String keyword);

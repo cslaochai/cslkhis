@@ -84,4 +84,10 @@ public interface SignCaApplyService {
      * 用于签名证书详情里看这张证书签过几次申请、卡在哪一步。
      */
     List<SysSignCaApply> listByCertId(Long certId);
+
+    /**
+     * 按员工取全部申请流水（最近一次在前）：员工名下所有证书的 CA 申请履历。
+     * 流水行冗余 emp_id，直查不回 JOIN 证书表；员工的「证书操作时间线」用。
+     */
+    List<SysSignCaApply> listByEmpId(Long empId);
 }

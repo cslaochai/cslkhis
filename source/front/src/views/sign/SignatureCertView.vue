@@ -91,9 +91,17 @@
               <div class="text-xs text-slate-400">{{ row.lastUsedTime || '未使用' }}</div>
             </template>
           </el-table-column>
-          <el-table-column fixed="right" label="操作" width="240">
+          <el-table-column fixed="right" label="操作" width="280">
             <template #default="{ row }">
               <el-button link size="small" type="primary" @click="openCertDetail(row)">详情</el-button>
+              <el-button
+                  link
+                  size="small"
+                  type="primary"
+                  data-testid="p5-sign-timeline-open"
+                  @click="openEmpTimeline(row)"
+              >履历
+              </el-button>
               <el-button
                   v-if="row.certStatus === 0"
                   link
@@ -154,6 +162,9 @@
     <!-- ---------------- 申请进度（流程图，子组件 SignatureCertApplyFlow） ---------------- -->
     <SignatureCertApplyFlow :id="progressId" v-model="progressVisible" @saved="onIssueSaved"/>
 
+    <!-- ---------------- 员工证书操作履历（CA申请+吊销时间线，子组件 SignatureCertEmpTimeline） ---------------- -->
+    <SignatureCertEmpTimeline v-model="timelineVisible" :emp-id="timelineEmpId" :emp-name="timelineEmpName"/>
+
     <!-- ---------------- 吊销证书 ---------------- -->
     <el-dialog v-model="revokeVisible" title="吊销签名证书" width="480px">
       <p class="text-sm">证书：<b>{{ revokeForm.certNo }}</b></p>
@@ -179,6 +190,7 @@ import {caApplyTagType, num} from '@/lib/sign';
 import SignatureCenterCertDetail from './SignatureCenterCertDetail.vue';
 import SignatureCenterCertIssue from './SignatureCenterCertIssue.vue';
 import SignatureCertApplyFlow from './SignatureCertApplyFlow.vue';
+import SignatureCertEmpTimeline from './SignatureCertEmpTimeline.vue';
 // ---------------- 下拉选项 ----------------
 const options = ref({});
 // ---------------- 证书 ----------------
@@ -202,6 +214,10 @@ const issueBindId = ref(null);
 // 申请进度（子组件 SignatureCertApplyFlow，流程图）
 const progressVisible = ref(false);
 const progressId = ref(null);
+// 员工证书操作履历（子组件 SignatureCertEmpTimeline，CA申请+吊销时间线）
+const timelineVisible = ref(false);
+const timelineEmpId = ref(null);
+const timelineEmpName = ref('');
 // 吊销证书
 const revokeVisible = ref(false);
 const revoking = ref(false);
@@ -251,6 +267,12 @@ const openBind = (row) => {
 const openProgress = (row) => {
   progressId.value = row.id;
   progressVisible.value = true;
+};
+// 员工维度全局履历：该员工名下所有证书的 CA 申请与吊销事件一条时间线看全
+const openEmpTimeline = (row) => {
+  timelineEmpId.value = row.empId;
+  timelineEmpName.value = row.empName || '';
+  timelineVisible.value = true;
 };
 const onIssueSaved = async () => {
   await loadCertList();

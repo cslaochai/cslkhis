@@ -89,7 +89,7 @@ public class DrgSimResult extends BaseEntity {
     private BigDecimal profitAmount;
 
     /**
-     * 结果（1-已入组 2-未入组）
+     * 结果（1-已入组 2-未入组 3-歧义组）
      */
     private Integer simStatus;
 

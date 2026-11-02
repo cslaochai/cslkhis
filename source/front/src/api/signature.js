@@ -109,6 +109,11 @@ export function getSignCertByEmp(empId) {
     return request.get('/emr/signCert/getByEmp', {params: {empId}})
 }
 
+// 员工证书操作时间线（CA申请流水+吊销事件，按时间倒序）：全局查看某员工的证书履历
+export function getSignCertEmpTimeline(empId) {
+    return request.get('/emr/signCert/empTimeline', {params: {empId}})
+}
+
 // 本人签名预检：当前登录人能不能电子签名、要不要输 PIN、不能签的原因
 export function getSignPreCheck() {
     return request.get('/emr/signCert/preCheck')

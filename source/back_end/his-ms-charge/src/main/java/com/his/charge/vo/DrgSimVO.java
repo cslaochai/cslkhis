@@ -45,7 +45,7 @@ public class DrgSimVO {
         private BigDecimal actualAmount;
         /** 盈亏：正=结余，负=超支；未入组为空 */
         private BigDecimal profitAmount;
-        /** 结果（1-已入组 2-未入组） */
+        /** 结果（1-已入组 2-未入组 3-歧义组） */
         private Integer simStatus;
         /** 命中规则说明 */
         private String ruleNote;
@@ -84,7 +84,7 @@ public class DrgSimVO {
         private BigDecimal actualAmount;
         /** 盈亏 = 支付标准 - 实际费用 */
         private BigDecimal profitAmount;
-        /** 结果（1-已入组 2-未入组） */
+        /** 结果（1-已入组 2-未入组 3-歧义组） */
         private Integer simStatus;
         /** 命中规则说明 */
         private String ruleNote;
@@ -124,6 +124,8 @@ public class DrgSimVO {
         private Long total;
         private Long grouped;
         private Long ungrouped;
+        /** 歧义组（命中 ?QY，合法结果码但不计权重与盈亏） */
+        private Long ambiguous;
         private BigDecimal totalProfit;
         private BigDecimal totalOverrun;
     }
@@ -139,12 +141,39 @@ public class DrgSimVO {
         /** MDC 大类 */
         private String mdcCode;
         private String adrgCode;
+        /** 行类型（0-正常 1-QY 歧义档 2-占位） */
+        private Integer rowKind;
         private BigDecimal weight;
         /** 病组支付标准（元） */
         private BigDecimal payStandard;
         private String source;
         private String version;
         private Integer status;
+    }
+
+    /**
+     * 方案健康检查（规则是否完整、是否可追溯、是否可复核）
+     */
+    @Data
+    public static class SchemeHealth {
+        private String version;
+        private String schemeCode;
+        private String schemeName;
+        private String ruleSource;
+        private Boolean verified;
+        private Integer expectedMdc;
+        private Integer expectedAdrg;
+        private Integer expectedDrg;
+        private Integer actualMdc;
+        /** 真组数量（不含 QY/占位伪行） */
+        private Integer actualAdrg;
+        private Integer actualDrg;
+        /** 规则引用了但库内不存在的集合编号 */
+        private List<String> missingRefs;
+        /** 规模与官方一致且引用集合齐全 */
+        private Boolean complete;
+        /** 不可用于正式结算的原因（完整则为空） */
+        private List<String> warnings;
     }
 
     /**

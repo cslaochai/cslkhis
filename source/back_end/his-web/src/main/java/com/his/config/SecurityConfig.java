@@ -51,8 +51,10 @@ public class SecurityConfig {
             // 注意：这里写的是去掉 context-path(/api) 后的内部路径，写 /api/pay/notify/** 等于没放行。
             "/pay/notify/**",
 
-            // CA 认证中心推送申请单状态变更。CA 服务器同样不持有 HIS token，
-            // 该端点由方案侧来源限制 + SignCaCallbackRateLimitFilter（每分钟限次，超出 429）保护，
+            // CA 认证中心推送申请单状态变更。CA 服务器同样不持有 HIS token，故本端点匿名放行，
+            // 保护分两层且顺序固定：先 SignCaCallbackRateLimitFilter 按来源 IP 限次（超出 429），
+            // 再 SignCaCallbackSignatureFilter 校验 HMAC-SHA256 + 时间戳 + nonce 去重；
+            // 限流必须先计数再验签，否则验签失败的伪造请求不进分钟桶，限流形同虚设。
             // 业务侧再做幂等校验与状态机校验。
             "/emr/signCert/caCallback",
 

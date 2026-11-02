@@ -13,6 +13,7 @@ import com.his.spi.vo.SignCaApplyRecordVO;
 import com.his.spi.vo.SignCaApplyVO;
 import com.his.spi.vo.SignCaStatusVO;
 import com.his.spi.vo.SignCaPushResultVO;
+import com.his.spi.vo.SignCertEmpTimelineVO;
 import com.his.spi.vo.SignPreCheckVO;
 
 import java.util.List;
@@ -80,6 +81,12 @@ public interface SignCertService {
      * 用于证书详情抽屉里的「CA 申请记录」时间线。
      */
     List<SignCaApplyRecordVO> caApplyHistory(Long certId);
+
+    /**
+     * 员工证书操作时间线：该员工名下所有证书的 CA 申请流水（含重提）与吊销事件合并，按事件时间倒序。
+     * 用于「全局查看某员工的证书申请、吊销操作」一条履历看全。
+     */
+    List<SignCertEmpTimelineVO> employeeOpTimeline(Long empId);
 
     /**
      * 按员工取当前有效证书：员工管理「签名设置」弹框只读展示用；无有效证书返回 null。

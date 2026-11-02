@@ -14,12 +14,15 @@ import com.his.charge.mapper.DrgSimMapper;
 import com.his.charge.service.DrgSimService;
 import com.his.charge.support.DrgFacts;
 import com.his.charge.support.DrgGrouper;
+import com.his.charge.support.DrgScheme;
 import com.his.charge.support.DrgSchemeCache;
+import com.his.charge.vo.DrgDiagPrefixVO;
 import com.his.charge.vo.DrgSimVO;
 import com.his.charge.vo.DrgSummaryListRowVO;
 import com.his.charge.vo.DrgSummaryRowVO;
 import com.his.common.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -33,6 +36,7 @@ import java.util.stream.Collectors;
 /**
  * DRG 分组模拟服务。
  */
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class DrgSimServiceImpl extends ServiceImpl<DrgSimMapper, DrgSimResult> implements DrgSimService {
@@ -106,7 +110,8 @@ public class DrgSimServiceImpl extends ServiceImpl<DrgSimMapper, DrgSimResult> i
         r.setPayStandard(pay);
         r.setActualAmount(actual);
         r.setProfitAmount(profit);
-        r.setSimStatus(grouped ? DrgSimStatusEnum.GROUPED.getCode() : DrgSimStatusEnum.UNGROUPED.getCode());
+        r.setSimStatus(g.ambiguous() ? DrgSimStatusEnum.AMBIGUOUS.getCode()
+                : grouped ? DrgSimStatusEnum.GROUPED.getCode() : DrgSimStatusEnum.UNGROUPED.getCode());
         r.setRuleNote(g.ruleNote());
         r.setUpdateBy(UserUtils.getCurrentUser().getRealName());
         if (create) {
@@ -202,6 +207,7 @@ public class DrgSimServiceImpl extends ServiceImpl<DrgSimMapper, DrgSimResult> i
         stat.setTotal((long) all.size());
         stat.setGrouped(all.stream().filter(x -> DrgSimStatusEnum.GROUPED.is(x.getSimStatus())).count());
         stat.setUngrouped(all.stream().filter(x -> DrgSimStatusEnum.UNGROUPED.is(x.getSimStatus())).count());
+        stat.setAmbiguous(all.stream().filter(x -> DrgSimStatusEnum.AMBIGUOUS.is(x.getSimStatus())).count());
         stat.setTotalProfit(all.stream()
                 .filter(x -> x.getProfitAmount() != null && x.getProfitAmount().signum() > 0)
                 .map(DrgSimResult::getProfitAmount)
@@ -233,6 +239,7 @@ public class DrgSimServiceImpl extends ServiceImpl<DrgSimMapper, DrgSimResult> i
                     r.setDrgName(m.getDrgName());
                     r.setMdcCode(m.getMdcCode());
                     r.setAdrgCode(m.getAdrgCode());
+                    r.setRowKind(m.getRowKind());
                     r.setWeight(m.getWeight());
                     r.setPayStandard(m.getPayStandard());
                     r.setSource(m.getSource());
@@ -240,6 +247,105 @@ public class DrgSimServiceImpl extends ServiceImpl<DrgSimMapper, DrgSimResult> i
                     r.setStatus(m.getStatus());
                     return r;
                 }).collect(Collectors.toList());
+    }
+
+    /**
+     * 方案健康检查：把「方案能不能用于正式结算」所需的证据一次返回给页面。
+     *
+     * <p>complete 只表示规模与引用集合齐全；verified 另算，2.0 规模能对上但规则仍是院内推导。
+     */
+    public DrgSimVO.SchemeHealth schemeHealth(String version) {
+        String v = TextUtil.hasText(version) ? version.trim() : drgSchemeCache.getDefaultVersion();
+        DrgScheme scheme = drgSchemeCache.get(v);
+        DrgScheme.Header h = scheme.header();
+        DrgSimVO.SchemeHealth vo = new DrgSimVO.SchemeHealth();
+        vo.setVersion(v);
+        vo.setSchemeCode(h.schemeCode());
+        vo.setSchemeName(h.schemeName());
+        vo.setRuleSource(h.ruleSource());
+        vo.setVerified(h.verified());
+        vo.setExpectedMdc(h.expectedMdc());
+        vo.setExpectedAdrg(h.expectedAdrg());
+        vo.setExpectedDrg(h.expectedDrg());
+        vo.setActualMdc(scheme.mdcs().size());
+        vo.setActualAdrg(scheme.realAdrgCount());
+        vo.setActualDrg(scheme.realDrgCount());
+        vo.setMissingRefs(new ArrayList<>(scheme.missingRefs()));
+        vo.setComplete(scheme.complete());
+
+        List<String> warnings = new ArrayList<>();
+        if (!scheme.missingRefs().isEmpty()) {
+            warnings.add("规则引用了库内不存在的码集合 " + String.join("、", scheme.missingRefs())
+                    + "，对应组永远不会命中");
+        }
+        if (h.expectedMdc() != null && h.expectedMdc() != scheme.mdcs().size()) {
+            warnings.add("MDC 数量与方案头不一致：库内 " + scheme.mdcs().size() + "，官方 " + h.expectedMdc());
+        }
+        if (h.expectedAdrg() != null && h.expectedAdrg() != scheme.realAdrgCount()) {
+            warnings.add("ADRG 真组数量与方案头不一致：库内 " + scheme.realAdrgCount() + "，官方 " + h.expectedAdrg());
+        }
+        if (h.expectedDrg() != null && h.expectedDrg() != scheme.realDrgCount()) {
+            warnings.add("DRG 真组数量与方案头不一致：库内 " + scheme.realDrgCount() + "，官方 " + h.expectedDrg());
+        }
+        if (h.ruleSource() != null && !"OFFICIAL".equalsIgnoreCase(h.ruleSource())) {
+            warnings.add("规则来源为 " + h.ruleSource() + "（非官方机读规则），须双人复核并用官方分组器回归");
+        }
+        if (!h.verified()) {
+            warnings.add("方案未标记为已复核（verified=0），不得用于正式结算");
+        }
+        vo.setWarnings(warnings);
+        return vo;
+    }
+
+    /**
+     * 实时聚合 MDC 主诊断集合的 ICD-10 前3位前缀分布。
+     *
+     * <p>DI 集合命名规则：{@code DI_{MDC后缀}00}，如 MDCB → DI_B00、MDCP → DI_P00。
+     * MDCA 是「先期分组」，它不靠主诊断集合判断，库内没有 DI_A00，直接返回空列表。
+     */
+    @Override
+    public List<DrgDiagPrefixVO> mdcDiagPrefixes(String version, String mdcCode) {
+        if (!TextUtil.hasText(version) || !TextUtil.hasText(mdcCode)) {
+            return List.of();
+        }
+        String suffix = mdcCode.startsWith("MDC") ? mdcCode.substring(3) : mdcCode;
+        String setCode = "DI_" + suffix + "00";
+        if (baseMapper.diagPrefixExists(version, setCode) == 0) {
+            return List.of();
+        }
+        return baseMapper.diagPrefixes(version, setCode);
+    }
+
+    /**
+     * 结算链路专用：通过 encounterId 触发 DRG 分组。
+     *
+     * <p>静默跳过的三种情况：
+     * <ol>
+     *   <li>encounterId 为空（防御式：结算链路 encounterId 理论上必填，但有人调错了别炸）</li>
+     *   <li>找不到首页（住院出院结算完成时首页可能还没归档，病历归档链路稍后会再触发一次）</li>
+     *   <li>首页主诊断编码为空（编码员还没补录，返回 null 让结算正常走完，页面上显示「未分组」）</li>
+     * </ol>
+     * 上述三种情况都返回 null，绝不抛异常 —— 出院结算是医院核心流程，分组是可选增强。
+     */
+    @Override
+    public DrgSimVO.SimResult simulateByEncounter(Long encounterId, String version) {
+        if (encounterId == null) {
+            return null;
+        }
+        DrgSummaryRowVO s = drgSimMapper.selectSummaryByEncounter(encounterId);
+        if (s == null) {
+            log.info("[DRG分组] encounterId={} 首页尚未创建，跳过分组", encounterId);
+            return null;
+        }
+        if (!TextUtil.hasText(s.getMainDiagnosisCode())) {
+            log.info("[DRG分组] encounterId={} (summaryId={}) 主诊断编码为空，跳过分组，等编码员补录后手动触发",
+                    encounterId, s.getSummaryId());
+            return null;
+        }
+        DrgSimDTO.Simulate dto = new DrgSimDTO.Simulate();
+        dto.setSummaryId(s.getSummaryId());
+        dto.setVersion(version);
+        return simulate(dto);
     }
 
     private DrgSimVO.SimResult toSimVo(DrgSimResult r) {

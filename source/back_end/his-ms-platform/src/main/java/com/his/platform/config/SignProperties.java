@@ -124,6 +124,34 @@ public class SignProperties {
         private int callbackRateLimitPerMinute;
 
         /**
+         * CA 状态推送回调的验签密钥（HMAC-SHA256），与 CA 侧 {@code csssl.his-push.secret} 同值。
+         *
+         * <p>留空时回调端点<b>拒绝一切推送</b>：该端点匿名开放（CA 服务器不持有 HIS token），
+         * 没有验签就等于任何人都能伪造「签发成功」报文，把任意一张证书塞进 HIS
+         * 当成这位医生的证书——这是反向的公钥替换攻击，比伪造一次业务请求严重得多。
+         */
+        private String callbackSecret;
+
+        /**
+         * 回调时间戳允许偏差（秒）：超出即判定为过期或重放请求
+         */
+        private int callbackClockSkewSeconds;
+
+        /**
+         * 是否信任代理传来的来源 IP 头（默认 false）。
+         *
+         * <p>默认 false 只取 {@code request.getRemoteAddr()}：本端点直连对外端口（容器映射 8009），
+         * 客户端可以随意伪造 {@code X-Forwarded-For} / {@code X-Real-IP}，若按头取 IP，
+         * 攻击者每次换一个伪造值就能让限流分钟桶永远填不满，限流等于没做。</p>
+         *
+         * <p>只有确实部署在受信反向代理之后（由代理强制覆盖该头）才置 true；
+         * 开启后优先取 {@code X-Real-IP}，其次取 {@code X-Forwarded-For} 的<b>最后一段</b>
+         * ——nginx 用 {@code $proxy_add_x_forwarded_for} 是把真实地址追加在末尾，
+         * 第一段反而是客户端可以自己塞的。</p>
+         */
+        private boolean callbackTrustForwardedIp;
+
+        /**
          * 对外接口路径（相对 base-url）。地址只写路径，参数一律封装在请求体内；
          * 默认值只写在 config/domain/his-platform.yml，代码不内联。
          */
@@ -157,7 +185,7 @@ public class SignProperties {
         /**
          * 提交申请
          */
-        private String applications;
+        private String applySign;
 
         /**
          * 撤销申请（申请单号放在请求体内，URL 不暴露参数）
