@@ -4,6 +4,8 @@ import { defineConfig } from 'vite'
 import { resolve } from 'path'
 
 export default defineConfig({
+  // 本地开发保持根路径 base='/'；仅门户部署构建时用 VITE_BASE=/his/ 注入
+  base: process.env.VITE_BASE || '/',
   plugins: [vue(), tailwindcss()],
   resolve: {
     alias: {

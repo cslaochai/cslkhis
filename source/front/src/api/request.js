@@ -101,7 +101,7 @@ request.interceptors.response.use(
                     localStorage.removeItem('token')
                     if (!redirectingToLogin) {
                         redirectingToLogin = true
-                        window.location.href = '/login'
+                        window.location.href = `${import.meta.env.BASE_URL}login`
                         import('@/lib/session-cache')
                             .then(({clearSessionCaches}) => {
                                 clearSessionCaches()
