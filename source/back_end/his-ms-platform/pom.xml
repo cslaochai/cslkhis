@@ -30,12 +30,6 @@
             <artifactId>bcprov-jdk18on</artifactId>
             <version>1.78.1</version>
         </dependency>
-        <!-- 解压带密码的证书压缩包（CA 系统导出的 主体CN-时间戳.zip）：commons-compress 不支持读密码 ZIP，故用 zip4j -->
-        <dependency>
-            <groupId>net.lingala.zip4j</groupId>
-            <artifactId>zip4j</artifactId>
-            <version>2.11.5</version>
-        </dependency>
     </dependencies>
 
     <build>

@@ -47,15 +47,14 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.io.ByteArrayInputStream;
-import java.io.InputStream;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
 
 /**
  * 签名证书服务实现。
@@ -224,12 +223,12 @@ public class SignCertServiceImpl extends ServiceImpl<SysSignCertMapper, SysSignC
     }
 
     /**
-     * 上传 CA 系统导出的「带密码压缩包（主体CN-时间戳.zip）」回填证书：
-     * 解压后挑出公钥与本地密钥对一致的那张证书，复用 bindCertificate 校验并生效。
+     * 上传 CA 系统「导出ZIP」得到的证书压缩包（未加密）回填证书：
+     * 解包后挑出公钥与本地密钥对一致的那张证书，复用 bindCertificate 校验并生效。
      */
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public SignCertVO bindFile(Long certId, String password, byte[] fileBytes, Long operatorId, String operatorName) {
+    public SignCertVO bindFile(Long certId, byte[] fileBytes, Long operatorId, String operatorName) {
         if (certId == null) {
             throw new BusinessException("证书ID不能为空");
         }
@@ -245,7 +244,7 @@ public class SignCertServiceImpl extends ServiceImpl<SysSignCertMapper, SysSignC
         if (fileBytes == null || fileBytes.length == 0) {
             throw new BusinessException("上传文件内容为空");
         }
-        java.security.cert.X509Certificate x509 = extractCertFromFile(fileBytes, password, cert);
+        java.security.cert.X509Certificate x509 = extractCertFromFile(fileBytes, cert);
         bindCertificate(cert, PemCodecUtil.toPem(x509),
                 "CA 线下签发，证书由管理员上传 CA 导出的证书文件回填（私钥本地生成并加密托管，未出 HIS）");
         // 线下回填同样给最近一单打上「回填生效」的时刻；从没向 CA 送过单（纯人工流程）就没有流水行可记
@@ -262,22 +261,19 @@ public class SignCertServiceImpl extends ServiceImpl<SysSignCertMapper, SysSignC
     /**
      * 从上传文件里挑出公钥与本地密钥对一致的那张证书。
      *
-     * <p>CA 侧实际产出的形态不统一，按内容嗅探而不是按扩展名硬判：
+     * <p>按内容嗅探而不是按扩展名硬判：
      * <ul>
-     *   <li>带密码的 ZIP（PK 魔数）→ 用 zip4j 解包后逐个条目解析；</li>
+     *   <li>ZIP（PK 魔数，CA「导出ZIP」产物，<b>不加密、不带口令</b>）→ 用 JDK ZipInputStream 解包后逐个条目解析；</li>
      *   <li>证书文件本身（.pem/.crt/.cer/.der，常带整条链）→ 直接解析。</li>
      * </ul>
      * 解析出的可能是证书链（终端实体证 + 签发 CA 证），只有终端实体证公钥才与本地一致。
-     *
-     * <p>zip4j 是唯一能读密码 ZIP 的库：java.util.zip 不支持密码，
-     * commons-compress 1.28.0 的 ZipFile 也不支持读密码 ZIP（构造里的 String 是文件名编码，不是密码）。
      */
-    private java.security.cert.X509Certificate extractCertFromFile(byte[] data, String password, SysSignCert cert) {
+    private java.security.cert.X509Certificate extractCertFromFile(byte[] data, SysSignCert cert) {
         List<java.security.cert.X509Certificate> certs = isZip(data)
-                ? readCertsFromZip(data, password)
+                ? readCertsFromZip(data)
                 : parseCertsAny(data);
         if (certs.isEmpty()) {
-            throw new BusinessException("文件内容里未找到任何证书（支持 CA 导出的 .pem/.crt/.cer/.der，或含证书的带密码 .zip）");
+            throw new BusinessException("文件内容里未找到任何证书（支持 CA 导出的 .pem/.crt/.cer/.der，或 CA「导出ZIP」产出的证书压缩包）");
         }
         // 优先取公钥与本地密钥对一致的那张
         String localPub = cert.getPublicKey();
@@ -304,38 +300,26 @@ public class SignCertServiceImpl extends ServiceImpl<SysSignCertMapper, SysSignC
     }
 
     /**
-     * 解压带密码的压缩包并把包内每个条目都试着解析成证书（跳过非证书条目，如说明文件）。
+     * 解压压缩包并把包内每个条目都试着解析成证书（跳过非证书条目，如说明文件）。
+     *
+     * <p>CA「导出ZIP」产物是不加密的普通 ZIP，JDK 自带 java.util.zip 直接读，全程在内存流里完成、不落临时文件。
+     * 不接受也不处理加密包：带口令的压缩包请改用 CA「下载证书」拿到的 .pem，或让 CA 导出未加密包。
      */
-    private List<java.security.cert.X509Certificate> readCertsFromZip(byte[] zipBytes, String password) {
+    private List<java.security.cert.X509Certificate> readCertsFromZip(byte[] zipBytes) {
         List<java.security.cert.X509Certificate> certs = new ArrayList<>();
-        Path tmp = null;
-        try {
-            tmp = Files.createTempFile("signcert-", ".zip");
-            Files.write(tmp, zipBytes);
-            try (net.lingala.zip4j.ZipFile zf = new net.lingala.zip4j.ZipFile(tmp.toFile(),
-                    password == null ? new char[0] : password.toCharArray())) {
-                for (net.lingala.zip4j.model.FileHeader fh : zf.getFileHeaders()) {
-                    if (fh.isDirectory()) {
-                        continue;
-                    }
-                    try (InputStream is = zf.getInputStream(fh)) {
-                        certs.addAll(parseCertsAny(is.readAllBytes()));
-                    }
+        try (ZipInputStream zis = new ZipInputStream(new ByteArrayInputStream(zipBytes))) {
+            ZipEntry entry;
+            while ((entry = zis.getNextEntry()) != null) {
+                if (entry.isDirectory()) {
+                    continue;
                 }
+                certs.addAll(parseCertsAny(zis.readAllBytes()));
             }
-        } catch (net.lingala.zip4j.exception.ZipException e) {
-            // 密码错误 / 非证书压缩包 / 损坏
-            throw new BusinessException("压缩包解析失败（密码错误或非证书压缩包）：" + e.getMessage());
+        } catch (java.util.zip.ZipException e) {
+            // 加密条目 / 结构损坏
+            throw new BusinessException("压缩包解析失败（文件损坏，或压缩包是加密的——CA「导出ZIP」产物不带密码）：" + e.getMessage());
         } catch (java.io.IOException e) {
             throw new BusinessException("压缩包读取失败：" + e.getMessage());
-        } finally {
-            if (tmp != null) {
-                try {
-                    Files.deleteIfExists(tmp);
-                } catch (java.io.IOException ignored) {
-                    // 临时文件删除失败不阻断主流程
-                }
-            }
         }
         return certs;
     }

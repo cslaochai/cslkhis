@@ -295,7 +295,7 @@ public class SignatureController {
     /**
      * 上传 CA 系统导出的证书文件回填证书（CA 线下签发流程第二步）。
      *
-     * <p>CA 侧产出的形态不统一（多数是含证书链的 .pem，也可能是带密码的 .zip），
+     * <p>CA 侧产出的形态不统一（多数是含证书链的 .pem，也可能是未加密的 .zip），
      * 后端按内容嗅探：ZIP 先按密码解包，否则直接解析文件本身；再取公钥与本地密钥对一致的那张生效。
      * 证书（含链）存库，不落文件。
      */
@@ -304,10 +304,9 @@ public class SignatureController {
     @PostMapping("/emr/signCert/bindFile")
     public Result<SignCertVO> signCertBindFile(
             @RequestParam("file") org.springframework.web.multipart.MultipartFile file,
-            @RequestParam(value = "password", required = false) String password,
             @RequestParam("certId") Long certId) {
         try {
-            return Result.success(signCertFacadeService.bindCertFile(certId, password, file.getBytes()));
+            return Result.success(signCertFacadeService.bindCertFile(certId, file.getBytes()));
         } catch (java.io.IOException e) {
             return Result.error("读取上传文件失败：" + e.getMessage());
         }

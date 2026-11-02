@@ -176,10 +176,10 @@ public interface SignCertFacadeService {
     /**
      * 上传 CA 系统导出的证书文件回填（CA 线下签发流程第二步）。
      *
-     * <p>按内容嗅探形态，不靠扩展名：带密码的 ZIP 先解包，否则把文件本身当证书解析；
+     * <p>按内容嗅探形态，不靠扩展名：ZIP（CA「导出ZIP」产物，未加密）先解包，否则把文件本身当证书解析；
      * 解析出的证书链里取公钥与本地密钥对一致的那张生效。证书（含链）存库，不落文件。
      */
-    SignCertVO bindCertFile(Long certId, String password, byte[] fileBytes);
+    SignCertVO bindCertFile(Long certId, byte[] fileBytes);
 
     /**
      * 吊销证书：必须写明理由，只改状态不删行——历史签名仍要靠它的公钥验通。

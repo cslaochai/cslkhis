@@ -96,27 +96,24 @@
            生效与失效时间）全部由后端从文件里解析，不接受手工粘贴，避免抄错或抄入伪值。
            CA 侧产出形态不统一：多数是含证书链的 .pem，也可能是带密码的 .zip —— 后端按内容嗅探。 -->
       <el-form label-width="90px">
-        <el-form-item label="证书文件" required>
+        <el-form-item label="证书压缩包" required>
           <el-upload
               :auto-upload="false"
               :limit="1"
-              accept=".pem,.crt,.cer,.der,.zip"
+              accept=".zip"
               :on-change="onZipChange"
               :on-remove="onZipRemove"
               :file-list="zipFileList"
               data-testid="p5-sign-bind-zip">
-            <el-button plain type="primary">选择证书文件</el-button>
+            <el-button plain type="primary">选择压缩包(.zip)</el-button>
             <template #tip>
-              <span class="text-xs text-slate-400">CA 系统「下载证书」得到的 .pem（可含整条链），或其导出的带密码 .zip</span>
+              <span class="text-xs text-slate-400">CA 系统证书列表 →「导出ZIP」下载的压缩包（未加密，内含证书链 PEM）</span>
             </template>
           </el-upload>
         </el-form-item>
-        <el-form-item v-if="isZipFile" label="解压密码" required>
-          <el-input v-model="bindForm.zipPassword" data-testid="p5-sign-bind-zippwd" placeholder="压缩包由 CA 提供时填写其展示的解压密码"/>
-        </el-form-item>
         <p class="pl-2 text-xs text-slate-400">
-          序列号、签发者、主体 DN 与生效/失效时间均从证书文件（notBefore / notAfter）解析，无需填写；
-          回填后列表展示的就是 CA 实际签发的有效期。若文件里同时有证书链，会自动挑公钥与本证书一致的那张。
+          序列号、签发者、主体 DN 与生效/失效时间均从包内证书（notBefore / notAfter）解析，无需填写；
+          回填后列表展示的就是 CA 实际签发的有效期。若包内是整条证书链，会自动挑公钥与本证书一致的那张。
         </p>
       </el-form>
     </div>
@@ -177,8 +174,7 @@ const form = reactive({
 });
 const bindForm = reactive({
   certId: undefined,
-  zipFile: null,
-  zipPassword: ''
+  zipFile: null
 });
 
 let pollTimer = null;
@@ -209,14 +205,7 @@ const onZipChange = (file) => {
 
 const onZipRemove = () => {
   bindForm.zipFile = null;
-  bindForm.zipPassword = '';
 };
-
-// 只有 .zip 才需要解压密码（CA 侧多数直接给 .pem，无密码）
-const isZipFile = computed(() => {
-  const n = (bindForm.zipFile?.name || '').toLowerCase();
-  return n.endsWith('.zip');
-});
 
 // CA 通道真实状态：只认后端 caStatus 的 caMode（offline=未启用，online=已启用），
 // 不再用「有没有提交过申请」冒充「是否接入」。凭证缺失时由 hint 逐条列出缺了哪些参数。
@@ -395,7 +384,6 @@ watch(visible, (open) => {
   form.remark = '';
   bindForm.certId = undefined;
   bindForm.zipFile = null;
-  bindForm.zipPassword = '';
   zipFileList.value = [];
   pinMasked.value = false;
   selectedEmp.value = null;
@@ -482,18 +470,13 @@ const submitBind = async () => {
   // 线下送 CA 只认「CA 导出的证书文件」：序列号/签发者/主体 DN/生效与失效时间
   // 全部由后端从文件里解析，不接受手工粘贴，避免抄错或抄入伪值。
   if (!bindForm.zipFile) {
-    ElMessage.warning('请选择 CA 系统下载的证书文件(.pem/.crt/.cer/.der/.zip)');
-    return;
-  }
-  if (isZipFile.value && !bindForm.zipPassword) {
-    ElMessage.warning('上传的是压缩包，请输入解压密码');
+    ElMessage.warning('请选择 CA 系统「导出ZIP」下载的证书压缩包(.zip)');
     return;
   }
   submitting.value = true;
   try {
     const fd = new FormData();
     fd.append('certId', String(bindForm.certId));
-    if (isZipFile.value) fd.append('password', bindForm.zipPassword);
     fd.append('file', bindForm.zipFile);
     const res = await bindSignCertFile(fd);
     // 有效期由证书文件的 notBefore/notAfter 解析，回填即覆盖申请时的预期值 —— 回显出来供核对

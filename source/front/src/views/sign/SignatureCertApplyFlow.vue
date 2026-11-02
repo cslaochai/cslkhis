@@ -25,7 +25,7 @@
       </div>
 
       <!-- 线下送 CA 指引（无在线申请单时展示：说明要传什么、怎么回填） -->
-      <div v-if="certDetail && !latestApply"
+      <div v-if="certDetail && certDetail.certStatus !== 1"
            class="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs leading-6">
         <p class="font-medium text-amber-800">该证书未发起 CA 在线申请，当前走线下送 CA 流程</p>
         <p class="mt-1 text-slate-700">HIS 无法自动查询 CA 结果，请按以下步骤让证书生效并展示 CA 处理记录：</p>
@@ -52,36 +52,6 @@
         </div>
       </div>
 
-      <!-- CA 申请记录（与详情一致的逐次申请记录） -->
-      <div class="mt-4 rounded-lg border border-slate-200 bg-white p-3">
-        <div class="flex items-center justify-between">
-          <p class="text-xs font-medium text-slate-900">CA 申请记录</p>
-        </div>
-        <p v-if="!caApplies.length" class="mt-2 text-xs text-slate-500">
-          未向 CA 发起过在线申请；该证书走线下送 CA 签发后回填。
-        </p>
-        <div v-for="item in caApplies" :key="item.applySeq"
-             class="mt-2 border-t border-slate-100 pt-2 text-xs leading-6 first:mt-1 first:border-t-0 first:pt-1">
-          <p class="flex flex-wrap items-center gap-2">
-            <span class="font-medium">第 {{ num(item.applySeq) }} 次申请</span>
-            <el-tag v-if="item.applyStatus" :type="caApplyTagType(item.applyStatus)" size="small">{{
-                text(item.applyStatusText)
-              }}</el-tag>
-            <span v-if="item.applyNo" class="font-mono text-slate-500">{{ item.applyNo }}</span>
-          </p>
-          <p class="text-slate-600">提交 {{ text(item.submittedAt) }}
-            <span v-if="item.reviewedAt"> · 审核 {{ text(item.reviewedAt) }}</span>
-            <span v-if="item.issuedAt"> · 签发 {{ text(item.issuedAt) }}</span>
-            <span v-if="item.boundAt"> · 回填生效 {{ text(item.boundAt) }}</span>
-          </p>
-          <p v-if="item.caMessage" class="text-slate-600">CA 说明：{{ item.caMessage }}</p>
-          <p v-if="item.caIssuer" class="text-slate-500">签发 CA：<span class="font-mono">{{
-              text(item.caIssuer)
-            }}</span></p>
-          <p class="text-slate-500">操作人：{{ text(item.operatorName) }}</p>
-        </div>
-      </div>
-
       <p class="mt-3 text-xs text-slate-400">
         说明：证书提交 CA 申请后进入「待审核」；CA 审核、签发、撤销都会主动推送回本系统，已签发时随报文带回证书并自动回填生效，
         无需人工刷新。线下签发的证书在「办理签名证书」里粘贴证书 PEM 回填（见上方黄色指引）。
@@ -94,8 +64,8 @@
 import {computed, ref, watch} from 'vue';
 import {ElMessage} from 'element-plus';
 import {Right} from '@element-plus/icons-vue';
-import {getSignCertDetail, listSignCaApplies} from '@/api/signature';
-import {caApplyTagType, num, text} from '@/lib/sign';
+import {getSignCertDetail} from '@/api/signature';
+import {text} from '@/lib/sign';
 
 const props = defineProps({
   modelValue: {type: Boolean, default: false},
@@ -111,21 +81,12 @@ const visible = computed({
 
 const loading = ref(false);
 const certDetail = ref(null);
-const caApplies = ref([]);
 
 const certNo = computed(() => certDetail.value?.certNo || '');
-
-// 最近的 CA 申请（按 applySeq 倒序取第一条）
-const latestApply = computed(() => {
-  const list = caApplies.value || [];
-  if (!list.length) return null;
-  return list.slice().sort((a, b) => Number(b.applySeq) - Number(a.applySeq))[0];
-});
 
 // 三阶段流程图（生成密钥对 → CA 签发 → 回填生效）
 const stages = computed(() => {
   const d = certDetail.value || {};
-  const latest = latestApply.value;
   const active = d.certStatus === 1;
 
   const node1 = {
@@ -137,40 +98,18 @@ const stages = computed(() => {
     note: '密钥对已在本地生成，私钥加密托管',
   };
 
-  let node2;
-  if (active) {
-    node2 = {title: 'CA 签发', cls: 'success', tagType: 'success', statusText: '已签发', time: text(latest?.issuedAt), note: ''};
-  } else if (latest) {
-    const s = latest.applyStatus;
-    if (s === 'PENDING') {
-      node2 = {title: 'CA 签发', cls: 'warning', tagType: 'warning', statusText: '待审核', time: text(latest.submittedAt), note: latest.applyMessage || latest.caMessage || '已提交 CA，等待审核签发'};
-    } else if (s === 'APPROVED') {
-      node2 = {title: 'CA 签发', cls: 'success', tagType: 'success', statusText: '已批准待签发', time: text(latest.reviewedAt), note: latest.caMessage || ''};
-    } else if (s === 'ISSUED') {
-      node2 = {title: 'CA 签发', cls: 'success', tagType: 'success', statusText: '已签发·待回填', time: text(latest.issuedAt), note: 'CA 已签发，回填证书后即生效'};
-    } else if (s === 'REJECTED') {
-      node2 = {title: 'CA 签发', cls: 'danger', tagType: 'danger', statusText: '已驳回', time: text(latest.reviewedAt), note: latest.caMessage || '被 CA 驳回，可在办理证书里重新提交'};
-    } else if (s === 'FAILED') {
-      node2 = {title: 'CA 签发', cls: 'danger', tagType: 'danger', statusText: '提交失败', time: text(latest.submittedAt), note: latest.caMessage || '向 CA 提交失败，可重新提交'};
-    } else if (s === 'CANCELLED') {
-      node2 = {title: 'CA 签发', cls: 'info', tagType: 'info', statusText: '已撤销', time: text(latest.reviewedAt), note: ''};
-    } else {
-      node2 = {title: 'CA 签发', cls: 'info', tagType: 'info', statusText: text(latest.applyStatusText), time: text(latest.submittedAt), note: ''};
-    }
-  } else {
-    node2 = {title: 'CA 签发', cls: 'info', tagType: 'info', statusText: '线下送签·待办理', time: '', note: '未发起在线申请，需线下送 CA 后回填'};
-  }
+  const node2 = active
+    ? {title: 'CA 签发', cls: 'success', tagType: 'success', statusText: '已签发', time: '', note: '证书已由 CA 签发并回填'}
+    : {title: 'CA 签发', cls: 'info', tagType: 'info', statusText: '线下送签·待办理', time: '', note: '未发起在线申请，需线下送 CA 后回填'};
 
   let node3;
   if (active) {
-    // 已生效：validFrom/validTo 已被证书文件的 notBefore/notAfter 覆盖，是 CA 实际签发的有效期真值
+    // 已生效：validFrom/validTo 取自 CA 证书文件，是 CA 实际签发的有效期真值
     node3 = {
       title: '回填生效', cls: 'success', tagType: 'success', statusText: '已生效',
-      time: text(latest?.boundAt) || text(d.validFrom),
+      time: text(d.validFrom),
       note: d.validFrom && d.validTo ? `有效期 ${text(d.validFrom)} ~ ${text(d.validTo)}（取自 CA 证书文件）` : ''
     };
-  } else if (latest && (latest.applyStatus === 'ISSUED' || latest.applyStatus === 'APPROVED')) {
-    node3 = {title: '回填生效', cls: 'warning', tagType: 'warning', statusText: '待回填', time: '', note: 'CA 已签发，回填证书后即生效'};
   } else {
     node3 = {title: '回填生效', cls: 'info', tagType: 'info', statusText: '待办理', time: '', note: '证书生效前不可用于电子签名'};
   }
@@ -184,8 +123,6 @@ const loadData = async () => {
   try {
     const res = await getSignCertDetail(props.id);
     certDetail.value = res.data;
-    const applies = await listSignCaApplies(props.id);
-    caApplies.value = applies.data || [];
   } catch (e) {
     console.error('加载证书申请进度失败', e);
   } finally {
@@ -211,7 +148,6 @@ const copyApplyMaterial = async () => {
 
 const onClosed = () => {
   certDetail.value = null;
-  caApplies.value = [];
 };
 </script>
 

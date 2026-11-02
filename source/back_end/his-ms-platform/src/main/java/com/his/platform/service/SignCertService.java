@@ -58,10 +58,10 @@ public interface SignCertService {
     SignCertVO bind(SignCertBindDTO dto, Long operatorId, String operatorName);
 
     /**
-     * 上传 CA 系统导出的「带密码压缩包（主体CN-时间戳.zip）」回填证书：
-     * 解压后取公钥与本地密钥对一致的证书，校验通过即转为有效状态。
+     * 上传 CA 系统「导出ZIP」得到的证书压缩包（未加密、无口令）回填证书：
+     * 解包后取公钥与本地密钥对一致的证书，校验通过即转为有效状态。
      */
-    SignCertVO bindFile(Long certId, String password, byte[] fileBytes, Long operatorId, String operatorName);
+    SignCertVO bindFile(Long certId, byte[] fileBytes, Long operatorId, String operatorName);
 
     /**
      * 吊销证书：必须写明理由，只改状态不删行——历史签名仍要靠它的公钥验通。

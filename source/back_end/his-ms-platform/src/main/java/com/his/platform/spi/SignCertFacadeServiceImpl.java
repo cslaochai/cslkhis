@@ -201,8 +201,8 @@ public class SignCertFacadeServiceImpl implements SignCertFacadeService {
     }
 
     @Override
-    public SignCertVO bindCertFile(Long certId, String password, byte[] fileBytes) {
-        com.his.platform.vo.SignCertVO inner = signCertService.bindFile(certId, password, fileBytes, null, null);
+    public SignCertVO bindCertFile(Long certId, byte[] fileBytes) {
+        com.his.platform.vo.SignCertVO inner = signCertService.bindFile(certId, fileBytes, null, null);
         SignCertVO vo = new SignCertVO();
         BeanUtils.copyProperties(inner, vo);
         return vo;
