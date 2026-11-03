@@ -16,6 +16,7 @@ import com.his.spi.vo.CancelCommandVO;
 import com.his.spi.vo.FeeRecordVO;
 import com.his.spi.vo.FeeTypeSumVO;
 import com.his.spi.vo.InsuranceBriefVO;
+import com.his.spi.vo.InsuredVerifyVO;
 import com.his.spi.vo.PendingBillVO;
 import com.his.spi.vo.PolicyPriceVO;
 import com.his.spi.vo.PrepayBalanceVO;
@@ -34,6 +35,7 @@ import com.his.charge.mapper.BizSettlementBillMapper;
 import com.his.charge.service.FeeRecordService;
 import com.his.charge.service.FundAccountService;
 import com.his.charge.service.InpatientAccountService;
+import com.his.charge.service.InsuranceChannelService;
 import com.his.charge.service.InsurancePolicyService;
 import com.his.charge.service.InsuranceRealTimeSettleService;
 import com.his.charge.service.PaymentService;
@@ -77,6 +79,8 @@ public class ChargeFacadeServiceImpl implements ChargeFacadeService {
 
     private final InsurancePolicyService insurancePolicyService;
 
+    private final InsuranceChannelService insuranceChannelService;
+
     private final BizSettlementBillItemMapper bizSettlementBillItemMapper;
 
     private final BizInsuranceSettlementMapper bizInsuranceSettlementMapper;
@@ -90,6 +94,24 @@ public class ChargeFacadeServiceImpl implements ChargeFacadeService {
     @Override
     public PolicyPriceVO policyPrice(String policyCode, Integer tierCode) {
         return chargePolicyPriceService.policyPrice(policyCode, tierCode);
+    }
+
+    // ---------- 参保核验（登记环节） ----------
+
+    @Override
+    public InsuredVerifyVO checkInsured(String insuranceNo, String idCard, String name) {
+        InsuranceChannelService.InsuredStatus st = insuranceChannelService.checkInsured(insuranceNo, idCard, name);
+        InsuredVerifyVO vo = new InsuredVerifyVO();
+        if (st == null) {
+            vo.setErrMsg("医保平台未返回参保结果");
+            return vo;
+        }
+        vo.setFound(st.isFound());
+        vo.setActive(st.isActive());
+        vo.setInsuranceType(st.getInsuranceType());
+        vo.setName(st.getName());
+        vo.setErrMsg(st.getErrMsg());
+        return vo;
     }
 
     // ---------- L1 记账 ----------

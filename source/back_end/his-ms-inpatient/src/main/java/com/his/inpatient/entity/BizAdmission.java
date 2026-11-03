@@ -141,6 +141,27 @@ public class BizAdmission implements Serializable {
     private Integer admitStatus;
 
     /**
+     * 入院参保核验结果（0-未核验 1-参保正常 2-查无参保 3-停保/异常 4-核验失败）
+     */
+    private Integer insuranceCheckStatus;
+
+    /**
+     * 险种快照（核验时医保平台返回；未参保/核验失败为 NULL）
+     */
+    private String insuranceType;
+
+    /**
+     * 参保核验时间（未发起核验为 NULL）
+     */
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private LocalDateTime insuranceCheckedAt;
+
+    /**
+     * 核验说明（未参保/停保/平台不可用的原因，最长 200）
+     */
+    private String insuranceCheckMsg;
+
+    /**
      * 创建人
      */
     @TableField(fill = FieldFill.INSERT)

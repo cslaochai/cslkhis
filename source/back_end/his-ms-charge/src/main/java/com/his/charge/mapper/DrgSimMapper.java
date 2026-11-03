@@ -7,6 +7,7 @@ import com.his.charge.vo.DrgDiagPrefixVO;
 import com.his.charge.vo.DrgAdrgRowVO;
 import com.his.charge.vo.DrgGroupRowVO;
 import com.his.charge.vo.DrgMdcRowVO;
+import com.his.charge.vo.DrgSchemeDataHealthVO;
 import com.his.charge.vo.DrgSchemeRowVO;
 import com.his.charge.vo.DrgSetRowVO;
 import com.his.charge.vo.DrgSummaryListRowVO;
@@ -111,39 +112,18 @@ public interface DrgSimMapper extends BaseMapper<DrgSimResult> {
 
     /**
      * 分组方案头（标准来源、规则可信度、官方预期规模）
+     *
+     * <p>本表只回答"有哪些版本"，不回答"哪版是默认"：默认版本只由「医保付费」参数（sys_config）+ Redis 决定。
      */
     @Select("""
             SELECT version, scheme_code AS schemeCode, scheme_name AS schemeName, standard_no AS standardNo,
                    publish_date AS publishDate, effective_date AS effectiveDate, source_file AS sourceFile,
                    rule_source AS ruleSource, verified,
                    expected_mdc AS expectedMdc, expected_adrg AS expectedAdrg, expected_drg AS expectedDrg,
-                   status, is_default AS isDefault
+                   status
               FROM biz_drg_scheme WHERE del_flag = 0 AND version = #{version} LIMIT 1
             """)
     DrgSchemeRowVO scheme(@Param("version") String version);
-
-    /**
-     * 库内标记为默认且启用的方案版本（sys_config 未配置时兜底）
-     */
-    @Select("""
-            SELECT version FROM biz_drg_scheme
-             WHERE del_flag = 0 AND status = 1 AND is_default = 1
-             ORDER BY update_time DESC LIMIT 1
-            """)
-    String selectDefaultSchemeVersion();
-
-    /**
-     * 标记默认方案（同表内只允许一个 is_default=1，库内与运行时 sys_config 保持同口径）
-     */
-    @Update("""
-            UPDATE biz_drg_scheme
-               SET is_default = IF(version = #{version}, 1, 0),
-                   update_by = #{operator}, update_by_id = #{operatorId}, update_time = now()
-             WHERE del_flag = 0
-            """)
-    int markDefaultScheme(@Param("version") String version,
-                          @Param("operator") String operator,
-                          @Param("operatorId") Long operatorId);
 
     /**
      * 规则引用的码集合（集合编号 → 精确码，含 CC/MCC 排除组）
@@ -213,4 +193,28 @@ public interface DrgSimMapper extends BaseMapper<DrgSimResult> {
              ORDER BY prefix
             """)
     List<DrgDiagPrefixVO> diagPrefixes(@Param("version") String version, @Param("setCode") String setCode);
+
+    /**
+     * 方案数据健康度：启用行数 + 层级一致性 + 排除组引用，一条 SQL 取证。
+     *
+     * <p>用子查询而不是 JOIN 拼多个计数，避免不同基数相乘导致计数失真。
+     */
+    @Select("""
+            SELECT
+              (SELECT COUNT(*) FROM biz_drg_mdc   WHERE version = #{v} AND del_flag = 0 AND status = 1) AS mdcEnabled,
+              (SELECT COUNT(*) FROM biz_drg_adrg  WHERE version = #{v} AND del_flag = 0 AND status = 1) AS adrgEnabled,
+              (SELECT COUNT(*) FROM biz_drg_group WHERE version = #{v} AND del_flag = 0 AND status = 1) AS groupEnabled,
+              (SELECT COUNT(*) FROM biz_drg_ccmcc WHERE version = #{v} AND del_flag = 0 AND status = 1) AS ccmccEnabled,
+              (SELECT COUNT(*) FROM biz_drg_set   WHERE version = #{v} AND del_flag = 0 AND status = 1) AS setEnabled,
+              (SELECT COUNT(*) FROM biz_drg_group g
+                 JOIN biz_drg_adrg a
+                   ON a.adrg_code = g.adrg_code AND a.version = g.version AND a.del_flag = 0
+                WHERE g.version = #{v} AND g.del_flag = 0 AND g.mdc_code <> a.mdc_code) AS groupMdcMismatch,
+              (SELECT COUNT(DISTINCT c.excl_group) FROM biz_drg_ccmcc c
+                WHERE c.version = #{v} AND c.del_flag = 0 AND c.excl_group IS NOT NULL
+                  AND NOT EXISTS (SELECT 1 FROM biz_drg_set s
+                                   WHERE s.version = c.version AND s.del_flag = 0
+                                     AND s.set_code = c.excl_group)) AS missingExclSets
+            """)
+    DrgSchemeDataHealthVO dataHealth(@Param("v") String version);
 }

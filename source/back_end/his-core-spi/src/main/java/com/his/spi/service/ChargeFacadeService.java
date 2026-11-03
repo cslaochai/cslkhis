@@ -13,6 +13,7 @@ import com.his.spi.vo.CancelCommandVO;
 import com.his.spi.vo.FeeRecordVO;
 import com.his.spi.vo.FeeTypeSumVO;
 import com.his.spi.vo.InsuranceBriefVO;
+import com.his.spi.vo.InsuredVerifyVO;
 import com.his.spi.vo.PendingBillVO;
 import com.his.spi.vo.PolicyPriceVO;
 import com.his.spi.vo.PrepayBalanceVO;
@@ -55,6 +56,22 @@ public interface ChargeFacadeService {
      *         （急诊只 log 不记账不拦人；门诊价表缺行记 error 痕并 null 安全降级）
      */
     PolicyPriceVO policyPrice(String policyCode, Integer tierCode);
+
+    // ---------- 参保核验（登记环节） ----------
+
+    /**
+     * 参保核验：向医保平台查参保状态，只回答「人在不在保」，不计算费用。
+     *
+     * <p>与结算时的核验是同一个医保接口，区别只在调用时机：入院登记/挂号登记用它提前把
+     * 参保快照落到就诊记录上，后续统计能区分自费与医保；<b>不能拿它做拦截</b>——
+     * 查无参保、停保、平台不可用一律由调用方降级放行（登记优先于收费）。
+     *
+     * @param insuranceNo 医保号/参保卡号（可为空）
+     * @param idCard      身份证号（实名金标准，可为空）
+     * @param name        患者姓名（用于卡号命中后的姓名比对）
+     * @return 核验结果；平台不可用时返回 found=false 或抛出异常，调用方必须自行兜底
+     */
+    InsuredVerifyVO checkInsured(String insuranceNo, String idCard, String name);
 
     // ---------- L1 记账（应收唯一来源） ----------
 

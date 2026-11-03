@@ -325,7 +325,7 @@ const handleSaveSign = async () => {
 
 // ---------------- 医保付费（付费方式 + 对应版本 / 点值） ----------------
 const medpayFormRef = ref()
-const medpayConfig = ref({mode: 'DRG', drgVersion: '3.0', dipVersion: '2.0', pointValue: ''})
+const medpayConfig = ref({mode: 'DRG', drgVersion: '', dipVersion: '2.0', pointValue: ''})
 const medpayRules = computed(() => ({
   mode: [{required: true, message: '请选择住院结算主付费方式', trigger: 'change'}],
   drgVersion: medpayConfig.value.mode === 'DRG'
@@ -362,7 +362,8 @@ const loadMedpayConfig = async () => {
     medpayConfig.value = {...medpayConfig.value, ...medpay.data}
   }
   if (drg.code === 200 && drg.data) {
-    medpayConfig.value.drgVersion = drg.data.dbVersion || '3.0'
+    // 未配置时留空，不在前端兜底成某个版本
+    medpayConfig.value.drgVersion = drg.data.dbVersion ?? ''
   }
 }
 

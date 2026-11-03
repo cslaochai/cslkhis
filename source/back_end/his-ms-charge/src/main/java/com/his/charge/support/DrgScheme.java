@@ -62,7 +62,7 @@ public record DrgScheme(Header header,
     public record Header(String version, String schemeCode, String schemeName, String standardNo,
                          String ruleSource, boolean verified,
                          Integer expectedMdc, Integer expectedAdrg, Integer expectedDrg,
-                         Integer status, boolean isDefault) {
+                         Integer status) {
     }
 
     public record MdcNode(String code, String name, DrgRule rule, Integer sortNo,

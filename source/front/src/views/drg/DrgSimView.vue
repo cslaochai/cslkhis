@@ -140,7 +140,7 @@
 
     <!-- 组表 -->
     <div class="bg-white rounded-lg border border-gray-100 p-4 shadow-sm">
-      <p class="text-sm font-medium mb-3">DRG 细分组目录（{{ version || '3.0' }} 分组方案；权重与支付标准由统筹区医保局下发，未下发处显示
+      <p class="text-sm font-medium mb-3">DRG 细分组目录（{{ version || '未配置版本' }} 分组方案；权重与支付标准由统筹区医保局下发，未下发处显示
         —）</p>
       <el-table :data="groups" border data-testid="drg-group-table" max-height="280" stripe>
         <el-table-column label="组编码" prop="drgCode" width="90"/>
@@ -191,7 +191,7 @@ const loadDicts = async () => {
   }
 };
 // ---------------- 版本切换 ----------------
-const version = ref('3.0');
+const version = ref('');
 const onVersionChange = () => {
   loadHealth();
   loadSummary();

@@ -32,6 +32,7 @@ import com.his.common.enums.SummaryStatusEnum;
 import com.his.spi.service.PatientFacadeService;
 import com.his.spi.service.PatientVisitFacadeService;
 import com.his.spi.vo.PatientMasterVO;
+import com.his.spi.vo.InsuredVerifyVO;
 import com.his.inpatient.mapper.*;
 import com.his.inpatient.service.DeathCertificateService;
 import com.his.inpatient.service.InpatientService;
@@ -280,6 +281,45 @@ public class InpatientServiceImpl extends ServiceImpl<BizInpatientSummaryMapper,
             throw new BusinessException("该患者已有在院记录，不能重复办理入院");
         }
 
+        // 入院参保核验：提前把参保状态落到入院记录上，后续统计才能区分自费与医保。
+        // 查无参保、停保、平台不可用一律降级放行 —— 患者已经站在住院处了，不能被医保专线挡住。
+        Integer insuredStatus = 0;
+        String insuredType = null;
+        String insuredMsg = null;
+        LocalDateTime insuredAt = null;
+        if (TextUtil.hasText(patient.getMedicalInsuranceNo()) || TextUtil.hasText(patient.getIdCard())) {
+            insuredAt = TimeUtil.toSeconds(LocalDateTime.now());
+            try {
+                InsuredVerifyVO insured = chargeFacadeService.checkInsured(
+                        patient.getMedicalInsuranceNo(), patient.getIdCard(), patient.getPatientName());
+                if (insured == null) {
+                    insuredStatus = 4;
+                    insuredMsg = "医保平台未返回参保结果";
+                } else if (!insured.isFound()) {
+                    String msg = insured.getErrMsg();
+                    // 远程通道把「平台不可用」也映射成 found=false，按文案前缀区分：
+                    // 连接/回执/解析失败属"核验失败"（4），不能记成"查无参保"（2），否则统计里全是未参保。
+                    insuredStatus = msg != null && msg.startsWith("医保平台") ? 4 : 2;
+                    insuredMsg = msg != null ? msg : "未查询到参保信息";
+                } else if (!insured.isActive()) {
+                    insuredStatus = 3;
+                    insuredMsg = insured.getErrMsg() != null ? insured.getErrMsg() : "参保状态异常（停保）";
+                } else {
+                    insuredStatus = 1;
+                    insuredType = insured.getInsuranceType();
+                }
+            } catch (Exception e) {
+                insuredStatus = 4;
+                insuredMsg = "参保核验失败：" + e.getMessage();
+                log.warn("[入院登记] 参保核验失败，按自费放行 patientId={}：{}", dto.getPatientId(), e.getMessage());
+            }
+        } else {
+            insuredMsg = "患者主档缺少医保号与身份证，未做参保核验";
+        }
+        if (insuredMsg != null && insuredMsg.length() > 200) {
+            insuredMsg = insuredMsg.substring(0, 200);
+        }
+
         SysBed bed = sysBedMapper.selectById(dto.getBedId());
         if (bed == null) {
             throw new BusinessException("床位不存在");
@@ -333,6 +373,10 @@ public class InpatientServiceImpl extends ServiceImpl<BizInpatientSummaryMapper,
         admission.setAdmitDiagnosisCode(dto.getAdmitDiagnosisCode());
         admission.setAdmitDiagnosisName(dto.getAdmitDiagnosisName());
         admission.setAdmitStatus(AdmitStatusEnum.IN_HOSPITAL.getCode());
+        admission.setInsuranceCheckStatus(insuredStatus);
+        admission.setInsuranceType(insuredType);
+        admission.setInsuranceCheckedAt(insuredAt);
+        admission.setInsuranceCheckMsg(insuredMsg);
         admission.setRemark(dto.getRemark());
         bizAdmissionMapper.insert(admission);
 

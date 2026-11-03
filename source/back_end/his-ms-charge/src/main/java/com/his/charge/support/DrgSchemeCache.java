@@ -45,22 +45,33 @@ public class DrgSchemeCache {
     private final Map<String, DrgScheme> schemes = new ConcurrentHashMap<>();
 
     public DrgScheme get() {
-        return get(drgSchemeConfig.getCurrenttVersion());
+        return get(drgSchemeConfig.requireVersion());
     }
 
     /**
      * 取指定版本的方案快照，首次访问该版本时惰性装载并缓存。
+     *
+     * <p>version 为空时不再兜底成某个版本，直接按「未配置」抛业务异常。
      */
     public DrgScheme get(String version) {
-        String v = version == null || version.isBlank() ? drgSchemeConfig.getCurrenttVersion() : version;
+        String v = version == null || version.isBlank()
+                ? drgSchemeConfig.requireVersion()
+                : version.trim();
         return schemes.computeIfAbsent(v, this::load);
     }
 
     /**
-     * 当前默认启用的库内 version 字符串
+     * 当前默认启用的库内 version 字符串；未配置时返回 null（只供展示类接口使用）
      */
     public String getDefaultVersion() {
         return drgSchemeConfig.getCurrenttVersion();
+    }
+
+    /**
+     * 当前版本，未配置直接抛业务异常（入组/落库路径使用）
+     */
+    public String requireVersion() {
+        return drgSchemeConfig.requireVersion();
     }
 
     /**
@@ -123,12 +134,12 @@ public class DrgSchemeCache {
         if (h == null) {
             log.warn("DRG 方案头缺失：version={}，按未复核方案装载（请执行 321 增量 SQL 补 biz_drg_scheme）", version);
             return new DrgScheme.Header(version, version, version, null, "UNKNOWN", false,
-                    null, null, null, null, false);
+                    null, null, null, null);
         }
         return new DrgScheme.Header(version, h.getSchemeCode(), h.getSchemeName(), h.getStandardNo(),
                 h.getRuleSource(), h.getVerified() != null && h.getVerified() == 1,
                 h.getExpectedMdc(), h.getExpectedAdrg(), h.getExpectedDrg(),
-                h.getStatus(), h.getIsDefault() != null && h.getIsDefault() == 1);
+                h.getStatus());
     }
 
     private Map<String, Set<String>> loadSets(String version) {

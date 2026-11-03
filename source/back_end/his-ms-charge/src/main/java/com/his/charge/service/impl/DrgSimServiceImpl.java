@@ -17,6 +17,7 @@ import com.his.charge.support.DrgGrouper;
 import com.his.charge.support.DrgScheme;
 import com.his.charge.support.DrgSchemeCache;
 import com.his.charge.vo.DrgDiagPrefixVO;
+import com.his.charge.vo.DrgSchemeDataHealthVO;
 import com.his.charge.vo.DrgSimVO;
 import com.his.charge.vo.DrgSummaryListRowVO;
 import com.his.charge.vo.DrgSummaryRowVO;
@@ -78,7 +79,8 @@ public class DrgSimServiceImpl extends ServiceImpl<DrgSimMapper, DrgSimResult> i
         }
         BigDecimal actual = money(s.getActualAmount());
 
-        String version = TextUtil.hasText(dto.getVersion()) ? dto.getVersion().trim() : drgSchemeCache.getDefaultVersion();
+        // 版本必须来自显式入参或"医保付费"参数配置，不做任何代码兜底
+        String version = TextUtil.hasText(dto.getVersion()) ? dto.getVersion().trim() : drgSchemeCache.requireVersion();
         DrgGrouper.GroupResult g = grouper.group(new DrgFacts(icd, mainOpers, otherDiags, otherOpers,
                 s.getGender(), s.getAge(), s.getAgeUnit(), s.getBirthWeight()), version);
         boolean grouped = g.grouped();
@@ -231,6 +233,10 @@ public class DrgSimServiceImpl extends ServiceImpl<DrgSimMapper, DrgSimResult> i
      */
     public List<DrgSimVO.GroupRow> groupList(String version) {
         String v = TextUtil.hasText(version) ? version.trim() : drgSchemeCache.getDefaultVersion();
+        // 未配置版本时不兜底，返回空目录而不是悄悄列某个版本
+        if (!TextUtil.hasText(v)) {
+            return List.of();
+        }
         return drgSimMapper.groupList(v).stream()
                 .map(m -> {
                     DrgSimVO.GroupRow r = new DrgSimVO.GroupRow();
@@ -256,6 +262,14 @@ public class DrgSimServiceImpl extends ServiceImpl<DrgSimMapper, DrgSimResult> i
      */
     public DrgSimVO.SchemeHealth schemeHealth(String version) {
         String v = TextUtil.hasText(version) ? version.trim() : drgSchemeCache.getDefaultVersion();
+        // 未配置版本时直接给出告警，不兜底成某个版本去查目录
+        if (!TextUtil.hasText(v)) {
+            DrgSimVO.SchemeHealth blank = new DrgSimVO.SchemeHealth();
+            blank.setComplete(false);
+            blank.setVerified(false);
+            blank.setWarnings(List.of("未配置 DRG 分组方案版本，请在「系统管理 → 参数设置 → 医保付费」选择后再入组"));
+            return blank;
+        }
         DrgScheme scheme = drgSchemeCache.get(v);
         DrgScheme.Header h = scheme.header();
         DrgSimVO.SchemeHealth vo = new DrgSimVO.SchemeHealth();
@@ -292,6 +306,31 @@ public class DrgSimServiceImpl extends ServiceImpl<DrgSimMapper, DrgSimResult> i
         }
         if (!h.verified()) {
             warnings.add("方案未标记为已复核（verified=0），不得用于正式结算");
+        }
+
+        // 目录本身的可运行性：启用行数、层级一致性、CC/MCC 排除组引用
+        DrgSchemeDataHealthVO dh = drgSimMapper.dataHealth(v);
+        if (dh != null) {
+            if (dh.getMdcEnabled() == null || dh.getMdcEnabled() == 0) {
+                warnings.add("该版本无任何启用的 MDC（status=1），全部病例都会判为未入组");
+            }
+            if (dh.getAdrgEnabled() == null || dh.getAdrgEnabled() == 0) {
+                warnings.add("该版本无任何启用的 ADRG（status=1），MDC 命中后也无法细分");
+            }
+            if (dh.getGroupEnabled() == null || dh.getGroupEnabled() == 0) {
+                warnings.add("该版本无任何启用的 DRG 细分组（status=1），无法产出最终组码");
+            }
+            if (dh.getSetEnabled() == null || dh.getSetEnabled() == 0) {
+                warnings.add("该版本无任何启用的码集合（status=1），规则里的 in/not in 全部判假");
+            }
+            if (dh.getGroupMdcMismatch() != null && dh.getGroupMdcMismatch() > 0) {
+                warnings.add("组表 mdc_code 与其所属 ADRG 的 mdc_code 不一致 " + dh.getGroupMdcMismatch()
+                        + " 条，按 MDC 筛选/展示会出现错位");
+            }
+            if (dh.getMissingExclSets() != null && dh.getMissingExclSets() > 0) {
+                warnings.add("CC/MCC 目录引用了 " + dh.getMissingExclSets()
+                        + " 个码集合中不存在的排除组，合并症排除会失效");
+            }
         }
         vo.setWarnings(warnings);
         return vo;

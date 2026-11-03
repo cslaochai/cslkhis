@@ -25,7 +25,7 @@ public class DrgSimDTO {
         private String icdCode;
         private String icdName;
         /**
-         * 分组方案版本（3.0/2.0），不传默认 3.0
+         * 分组方案版本（3.0/2.0）；不传则取「医保付费」参数配置，未配置直接报错，不回退默认值
          */
         private String version;
     }
@@ -40,7 +40,7 @@ public class DrgSimDTO {
          */
         private List<Long> summaryIds;
         /**
-         * 分组方案版本（3.0/2.0），不传默认 3.0
+         * 分组方案版本（3.0/2.0）；不传则取「医保付费」参数配置，未配置直接报错，不回退默认值
          */
         private String version;
     }

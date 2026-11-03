@@ -75,9 +75,4 @@ public class DrgSchemeRowVO implements Serializable {
      * 状态（0-草稿 1-启用 2-停用）
      */
     private Integer status;
-
-    /**
-     * 是否默认版本（1-是 0-否）
-     */
-    private Integer isDefault;
 }

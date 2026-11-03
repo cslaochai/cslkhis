@@ -73,7 +73,7 @@ CREATE TABLE `biz_drg_adrg` (
   `mdc_code` varchar(8) COMMENT '所属 MDC 编码',
   `sort_no` int COMMENT 'MDC 内排序',
   `row_kind` tinyint NOT NULL DEFAULT '0' COMMENT '行类型（0-正常入组 1-QY 其他手术歧义组 2-00 该 MDC 未入组占位）',
-  `version` varchar(32) COMMENT '分组方案版本',
+  `version` varchar(32) NOT NULL COMMENT '分组方案版本',
   `source` varchar(64) COMMENT '来源',
   `status` tinyint NOT NULL DEFAULT '0' COMMENT '状态（1-启用 0-停用）',
   `create_by` varchar(64) NOT NULL COMMENT '创建人',
@@ -97,7 +97,7 @@ CREATE TABLE `biz_drg_ccmcc` (
   `icd_code` varchar(32) NOT NULL COMMENT '诊断编码（ICD-10）',
   `cc_level` varchar(8) NOT NULL DEFAULT '' COMMENT '级别（MCC-严重并发症合并症 CC-并发症合并症 NONE-无）',
   `excl_group` varchar(24) COMMENT 'CC/MCC 排除组编号',
-  `version` varchar(32) COMMENT '分组方案版本（2.0/3.0）',
+  `version` varchar(32) NOT NULL COMMENT '分组方案版本（2.0/3.0）',
   `source` varchar(64) COMMENT '来源',
   `status` tinyint NOT NULL DEFAULT '0' COMMENT '状态（0-停用 1-启用）',
   `create_by` varchar(64) NOT NULL COMMENT '创建人',
@@ -127,7 +127,7 @@ CREATE TABLE `biz_drg_group` (
   `weight` decimal(10,4) COMMENT '权重',
   `pay_standard` decimal(10,2) COMMENT '病组支付标准（元）',
   `source` varchar(64) COMMENT '来源',
-  `version` varchar(32) COMMENT '版本号',
+  `version` varchar(32) NOT NULL COMMENT '版本号',
   `status` tinyint NOT NULL DEFAULT '0' COMMENT '状态（0-停用 1-启用）',
   `create_by` varchar(64) NOT NULL COMMENT '创建人',
   `create_time` datetime NOT NULL DEFAULT (now()) COMMENT '创建时间',
@@ -138,7 +138,8 @@ CREATE TABLE `biz_drg_group` (
   `create_by_id` bigint NOT NULL COMMENT '创建人ID',
   `update_by_id` bigint NOT NULL COMMENT '更新人ID',
   PRIMARY KEY (`id`),
-  UNIQUE KEY `uk_drg_code` (`drg_code`,`version`,`del_flag`)
+  UNIQUE KEY `uk_drg_code` (`drg_code`,`version`,`del_flag`),
+  KEY `idx_group_adrg` (`adrg_code`,`version`,`del_flag`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='DRG 分组与权重';
 
 -- ----------------------------
@@ -154,7 +155,7 @@ CREATE TABLE `biz_drg_mdc` (
   `rule_source` varchar(16) NOT NULL DEFAULT 'OFFICIAL' COMMENT '规则来源（OFFICIAL-官方 INFERRED-院内推导 LOCAL-本地自建）',
   `verified` tinyint NOT NULL DEFAULT '0' COMMENT '是否已复核（1-双人复核且回归一致 0-未复核）',
   `sort_no` int COMMENT '排序',
-  `version` varchar(32) COMMENT '分组方案版本',
+  `version` varchar(32) NOT NULL COMMENT '分组方案版本',
   `source` varchar(64) COMMENT '来源',
   `status` tinyint NOT NULL DEFAULT '0' COMMENT '状态（1-启用 0-停用）',
   `create_by` varchar(64) NOT NULL COMMENT '创建人',
@@ -187,7 +188,6 @@ CREATE TABLE `biz_drg_scheme` (
   `expected_adrg` int COMMENT '官方 ADRG 真组数（不含 QY/00 伪行）',
   `expected_drg` int COMMENT '官方 DRG 真组数（不含 QY/000 伪行）',
   `status` tinyint NOT NULL DEFAULT '0' COMMENT '状态（0-草稿 1-启用 2-停用）',
-  `is_default` tinyint NOT NULL DEFAULT '0' COMMENT '是否默认版本（1-是 0-否，同版本内唯一）',
   `create_by` varchar(64) NOT NULL COMMENT '创建人',
   `create_time` datetime NOT NULL DEFAULT (now()) COMMENT '创建时间',
   `update_by` varchar(64) NOT NULL COMMENT '更新人',
@@ -197,8 +197,7 @@ CREATE TABLE `biz_drg_scheme` (
   `create_by_id` bigint NOT NULL COMMENT '创建人ID',
   `update_by_id` bigint NOT NULL COMMENT '更新人ID',
   PRIMARY KEY (`id`),
-  UNIQUE KEY `uk_scheme_version` (`version`,`del_flag`),
-  KEY `idx_scheme_default` (`is_default`,`status`,`del_flag`)
+  UNIQUE KEY `uk_scheme_version` (`version`,`del_flag`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='DRG 分组方案头';
 
 -- ----------------------------
@@ -210,7 +209,7 @@ CREATE TABLE `biz_drg_set` (
   `icd_code` varchar(32) NOT NULL COMMENT 'ICD 编码',
   `icd_name` varchar(200) COMMENT 'ICD 名称',
   `set_type` varchar(4) NOT NULL DEFAULT '' COMMENT '类型（OP-手术操作 DI-诊断 EX-CC/MCC 排除组）',
-  `version` varchar(32) COMMENT '分组方案版本',
+  `version` varchar(32) NOT NULL COMMENT '分组方案版本',
   `status` tinyint NOT NULL DEFAULT '0' COMMENT '状态（1-启用 0-停用）',
   `create_by` varchar(64) NOT NULL COMMENT '创建人',
   `create_time` datetime NOT NULL DEFAULT (now()) COMMENT '创建时间',
