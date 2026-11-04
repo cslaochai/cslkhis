@@ -14,6 +14,7 @@ import com.his.common.util.DateFormats;
 import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
 import com.his.common.utils.UserUtils;
+import com.his.platform.config.HospitalProperties;
 import com.his.platform.config.SignProperties;
 import com.his.platform.constant.SignConst;
 import com.his.platform.dto.SignCertPageQueryDTO;
@@ -90,6 +91,8 @@ public class SignCertServiceImpl extends ServiceImpl<SysSignCertMapper, SysSignC
     private final SignPinSessionCache signPinSessionCache;
 
     private final SignProperties signProperties;
+
+    private final HospitalProperties hospitalProperties;
 
     private final RedisSequenceService redisSequenceService;
 
@@ -793,9 +796,9 @@ public class SignCertServiceImpl extends ServiceImpl<SysSignCertMapper, SysSignC
      * CA 签发申请单上的 Subject DN：CN=姓名, O=机构, OU=员工编号（工号）
      */
     private String buildSubjectDn(String empName, String empCode) {
-        String organization = signProperties.getOrganization();
+        String organization = hospitalProperties.getOrganization();
         if (!TextUtil.hasText(organization)) {
-            throw new BusinessException("未配置机构名（his.sign.organization），无法生成证书申请单主体 DN");
+            throw new BusinessException("未配置机构名（his.organization），无法生成证书申请单主体 DN");
         }
         StringBuilder dn = new StringBuilder("CN=").append(empName)
                 .append(", O=").append(organization);

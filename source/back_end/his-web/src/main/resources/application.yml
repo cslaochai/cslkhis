@@ -37,14 +37,21 @@ spring:
       database: 0
       timeout: 5000
 
-# token 有效期两环境一致；签名密钥属环境项，落 profile 文件
-jwt:
-  expiration: 86400000
-
 server:
   port: 8080
   servlet:
     context-path: /api
+# 医院身份：两环境同值，只在共享文件声明一次（dev / pro 不再重复）
+
+his:
+  # 机构名
+  organization: 长沙市麓康医院
+  # 医院统一社会信用代码（18 位）：法人和其他组织的唯一身份标识
+  organization-credit-code: "91430100MA4L5K2N3T"
+# token 有效期两环境一致；签名密钥属环境项，落 profile 文件
+
+jwt:
+  expiration: 86400000
 
 mybatis-plus:
   mapper-locations: classpath*:mapper/**/*.xml

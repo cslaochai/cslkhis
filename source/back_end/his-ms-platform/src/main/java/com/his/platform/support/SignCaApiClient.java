@@ -130,7 +130,7 @@ public class SignCaApiClient {
         } catch (Exception e) {
             throw new BusinessException("构造 CA 申请报文失败：" + e.getMessage());
         }
-        return toApplication(call("POST", path(signProperties.getCa().getPaths().getApplySign(), "applications"), body));
+        return toApplication(call("POST", path(signProperties.getCa().getPaths().getApplySign(), "apply-sign"), body));
     }
 
     // ---------------- 加解密与签名 ----------------
@@ -201,6 +201,7 @@ public class SignCaApiClient {
         URI uri = URI.create(base + pathAndQuery);
         String canonicalPath = uri.getRawPath() + (uri.getRawQuery() == null ? "" : "?" + uri.getRawQuery());
 
+        log.warn("调用 CA 接口地址为：{}", uri);
         String body = "";
         try {
             if (plainJson != null) {
@@ -244,25 +245,57 @@ public class SignCaApiClient {
     // ---------------- 响应映射 ----------------
 
     /**
-     * 业务错误取 CA 统一响应体里的 message；拿不到就回状态码，绝不把整包 HTML/堆栈抛给操作员
+     * 业务错误透传：只标注 HTTP 状态码这一事实，把 CA 响应体里的业务码、错误分类（error / errorCode / errorType）
+     * 与 message 原样透出，绝不再替 CA 猜测具体原因。
+     *
+     * <p>旧版把 403 一律写成"来源地址不在白名单或证书校验未通过"，而 CA 实际返回的 message 可能是
+     * "公司不可用"——两者自相矛盾，误导排查（以为问题在白名单，其实是公司被停用）。错误的真实分类
+     * 由 CA 决定，HIS 不应二度猜测，直接把 CA 给的字段亮出来最准。</p>
      */
     private String errorMessage(HttpResponse<String> resp) {
+        int status = resp.statusCode();
+        Integer bizCode = null;
         String message = null;
+        String errorType = null;
         try {
             JsonNode root = objectMapper.readTree(resp.body());
-            message = root.path("message").asText(null);
+            if (root != null && !root.isMissingNode() && !root.isNull()) {
+                if (root.path("code").isInt()) {
+                    bizCode = root.path("code").asInt();
+                }
+                message = root.path("message").asText(null);
+                // CA 若用结构化字段标注具体错误分类，原样取出，不二次猜测
+                if (root.path("error").isTextual()) {
+                    errorType = root.path("error").asText();
+                } else {
+                    errorType = root.path("errorCode").asText(null);
+                    if (errorType == null) {
+                        errorType = root.path("errorType").asText(null);
+                    }
+                }
+            }
         } catch (Exception ignored) {
             // 非 JSON 错误页（网关/代理）按状态码兜底
         }
-        String prefix = switch (resp.statusCode()) {
+        String prefix = switch (status) {
             case 401 -> "CA 认证失败（App ID 或接入密钥不正确）";
-            case 403 -> "CA 拒绝访问（来源地址不在白名单或证书校验未通过）";
+            case 403 -> "CA 拒绝访问（HTTP 403）";
             case 409 -> "CA 申请状态冲突";
             case 429 -> "CA 请求过于频繁，请稍后重试";
             case 503 -> "CA 对外 API 暂未开放";
-            default -> "CA 返回 HTTP " + resp.statusCode();
+            default -> "CA 返回 HTTP " + status;
         };
-        return TextUtil.hasText(message) ? prefix + "：" + message : prefix;
+        StringBuilder sb = new StringBuilder(prefix);
+        if (bizCode != null) {
+            sb.append("（业务码 ").append(bizCode).append("）");
+        }
+        if (TextUtil.hasText(errorType)) {
+            sb.append(" [").append(errorType).append("]");
+        }
+        if (TextUtil.hasText(message)) {
+            sb.append("：").append(message);
+        }
+        return sb.toString();
     }
 
     private String encryptEnvelope(String secret, String plainJson) throws Exception {

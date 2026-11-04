@@ -29,8 +29,6 @@ his:
   sign:
     # 签名主口令：不注入即拒绝签发证书（私钥绝不明文落库）
     master-secret: ${HIS_SIGN_SECRET:}
-    # 证书主体 O（机构名），必须与 CA 侧租户登记的「证书主体O」一致
-    organization: ${HIS_SIGN_ORG:长沙市麓康医院}
     ca:
       enabled: true
       base-url: http://host.docker.internal:8012/ssl

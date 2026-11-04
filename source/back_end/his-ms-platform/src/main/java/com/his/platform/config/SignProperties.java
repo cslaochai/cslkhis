@@ -43,11 +43,6 @@ public class SignProperties {
     private int timeSource;
 
     /**
-     * 证书主体 O（机构名）：写入签名证书申请单 DN，必须与 CA 侧租户登记的「证书主体O」一致。
-     */
-    private String organization;
-
-    /**
      * 新签发证书的密钥算法：RSA2048 或 SM2（国密，对齐 WS/T 847 医学电子签名要求）。
      * 影响密钥生成、签名算法（SHA256withRSA / SM3withSM2）与指纹摘要；历史证书按各自行内算法继续工作。
      * 走在线申请时必须与 CA 模板 algorithm 一致（如 DOCTOR_SIGN 为 SM2）。

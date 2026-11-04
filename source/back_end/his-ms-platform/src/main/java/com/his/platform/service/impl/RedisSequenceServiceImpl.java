@@ -21,7 +21,9 @@ public class RedisSequenceServiceImpl implements RedisSequenceService {
 
     private final StringRedisTemplate stringRedisTemplate;
 
-    /** SecureRandom 线程安全，全局复用，避免每次取号重新播种。 */
+    /**
+     * SecureRandom 线程安全，全局复用，避免每次取号重新播种。
+     */
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
     @Override
@@ -67,25 +69,26 @@ public class RedisSequenceServiceImpl implements RedisSequenceService {
      * 与按天过期的业务单号键不同：员工编号一经下发终身不变，段内计数器必须永久有效——
      * 键过期或删键都会让下一发从 001 重来，撞 {@code sys_employee.uk_emp_code}。
      */
-    private static final String EMPLOYEE_NO_SEG_KEY = BizCodeConst.EMPLOYEE_NO_KEY_PREFIX + ":SEG:";
+    private static final String EMPLOYEE_NO_SEQ_KEY = BizCodeConst.EMPLOYEE_NO_KEY_PREFIX + ":NO:";
 
     @Override
     public String generateEmployeeNo() {
-        // 口径（2026-10-25 定）：E + 3 位随机段 + 3 位段内序号。
-        // 随机段把编号空间切成 1000 个段，每段一个永久计数器：单段序号 3 位不会溢出，
-        // 全院容量 999 × 1000 = 999000；比「全局 3 位序号」（全院上限 999 人）稳。
-        // 从随机起点顺序扫段：有空间就一定能找到，不会在已满段上反复重摇。
-        int start = SECURE_RANDOM.nextInt(1000);
-        for (int i = 0; i < 1000; i++) {
-            String seg = String.format("%03d", (start + i) % 1000);
-            Long seq = stringRedisTemplate.opsForValue().increment(EMPLOYEE_NO_SEG_KEY + seg);
-            if (seq != null && seq <= 999L) {
-                return BizCodeConst.EMPLOYEE_NO_PREFIX + seg + String.format("%03d", seq);
-            }
-            // 该段已满（序号 > 999）：键留着不删——删掉下一发会从 001 重来撞已发号；换下一段继续
+        // 1. 取当前时间毫秒的后三位，作为伪随机前缀（000~999）
+        int randomPart = (int) (System.currentTimeMillis() % 1000);
+
+        // 2. Redis 自增计数器（单 key，原子操作）
+        Long seq = stringRedisTemplate.opsForValue().increment(EMPLOYEE_NO_SEQ_KEY);
+
+        if (seq == null || seq > 99999L) {
+            throw new BusinessException("员工编号空间已耗尽（最大容量 99999），请联系管理员");
         }
-        throw new BusinessException("员工编号段空间已耗尽（全院容量 999000），请联系管理员");
+
+        // 3. 拼接：前缀 + 3位随机 + 5位自增
+        return BizCodeConst.EMPLOYEE_NO_PREFIX
+                + String.format("%03d", randomPart)
+                + String.format("%05d", seq);
     }
+
 
     @Override
     public String generateEmergencyNo() {
