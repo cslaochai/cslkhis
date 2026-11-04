@@ -146,6 +146,8 @@ const props = defineProps({
   modelValue: {type: Boolean, default: false},
   // 回填模式：传入已存在且「待 CA 签发」的证书 id，跳过密钥生成，直接走线下回填
   bindCertId: {type: [String, Number], default: null},
+  // 重新签发模式：过期/已吊销后补办，带上原持有人，省掉再次搜索（仍可改选他人）
+  presetEmp: {type: Object, default: null},
 });
 const emit = defineEmits(['update:modelValue', 'saved']);
 
@@ -395,6 +397,20 @@ watch(visible, (open) => {
     bindForm.certId = props.bindCertId;
     loadBindCertDetail(props.bindCertId);
     return;
+  }
+  // 重新签发：打开即预选原持有人（仍允许改选），PIN 必须重新设置
+  if (props.presetEmp?.id) {
+    selectedEmp.value = {
+      id: props.presetEmp.id,
+      empName: props.presetEmp.empName,
+      deptId: props.presetEmp.deptId,
+      deptName: props.presetEmp.deptName,
+    };
+    empOptions.value = [selectedEmp.value];
+    form.empId = selectedEmp.value.id;
+    form.empName = selectedEmp.value.empName;
+    form.deptId = selectedEmp.value.deptId;
+    form.deptName = selectedEmp.value.deptName;
   }
   loadCaStatus();
   empLoading.value = false;

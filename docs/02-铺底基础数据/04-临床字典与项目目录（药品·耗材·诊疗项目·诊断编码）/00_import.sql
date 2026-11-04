@@ -8,7 +8,6 @@ SOURCE ./biz_shift.sql;
 SOURCE ./sys_checkup_package.sql;
 SOURCE ./sys_checkup_package_item.sql;
 SOURCE ./sys_consumable.sql;
-SOURCE ./sys_diagnosis.sql;
 SOURCE ./sys_drug.sql;
 SOURCE ./sys_drug_dose_limit.sql;
 SOURCE ./sys_drug_interaction.sql;

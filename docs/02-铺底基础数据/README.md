@@ -1,7 +1,7 @@
 # 02-铺底基础数据（新库初始化用）
 
 - 一个表一个文件，按 `../01-初始化DDL` 的领域分子目录；目录内 `00_import.sql` 汇总，根目录 `00_import_all.sql` 串全部领域。
-- 共 92 张表。生成：`python workspace/_reorg_docs_baseline.py seed`（2026-10-25 自 dev 库按主键序导出，单语句 500 行）
+- 共 91 张表。生成：`python workspace/_reorg_docs_baseline.py seed`（2026-10-25 自 dev 库按主键序导出，单语句 500 行）
 - 前置：先跑 `../01-初始化DDL/*.sql` 建表，再 `cd` 到本目录执行 `mysql --default-character-set=utf8mb4 库名 < 00_import_all.sql`。
 - **不含运行数据**：`biz_clinic_source`（排班）、`biz_clinic_source_slot`（号源）、`biz_schedule`（排班实例）——新环境由排班发布功能生成，不铺底。
 - `biz_clinic_source_slot_template` 是主数据模板：dev 库当前 0 行，按原铺底保留，不以库清空。
@@ -34,7 +34,6 @@
 | 04-临床字典与项目目录（药品·耗材·诊疗项目·诊断编码） | sys_checkup_package | 10 |
 | 04-临床字典与项目目录（药品·耗材·诊疗项目·诊断编码） | sys_checkup_package_item | 73 |
 | 04-临床字典与项目目录（药品·耗材·诊疗项目·诊断编码） | sys_consumable | 125 |
-| 04-临床字典与项目目录（药品·耗材·诊疗项目·诊断编码） | sys_diagnosis | 82 |
 | 04-临床字典与项目目录（药品·耗材·诊疗项目·诊断编码） | sys_drug | 550 |
 | 04-临床字典与项目目录（药品·耗材·诊疗项目·诊断编码） | sys_drug_dose_limit | 34 |
 | 04-临床字典与项目目录（药品·耗材·诊疗项目·诊断编码） | sys_drug_interaction | 91 |

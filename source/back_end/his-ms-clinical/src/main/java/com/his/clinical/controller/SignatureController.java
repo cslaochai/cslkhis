@@ -329,7 +329,8 @@ public class SignatureController {
      * 吊销证书：必须写明理由；吊销不删行，历史签名仍要靠它的公钥验通。
      *
      * <p>吊销是独立处置权（sign:cert:revoke），不与证书办理（sign:cert:edit）混用：
-     * 能办证的人不该能随手吊销，处置权只授医务科。无签结诊预警也发给持本权限的人。
+     * 保留独立权限码便于单独收回。2026-11-04 起本页全部按钮（含吊销）只授信息科管理员
+     * （sql326，role 33），不再授医务科；无签结诊催办预警仍发给持本权限的人，即信息科。
      */
     @PreAuthorize("hasAuthority('sign:cert:revoke')")
     @Operation(summary = "吊销签名证书（必须写理由）")

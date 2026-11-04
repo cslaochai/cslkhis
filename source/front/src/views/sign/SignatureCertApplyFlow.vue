@@ -24,8 +24,9 @@
         </template>
       </div>
 
-      <!-- 线下送 CA 指引（无在线申请单时展示：说明要传什么、怎么回填） -->
-      <div v-if="certDetail && certDetail.certStatus !== 1"
+      <!-- 线下送 CA 指引（仅「待 CA 签发」有回填诉求时展示：说明要传什么、怎么回填；
+           已吊销的证书不需要再送 CA，别把回填指引导到它头上） -->
+      <div v-if="certDetail && certDetail.certStatus === 0"
            class="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs leading-6">
         <p class="font-medium text-amber-800">该证书未发起 CA 在线申请，当前走线下送 CA 流程</p>
         <p class="mt-1 text-slate-700">HIS 无法自动查询 CA 结果，请按以下步骤让证书生效并展示 CA 处理记录：</p>
@@ -52,6 +53,32 @@
         </div>
       </div>
 
+      <!-- CA 申请流水：一张证可能送过好几单（失败/驳回后重提各算一单），
+           失败原因、第几次、CA 各阶段时刻都在这里，光看三阶段流程图会漏 -->
+      <div v-if="caRecords.length" class="mt-4 rounded-lg border border-slate-200 bg-white p-3"
+           data-testid="p5-sign-ca-record">
+        <p class="text-xs font-medium text-slate-900">CA 申请记录（共 {{ caRecords.length }} 次）</p>
+        <div v-for="(r, i) in caRecords" :key="r.applySeq ?? i"
+             class="mt-2 border-t border-slate-100 pt-2 text-xs">
+          <div class="flex flex-wrap items-center gap-2">
+            <span class="text-slate-500">第 {{ r.applySeq }} 次</span>
+            <el-tag :type="caApplyTagType(r.applyStatus)" size="small">
+              {{ r.applyStatusText || r.applyStatus }}
+            </el-tag>
+            <span v-if="r.applyNo" class="font-mono text-slate-500">{{ r.applyNo }}</span>
+          </div>
+          <p v-if="r.caMessage" class="mt-1 leading-5 text-slate-600">{{ r.caMessage }}</p>
+          <p class="mt-1 text-slate-400">
+            提交 {{ text(r.submittedAt) }}
+            <span v-if="r.reviewedAt"> · 审核 {{ text(r.reviewedAt) }}</span>
+            <span v-if="r.issuedAt"> · 签发 {{ text(r.issuedAt) }}</span>
+            <span v-if="r.boundAt"> · 回填 {{ text(r.boundAt) }}</span>
+            <span v-if="r.operatorName"> · 操作人 {{ r.operatorName }}</span>
+          </p>
+          <p v-if="r.caIssuer" class="text-slate-400">签发 CA：{{ r.caIssuer }}</p>
+        </div>
+      </div>
+
       <p class="mt-3 text-xs text-slate-400">
         说明：证书提交 CA 申请后进入「待审核」；CA 审核、签发、撤销都会主动推送回本系统，已签发时随报文带回证书并自动回填生效，
         无需人工刷新。线下签发的证书在「办理签名证书」里粘贴证书 PEM 回填（见上方黄色指引）。
@@ -64,8 +91,8 @@
 import {computed, ref, watch} from 'vue';
 import {ElMessage} from 'element-plus';
 import {Right} from '@element-plus/icons-vue';
-import {getSignCertDetail} from '@/api/signature';
-import {text} from '@/lib/sign';
+import {getSignCertCaApplyList, getSignCertDetail} from '@/api/signature';
+import {caApplyTagType, text} from '@/lib/sign';
 
 const props = defineProps({
   modelValue: {type: Boolean, default: false},
@@ -81,6 +108,8 @@ const visible = computed({
 
 const loading = ref(false);
 const certDetail = ref(null);
+// CA 申请流水（重提过几次就有几条）：失败原因与各阶段时刻以这里为准
+const caRecords = ref([]);
 
 const certNo = computed(() => certDetail.value?.certNo || '');
 
@@ -129,6 +158,14 @@ const loadData = async () => {
   try {
     const res = await getSignCertDetail(props.id);
     certDetail.value = res.data;
+    // 流水单独取：这一步失败不该把整页进度打成空白
+    try {
+      const listRes = await getSignCertCaApplyList(props.id);
+      caRecords.value = listRes.data || [];
+    } catch (e) {
+      caRecords.value = [];
+      console.error('加载 CA 申请记录失败', e);
+    }
   } catch (e) {
     console.error('加载证书申请进度失败', e);
   } finally {
@@ -154,6 +191,7 @@ const copyApplyMaterial = async () => {
 
 const onClosed = () => {
   certDetail.value = null;
+  caRecords.value = [];
 };
 </script>
 

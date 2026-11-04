@@ -8893,31 +8893,6 @@ CREATE TABLE `sys_department` (
   UNIQUE KEY `uk_dept_code` (`dept_code`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='科室';
 
--- sys_diagnosis  诊断字典
-CREATE TABLE `sys_diagnosis` (
-  `id` bigint NOT NULL COMMENT '主键ID',
-  `diagnosis_code` varchar(32) NOT NULL COMMENT '诊断编码',
-  `diagnosis_name` varchar(200) NOT NULL COMMENT '诊断名称',
-  `diagnosis_type` tinyint COMMENT '诊断类型（1-西医诊断 2-中医诊断）',
-  `category_name` varchar(100) COMMENT '诊断分类名称',
-  `parent_id` bigint COMMENT '父诊断ID',
-  `sort_order` int COMMENT '排序号',
-  `is_common` tinyint COMMENT '是否常用诊断（0-否 1-是）',
-  `is_notifiable` tinyint COMMENT '是否传染病（0-否 1-是）',
-  `disease_stage` varchar(100) COMMENT '疾病分期',
-  `status` tinyint COMMENT '状态（0-停用 1-启用）',
-  `create_by` varchar(64) NOT NULL COMMENT '创建人',
-  `create_by_id` bigint COMMENT '创建人ID',
-  `create_time` datetime NOT NULL COMMENT '创建时间',
-  `update_by` varchar(64) NOT NULL COMMENT '更新人',
-  `update_by_id` bigint COMMENT '更新人ID',
-  `update_time` datetime NOT NULL COMMENT '更新时间',
-  `del_flag` tinyint NOT NULL DEFAULT 0 COMMENT '删除标志（0-正常 1-删除）',
-  `remark` varchar(500) COMMENT '备注',
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `uk_diagnosis_code` (`diagnosis_code`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='诊断字典';
-
 -- sys_dict_data  字典数据
 CREATE TABLE `sys_dict_data` (
   `id` bigint NOT NULL COMMENT '主键ID',
@@ -10110,7 +10085,6 @@ ALTER TABLE `sys_equipment` ADD CONSTRAINT `fk_sys_equipment_dept_id` FOREIGN KE
 ALTER TABLE `sys_ward` ADD CONSTRAINT `fk_sys_ward_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
 ALTER TABLE `biz_shift` ADD CONSTRAINT `fk_biz_shift_dept_id` FOREIGN KEY (`dept_id`) REFERENCES `sys_department` (`id`);
 ALTER TABLE `sys_checkup_package_item` ADD CONSTRAINT `fk_sys_checkup_package_item_package_id` FOREIGN KEY (`package_id`) REFERENCES `sys_checkup_package` (`id`);
-ALTER TABLE `sys_diagnosis` ADD CONSTRAINT `fk_sys_diagnosis_parent_id` FOREIGN KEY (`parent_id`) REFERENCES `sys_diagnosis` (`parent_id`);
 ALTER TABLE `biz_drg_adrg` ADD CONSTRAINT `fk_biz_drg_adrg_mdc_code` FOREIGN KEY (`mdc_code`) REFERENCES `biz_drg_mdc` (`mdc_code`);
 ALTER TABLE `biz_drg_group` ADD CONSTRAINT `fk_biz_drg_group_adrg_code` FOREIGN KEY (`adrg_code`) REFERENCES `biz_drg_adrg` (`adrg_code`);
 ALTER TABLE `biz_drg_group` ADD CONSTRAINT `fk_biz_drg_group_mdc_code` FOREIGN KEY (`mdc_code`) REFERENCES `biz_drg_mdc` (`mdc_code`);

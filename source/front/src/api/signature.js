@@ -87,6 +87,11 @@ export function getSignCaStatus() {
     return request.get('/emr/signCert/caStatus')
 }
 
+// 一张证书的 CA 申请流水（第几次申请、走到哪一步、提交/审核/签发/回填时刻与 CA 说明）
+export function getSignCertCaApplyList(certId) {
+    return request.get('/emr/signCert/caApplyList', {params: {certId}})
+}
+
 // 提交/重试 CA 在线申请（已提交待审核时等价于刷新，不重复建单）
 export function submitSignCaApply(certId) {
     return request.post('/emr/signCert/caSubmit', {certId})

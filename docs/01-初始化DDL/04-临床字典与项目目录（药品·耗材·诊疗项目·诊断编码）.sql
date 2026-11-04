@@ -337,35 +337,6 @@ CREATE TABLE `sys_consumable` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='耗材字典';
 
 -- ----------------------------
--- sys_diagnosis  诊断字典
--- ----------------------------
-CREATE TABLE `sys_diagnosis` (
-  `id` bigint NOT NULL COMMENT '主键ID',
-  `diagnosis_code` varchar(32) NOT NULL COMMENT '诊断编码',
-  `diagnosis_name` varchar(200) NOT NULL COMMENT '诊断名称',
-  `diagnosis_type` tinyint COMMENT '诊断类型（1-西医诊断 2-中医诊断）',
-  `category_name` varchar(100) COMMENT '诊断分类名称',
-  `parent_id` bigint COMMENT '父诊断ID',
-  `sort_order` int COMMENT '排序号',
-  `is_common` tinyint COMMENT '是否常用诊断（0-否 1-是）',
-  `is_notifiable` tinyint COMMENT '是否传染病（0-否 1-是）',
-  `disease_stage` varchar(100) COMMENT '疾病分期',
-  `status` tinyint COMMENT '状态（0-停用 1-启用）',
-  `create_by` varchar(64) NOT NULL COMMENT '创建人',
-  `create_time` datetime NOT NULL DEFAULT (now()) COMMENT '创建时间',
-  `update_by` varchar(64) NOT NULL COMMENT '更新人',
-  `update_time` datetime NOT NULL DEFAULT (now()) COMMENT '更新时间',
-  `del_flag` tinyint NOT NULL DEFAULT '0' COMMENT '删除标志（0-正常 1-删除）',
-  `remark` varchar(500) COMMENT '备注',
-  `create_by_id` bigint NOT NULL COMMENT '创建人ID',
-  `update_by_id` bigint NOT NULL COMMENT '更新人ID',
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `uk_diagnosis_code` (`diagnosis_code`),
-  KEY `idx_diagnosis_name` (`diagnosis_name`),
-  KEY `idx_is_common` (`is_common`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='诊断字典';
-
--- ----------------------------
 -- sys_drug  药品字典
 -- ----------------------------
 CREATE TABLE `sys_drug` (

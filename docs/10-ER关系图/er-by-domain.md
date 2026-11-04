@@ -256,11 +256,6 @@ erDiagram
     varchar item_code "项目编码（唯一）"
     bigint dept_id "执行科室ID"
   }
-  sys_diagnosis["诊断字典 · sys_diagnosis"] {
-    bigint id "主键ID"
-    varchar diagnosis_code "诊断编码"
-    bigint parent_id "父诊断ID"
-  }
   sys_icd10["ICD-10 诊断编码 · sys_icd10"] {
     bigint id "主键ID"
   }
@@ -341,7 +336,6 @@ erDiagram
   }
   sys_department ||--o{ biz_shift : "dept_id"
   sys_checkup_package ||--|{ sys_checkup_package_item : "package_id"
-  sys_diagnosis ||--o{ sys_diagnosis : "parent_id"
   biz_drg_mdc ||--o{ biz_drg_adrg : "mdc_code"
   biz_drg_adrg ||--o{ biz_drg_group : "adrg_code"
   biz_drg_mdc ||--o{ biz_drg_group : "mdc_code"

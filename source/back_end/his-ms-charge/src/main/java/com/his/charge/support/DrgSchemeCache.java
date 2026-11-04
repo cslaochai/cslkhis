@@ -86,10 +86,14 @@ public class DrgSchemeCache {
     }
 
     private DrgScheme load(String version) {
+        //1、分组方案头
         DrgSchemeRowVO h = drgSimMapper.scheme(version);
         DrgScheme.Header header = headerOf(version, h);
 
+        //2、存放setCode和icd_code的映射关系
         Map<String, Set<String>> sets = loadSets(version);
+
+        //3、存放mcc/cc
         Map<String, DrgScheme.CcEntry> ccmcc = loadCcMcc(version);
 
         Set<String> refs = new HashSet<>();

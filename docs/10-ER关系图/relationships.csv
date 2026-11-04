@@ -36,7 +36,6 @@
 35,3,"sys_ward","病区","dept_id","所属科室ID","sys_department","id","||--|{","N","A-数据全命中",,,,"命名+覆盖率",
 36,4,"biz_shift","班次字典","dept_id","适用科室ID","sys_department","id","||--o{","Y","D-无数据可验证",,,,"命名+覆盖率",
 37,4,"sys_checkup_package_item","体检套餐项目","package_id","套餐ID","sys_checkup_package","id","||--|{","N","A-数据全命中",,,,"命名+覆盖率",
-38,4,"sys_diagnosis","诊断字典","parent_id","父诊断ID","sys_diagnosis","parent_id","||--o{","Y","D-无数据可验证",,,,"命名+覆盖率",
 39,4,"biz_drg_adrg","DRG 核心组目录","mdc_code","所属 MDC 编码","biz_drg_mdc","mdc_code","1:N","Y","A-数据全命中",537,537,1,"命名+覆盖率",
 40,4,"biz_drg_group","DRG 分组与权重","adrg_code","ADRG 编码","biz_drg_adrg","adrg_code","1:N","Y","A-数据全命中",870,870,1,"命名+覆盖率",
 41,4,"biz_drg_group","DRG 分组与权重","mdc_code","MDC 主要诊断大类","biz_drg_mdc","mdc_code","1:N","Y","A-数据全命中",870,870,1,"命名+覆盖率",
