@@ -17,6 +17,10 @@ jwt:
   secret: ${HIS_JWT_SECRET:}
 
 his:
+  # 运行时数据根目录：与 dev 同形（其下 uploads/<业务子目录> 落 PDF 与影像，crypto 落医保国密证书）。
+  # 容器里由 compose 把宿主 ./cslk-data 挂到 /app/cslk-data，重建镜像不丢产物
+  upload:
+    base-dir: ${HIS_UPLOAD_BASE_DIR:/app/cslk-data}
   # 模型访问密钥：生产只从环境变量注入，dev 内联真值
   ai:
     api-key: ${HIS_AI_API_KEY:}
@@ -27,12 +31,17 @@ his:
   # 电子签名证书：CA 在线申请（csssl 对外 RA API）
   # 环境相关的值在本文件声明；迭代次数、有效期、超时、接口路径等固定契约在 config/domain/his-platform.yml
   sign:
-    # 签名主口令：不注入即拒绝签发证书（私钥绝不明文落库）
+    # 签名主口令（HIS 本地私钥保护口令，与 CA 服务端 csssl 的 SSL_MASTER_KEY 无关）：
+    # 本地生成密钥对时用它加密私钥落库、签名时解密私钥；CA 在线申请只把公钥送 CA，私钥不出 HIS。
+    # 不注入即拒绝签发证书（私钥绝不明文落库）。注意：此值不是 CA 的 SSL_MASTER_KEY，HIS 不持有后者。
     master-secret: ${HIS_SIGN_SECRET:}
+    # CA 在线申请：接入 csssl 对外 RA API。App ID / 接入密钥由 csssl 建租户时颁发，HIS 按 app-id 反查租户。
+    # 私钥在 HIS 本地生成并用上面 master-secret 加密保管，只把公钥送 CA —— 与 CA 的 SSL_MASTER_KEY 是两回事。
     ca:
       enabled: true
       base-url: http://host.docker.internal:8012/ssl
       app-id: app_a295062ed8c9f4177b888cceb6d7c5b9
+      # CA 接入密钥（HMAC 验签 + 报文 AES-GCM 加密共用）；只配在配置里，绝不落业务库
       app-secret: sk_c78dd9c0e7a84d9ef545c30d063ff35fcc2bfd4db66616c6f680060cf52773d1
       # CA 推送回调验签密钥（HMAC-SHA256）：必须与 CA 侧 SSL_HIS_PUSH_SECRET 同值
       # **生产必须注入**；留空则回调端点拒绝一切推送（宁停摆，也不收来源不明的证书）
@@ -42,6 +51,12 @@ his:
       # remote=调医保前置系统(csmig)；生产必须给真实前置机地址，localhost 默认值只够本机联调
       mode: ${HIS_INSURANCE_MODE:remote}
       base-url: ${HIS_INSURANCE_BASE_URL:http://localhost:8091/mig}
+    # 医保国密证书从数据卷读，不再打进 jar；没挂上目录启动即报「证书读取失败」
+    crypto:
+      private-key: file:${HIS_INS_CRYPTO_DIR:/app/cslk-data/crypto}/hisins-private.pem
+      cert-chain: file:${HIS_INS_CRYPTO_DIR:/app/cslk-data/crypto}/hisins-cert.pem
+      root-ca: file:${HIS_INS_CRYPTO_DIR:/app/cslk-data/crypto}/root-ca.pem
+      sub-ca: file:${HIS_INS_CRYPTO_DIR:/app/cslk-data/crypto}/sub-ca.pem
   sms:
     code:
       # 测试开关：true=不走网关、验证码回显。漏配即失败关闭

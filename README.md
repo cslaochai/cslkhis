@@ -103,6 +103,10 @@ cslk/
   `platform` / `sms`），dev/pro 共用、零密钥；
 - `application-{dev,pro}.yml`：环境差异。`application-dev.yml` 为本地个人配置，不入库。
 
+上传影像、生成的 PDF（导诊单/处方/报告/值班表）与医保国密证书都不落业务源码目录：`his.upload.base-dir` 指定数据根目录，
+dev 用 `source/cslk-data/`（其下 `uploads/<业务子目录>` 落文件、`crypto/` 放证书），pro 用容器卷 `/app/cslk-data`。
+换机器只改 `application-dev.yml` 里那一行路径。
+
 密钥一律走 `HIS_*` 环境变量（数据库、Redis、JWT、签名主密钥、SM2 私钥、AI 密钥、Milvus、RocketMQ、支付渠道、
 短信、医保、随访外呼），完整清单见 `docker/.env.example`。
 
@@ -153,7 +157,8 @@ docker compose -f docker/docker-compose.yml up -d --build
 # 后端 http://localhost:8009/api  ·  管理端 http://localhost:3100
 ```
 
-影像与导诊单 PDF 写入容器内 `/app/uploads`，compose 已挂载到宿主 `docker/uploads`，重建容器不丢文件。
+影像与导诊单 PDF 落在数据卷 `cslk-data`（容器内 `/app/cslk-data`，compose 挂到宿主 `docker/cslk-data`，其下 `uploads/` 按业务分子目录），
+医保国密证书放同卷的 `crypto/` 子目录：重建容器不丢文件，jar 内不再含私钥。
 
 ## 部署架构
 

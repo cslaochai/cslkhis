@@ -18,6 +18,7 @@ import com.his.clinical.support.QcOperator;
 import com.his.clinical.support.QcSnapshot;
 import com.his.clinical.vo.*;
 import com.his.common.base.PageResult;
+import com.his.common.config.UploadProperties;
 import com.his.common.entity.CurrentUser;
 import com.his.common.enums.*;
 import com.his.common.exception.BusinessException;
@@ -86,6 +87,7 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
     private final SystemFacadeService systemFacadeService;
     private final SysMessageService sysMessageService;
     private final ApplicationEventPublisher eventPublisher;
+    private final UploadProperties uploadProperties;
 
     /**
      * 引导单「取药流程」的判据：本次应收里有没有药品类项目（2-西药 3-中成药 4-中药饮片）。
@@ -2078,16 +2080,8 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
         String dateDir = LocalDate.now().format(DateFormats.COMPACT_DATE);
         String fileName = record.getRecordNo() + ".pdf";
         String relativePath = "uploads/guide/" + dateDir + "/" + fileName;
-
-        // 获取上传目录路径
-        String uploadBaseDir = System.getProperty("user.dir");
-        String absolutePath = uploadBaseDir + "/" + relativePath;
-
-        // 创建目录
-        java.io.File dir = new java.io.File(uploadBaseDir + "/uploads/guide/" + dateDir);
-        if (!dir.exists()) {
-            dir.mkdirs();
-        }
+        java.io.File dir = uploadProperties.mkdirsOf("uploads/guide/" + dateDir);
+        String absolutePath = new java.io.File(dir, fileName).getAbsolutePath();
 
         // 费用来自 L1 记账行：按项目类型聚合的**未结算**净额（排除挂号时已收的诊查费）
         List<FeeTypeSumVO> receivables = chargeFacadeService.sumPendingGroupByItemType(
@@ -2374,13 +2368,10 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
         }
 
         String dateDir = LocalDate.now().format(DateFormats.COMPACT_DATE);
-        String relativePath = "uploads/rx/" + dateDir + "/" + record.getRecordNo() + "_" + fileSuffix + ".pdf";
-        String uploadBaseDir = System.getProperty("user.dir");
-        String absolutePath = uploadBaseDir + "/" + relativePath;
-        java.io.File dir = new java.io.File(uploadBaseDir + "/uploads/rx/" + dateDir);
-        if (!dir.exists()) {
-            dir.mkdirs();
-        }
+        String fileName = record.getRecordNo() + "_" + fileSuffix + ".pdf";
+        String relativePath = "uploads/rx/" + dateDir + "/" + fileName;
+        java.io.File dir = uploadProperties.mkdirsOf("uploads/rx/" + dateDir);
+        String absolutePath = new java.io.File(dir, fileName).getAbsolutePath();
 
         try {
             com.lowagie.text.Document document = new com.lowagie.text.Document(com.lowagie.text.PageSize.A4, 36, 36, 36, 36);

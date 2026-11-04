@@ -13,5 +13,5 @@ his:
       max-frame-count: 24
       # 模拟导入未传 frameCount 时的默认帧数
       default-frame-count: 6
-      # 影像落盘相对根目录（相对 user.dir，不含前导/尾部斜杠）
+      # 影像落盘相对根目录（相对 his.upload.base-dir，不含前导/尾部斜杠），同时是库里 file_url 与 /uploads/** 的前缀
       upload-root-rel: uploads/examImage

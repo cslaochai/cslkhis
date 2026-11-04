@@ -16,8 +16,9 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
     volumes:
-      # 后端把影像/导诊单写在 ${user.dir}/uploads（WORKDIR=/app），落宿主目录避免镜像里堆文件、重建不丢
-      - ./uploads:/app/uploads
+      # 运行时数据卷：影像/导诊单等写在容器内 /app/cslk-data（compose 挂到宿主 ./cslk-data），
+      # 医保国密证书同卷的 crypto 子目录；重建镜像不丢产物，私钥也不再打进 jar
+      - ./cslk-data:/app/cslk-data
     healthcheck:
       test: [ "CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/8080" ]
       interval: 10s

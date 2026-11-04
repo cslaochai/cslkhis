@@ -201,6 +201,7 @@ public class SignCaApiClient {
         URI uri = URI.create(base + pathAndQuery);
         String canonicalPath = uri.getRawPath() + (uri.getRawQuery() == null ? "" : "?" + uri.getRawQuery());
 
+        long start = System.currentTimeMillis();
         log.warn("调用 CA 接口地址为：{}", uri);
         String body = "";
         try {
@@ -225,7 +226,11 @@ public class SignCaApiClient {
                 builder.header("Content-Type", "application/json;charset=UTF-8")
                         .method(method, HttpRequest.BodyPublishers.ofString(body, StandardCharsets.UTF_8));
             }
-            return httpClient.send(builder.build(), HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+            HttpResponse<String> resp = httpClient.send(builder.build(), HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+            // 无论成功失败都打出响应概览：排查「调用不通 / CA 解密报错」时，能直接看到 CA 到底回了什么
+            String preview = resp.body() == null ? "" : (resp.body().length() <= 500 ? resp.body() : resp.body().substring(0, 500) + "...");
+            log.warn("CA 接口响应 method={} uri={} status={} cost={}ms bodyPreview={}", method, uri, resp.statusCode(), System.currentTimeMillis() - start, preview);
+            return resp;
         } catch (BusinessException e) {
             throw e;
         } catch (java.net.http.HttpTimeoutException e) {
@@ -254,12 +259,15 @@ public class SignCaApiClient {
      */
     private String errorMessage(HttpResponse<String> resp) {
         int status = resp.statusCode();
+        String rawBody = resp.body();
         Integer bizCode = null;
         String message = null;
         String errorType = null;
+        boolean json = false;
         try {
-            JsonNode root = objectMapper.readTree(resp.body());
+            JsonNode root = objectMapper.readTree(rawBody);
             if (root != null && !root.isMissingNode() && !root.isNull()) {
+                json = true;
                 if (root.path("code").isInt()) {
                     bizCode = root.path("code").asInt();
                 }
@@ -275,7 +283,12 @@ public class SignCaApiClient {
                 }
             }
         } catch (Exception ignored) {
-            // 非 JSON 错误页（网关/代理）按状态码兜底
+            // 非 JSON 错误页（网关/代理/CA 自身崩溃）按状态码兜底
+        }
+        // CA 崩了返回 500 错误页（含堆栈/异常名）时，把异常线索原样带出来，
+        // 否则只会显示「CA 返回 HTTP 500」，看不到「私钥解密失败(BadPaddingException)」这类根因
+        if (!json && message == null) {
+            message = extractExceptionHint(rawBody);
         }
         String prefix = switch (status) {
             case 401 -> "CA 认证失败（App ID 或接入密钥不正确）";
@@ -296,6 +309,21 @@ public class SignCaApiClient {
             sb.append("：").append(message);
         }
         return sb.toString();
+    }
+
+    /**
+     * 从非 JSON 错误页/堆栈里抓第一个异常线索（异常类名 + 简短信息），便于排查 CA 侧崩溃。
+     * 例如 CA 返回 500 且页面含 "IllegalStateException: 私钥解密失败...BadPaddingException" 时，
+     * 能直接把这段带出来，而不是只给一个笼统的「CA 返回 HTTP 500」。
+     */
+    private static String extractExceptionHint(String body) {
+        if (!TextUtil.hasText(body)) {
+            return null;
+        }
+        java.util.regex.Pattern p = java.util.regex.Pattern.compile(
+                "(?:[a-zA-Z_][\\w.]*(?:Exception|Error))[^\\n<>]{0,160}");
+        java.util.regex.Matcher m = p.matcher(body);
+        return m.find() ? m.group().trim() : null;
     }
 
     private String encryptEnvelope(String secret, String plainJson) throws Exception {

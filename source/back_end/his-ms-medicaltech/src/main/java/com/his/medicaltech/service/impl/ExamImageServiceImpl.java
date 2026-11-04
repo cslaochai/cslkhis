@@ -2,6 +2,7 @@ package com.his.medicaltech.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.his.common.config.UploadProperties;
 import com.his.common.constant.DictTypeConst;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.DateFormats;
@@ -56,6 +57,8 @@ import java.util.UUID;
 public class ExamImageServiceImpl extends ServiceImpl<BizExamImageMapper, BizExamImage> implements ExamImageService {
 
     private final ExamImageProperties examImageProperties;
+
+    private final UploadProperties uploadProperties;
 
     private final BizExamImageMapper bizExamImageMapper;
 
@@ -266,10 +269,7 @@ public class ExamImageServiceImpl extends ServiceImpl<BizExamImageMapper, BizExa
     private String saveBytes(String fileName, byte[] bytes) {
         String dateDir = LocalDate.now().format(DateFormats.COMPACT_DATE);
         String relativeDir = uploadRoot() + "/" + dateDir;
-        File dir = new File(System.getProperty("user.dir"), relativeDir);
-        if (!dir.exists() && !dir.mkdirs()) {
-            throw new BusinessException("影像存储目录创建失败：" + dir.getAbsolutePath());
-        }
+        File dir = uploadProperties.mkdirsOf(relativeDir);
         Path target = new File(dir, fileName).toPath();
         try {
             Files.write(target, bytes);
@@ -296,7 +296,7 @@ public class ExamImageServiceImpl extends ServiceImpl<BizExamImageMapper, BizExa
             return;
         }
         try {
-            File f = new File(System.getProperty("user.dir"), fileUrl);
+            File f = uploadProperties.file(fileUrl);
             if (f.exists() && !f.delete()) {
                 log.warn("[影像删除] 磁盘文件删除失败（行已删，孤儿文件待清理）：{}", f.getAbsolutePath());
             }

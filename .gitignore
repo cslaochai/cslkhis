@@ -45,6 +45,10 @@ Thumbs.db
 
 # 运行时上传产物（导诊单 PDF 等，由后端写入，不属源码）
 uploads/
+# 例外：source/cslk-data/uploads 的演示产物要随仓库走（新环境 clone 就能打开库里已有 PDF 记录）。
+# 父目录被 uploads/ 整条排除时，git 不会再看里面的文件，所以先放行目录本身、再放行其内容。
+!source/cslk-data/uploads/
+!source/cslk-data/uploads/**
 
 # 本地 IDE / 环境覆盖配置（项目内也属个人配置，不进库）
 .idea/

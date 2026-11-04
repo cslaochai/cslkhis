@@ -1,5 +1,6 @@
 package com.his.outpatient.service.impl;
 
+import com.his.common.config.UploadProperties;
 import com.his.common.util.TextUtil;
 import com.his.outpatient.service.StaffScheduleService;
 import com.his.outpatient.service.ErDutyPdfService;
@@ -12,7 +13,6 @@ import org.springframework.stereotype.Service;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -28,6 +28,7 @@ import java.util.List;
 public class ErDutyPdfServiceImpl implements ErDutyPdfService {
 
     private final StaffScheduleService staffScheduleService;
+    private final UploadProperties uploadProperties;
 
     private static final DateTimeFormatter COMPACT = DateTimeFormatter.ofPattern("yyyyMMdd");
 
@@ -39,8 +40,7 @@ public class ErDutyPdfServiceImpl implements ErDutyPdfService {
         String dateDir = date.format(COMPACT);
         String fileName = "erDuty_" + date + ".pdf";
         String relativePath = "uploads/erDutyPdf/" + dateDir + "/" + fileName;
-        String uploadBaseDir = System.getProperty("user.dir");
-        java.nio.file.Path file = Paths.get(uploadBaseDir + "/" + relativePath);
+        java.nio.file.Path file = uploadProperties.file(relativePath).toPath();
 
         boolean existed = Files.exists(file);
         if (!existed) {

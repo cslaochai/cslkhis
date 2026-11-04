@@ -1,5 +1,6 @@
 package com.his.medicaltech.service.impl;
 
+import com.his.common.config.UploadProperties;
 import com.his.common.entity.CurrentUser;
 import com.his.common.enums.LabAbnormalFlagEnum;
 import com.his.common.enums.SysGenderEnum;
@@ -38,6 +39,7 @@ public class ReportPdfServiceImpl implements ReportPdfService {
 
     private final SignCertFacadeService signCertFacadeService;
     private final SystemFacadeService systemFacadeService;
+    private final UploadProperties uploadProperties;
 
     @Override
     public ReportPdfFileVO generateInspectionPdf(BizInspectionRecord record, String pin) {
@@ -77,7 +79,7 @@ public class ReportPdfServiceImpl implements ReportPdfService {
             return vo;
         }
         try {
-            String absolutePath = System.getProperty("user.dir") + "/" + relativePath;
+            String absolutePath = uploadProperties.file(relativePath).getAbsolutePath();
             byte[] pdfBytes = Files.readAllBytes(Paths.get(absolutePath));
             String actualHash = sha256Hex(pdfBytes);
             SignCertBriefVO cert = signCertFacadeService.getCertById(certId);
@@ -283,13 +285,10 @@ public class ReportPdfServiceImpl implements ReportPdfService {
         String signValue = signCertFacadeService.signWithCert(cert.getId(), "SHA-256:" + hash, pin);
 
         String dateDir = LocalDate.now().format(com.his.common.util.DateFormats.COMPACT_DATE);
-        String relativePath = "uploads/reportPdf/" + dateDir + "/" + recordNo + ".pdf";
-        String uploadBaseDir = System.getProperty("user.dir");
-        File dir = new File(uploadBaseDir + "/uploads/reportPdf/" + dateDir);
-        if (!dir.exists()) {
-            dir.mkdirs();
-        }
-        Files.write(Paths.get(uploadBaseDir + "/" + relativePath), pdfBytes);
+        String fileName = recordNo + ".pdf";
+        String relativePath = "uploads/reportPdf/" + dateDir + "/" + fileName;
+        File dir = uploadProperties.mkdirsOf("uploads/reportPdf/" + dateDir);
+        Files.write(new File(dir, fileName).toPath(), pdfBytes);
 
         signCertFacadeService.markCertUsed(cert.getId(), LocalDateTime.now());
 

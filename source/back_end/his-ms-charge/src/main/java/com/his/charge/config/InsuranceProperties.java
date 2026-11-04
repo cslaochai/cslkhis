@@ -1,5 +1,6 @@
 package com.his.charge.config;
 
+import jakarta.annotation.PostConstruct;
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.core.io.Resource;
@@ -33,6 +34,26 @@ public class InsuranceProperties {
      * 报文国密参数（his.insurance.crypto.*）：HIS→医保前置 方向 SM2 签名 + SM4 加密
      */
     private Crypto crypto = new Crypto();
+
+    /**
+     * 证书改成外部文件后，「没挂上目录」是部署事故而不是运行期业务失败：启动就查文件在不在，别等第一笔医保结算才炸。
+     */
+    @PostConstruct
+    public void assertCryptoResourcesReadable() {
+        if (!crypto.isEnabled()) {
+            return;
+        }
+        requireReadable("his.insurance.crypto.private-key", crypto.getPrivateKey());
+        requireReadable("his.insurance.crypto.cert-chain", crypto.getCertChain());
+        requireReadable("his.insurance.crypto.root-ca", crypto.getRootCa());
+        requireReadable("his.insurance.crypto.sub-ca", crypto.getSubCa());
+    }
+
+    private void requireReadable(String key, Resource resource) {
+        if (resource == null || !resource.isReadable()) {
+            throw new IllegalStateException("医保国密证书读取失败，请检查配置 " + key + "=" + resource);
+        }
+    }
 
     @Data
     public static class Channel {
@@ -114,22 +135,22 @@ public class InsuranceProperties {
         private String sm4Key = "";
 
         /**
-         * 本端 SM2 签名私钥 PEM（classpath 资源路径，csssl 签发）
+         * 本端 SM2 签名私钥 PEM（外部文件路径，file: 前缀，csssl 签发；不进 jar）
          */
         private Resource privateKey;
 
         /**
-         * 本端证书链 PEM（叶子 + SUB_CA，csssl 签发）
+         * 本端证书链 PEM（叶子 + SUB_CA，外部文件路径，csssl 签发）
          */
         private Resource certChain;
 
         /**
-         * 信任根：csssl 根证书 PEM
+         * 信任根：csssl 根证书 PEM（外部文件路径）
          */
         private Resource rootCa;
 
         /**
-         * 信任链：csssl SUB_CA 证书 PEM
+         * 信任链：csssl SUB_CA 证书 PEM（外部文件路径）
          */
         private Resource subCa;
 
