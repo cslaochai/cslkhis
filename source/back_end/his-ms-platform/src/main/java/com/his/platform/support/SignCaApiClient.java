@@ -202,7 +202,6 @@ public class SignCaApiClient {
         String canonicalPath = uri.getRawPath() + (uri.getRawQuery() == null ? "" : "?" + uri.getRawQuery());
 
         long start = System.currentTimeMillis();
-        log.warn("调用 CA 接口地址为：{}", uri);
         String body = "";
         try {
             if (plainJson != null) {
