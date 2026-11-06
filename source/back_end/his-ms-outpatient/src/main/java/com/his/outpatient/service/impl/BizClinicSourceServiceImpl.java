@@ -416,7 +416,7 @@ public class BizClinicSourceServiceImpl extends ServiceImpl<BizClinicSourceMappe
         // toVOList 返回的是 stream.toList() 不可变列表，独立休息行要追加，必须先拷成可变列表
         List<ScheduleDetailVO> voList = new ArrayList<>(toVOList(listPage(queryDTO)));
         enrichDutyStatus(voList);
-        voList.addAll(standaloneRestRows(queryDTO, voList));
+        voList.addAll(standaloneAttendanceRows(queryDTO, voList));
         return voList;
     }
 
@@ -446,11 +446,16 @@ public class BizClinicSourceServiceImpl extends ServiceImpl<BizClinicSourceMappe
     }
 
     /**
-     * 独立休息行：排班表里 duty_status≠1、没有被任何号源行引用的行（空格直接标休的产物）。
-     * 门诊排班面板要把它们当格子渲染出来，否则「标了休」在面板上不可见、也改不回来。
+     * 独立出勤行：排班表里「没有被任何号源行引用」的行（空格直接标休的产物，或已排出勤但未排号源的孤儿行）。
+     * 门诊排班面板要把它们当格子渲染出来，否则两类数据在面板上不可见、也改不回来：
+     *   - duty_status≠1（休息/请假/培训/停班）：空格标休的产物，灰虚线格；
+     *   - duty_status=1（上班）但无号源：出诊计划只派生出勤事实、号源行因故没落成的孤儿行，
+     *     面板必须显示成「上班·未排号源」，否则就会出现「库里明明排了、面板却一片空白」的假象
+     *     （施佳明 11-16 即此类，全库曾累计 23 条同类孤儿行）。
+     * 已与号源行绑定的出勤事实由 clinicVos 渲染，这里用 boundScheduleIds 排除，不会重复。
      * 只出非急诊科室（急诊归急诊排班页）+ 与号源行同款的科室数据范围/岗位过滤。
      */
-    private List<ScheduleDetailVO> standaloneRestRows(ScheduleQueryDTO queryDTO, List<ScheduleDetailVO> clinicVos) {
+    private List<ScheduleDetailVO> standaloneAttendanceRows(ScheduleQueryDTO queryDTO, List<ScheduleDetailVO> clinicVos) {
         Set<Long> boundScheduleIds = clinicVos.stream()
                 .map(ScheduleDetailVO::getStaffScheduleId)
                 .filter(Objects::nonNull)
@@ -461,7 +466,6 @@ public class BizClinicSourceServiceImpl extends ServiceImpl<BizClinicSourceMappe
 
         LambdaQueryWrapper<BizSchedule> wrapper = new LambdaQueryWrapper<BizSchedule>()
                 .eq(BizSchedule::getOrgType, OrgUnitTypeEnum.DEPT.getCode())
-                .ne(BizSchedule::getDutyStatus, StaffDutyStatusEnum.WORK.getCode())
                 .ge(queryDTO.getStartDate() != null, BizSchedule::getScheduleDate, queryDTO.getStartDate())
                 .le(queryDTO.getEndDate() != null, BizSchedule::getScheduleDate, queryDTO.getEndDate())
                 .eq(queryDTO.getStaffType() != null, BizSchedule::getStaffType, queryDTO.getStaffType());

@@ -139,6 +139,7 @@
             <span class="flex items-center gap-1"><span class="inline-block h-3 w-3 rounded border border-slate-200 bg-white"></span>出诊（白/蓝卡）</span>
             <span class="flex items-center gap-1"><span class="inline-block h-3 w-3 rounded border border-red-300 bg-slate-100"></span>停诊（红色「停诊」标签）</span>
             <span class="flex items-center gap-1"><span class="inline-block h-3 w-3 rounded border border-dashed border-slate-300 bg-slate-50"></span>休息/请假/培训/停班（灰色虚线）</span>
+            <span class="flex items-center gap-1"><span class="inline-block h-3 w-3 rounded border border-amber-300 bg-amber-50"></span>上班·未排号源（琥珀色，点「补排号源」补齐）</span>
             <span class="flex items-center gap-1"><span class="inline-block h-3 w-3 rounded border border-slate-200 bg-white"></span>空白 = 该人该日未排班</span>
           </div>
           <div ref="panelTableWrap" v-loading="panelLoading" class="mt-3 min-h-0 flex-1 overflow-x-auto">
@@ -210,6 +211,29 @@
                                     title="修改出勤状态（休息/请假/培训/停班）"
                                     @click.stop="handlePanelCellRest(s)">编辑
                             </button>
+                          </div>
+                        </div>
+                        <!-- 上班·未排号源（孤儿出勤行）：dutyStatus=1 但号源层没落成，必须可见并引导补排，
+                             否则「库里有排、面板空白」的假象就出在这 -->
+                        <div v-else-if="isOrphanWork(s)"
+                             class="group relative rounded border border-amber-300 bg-amber-50 px-2.5 py-1.5 text-left leading-5"
+                             :data-testid="`panel-orphan-${row.doctorId}-${d}`"
+                             :title="'已排出勤（' + (s.dutyStatusText || '上班') + '）但未排号源，点「补排号源」补齐'">
+                          <div class="flex items-center justify-between gap-2">
+                            <span class="flex min-w-0 items-center gap-1.5">
+                              <span class="text-sm font-medium text-amber-700">{{ s.dutyStatusText || '上班' }}·未排号源</span>
+                              <el-tag v-if="s.publishStatus != null"
+                                      :type="publishStatusTagType(s.publishStatus)"
+                                      class="!px-1.5 !align-middle shrink-0" effect="plain" size="small">{{ s.publishStatusText }}</el-tag>
+                            </span>
+                          </div>
+                          <div v-if="d >= todayStr"
+                               class="mt-1 flex justify-end opacity-0 transition-opacity duration-150 group-hover:opacity-100">
+                            <button v-perm="'outpatient:schedule:add'"
+                                    :data-testid="`panel-orphan-fill-${row.doctorId}-${d}`"
+                                    class="cursor-pointer text-[13px] font-medium text-amber-700"
+                                    title="为该医生该日补排号源（会复用已有的出勤事实）"
+                                    @click.stop="handlePanelCellAdd(row, d)">补排号源</button>
                           </div>
                         </div>
                         <!-- 号源/出诊行（原有渲染） -->
@@ -1124,6 +1148,10 @@ const weekPendingCount = computed(() => panelAllSchedules.value.filter((s) => !i
  * 但格子要渲染、也要能编辑 —— cellsFor 保留全量，统计侧一律先滤掉。
  */
 const isRestRow = (s) => s.dutyStatus != null && Number(s.dutyStatus) !== 1;
+// 已排出勤（dutyStatus=1）但没落成号源的孤儿行：号源层没建出来，面板必须显式标出「上班·未排号源」，
+// 否则就是「库里明明排了、面板却一片空白」的假象（施佳明 11-16 即此类）。
+// 判定：非休息 + 有出勤事实(staffScheduleId) + 无号源行(id 为空)。
+const isOrphanWork = (s) => !isRestRow(s) && s.staffScheduleId != null && !s.id;
 
 // 休息行弹框（StaffScheduleEdit，scope=门诊出诊域）：row 预填后组件自己控表单
 const restEditVisible = ref(false);

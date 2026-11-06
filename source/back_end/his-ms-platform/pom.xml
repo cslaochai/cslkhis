@@ -30,6 +30,12 @@
             <artifactId>bcprov-jdk18on</artifactId>
             <version>1.78.1</version>
         </dependency>
+        <!-- CA 推送 SDK：SM2 验签 + 事件 DTO -->
+        <dependency>
+            <groupId>com.csssl</groupId>
+            <artifactId>csssl-push-sdk</artifactId>
+            <version>1.0.0</version>
+        </dependency>
     </dependencies>
 
     <build>

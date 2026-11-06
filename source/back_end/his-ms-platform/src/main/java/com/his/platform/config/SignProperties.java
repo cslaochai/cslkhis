@@ -125,7 +125,13 @@ public class SignProperties {
          * 没有验签就等于任何人都能伪造「签发成功」报文，把任意一张证书塞进 HIS
          * 当成这位医生的证书——这是反向的公钥替换攻击，比伪造一次业务请求严重得多。
          */
-        private String callbackSecret;
+        private String callbackPublicKey;
+
+        /**
+         * 预期的 CA 推送 keyId（公钥指纹前 16 位）。配置后会校验请求头 X-Ca-Key-Id 是否匹配，
+         * 防止 CA 换了推送密钥后 HIS 还在用旧公钥验签。留空则不校验 keyId。
+         */
+        private String callbackKeyId;
 
         /**
          * 回调时间戳允许偏差（秒）：超出即判定为过期或重放请求

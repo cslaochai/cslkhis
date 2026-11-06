@@ -43,9 +43,10 @@ his:
       app-id: app_a295062ed8c9f4177b888cceb6d7c5b9
       # CA 接入密钥（HMAC 验签 + 报文 AES-GCM 加密共用）；只配在配置里，绝不落业务库
       app-secret: sk_c78dd9c0e7a84d9ef545c30d063ff35fcc2bfd4db66616c6f680060cf52773d1
-      # CA 推送回调验签密钥（HMAC-SHA256）：必须与 CA 侧 SSL_HIS_PUSH_SECRET 同值
+      # CA 推送回调验签公钥（SM2 非对称签名）：从 CA 启动日志复制推送公钥
       # **生产必须注入**；留空则回调端点拒绝一切推送（宁停摆，也不收来源不明的证书）
-      callback-secret: ${HIS_CA_PUSH_SECRET:}
+      callback-public-key: ${HIS_CA_CALLBACK_PUB:}
+      callback-key-id: ${HIS_CA_CALLBACK_KEY_ID:}
   insurance:
     channel:
       # remote=调医保前置系统(csmig)；生产必须给真实前置机地址，localhost 默认值只够本机联调
