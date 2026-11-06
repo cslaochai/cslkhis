@@ -744,9 +744,12 @@ grep -E "(//|\*+ ).*\b(biz|sys)_[a-z_]{3,}" --include=*.java -rn source/back_end
   **不存在 `application-local.yml`**（没 import，写了不加载）。
 - `.gitignore` 白名单模式，`workspace/` 天然不入库；`docs/` 放行，新增带凭据文档必须显式加排除。⚠ 排除规则别写 `*凭据*.md`
   （误伤可入库的测试账号文档），按文件名精确匹配。
-- **医保国密证书（PEM）不落 `resources`、不进 jar、不入库**：落 `source/cslk-data/crypto/`，dev 把 `file:` 绝对路径写进
-  `application-dev.yml` 的 `his.insurance.crypto.*`，pro 走容器卷 `/app/cslk-data/crypto`。`*.pem` 忽略规则继续生效，目录里只放一份
-  `README.md` 说明证书来源。缺文件由 `InsuranceProperties` 的启动闸直接拒（crypto.enabled=true 时逐个查可读）。
+- **医保国密证书（PEM）落 `source/cslk-data/crypto/` 并整目录入库**（2026-11-06 拍板，原「只留 README、PEM 不入库」口径作废）：
+  `root-ca.pem`/`sub-ca.pem`/`hisins-cert.pem`/`hisins-public.pem`/`hisins-private.pem` 五个文件随仓库走，新环境 clone 即可用。
+  `.gitignore` 末尾有 `!source/cslk-data/crypto/` + `!source/cslk-data/crypto/**` 例外，`*.pem` 全局忽略对其它路径继续生效。
+  ⚠ 目录内含**签名私钥**，仅供联调/演示环境；生产密钥必须单独换发，禁止复用本目录文件。dev 把 `file:` 绝对路径写进
+  `application-dev.yml` 的 `his.insurance.crypto.*`，pro 走容器卷 `/app/cslk-data/crypto`；证书仍不落 `resources`、不进 jar。
+  缺文件由 `InsuranceProperties` 的启动闸直接拒（crypto.enabled=true 时逐个查可读）。
 - **运行时产物只认 `his.upload.base-dir`**（`UploadProperties`，his-core-common）：影像与各 PDF 落
   `<base-dir>/uploads/<业务子目录>`，dev=`source/cslk-data`、pro=`/app/cslk-data`（compose 挂宿主 `./cslk-data`）。
   相对访问路径 `uploads/xxx` 同时是库里的 `file_url` 与 `/uploads/**` 的 URL 前缀，改落点不许动这两个字符串。判据：
