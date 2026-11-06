@@ -15,10 +15,21 @@
                      placeholder="选择医生（可多选，一次排完）" class="w-full"
                      collapse-tags collapse-tags-tooltip
                      data-testid="form-doctor" multiple @change="ensureDoctorRows">
-            <el-option v-for="e in employees" :key="e.id" :label="`${e.empName} - ${getTitleLabel(titleMap, e.title)}`"
-                       :value="e.id"/>
+            <el-option v-for="e in employees" :key="e.id" :value="e.id" :data-testid="`doctor-opt-${e.id}`">
+              <span>{{ e.empName }} - {{ getTitleLabel(titleMap, e.title) }}</span>
+              <span v-if="dayStatusMap.get(String(e.id))"
+                    :class="['ml-1 text-xs', statusClassFor(e.id)]">· {{ doctorStatusSummary(e.id) }}</span>
+            </el-option>
           </el-select>
         </el-form-item>
+      </div>
+      <!-- 已选人员 × 日期区间的排班/停诊/休息状态：选人 + 选区间后自动汇总，避免「以为没排其实停诊了」 -->
+      <div v-if="(formData.doctorIds || []).length && dayStatusMap.size"
+           class="mb-3 rounded border border-slate-200 bg-slate-50 p-2 text-xs leading-6 text-slate-600">
+        <div v-for="id in formData.doctorIds" :key="id" class="flex flex-wrap items-baseline gap-x-2">
+          <span class="font-medium text-slate-700">{{ doctorNameOf(id) }}</span>
+          <span :class="statusClassFor(id)">{{ doctorStatusDetail(id) || '所选日期区间均未排班' }}</span>
+        </div>
       </div>
       <!-- 出勤状态（标准 HIS 口径：休息/请假与某个班次是同一张格子上的并列状态，
            美维 HIS 排班格默认即「休息」，排班=把格子改成某个班——不是两个页面两套表单） -->
@@ -225,6 +236,87 @@ const clinicRooms = ref([]);
 const submitLoading = ref(false);
 const formData = ref({});
 
+// ========== 下拉选人时提示：该人在所选日期区间内的排班/停诊/休息状态 ==========
+// 排班员最常做的是「给某人排班」，但旧面板看不出这个人当天到底是未排、已排还是停诊/休息，
+// 导致要么重复排（撞唯一键）、要么误以为没排。这里按 人×日 把已有排班（号源行 + 独立休息行）
+// 汇总成状态，下拉选项与所选人员下方都直接标注，避免「以为没排其实停诊了」。
+const existingSchedules = ref([]);
+const loadExistingSchedules = async () => {
+  const range = formData.value.scheduleDateRange;
+  if (!formData.value.deptId || !range || range.length !== 2) {
+    existingSchedules.value = [];
+    return;
+  }
+  try {
+    const res = await getScheduleList({
+      deptId: formData.value.deptId,
+      startDate: range[0],
+      endDate: range[1],
+      staffType: STAFF_TYPE_DOCTOR,
+    });
+    existingSchedules.value = res.data?.records || res.data || [];
+  } catch (error) {
+    console.error('加载已有排班状态失败:', error);
+    existingSchedules.value = [];
+  }
+};
+/**
+ * 人×日 → 状态：号源行(status 0=停诊 / 1=已排) 与 独立休息行(dutyStatus 2~5=休/请假/培训/停班) 合并。
+ * 同一人同一天若两条来源都在，号源行优先（停诊的号源比独立休息行更贴近业务事实）。
+ */
+const dayStatusMap = computed(() => {
+  const map = new Map();
+  for (const s of existingSchedules.value) {
+    const did = String(s.doctorId);
+    const date = s.scheduleDate;
+    if (!did || !date) continue;
+    if (!map.has(did)) map.set(did, new Map());
+    const dayMap = map.get(did);
+    if (dayMap.has(date)) continue;
+    let kind, label;
+    if (s.status === 0) {
+      kind = 'stopped'; label = '停诊';
+    } else if (s.dutyStatus != null && Number(s.dutyStatus) !== 1) {
+      kind = 'rest'; label = s.dutyStatusText || '休';
+    } else if (s.status === 1 || s.status != null) {
+      kind = 'scheduled'; label = '已排';
+    } else {
+      continue;
+    }
+    dayMap.set(date, {kind, label});
+  }
+  return map;
+});
+const doctorStatusChips = (doctorId) => {
+  const dayMap = dayStatusMap.value.get(String(doctorId));
+  if (!dayMap) return [];
+  return [...dayMap.entries()]
+      .map(([date, info]) => ({date, ...info}))
+      .sort((a, b) => (a.date < b.date ? -1 : 1));
+};
+// 选项/标签用的短摘要：把同状态归并，如「停诊 / 已排3天」
+const doctorStatusSummary = (doctorId) => {
+  const chips = doctorStatusChips(doctorId);
+  if (!chips.length) return '未排班';
+  const kinds = {};
+  for (const c of chips) kinds[c.label] = (kinds[c.label] || 0) + 1;
+  return Object.entries(kinds).map(([k, n]) => `${k}${n > 1 ? n + '天' : ''}`).join(' / ');
+};
+// 所选人员下方的逐日明细：如「11-16 停诊，11-17 已排」
+const doctorStatusDetail = (doctorId) => {
+  const chips = doctorStatusChips(doctorId);
+  if (!chips.length) return '';
+  return chips.map(c => `${c.date.slice(5)} ${c.label}`).join('，');
+};
+const statusClassFor = (doctorId) => {
+  const chips = doctorStatusChips(doctorId);
+  if (!chips.length) return 'text-slate-400';
+  if (chips.some(c => c.kind === 'stopped')) return 'text-red-500 font-medium';
+  if (chips.some(c => c.kind === 'rest')) return 'text-slate-500';
+  if (chips.some(c => c.kind === 'scheduled')) return 'text-blue-600';
+  return 'text-slate-400';
+};
+
 /** 本次是否为「休息类」批量（出勤状态 2~5）：隐藏班次/号源/诊室，提交走考勤休息行 */
 const isRestBatch = computed(() => Number(formData.value.dutyStatus) !== 1);
 const dutyStatusTextOf = computed(() => DUTY_STATUS_TEXT[formData.value.dutyStatus] || '休息');
@@ -402,6 +494,11 @@ const applyDefaultsToAllRows = () => {
 /** 选医生（或科室诊室列表到位）都要重算分配 */
 watch(() => formData.value.doctorIds, ensureDoctorRows, {deep: true});
 watch(clinicRooms, ensureDoctorRows);
+// 选了科室且日期区间齐了，就拉一次该区间已有排班，给下拉与选项标注停诊/已排/休息
+watch(() => [formData.value.deptId, formData.value.scheduleDateRange], () => {
+  if (formData.value.deptId && formData.value.scheduleDateRange?.length === 2)
+    loadExistingSchedules();
+});
 const doctorNameOf = (id) => (employees.value.find((e) => e.id === id)?.empName) || '';
 const roomNameOf = (id) => (clinicRooms.value.find((r) => r.id === id)?.name) || '';
 /** 新增批量实际会生成的条数：医生数 × 天数（天数只来自日期区间，排一天就是起止同一天） */

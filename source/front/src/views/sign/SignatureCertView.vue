@@ -88,9 +88,6 @@
           </el-table-column>
           <el-table-column label="有效期" width="200">
             <template #default="{ row }">
-              <!-- 待 CA 签发时库里的有效期只是申请时按有效天数估算的预期值，
-                   真实有效期由 CA 签发证书文件的 notBefore/notAfter 决定，回填后被覆盖。
-                   validityEstimated=true 必须明示「预期」，绝不能当真值展示。 -->
               <template v-if="row.validityEstimated">
                 <div class="text-xs text-slate-400">待 CA 签发</div>
                 <div class="text-xs text-slate-300">有效期以签发为准</div>
@@ -109,8 +106,6 @@
           </el-table-column>
           <el-table-column fixed="right" label="操作" width="330">
             <template #default="{ row }">
-              <!-- 本页按钮只归信息科（sign:cert:edit）；吊销是独立处置权 sign:cert:revoke，
-                   同样只授信息科，便于日后单独收回而不牵动办理入口 -->
               <el-button v-perm="'sign:cert:edit'" link size="small" type="primary"
                          @click="openCertDetail(row)">详情
               </el-button>
@@ -120,10 +115,7 @@
               <el-button v-if="row.certStatus === 0" v-perm="'sign:cert:edit'" data-testid="p5-sign-bind-open"
                          link size="small" type="primary" @click="openBind(row)">回填
               </el-button>
-              <!-- CA 调用失败 / 被驳回 / 被撤销：这张证的在线申请已断，
-                   只能重提（后端会换新幂等键、生成新申请单）或转线下回填 -->
               <el-tooltip :content="caOfflineTip" :disabled="!caOffline" placement="top">
-                <span v-if="canRetryCa(row)" class="inline-block">
                   <el-button
                       v-perm="'sign:cert:edit'"
                       :data-testid="`p5-sign-cert-retry-${row.certNo}`"
@@ -135,15 +127,11 @@
                       @click="retryCa(row)"
                   >{{ retryLabel(row) }}
                   </el-button>
-                </span>
               </el-tooltip>
-              <!-- 已过期不再给吊销：吊销会让历史签名失去「当时有效」的解释力，
-                   补办新证即可（后端 actionHint 同口径） -->
               <el-button v-if="row.canRevoke && !row.expired" v-perm="'sign:cert:revoke'"
                          :data-testid="`p5-sign-cert-revoke-${row.certNo}`"
                          link size="small" type="danger" @click="openRevoke(row)">吊销
               </el-button>
-              <!-- 已吊销 / 已过期：原证不可再签，给同一持有人补办一张（有效证书要先吊销，交后端拦） -->
               <el-button v-if="canReissue(row)" v-perm="'sign:cert:edit'"
                          :data-testid="`p5-sign-cert-reissue-${row.certNo}`"
                          link size="small" type="primary" @click="openReissue(row)">重新签发

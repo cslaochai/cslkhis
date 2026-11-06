@@ -149,15 +149,16 @@ public class SignCaApiClient {
     }
 
     /**
-     * 吊销已签发证书：证书序列号放在请求体内。
+     * 吊销已签发证书：序列号 + 原因 + 公钥指纹（三重里的强校验靠指纹，工号不重复传）。
      */
-    public void revoke(String serialHex, String reason) {
+    public void revoke(String serialHex, String reason, String publicKeyFingerprint) {
         if (!TextUtil.hasText(serialHex)) {
             throw new BusinessException("证书序列号为空，无法推送 CA 吊销");
         }
         String body;
         try {
-            body = objectMapper.writeValueAsString(new CaRevokePayload(serialHex, reason));
+            body = objectMapper.writeValueAsString(
+                    new CaRevokePayload(serialHex, reason, publicKeyFingerprint));
         } catch (Exception e) {
             throw new BusinessException("构造 CA 吊销报文失败：" + e.getMessage());
         }
@@ -373,7 +374,7 @@ public class SignCaApiClient {
     public record CaCancelPayload(String applyNo, String reason) {
     }
 
-    public record CaRevokePayload(String serialHex, String reason) {
+    public record CaRevokePayload(String serialHex, String reason, String publicKeyFingerprint) {
     }
 
     public record CaCertificate(String serialHex, String subjectDn, String issuerDn, String algorithm,

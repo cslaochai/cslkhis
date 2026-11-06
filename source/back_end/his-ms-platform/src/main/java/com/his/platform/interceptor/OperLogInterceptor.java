@@ -73,6 +73,18 @@ public class OperLogInterceptor implements HandlerInterceptor {
 
     private static final int PARAM_MAX = 2000;
 
+    /**
+     * 无登录态入口（CA / 渠道异步回调等匿名接口）的操作日志归属：种子超管（employee_id=1, emp_code=E100001，库内恒在）。
+     *
+     * <p>为什么必须给值：{@code sys_oper_log} 的 {@code create_by} / {@code create_by_id} /
+     * {@code update_by} / {@code update_by_id} 均为 NOT NULL，而 MetaObjectHandler 在取不到当前用户时直接 return，
+     * 匿名请求的日志落库必抛 {@code Column 'create_by_id' cannot be null}（CA 推送回调已踩）。
+     * 这类请求没有「谁干的」可归因，日志行由系统归属，业务写账的操作人仍按各自链路的
+     * SystemOperatorContext 绑定，不在此处冒充。</p>
+     */
+    private static final long SYSTEM_OPERATOR_ID = 1L;
+    private static final String SYSTEM_OPERATOR_NAME = "管理员";
+
     private final SysOperLogMapper sysOperLogMapper;
 
     private static String tail(String uri) {
@@ -204,6 +216,20 @@ public class OperLogInterceptor implements HandlerInterceptor {
         return SECRET_PATTERN.matcher(json).replaceAll("\"$1\":\"******\"");
     }
 
+    /**
+     * 审计四列的兜底：姓名一定有值，ID 为空时留给 MetaObjectHandler 按当前用户补
+     * （患者账号的 create_by_id 是 user_id，不是员工ID，不能在此冒充成 1）。
+     */
+    private static void fillOperator(String operatorName, Long operatorId, SysOperLog row) {
+        String name = TextUtil.hasText(operatorName) ? operatorName : SYSTEM_OPERATOR_NAME;
+        row.setCreateBy(name);
+        row.setUpdateBy(name);
+        if (operatorId != null) {
+            row.setCreateById(operatorId);
+            row.setUpdateById(operatorId);
+        }
+    }
+
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
         String method = request.getMethod();
@@ -227,6 +253,10 @@ public class OperLogInterceptor implements HandlerInterceptor {
                 row.setOperName(user.getRealName());
                 row.setDeptId(user.getDeptId());
                 row.setDeptName(user.getDeptName());
+            } else {
+                // 匿名入口（如 CA 推送回调）：审计列 NOT NULL，归属系统超管
+                row.setOperId(SYSTEM_OPERATOR_ID);
+                row.setOperName(SYSTEM_OPERATOR_NAME);
             }
             row.setOperUrl(uri.length() > 500 ? uri.substring(0, 500) : uri);
             row.setOperIp(RequestInfoUtils.clientIp(request));
@@ -261,7 +291,9 @@ public class OperLogInterceptor implements HandlerInterceptor {
                     ? TextUtil.cut(real.getClass().getSimpleName() + ": " + real.getMessage(), 1000)
                     : (failMsg == null ? null : TextUtil.cut(String.valueOf(failMsg), 1000)));
             row.setOperParam(TextUtil.cut(mask(readParam(request)), PARAM_MAX));
-            row.setCreateBy(row.getOperName());
+            // 审计四列 NOT NULL：匿名入口没有登录态，MetaObjectHandler 不会填，这里按操作人补齐，
+            // 否则整条日志被 SQLIntegrityConstraintViolationException 拒写（业务早已成功，却查不到痕迹）
+            fillOperator(row.getOperName(), row.getOperId(), row);
             sysOperLogMapper.insert(row);
         } catch (Exception e) {
             log.error("操作日志写入失败 uri={}", request.getRequestURI(), e);

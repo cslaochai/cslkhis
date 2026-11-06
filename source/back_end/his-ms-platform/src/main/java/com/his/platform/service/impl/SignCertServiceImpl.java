@@ -856,7 +856,7 @@ public class SignCertServiceImpl extends ServiceImpl<SysSignCertMapper, SysSignC
             log.info("证书 {} 尚未被 CA 签发（无序列号），无需推送吊销", cert.getCertNo());
             return;
         }
-        signCaApiClient.revoke(cert.getCaSerial(), reason);
+        signCaApiClient.revoke(cert.getCaSerial(), reason, cert.getKeyFingerprint());
         SysSignCaApply latest = signCaApplyService.latestOf(cert.getId());
         if (latest != null) {
             signCaApplyService.updateMessage(latest, "HIS 已吊销证书并向 CA 推送吊销（原因："
