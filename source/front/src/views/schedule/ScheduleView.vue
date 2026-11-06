@@ -134,6 +134,13 @@
                          @click="handleAdd">新增排班</el-button>
             </span>
           </div>
+          <!-- 图例：一眼分清 出诊 / 停诊 / 休息，避免「空白=没排」与「停诊」混淆 -->
+          <div class="mb-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-500">
+            <span class="flex items-center gap-1"><span class="inline-block h-3 w-3 rounded border border-slate-200 bg-white"></span>出诊（白/蓝卡）</span>
+            <span class="flex items-center gap-1"><span class="inline-block h-3 w-3 rounded border border-red-300 bg-slate-100"></span>停诊（红色「停诊」标签）</span>
+            <span class="flex items-center gap-1"><span class="inline-block h-3 w-3 rounded border border-dashed border-slate-300 bg-slate-50"></span>休息/请假/培训/停班（灰色虚线）</span>
+            <span class="flex items-center gap-1"><span class="inline-block h-3 w-3 rounded border border-slate-200 bg-white"></span>空白 = 该人该日未排班</span>
+          </div>
           <div ref="panelTableWrap" v-loading="panelLoading" class="mt-3 min-h-0 flex-1 overflow-x-auto">
             <el-table :data="doctorRows" :max-height="panelTableMaxHeight" border min-width="980"
                       class="panel-table" style="width: 100%">
@@ -219,6 +226,9 @@
                           <span class="flex min-w-0 items-center gap-1.5">
                             <span :class="s.status === 0 ? '' : 'font-medium text-slate-700'"
                                   class="text-sm">{{ shiftText(s) }}</span>
+                            <!-- 停诊（出诊行停用）明确标红，与「休息/请假」灰格区分开，避免看不出停诊 -->
+                            <el-tag v-if="s.status === 0" type="danger" effect="plain" size="small"
+                                    class="!px-1.5 !align-middle shrink-0">停诊</el-tag>
                             <!-- 发布态（G-15）：文案唯一来源 = 后端 publishStatusText，前端不抄中文 -->
                             <el-tag v-if="s.publishStatus != null" :data-testid="`publish-tag-${s.id}`"
                                     :type="publishStatusTagType(s.publishStatus)"
@@ -233,11 +243,11 @@
                               s.totalSource
                             }}</span></span>
                           <span v-else-if="s.status !== 0" class="text-xs font-medium text-emerald-600 shrink-0">在岗</span>
-                          <span v-else class="text-sm shrink-0">停用</span>
+                          <span v-else class="text-sm shrink-0">停诊</span>
                         </div>
                         <div class="mt-0.5 text-xs leading-4 text-slate-600">
                           <p class="truncate">
-                            <span v-if="s.status === 0">已停用 · 原 {{ s.totalSource }} 个号源</span>
+                            <span v-if="s.status === 0">已停诊 · 原 {{ s.totalSource }} 个号源</span>
                             <template v-else>
                               <span>{{ s.startTime || '' }}-{{ s.endTime || '' }}</span>
                               <template v-if="staffTypeHasSource(s.staffType)"> · <span

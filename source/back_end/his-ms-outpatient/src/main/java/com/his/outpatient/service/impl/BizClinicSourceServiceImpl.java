@@ -534,7 +534,7 @@ public class BizClinicSourceServiceImpl extends ServiceImpl<BizClinicSourceMappe
                     null, schedule.getDoctorName() + " " + schedule.getScheduleDate() + " "
                             + schedule.getStartTime() + "-" + schedule.getEndTime(), schedule);
         } catch (DuplicateKeyException e) {
-            throw new BusinessException("该医生在此时间段已有排班，时间冲突");
+            throw new BusinessException(conflictDetail(schedule));
         }
     }
 
@@ -556,7 +556,7 @@ public class BizClinicSourceServiceImpl extends ServiceImpl<BizClinicSourceMappe
                     addSchedule(schedule);
                 } catch (BusinessException | DuplicateKeyException e) {
                     // 整批已经回滚，所以报错必须点名是「哪个人、哪一天」，只说「时间冲突」没人知道该改哪一条
-                    String reason = e instanceof DuplicateKeyException ? "该医生在此时间段已有排班，时间冲突" : e.getMessage();
+                    String reason = e instanceof DuplicateKeyException ? conflictDetail(schedule) : e.getMessage();
                     throw new BusinessException(item.getDoctorName() + " " + date + "：" + reason);
                 }
                 clinicSourceLogService.record(schedule.getId(), ClinicSourceChangeTypeEnum.CREATE, null,
@@ -794,9 +794,36 @@ public class BizClinicSourceServiceImpl extends ServiceImpl<BizClinicSourceMappe
         List<BizClinicSource> existing = clinicSourceMapper.selectList(wrapper);
         for (BizClinicSource s : existing) {
             if (overlaps(s.getStartTime(), s.getEndTime(), schedule.getStartTime(), schedule.getEndTime())) {
-                throw new BusinessException("该医生在此时间段已有排班，时间冲突");
+                // 冲突提示必须把挡路的是哪条、什么状态摊开——否则只说「时间冲突」，
+                // 在面板当前周视图看不到目标日、或那行是「停诊/草稿」不显眼时，极易误判成「明明没排却说有」。
+                String statusText = ScheduleStatusEnum.stopped(s.getStatus()) ? "停诊" : "正常";
+                String pubText = PublishStatusEnum.getLabel(s.getPublishStatus());
+                throw new BusinessException("「" + s.getDoctorName() + "」在 " + s.getScheduleDate() + " "
+                        + s.getStartTime() + "-" + s.getEndTime() + " 已存在排班（状态：" + statusText
+                        + "，发布态：" + pubText + "），时间冲突；如需调整请先在排班面板删除该记录或改用其他时段");
             }
         }
+    }
+
+    /**
+     * 唯一键兜底描述：插入被 {@code uk_schedule_window} 拦下时（与上面 overlap 校验的竞态/边界），
+     * 把挡路的已有号源行查出来，把「日期 / 时段 / 状态 / 发布态」摊开给用户。
+     */
+    private String conflictDetail(BizClinicSource schedule) {
+        BizClinicSource blocker = clinicSourceMapper.selectOne(new LambdaQueryWrapper<BizClinicSource>()
+                .eq(BizClinicSource::getDeptId, schedule.getDeptId())
+                .eq(BizClinicSource::getDoctorId, schedule.getDoctorId())
+                .eq(BizClinicSource::getScheduleDate, schedule.getScheduleDate())
+                .eq(BizClinicSource::getStartTime, schedule.getStartTime())
+                .eq(BizClinicSource::getEndTime, schedule.getEndTime()));
+        if (blocker == null) {
+            return "该医生在此时间段已有排班，时间冲突";
+        }
+        String statusText = ScheduleStatusEnum.stopped(blocker.getStatus()) ? "停诊" : "正常";
+        String pubText = PublishStatusEnum.getLabel(blocker.getPublishStatus());
+        return "「" + blocker.getDoctorName() + "」在 " + blocker.getScheduleDate() + " "
+                + blocker.getStartTime() + "-" + blocker.getEndTime() + " 已存在一条排班（状态：" + statusText
+                + "，发布态：" + pubText + "），无法重复添加；如需调整请先在排班面板删除该记录或改用其他时段";
     }
 
     /**

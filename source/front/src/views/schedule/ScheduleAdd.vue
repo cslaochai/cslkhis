@@ -15,13 +15,25 @@
                      placeholder="选择医生（可多选，一次排完）" class="w-full"
                      collapse-tags collapse-tags-tooltip
                      data-testid="form-doctor" multiple @change="ensureDoctorRows">
-            <el-option v-for="e in employees" :key="e.id" :value="e.id" :data-testid="`doctor-opt-${e.id}`">
+            <el-option v-for="e in employees" :key="e.id" :value="e.id"
+                       :label="`${e.empName} - ${getTitleLabel(titleMap, e.title)}`"
+                       :data-testid="`doctor-opt-${e.id}`">
               <span>{{ e.empName }} - {{ getTitleLabel(titleMap, e.title) }}</span>
               <span v-if="dayStatusMap.get(String(e.id))"
                     :class="['ml-1 text-xs', statusClassFor(e.id)]">· {{ doctorStatusSummary(e.id) }}</span>
             </el-option>
           </el-select>
         </el-form-item>
+        <!-- 阻塞预警：所选人员 + 目标日期区间内有「号源行」会直接与本次新增撞唯一键被拒绝 -->
+        <el-alert v-if="hasBlockingWarning" type="warning" :closable="false" show-icon class="mb-3">
+          <template #title>以下人员目标日期已有号源排班，继续提交会被唯一键拒绝</template>
+          <div class="text-xs leading-6">
+            <div v-for="w in selectedBlockingWarnings" :key="w.id">
+              <span class="font-medium">{{ w.name }}</span>：{{ w.text }}
+            </div>
+            <div class="text-slate-500">如需调整，请先在排班面板删除该记录或改用其他时段/人员。</div>
+          </div>
+        </el-alert>
       </div>
       <!-- 已选人员 × 日期区间的排班/停诊/休息状态：选人 + 选区间后自动汇总，避免「以为没排其实停诊了」 -->
       <div v-if="(formData.doctorIds || []).length && dayStatusMap.size"
@@ -196,8 +208,7 @@
 <script setup>
 import {computed, ref, watch} from 'vue';
 import {ElMessage} from 'element-plus';
-import {createScheduleBatch, getShiftSelectList} from '@/api/appoint';
-import {staffScheduleUpsert} from '@/api/staffSchedule';
+import {createScheduleBatch, getScheduleList, getShiftSelectList, outpatientRestUpsert} from '@/api/appoint';
 import {getClinicRoomListAll, getEmployeeList} from '@/api/system';
 import {shiftOptionLabel, SHIFT_SCOPE_OUTPATIENT, STAFF_TYPE_DOCTOR, staffTypeHasSource, staffTypeText} from '@/lib/scheduleShift';
 import {DUTY_STATUS_OPTIONS, DUTY_STATUS_TEXT} from '@/lib/staffSchedule';
@@ -211,7 +222,7 @@ import {DIAGNOSIS_TIER_LIST, tierAmount, tierDefaultOf} from '@/lib/diagnosisTie
  * 修改是单条、人员单选、日期一天 —— 字段与版式都不同，不合并。
  *
  * 出勤状态（2026-10-26）：休息/请假/培训/停班与「上班」在同一个弹框内切换——
- * 上班走号源排班（班次/诊室/号源），休息类整段落考勤休息行（staffScheduleUpsert scope=3，不产生号源）。
+ * 上班走号源排班（班次/诊室/号源），休息类整段落考勤休息行（outpatientRestUpsert scope=3，不产生号源）。
  * 对标厂商：排班格上「休」与「某个班」是并列状态（美维 HIS 排班格默认即休息），不是两个入口两套表单。
  *
  * 科室列表由页面加载一次 prop 下发（面板筛选与这里同一份）；
@@ -316,6 +327,43 @@ const statusClassFor = (doctorId) => {
   if (chips.some(c => c.kind === 'scheduled')) return 'text-blue-600';
   return 'text-slate-400';
 };
+
+// ========== 阻塞预警：所选人员 + 目标日期区间内，已有「号源行」会与新增撞唯一键 ==========
+// 号源行（status 0=停诊 / 1=正常）按 人×日 归集；独立休息行（dutyStatus 2~5、status 为空）是另一张表另一口径，
+// 不挡号源插入，只在前面的下拉/明细里标「休息类」，不进阻塞预警。
+const blockingByDoctor = computed(() => {
+  const map = new Map();
+  for (const s of existingSchedules.value) {
+    if (s.status === undefined || s.status === null) continue; // 独立休息行，非号源行
+    const did = String(s.doctorId);
+    if (!map.has(did)) map.set(did, []);
+    map.get(did).push(s);
+  }
+  return map;
+});
+const blockingWarningOf = (doctorId) => {
+  const list = blockingByDoctor.value.get(String(doctorId)) || [];
+  if (!list.length) return '';
+  const targetDays = formData.value.scheduleDateRange?.length === 2
+      ? batchDays(formData.value.scheduleDateRange) : [];
+  const hit = list.filter(s => targetDays.includes(s.scheduleDate));
+  if (!hit.length) return '';
+  return hit.map(s => {
+    const st = s.status === 0 ? '停诊' : '已排';
+    const pub = s.publishStatusText ? `（${s.publishStatusText}）` : '';
+    return `${s.scheduleDate.slice(5)} ${st}${pub}`;
+  }).join('，');
+};
+const selectedBlockingWarnings = computed(() => {
+  const ids = (formData.value.doctorIds || []).filter(Boolean);
+  const out = [];
+  for (const id of ids) {
+    const text = blockingWarningOf(id);
+    if (text) out.push({id, name: doctorNameOf(id), text});
+  }
+  return out;
+});
+const hasBlockingWarning = computed(() => selectedBlockingWarnings.value.length > 0);
 
 /** 本次是否为「休息类」批量（出勤状态 2~5）：隐藏班次/号源/诊室，提交走考勤休息行 */
 const isRestBatch = computed(() => Number(formData.value.dutyStatus) !== 1);
@@ -606,6 +654,10 @@ watch(visible, (open) => {
     loadEmployees(undefined, formData.value.staffType);
     loadShiftDict(null);
   }
+  // 打开即拉一次目标区间已有排班（带 seed 的科室/日期也要算），用于「已有号源行会挡插入」的预警
+  if (seed.deptId && formData.value.scheduleDateRange?.length === 2) {
+    loadExistingSchedules();
+  }
 });
 
 const handleDeptChange = (deptId) => {
@@ -667,7 +719,7 @@ const handleSubmit = async () => {
       for (const id of doctorIds) {
         for (const day of days) {
           try {
-            await staffScheduleUpsert({
+            await outpatientRestUpsert({
               scheduleDate: day,
               orgType: 1,
               orgId: formData.value.deptId,

@@ -185,8 +185,8 @@ public class SignatureController {
     @Operation(summary = "签名证书台账分页")
     @PreAuthorize("hasAnyAuthority('sign:cert:list', 'org:employee:list')")
     @GetMapping("/emr/signCert/listPage")
-    public Result<PageResult<SignCertVO>> signCertListPage(@Valid SignCertPageQueryDTO query) {
-        var page = signCertFacadeService.listCertPage(query);
+    public Result<PageResult<SignCertVO>> signCertListPage(@Valid SignCertPageQueryDTO queryDTO) {
+        var page = signCertFacadeService.listCertPage(queryDTO);
         return Result.success(PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(),
                 page.getPages(), page.getRecords()));
     }

@@ -6,6 +6,7 @@ import com.his.outpatient.dto.*;
 import com.his.outpatient.service.BizClinicSourceService;
 import com.his.outpatient.service.BizClinicSourceSlotService;
 import com.his.outpatient.service.ClinicSourceLogService;
+import com.his.outpatient.service.StaffScheduleService;
 import com.his.outpatient.vo.*;
 import com.his.spi.vo.StopImpactItemVO;
 import com.his.common.base.Result;
@@ -32,6 +33,8 @@ public class BizClinicSourceController {
     private final BizClinicSourceSlotService bizScheduleSlotService;
 
     private final ClinicSourceLogService clinicSourceLogService;
+
+    private final StaffScheduleService staffScheduleService;
 
     /**
      * 新增或修改一条门诊排班（医生×日期×班次）。
@@ -146,6 +149,21 @@ public class BizClinicSourceController {
     @PostMapping("/batchUpsert")
     public Result<BizClinicSourceBatchResultVO> scheduleBatchUpsert(@Valid @RequestBody BizClinicSourceBatchUpsertDTO batchDTO) {
         return Result.success(bizScheduleService.batchUpsert(batchDTO));
+    }
+
+    /**
+     * 门诊出诊域「休息/请假/培训/停班」标记：把排班员在门诊排班页标出的出勤状态落为考勤休息行。
+     * 与员工排班域 {@code /system/staffSchedule/staffScheduleUpsert} 复用同一张 biz_schedule 表，
+     * 但此处强制 scope=3（门诊出诊域）、只认 outpatient:schedule:add，不向科室排班员开放 staff 域权限。
+     * 不产生号源；与已排出诊冲突的日期由服务端 upsert 内校验兜底。
+     */
+    @PreAuthorize("hasAuthority('outpatient:schedule:add')")
+    @Operation(summary = "门诊出诊域休息/请假/培训/停班标记（scope=3，不产生号源）")
+    @PostMapping("/restUpsert")
+    public Result<Void> scheduleRestUpsert(@Valid @RequestBody StaffScheduleUpsertDTO upsertDTO) {
+        upsertDTO.setScope(3);
+        String warning = staffScheduleService.upsert(upsertDTO);
+        return warning == null ? Result.success("标记成功", null) : Result.success(warning, null);
     }
 
     /**

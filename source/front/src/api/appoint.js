@@ -119,6 +119,12 @@ export function createScheduleBatch(data) {
     return request.post('/schedule/batchUpsert', data)
 }
 
+// 门诊出诊域休息/请假/培训/停班标记：走门诊域接口（outpatient:schedule:add），
+// 复用 biz_schedule 但强制 scope=3，不依赖员工排班域的 staff:schedule:add 权限
+export function outpatientRestUpsert(data) {
+    return request.post('/schedule/restUpsert', data)
+}
+
 // 复刻排班：把源区间内正常排班整体后移 dayOffset 天，单事务落库
 export function replicateSchedule(data) {
     return request.post('/schedule/replicate', data)
