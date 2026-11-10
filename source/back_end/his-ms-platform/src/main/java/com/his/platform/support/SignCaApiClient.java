@@ -2,6 +2,7 @@ package com.his.platform.support;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.his.ca.sdk.CaRequestSigner;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.TextUtil;
 import com.his.platform.config.SignProperties;
@@ -205,14 +206,19 @@ public class SignCaApiClient {
         long start = System.currentTimeMillis();
         String body = "";
         try {
+            // 非对称模式（配了 api-private-key）：私钥签名、报文明文，机密性交给 HTTPS；
+            // 兼容模式：沿用 HMAC 共享口令 + AES-GCM 整包加密
+            boolean sm2 = TextUtil.hasText(ca.getApiPrivateKey());
             if (plainJson != null) {
-                body = encryptEnvelope(ca.getAppSecret(), plainJson);
+                body = sm2 ? plainJson : encryptEnvelope(ca.getAppSecret(), plainJson);
             }
             String ts = String.valueOf(System.currentTimeMillis());
             String nonce = UUID.randomUUID().toString().replace("-", "");
-            String canonical = ca.getAppId() + "\n" + ts + "\n" + nonce + "\n"
-                    + method + "\n" + canonicalPath + "\n" + sha256Hex(body.getBytes(StandardCharsets.UTF_8));
-            String signature = hmacHex(ca.getAppSecret(), canonical);
+            String canonical = CaRequestSigner.canonical(ca.getAppId(), ts, nonce, method, canonicalPath,
+                    CaRequestSigner.sha256Hex(body.getBytes(StandardCharsets.UTF_8)));
+            String signature = sm2
+                    ? CaRequestSigner.sign(ca.getApiPrivateKey(), canonical)
+                    : hmacHex(ca.getAppSecret(), canonical);
 
             HttpRequest.Builder builder = HttpRequest.newBuilder(uri)
                     .timeout(Duration.ofMillis(ca.getRequestTimeoutMs()))

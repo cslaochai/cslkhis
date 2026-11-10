@@ -30,10 +30,11 @@ public class QrPayController {
     private final QrPayService qrPayService;
 
     /**
-     * 按账单生成一张聚合收款码：支付单金额只能由账单当前尚需缴算出，前端传不进金额。
-     * 一张码微信/支付宝/云闪付都能扫（渠道在支付时由医院聚合网关识别确定），所以入参不需要选渠道。
+     * 按账单生成一张收款码：支付单金额只能由账单当前尚需缴算出，前端传不进金额。
+     * 默认出支付宝原生码（当面付预下单，只有支付宝能扫）；开关关闭时才是一码多平台的聚合码。
+     * 两种形态渠道都由服务端定，所以入参不需要选渠道。
      */
-    @Operation(summary = "按账单出聚合收款码（金额取账单实时应缴，一码多平台）")
+    @Operation(summary = "按账单出收款码（金额取账单实时应缴，默认支付宝码）")
     @PreAuthorize("hasAuthority('finance:cashier:list')")
     @PostMapping("/create")
     public Result<QrPayCreateVO> create(@Valid @RequestBody QrPayCreateDTO dto) {

@@ -121,7 +121,7 @@
             </template>
             <template v-else>
               <el-button v-if="Number(current.billUnpaid) > 0" :icon="Iphone" :loading="qrCreating"
-                         data-testid="bedside-qr-btn" type="primary" @click="showQr">亮聚合码收款
+                         data-testid="bedside-qr-btn" type="primary" @click="showQr">亮收款码收款
               </el-button>
               <el-button :icon="Document" data-testid="bedside-detail-btn" @click="loadSettlementDetail">
                 查看结算单
@@ -188,8 +188,8 @@
           <!-- 收款码面板（扫码档：床旁不代收现金，患者自己扫） -->
           <div v-if="qrVisible" class="mx-4 mb-4 rounded border border-slate-200 p-4" data-testid="bedside-qr-panel">
             <div class="flex items-center justify-between">
-              <span class="text-sm font-medium text-slate-700">聚合收款码</span>
-              <span class="text-xs text-slate-400">微信 / 支付宝 / 云闪付均可扫</span>
+              <span class="text-sm font-medium text-slate-700">支付宝收款码</span>
+              <span class="text-xs text-slate-400">仅支持支付宝扫码</span>
             </div>
             <div class="mt-3 flex flex-col items-center">
               <div v-if="qrPaid" class="flex flex-col items-center gap-1 py-6" data-testid="bedside-qr-paid">
@@ -200,11 +200,11 @@
                 <p class="text-sm text-slate-500">{{ money(qrAmount) }} 已入账</p>
               </div>
               <template v-else>
-                <img v-if="qrImage" :class="{ 'opacity-40': qrExpired }" :src="qrImage" alt="聚合收款码"
+                <img v-if="qrImage" :class="{ 'opacity-40': qrExpired }" :src="qrImage" alt="支付宝收款码"
                      class="h-[220px] w-[220px]" data-testid="bedside-qr-image"/>
                 <p v-if="qrExpired" class="mt-2 text-sm text-red-600">二维码已过期，请关闭后重新亮码</p>
                 <p v-else class="mt-2 text-xs text-slate-400">
-                  请患者用手机扫码支付 · 收款码 {{ countdownText }} 后过期 · 已自动确认支付结果{{
+                  请患者用支付宝扫码支付（微信扫不开）· 收款码 {{ countdownText }} 后过期 · 已自动确认支付结果{{
                     pollError ? `（查询失败：${pollError}）` : ''
                   }}
                 </p>

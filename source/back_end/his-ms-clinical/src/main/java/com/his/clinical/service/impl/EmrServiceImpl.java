@@ -2277,11 +2277,11 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
                 return;
             }
             cell.addElement(image);
-            cell.addElement(createParagraph("微信/支付宝扫码缴费", smallFont));
+            cell.addElement(createParagraph("支付宝扫码缴费", smallFont));
             cell.addElement(createParagraph("金额：¥" + (payResult.getAmount() != null
                     ? payResult.getAmount().toPlainString() : "0"), smallFont));
         } catch (Exception e) {
-            log.warn("结诊文书聚合支付码出码失败 recordNo={}", record.getRecordNo(), e);
+            log.warn("结诊文书收款码出码失败 recordNo={}", record.getRecordNo(), e);
             cell.addElement(createParagraph("付款码暂不可用", smallFont));
             cell.addElement(createParagraph("请到收费窗口结算", smallFont));
         }

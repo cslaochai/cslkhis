@@ -43,7 +43,10 @@ import java.util.Map;
 import java.util.Objects;
 
 /**
- * 收费台扫码收款实现（聚合支付码：医院自有聚合网关，一张码微信/支付宝/云闪付都能扫）。
+ * 收费台扫码收款实现。出码形态由 {@code pay.aggregated.alipay-qr-enabled} 决定：
+ * 聚合形态 = 医院自有聚合网关地址 + 支付单号（一张码多平台可扫）；
+ * 支付宝原生码形态 = 当面付 {@code alipay.trade.precreate} 返回的码串（只能被支付宝扫）。
+ * 两种形态共用同一套「建单 → 轮询/通知 → 入账」链路，差别只在码串来源与建单渠道。
  */
 @Slf4j
 @Service
@@ -128,9 +131,11 @@ public class QrPayServiceImpl implements QrPayService {
 
         // 第 1 道：  位置必须在节流闸之前 —— 收银员点刷新、重开收款弹层、从现金切回扫码，最终都走这里；
         // 任何一次被闸拦下，都是把「码就在手里」说成「你点太快了」（现场看到的就是这句）。
-        // 聚合码的渠道为 null，复用按「本账单的聚合待支付单」匹配（判据与建单同源，收在支付单端口实现里）
+        // 复用判据必须与建单写入的渠道一致：聚合形态渠道为 null，支付宝原生码形态渠道为支付宝，
+        // 两边的待支付单靠 channel 列天然隔离，传错就是「明明有码却每次重出」并撞 20 秒间隔闸
+        Integer cashierChannel = cashierChannel();
         PayOrderVO reusable = payOrderService.reusablePending(
-                PayOrderBizTypeEnum.OUTPATIENT_PAY.getCode(), bill.getId(), null, unpaid);
+                PayOrderBizTypeEnum.OUTPATIENT_PAY.getCode(), bill.getId(), cashierChannel, unpaid);
         if (reusable != null) {
             String cachedQrCode = payQrCodeCache.get(reusable.getPayNo());
             if (TextUtil.hasText(cachedQrCode)) {
@@ -161,8 +166,7 @@ public class QrPayServiceImpl implements QrPayService {
             // 复用命中的单：码串在缓存里，取回本地画图，不再生成
             String qrCode = created.reused() ? payQrCodeCache.get(order.getPayNo()) : null;
             if (!TextUtil.hasText(qrCode)) {
-                // 聚合码 = 医院聚合收款页地址 + 支付单号，不进任何渠道预下单
-                qrCode = aggregatedQrSupport.buildQrContent(order.getPayNo());
+                qrCode = issueQrCode(order);
                 payQrCodeCache.put(order.getPayNo(), qrCode);
             }
 
@@ -174,18 +178,40 @@ public class QrPayServiceImpl implements QrPayService {
     }
 
     /**
-     * 聚合码建单入参：渠道留空，聚合码在患者扫码付款时才由网关识别确定渠道。
+     * 收费台建单入参：渠道随出码形态走 —— 聚合形态留空（渠道在患者扫码付款时由网关识别），
+     * 支付宝原生码形态必须在建单时定为支付宝，否则查单走不到支付宝查单那一支，付了钱也确认不了。
      */
     private PayOrderCreateDTO aggregateOrderSpec(BizSettlementBill bill, BigDecimal unpaid) {
+        Integer channel = cashierChannel();
         PayOrderCreateDTO spec = new PayOrderCreateDTO();
         spec.setBizType(PayOrderBizTypeEnum.OUTPATIENT_PAY.getCode());
         spec.setBizId(bill.getId());
         spec.setPatientId(bill.getPatientId());
         spec.setPatientName(bill.getPatientName());
         spec.setAmount(unpaid);
-        spec.setChannel(null);
-        spec.setRemark("收费台扫码收款（聚合码）账单 " + bill.getBillNo());
+        spec.setChannel(channel);
+        spec.setRemark((channel == null ? "收费台扫码收款（聚合码）账单 " : "收费台扫码收款（支付宝码）账单 ")
+                + bill.getBillNo());
         return spec;
+    }
+
+    /**
+     * 收费台出码的渠道口径：聚合形态 null（一码多平台，渠道在支付时确定），
+     * 支付宝原生码形态为支付宝。建单、复用判据、查单分支三处必须同源。
+     */
+    private Integer cashierChannel() {
+        return aggregatedQrSupport.isAlipayQrEnabled() ? PayChannelEnum.ALIPAY.getCode() : null;
+    }
+
+    /**
+     * 出一张码：支付宝原生码形态走当面付预下单，码串可被支付宝直接扫；聚合形态仍是
+     * 「医院收款页地址 + 支付单号」，不进任何渠道预下单。
+     */
+    private String issueQrCode(PayOrderVO order) {
+        if (aggregatedQrSupport.isAlipayQrEnabled()) {
+            return alipayChannelService.precreate(order);
+        }
+        return aggregatedQrSupport.buildQrContent(order.getPayNo());
     }
 
     /**
@@ -252,8 +278,9 @@ public class QrPayServiceImpl implements QrPayService {
             throw new BusinessException(
                     "聚合收款处于真实模式（pay.aggregated.mock-enabled=false），拒绝模拟收款：" + payNo);
         }
-        // 不传渠道默认微信：模拟的是「患者用微信扫聚合码付了」，要模拟别的渠道传 channel
-        Integer ch = channel != null ? channel : PayChannelEnum.WECHAT.getCode();
+        // 不传渠道默认支付宝：收费台现在出的是支付宝原生码，模拟收款默认就该落在支付宝，
+        // 落成微信会让资金流水与患者实际付款渠道对不上（对账时这条要单独解释）
+        Integer ch = channel != null ? channel : PayChannelEnum.ALIPAY.getCode();
         aggregatedQrSupport.markMockPaid(payNo, ch, order.getAmount());
     }
 
@@ -382,6 +409,17 @@ public class QrPayServiceImpl implements QrPayService {
             return;
         }
         if (Objects.equals(order.getChannel(), PayChannelEnum.ALIPAY.getCode())) {
+            // 支付宝原生码形态下这张单渠道已定死，不再走上面那支聚合模拟存储；
+            // 但联调期仍要能用 mock 标记顶替一次真实付款（没有沙箱钱包/安卓机时唯一的验收手段）。
+            // 真实模式（mock-enabled=false）这段整体不生效，只认渠道查单。
+            if (aggregatedQrSupport.isMockEnabled()) {
+                AggregatedQrSupport.AggPaidInfo mockInfo = aggregatedQrSupport.queryMockPaid(order.getPayNo());
+                if (mockInfo != null) {
+                    confirmAndBook(order, PayChannelEnum.ALIPAY.getCode(),
+                            mockTradeNo(order.getPayNo(), PayChannelEnum.ALIPAY.getCode()), mockInfo.amount());
+                    return;
+                }
+            }
             // 查单是网络调用，留在本事务里是为了让「翻转 + 记账」保持原子
             TradeState state = alipayChannelService.queryTrade(order.getPayNo());
             if (state == null || !alipayChannelService.isPaidStatus(state.tradeStatus())) {

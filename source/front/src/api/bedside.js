@@ -30,7 +30,7 @@ export function bedsideSettlementDetail(data) {
     return request.post('/charge/bedside/settlementDetail', data)
 }
 
-// 按账单出聚合支付码（微信/支付宝/云闪付一码通扫）
+// 按账单出收款码（收费域统一入口：默认支付宝原生码，只有支付宝能扫；开关关闭时才是聚合码）
 export function bedsideCreateQr(data) {
     return request.post('/charge/bedside/qrCreate', data)
 }

@@ -83,9 +83,9 @@ public class BedsideSettlementController {
     }
 
     /**
-     * 按账单出聚合支付码（微信/支付宝/云闪通扫）；同账单已有活码直接复用。
+     * 按账单出收款码（默认支付宝原生码，只有支付宝能扫）；同账单已有活码直接复用。
      */
-    @Operation(summary = "出聚合支付码")
+    @Operation(summary = "出收款码")
     @PostMapping("/qrCreate")
     public Result<QrPayCreateVO> createQr(@Valid @RequestBody BedsideBillDTO dto) {
         return Result.success(bedsideSettlementService.createQr(dto));

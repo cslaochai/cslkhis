@@ -30,11 +30,12 @@
             <artifactId>bcprov-jdk18on</artifactId>
             <version>1.78.1</version>
         </dependency>
-        <!-- CA 推送 SDK：SM2 验签 + 事件 DTO -->
+        <!-- CA SDK：SM2 验签 + 事件 DTO + API 客户端（同 reactor 模块）。
+             不能加 optional：optional 会阻断传递依赖，his-web 打 fat jar 时不会带这个 jar，
+             运行时缺 CaPushVerifier → @ConditionalOnClass 判不成立 → 回调验签静默失效（端点裸奔）。 -->
         <dependency>
-            <groupId>com.csssl</groupId>
-            <artifactId>csssl-push-sdk</artifactId>
-            <version>1.0.0</version>
+            <groupId>com.his</groupId>
+            <artifactId>his-ca-sdk</artifactId>
         </dependency>
     </dependencies>
 

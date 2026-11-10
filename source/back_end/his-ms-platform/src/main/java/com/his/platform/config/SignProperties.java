@@ -88,9 +88,21 @@ public class SignProperties {
         private String appId;
 
         /**
-         * 接入密钥（HMAC 验签 + 报文 AES-GCM 加密共用；只出现在配置里，绝不落业务库）
+         * 接入密钥（HMAC 验签 + 报文 AES-GCM 加密共用；只出现在配置里，绝不落业务库）。
+         *
+         * <p>配置了 {@link #apiPrivateKey} 后本项不再使用：非对称模式下私钥签名、
+         * 报文走明文 JSON（机密性由 HTTPS 负责），CA 侧也不需要保存任何共享口令。</p>
          */
         private String appSecret;
+
+        /**
+         * 调用 CA 开放接口用的 SM2 私钥（64 位十六进制）。
+         *
+         * <p>由 HIS 本地生成（{@code CaRequestSigner#publicKeyOf} 导出公钥），
+         * 只把公钥登记到 CA 的「系统接入」里；私钥永远只在本机配置/密钥库里，
+         * CA 拿不到、也不需要它能伪造请求。配置了本项即切到非对称签名模式。</p>
+         */
+        private String apiPrivateKey;
 
         /**
          * CA 证书模板编码（模板的 algorithm 必须与本机 keyAlgorithm 一致）
@@ -126,6 +138,18 @@ public class SignProperties {
          * 当成这位医生的证书——这是反向的公钥替换攻击，比伪造一次业务请求严重得多。
          */
         private String callbackPublicKey;
+
+        /**
+         * 是否启用 CA 推送回调验签（默认 true）。
+         *
+         * <p>这是<b>显式能力开关</b>：不靠「classpath 里有没有 csssl-sdk」隐式决定。
+         * 置 false 时验签 Filter 不注册，并由 {@code CaPushDisabledFilter} 直接对回调端点回 503，
+         * 保证不会出现「端点开门但无人验签」的窗口——停用是拒绝，不是放行。</p>
+         *
+         * <p>保持 true（默认）而 classpath 又缺 SDK 时，应用<b>启动即失败</b>（fail-fast），
+         * 不允许带着未验签的匿名写入口上线。</p>
+         */
+        private boolean pushVerifyEnabled = true;
 
         /**
          * 预期的 CA 推送 keyId（公钥指纹前 16 位）。配置后会校验请求头 X-Ca-Key-Id 是否匹配，
@@ -170,8 +194,8 @@ public class SignProperties {
             if (!TextUtil.hasText(appId)) {
                 missing.add("his.sign.ca.app-id");
             }
-            if (!TextUtil.hasText(appSecret)) {
-                missing.add("his.sign.ca.app-secret");
+            if (!TextUtil.hasText(appSecret) && !TextUtil.hasText(apiPrivateKey)) {
+                missing.add("his.sign.ca.app-secret 或 his.sign.ca.api-private-key（二者填其一）");
             }
             return missing.isEmpty() ? null : String.join("、", missing);
         }

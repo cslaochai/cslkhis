@@ -35,6 +35,7 @@
     <modules>
         <module>his-core-common</module>
         <module>his-core-spi</module>
+        <module>his-ca-sdk</module>
         <module>his-ms-platform</module>
         <module>his-ms-patient</module>
         <module>his-ms-inpatient</module>
@@ -60,6 +61,12 @@
             <dependency>
                 <groupId>com.his</groupId>
                 <artifactId>his-core-spi</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <!-- CA 对接 SDK：SM2 推送验签 + 开放接口客户端 -->
+            <dependency>
+                <groupId>com.his</groupId>
+                <artifactId>his-ca-sdk</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>

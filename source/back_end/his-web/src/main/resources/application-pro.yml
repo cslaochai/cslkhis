@@ -92,6 +92,12 @@ alipay:
   notify-url: ${ALIPAY_NOTIFY_URL:}
   notify-url-cashier: ${ALIPAY_NOTIFY_URL_CASHIER:}
 
+# 收费台出码形态：生产默认仍出聚合码（医院收款页地址 + 支付单号，等真实聚合网关落地）
+# 切 true 前必须确认：支付宝当面付已签约、回调地址公网可达，否则收费台出不了码
+pay:
+  aggregated:
+    alipay-qr-enabled: ${ALIPAY_QR_ENABLED:false}
+
 unionpay:
   app-id: ${UNIONPAY_APP_ID:}
   mer-id: ${UNIONPAY_MER_ID:}

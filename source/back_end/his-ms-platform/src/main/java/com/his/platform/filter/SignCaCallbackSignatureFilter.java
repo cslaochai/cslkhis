@@ -1,6 +1,6 @@
 package com.his.platform.filter;
 
-import com.csssl.sdk.CaPushVerifier;
+import com.his.ca.sdk.CaPushVerifier;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.his.common.base.Result;
 import com.his.common.util.TextUtil;
@@ -14,6 +14,8 @@ import jakarta.servlet.http.HttpServletRequestWrapper;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.MediaType;
@@ -30,15 +32,26 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * CA 推送回调验签：用 csssl-push-sdk 的 CaPushVerifier 做 SM2 非对称验签。
+ * CA 推送回调验签：用 csssl-sdk 的 CaPushVerifier 做 SM2 非对称验签。
  *
  * <p>校验 {@code X-Ca-Timestamp} / {@code X-Ca-Nonce} / {@code X-Ca-Signature} / {@code X-Ca-Key-Id}。
  * CA 侧用推送私钥签，HIS 用推送公钥验——公钥是公开的，泄露也只能验签不能伪造。</p>
  *
  * <p>公钥未配置时<b>拒绝一切推送</b>：回调端点匿名开放，无验签等于允许任意伪造签发结果。</p>
+ *
+ * <p>启用条件（两个都满足才注册）：</p>
+ * <ol>
+ *   <li>{@code his.sign.ca.push-verify-enabled} 未置 false（默认启用）；</li>
+ *   <li>classpath 存在 {@link CaPushVerifier}（已引入 csssl-sdk）。</li>
+ * </ol>
+ * <p>缺少 SDK 且仍要求验签时，{@code CaSdkRequiredFailFast} 会让应用启动失败；
+ * 显式停用时由 {@code CaPushDisabledFilter} 把回调端点回 503——
+ * 两种情况都不会留下「端点开放但没人验签」的窗口。</p>
  */
 @Slf4j
 @Component
+@ConditionalOnClass(CaPushVerifier.class)
+@ConditionalOnProperty(prefix = "his.sign.ca", name = "push-verify-enabled", matchIfMissing = true)
 @RequiredArgsConstructor
 @Order(Ordered.HIGHEST_PRECEDENCE + 20)
 public class SignCaCallbackSignatureFilter extends OncePerRequestFilter {

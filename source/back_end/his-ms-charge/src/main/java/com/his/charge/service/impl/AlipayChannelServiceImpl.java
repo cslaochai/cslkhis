@@ -7,9 +7,11 @@ import com.alipay.api.DefaultAlipayClient;
 import com.alipay.api.internal.util.AlipaySignature;
 import com.alipay.api.request.AlipayTradeAppPayRequest;
 import com.alipay.api.request.AlipayTradeCloseRequest;
+import com.alipay.api.request.AlipayTradePrecreateRequest;
 import com.alipay.api.request.AlipayTradeQueryRequest;
 import com.alipay.api.response.AlipayTradeAppPayResponse;
 import com.alipay.api.response.AlipayTradeCloseResponse;
+import com.alipay.api.response.AlipayTradePrecreateResponse;
 import com.alipay.api.response.AlipayTradeQueryResponse;
 import com.his.common.enums.PayOrderBizTypeEnum;
 import com.his.common.exception.BusinessException;
@@ -18,6 +20,7 @@ import com.his.common.util.TextUtil;
 import com.his.charge.config.AlipayProperties;
 import com.his.charge.vo.PayOrderVO;
 import com.his.charge.service.AlipayChannelService;
+import com.his.charge.service.PayOrderService;
 import com.his.charge.service.PayChannelResult.PayUnifiedResult;
 import com.his.charge.service.PayChannelResult.TradeState;
 import org.slf4j.Logger;
@@ -89,6 +92,54 @@ public class AlipayChannelServiceImpl implements AlipayChannelService {
         } catch (Exception e) {
             log.error("[支付宝支付] 下单失败 payNo={} err={}", order.getPayNo(), e.getMessage(), e);
             return PayUnifiedResult.fail("支付宝下单失败：" + e.getMessage());
+        }
+    }
+
+    @Override
+    public String precreate(PayOrderVO order) {
+        assertEnabled("出码");
+        if (order == null || !TextUtil.hasText(order.getPayNo())) {
+            throw new BusinessException("缺少支付单，无法出码");
+        }
+        // 私钥没配属于配置错，必须在 try 外暴露成它本来的样子，不能被兜底 catch 洗成「出码失败」
+        AlipayClient client = alipayClient();
+        try {
+            log.info("[支付宝出码] 调当面付预下单（alipay.trade.precreate） payNo={} amount={}",
+                    order.getPayNo(), NumUtil.plain(order.getAmount()));
+
+            AlipayTradePrecreateRequest request = new AlipayTradePrecreateRequest();
+            JSONObject bizContent = new JSONObject();
+            bizContent.put("out_trade_no", order.getPayNo());
+            bizContent.put("total_amount", NumUtil.plain(order.getAmount()));
+            bizContent.put("subject", PayOrderBizTypeEnum.getLabel(order.getBizType()));
+            // 渠道侧有效期必须与本地支付单一致：码活得比单久，患者就能在本地单已关之后继续付款，
+            // 钱进来了却无人认领（本地只认库里的待支付单）
+            bizContent.put("timeout_express", PayOrderService.PAY_ORDER_EXPIRE_MINUTES + "m");
+            request.setBizContent(bizContent.toString());
+
+            // 收费台出码的专用回调；没配才回落到患者端那条。两者都不配时必须留痕：
+            // 通知永远不来、代码零报错，界面会一路停在「等待患者支付」
+            String notifyUrl = TextUtil.hasText(alipayProperties.getNotifyUrlCashier())
+                    ? alipayProperties.getNotifyUrlCashier() : alipayProperties.getNotifyUrl();
+            if (TextUtil.hasText(notifyUrl)) {
+                request.setNotifyUrl(notifyUrl);
+            } else {
+                log.warn("[支付宝出码] 未配置回调地址（alipay.notify-url-cashier / alipay.notify-url），"
+                        + "本次收款只能靠主动查单入账 payNo={}", order.getPayNo());
+            }
+
+            AlipayTradePrecreateResponse response = client.execute(request);
+            if (!response.isSuccess() || !TextUtil.hasText(response.getQrCode())) {
+                log.error("[支付宝出码] 失败 payNo={} code={} subCode={} subMsg={}", order.getPayNo(),
+                        response.getCode(), response.getSubCode(), response.getSubMsg());
+                throw new BusinessException("支付宝出码失败："
+                        + (TextUtil.hasText(response.getSubMsg()) ? response.getSubMsg() : response.getCode()));
+            }
+            log.info("[支付宝出码] 成功 payNo={}", order.getPayNo());
+            return response.getQrCode();
+        } catch (AlipayApiException e) {
+            log.error("[支付宝出码] 调用异常 payNo={} err={}", order.getPayNo(), e.getMessage(), e);
+            throw new BusinessException("支付宝出码调用失败：" + e.getMessage());
         }
     }
 

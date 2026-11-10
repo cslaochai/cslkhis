@@ -55,6 +55,14 @@ public class AggregatedQrSupport {
     }
 
     /**
+     * 收费台是否改出支付宝原生码。开启时建单阶段就必须把渠道定为支付宝，
+     * 否则查单会走到聚合模拟分支，真实模式下永远确认不了收款。
+     */
+    public boolean isAlipayQrEnabled() {
+        return aggregatedProperties.isAlipayQrEnabled();
+    }
+
+    /**
      * 模拟收款登记：把「患者已照单付款」这件事记进 Redis，随后轮询查单就按实收入账。
      * channel 决定这笔模拟收款最终落在哪个资金渠道（影响流水与对账口径），不传默认微信。
      */

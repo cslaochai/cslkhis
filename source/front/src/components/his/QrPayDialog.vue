@@ -126,7 +126,7 @@
            class="flex min-h-[236px] flex-col items-center justify-center rounded-lg border border-slate-200 p-3">
         <el-skeleton v-if="creating" :rows="3" animated class="w-full"/>
         <div v-else-if="qrImage && !isPaid" class="relative">
-          <img :class="{ 'opacity-40 blur-[3px]': qrExpired }" :src="qrImage" alt="聚合收款码"
+          <img :class="{ 'opacity-40 blur-[3px]': qrExpired }" :src="qrImage" alt="支付宝收款码"
                class="h-[220px] w-[220px]"/>
           <div v-if="qrExpired" class="absolute inset-0 flex flex-col items-center justify-center gap-2">
             <p class="text-sm font-medium text-slate-600">二维码已过期</p>
@@ -161,7 +161,7 @@
         <template v-if="isPaid">钱已到账并已入账 —— 以本系统显示为准，不要只看患者手机</template>
         <template v-else-if="qrImage && qrExpired">二维码已过期，点击「刷新收款码」重新出码</template>
         <template v-else-if="qrImage">
-          请患者用手机（微信/支付宝/云闪付）扫此码 · 收款码 {{ countdownText }} 后过期 ·
+          请患者用支付宝扫此码（微信扫不开）· 收款码 {{ countdownText }} 后过期 ·
           已自动确认支付结果{{ pollError ? `（最近一次查询失败：${pollError}）` : '' }}
         </template>
       </p>
@@ -201,9 +201,10 @@ import {moneyText} from '@/lib/patientField';
 /**
  * 收款弹层：一笔账单收一次，方式在弹层里选 —— 只有「现金」与「扫码收款」两档。
  *
- * 扫码收款出的是<b>聚合支付码</b>：一张码微信、支付宝、云闪付都能扫，渠道在患者支付那一刻
- * 由医院聚合网关识别运行环境后确定。因此这里不再有支付宝/微信切换，
- * 「从支付宝切到微信要重出一张码、还可能把患者手上那张作废」这个问题在模型上就不存在了。
+ * 扫码收款默认出的是<b>支付宝原生码</b>（当面付预下单返回的码串，只有支付宝能扫）；
+ * 关掉 pay.aggregated.alipay-qr-enabled 才回到聚合码：一张码微信、支付宝、云闪付都能扫，
+ * 渠道由医院聚合网关识别运行环境后确定。两种形态都在服务端定渠道，
+ * 所以这里没有支付宝/微信切换，也不存在「换渠道要重出一张码」。
  *
  * 界面不出现「确认已支付」那类按钮 —— 扫码档的收款事实来自渠道（异步通知 + 查单兜底），
  * 前端点一下就把账单置成已支付，等于让没收到钱的账先平了。
@@ -423,7 +424,7 @@ async function generate(force = false) {
   payNo.value = '';
   countdownDeadline.value = 0;
   try {
-    // 聚合码不传渠道：一张码多平台可扫，渠道在支付时由网关确定
+    // 出码不传渠道：渠道由后端形态开关决定（默认支付宝原生码），前端只认账单
     const res = await createQrPay({billId: props.billId});
     const data = res.data || {};
     if (!data.qrImage) {

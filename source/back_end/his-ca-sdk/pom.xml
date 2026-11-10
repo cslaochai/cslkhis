@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.his</groupId>
+        <artifactId>his-backend</artifactId>
+        <version>1.0.0</version>
+    </parent>
+
+    <artifactId>his-ca-sdk</artifactId>
+    <packaging>jar</packaging>
+    <name>his-ca-sdk</name>
+    <description>CA 对接 SDK：SM2 推送验签、CA 开放接口调用客户端、协议 DTO。
+        纯 Java 实现，不依赖 Spring——Spring 胶水（Filter/配置类）留在 his-ms-platform，
+        其他系统（EMR/LIS 等）要用时不被迫引入 Spring。</description>
+
+    <dependencies>
+        <!-- 国密 SM2：验签与密钥指纹 -->
+        <dependency>
+            <groupId>org.bouncycastle</groupId>
+            <artifactId>bcprov-jdk18on</artifactId>
+            <version>1.78.1</version>
+        </dependency>
+        <dependency>
+            <groupId>org.bouncycastle</groupId>
+            <artifactId>bcpkix-jdk18on</artifactId>
+            <version>1.78.1</version>
+        </dependency>
+        <!-- JSON 编解码（版本由 spring-boot-starter-parent 统一管理） -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+        </dependency>
+    </dependencies>
+</project>
