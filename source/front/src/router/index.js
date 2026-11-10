@@ -187,7 +187,7 @@ const routes = [
             {
                 path: 'inspection-workstation',
                 name: 'InspectionWorkstation',
-                component: () => import('@/views/lab/InspectionView.vue')
+                component: () => import('@/views/module-center/ExamCenterView.vue')
             },
             {
                 path: 'radio-diagnosis',
@@ -210,7 +210,7 @@ const routes = [
             {
                 path: 'laboratory-workstation',
                 name: 'LaboratoryWorkstation',
-                component: () => import('@/views/lab/LaboratoryView.vue')
+                component: () => import('@/views/module-center/LisCenterView.vue')
             },
             {path: 'specimen', name: 'Specimen', component: () => import('@/views/specimen/SpecimenView.vue')},
             {path: 'pathology', name: 'Pathology', component: () => import('@/views/pathology/PathologyView.vue')},
@@ -222,7 +222,7 @@ const routes = [
             {
                 path: 'exam-appointment',
                 name: 'ExamAppointment',
-                component: () => import('@/views/exam-appointment/ExamAppointmentView.vue')
+                component: () => import('@/views/module-center/ExamAppointmentCenterView.vue')
             },
             {
                 path: 'exam-device-slot',
@@ -435,7 +435,7 @@ const routes = [
             {
                 path: 'transfusion',
                 name: 'Transfusion',
-                component: () => import('@/views/transfusion/TransfusionView.vue')
+                component: () => import('@/views/module-center/TransfusionCenterView.vue')
             },
             {path: 'patients', name: 'Patients', component: () => import('@/views/patients/PatientsView.vue')},
             {path: 'empi', name: 'PatientIndex', component: () => import('@/views/empi/PatientIndexView.vue')},
@@ -545,7 +545,7 @@ const routes = [
             {
                 path: 'dialysis',
                 name: 'Dialysis',
-                component: () => import('@/views/dialysis/DialysisView.vue'),
+                component: () => import('@/views/module-center/DialysisCenterView.vue'),
                 meta: {title: '血液净化中心'}
             },
             {
