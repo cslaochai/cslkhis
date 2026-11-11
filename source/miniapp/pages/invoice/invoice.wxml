@@ -1,0 +1,27 @@
+<view class="page">
+  <view class="card" wx:for="{{list}}" wx:key="invoiceId" data-id="{{item.invoiceId}}" bindtap="onTapItem">
+    <view class="row">
+      <text class="title">{{item.billNo || '票据'}}</text>
+      <text class="amount">￥{{item.totalAmount}}</text>
+    </view>
+    <view class="row sub">
+      <text>票号 {{item.invoiceNo}}</text>
+      <text class="status">{{item.invoiceStatusText}}</text>
+    </view>
+    <text class="time">开票时间 {{item.invoiceTime}}</text>
+  </view>
+
+  <view class="empty" wx:if="{{!loading && list.length === 0}}">暂无已开具的票据</view>
+</view>
+
+<view class="mask" wx:if="{{detail}}" bindtap="onCloseDetail">
+  <view class="sheet" catchtap="noop">
+    <text class="sheet-title">票据详情</text>
+    <view class="kv"><text class="k">票据号</text><text class="v">{{detail.invoiceNo}}</text></view>
+    <view class="kv"><text class="k">账单号</text><text class="v">{{detail.billNo}}</text></view>
+    <view class="kv"><text class="k">金额</text><text class="v">￥{{detail.totalAmount}}</text></view>
+    <view class="kv"><text class="k">状态</text><text class="v">{{detail.invoiceStatusText}}</text></view>
+    <view class="kv"><text class="k">开票时间</text><text class="v">{{detail.invoiceTime}}</text></view>
+    <button class="btn" bindtap="onOpenFile">查看电子票据</button>
+  </view>
+</view>

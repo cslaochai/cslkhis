@@ -10,7 +10,12 @@ Page({
     // 只保留首页/底部 tab 没有入口的功能；其余（预约/报告/缴费/叫号/处方/消息/就诊人）都从首页进
     menus: [
       { id: 'emr', name: '门诊病历', icon: '/images/icons/clipboard.svg', page: '/pages/emr/emr' },
-      { id: 'chronic', name: '慢病档案', icon: '/images/icons/shield.svg', page: '/pages/chronic/chronic' }
+      { id: 'chronic', name: '慢病档案', icon: '/images/icons/shield.svg', page: '/pages/chronic/chronic' },
+      { id: 'exam', name: '检查预约', icon: '/images/icons/appointment.svg', page: '/pages/exam/exam' },
+      { id: 'bill', name: '费用明细', icon: '/images/icons/money.svg', page: '/pages/bill/bill' },
+      { id: 'survey', name: '满意度评价', icon: '/images/icons/check.svg', page: '/pages/survey/survey' },
+      { id: 'invoice', name: '电子票据', icon: '/images/icons/money.svg', page: '/pages/invoice/invoice' },
+      { id: 'checkup', name: '体检报告', icon: '/images/icons/check.svg', page: '/pages/checkup/checkup' }
     ]
   },
 

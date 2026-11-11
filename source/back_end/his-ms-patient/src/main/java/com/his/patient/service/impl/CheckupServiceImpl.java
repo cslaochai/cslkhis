@@ -219,6 +219,19 @@ public class CheckupServiceImpl extends ServiceImpl<BizCheckupRecordMapper, BizC
         return page.convert(r -> toRecordVo(r, false));
     }
 
+    public IPage<CheckupVO.RecordVO> myRecords(Long patientId, int pageNum, int pageSize) {
+        if (patientId == null) {
+            return Page.of(pageNum, pageSize);
+        }
+        LambdaQueryWrapper<BizCheckupRecord> qw = new LambdaQueryWrapper<BizCheckupRecord>()
+                .eq(BizCheckupRecord::getPatientId, patientId)
+                .eq(BizCheckupRecord::getDelFlag, 0)
+                .orderByDesc(BizCheckupRecord::getCheckupDate)
+                .orderByDesc(BizCheckupRecord::getId);
+        IPage<BizCheckupRecord> page = bizCheckupRecordMapper.selectPage(Page.of(pageNum, pageSize), qw);
+        return page.convert(r -> toRecordVo(r, false));
+    }
+
     public CheckupVO.RecordVO getRecord(Long id) {
         BizCheckupRecord r = bizCheckupRecordMapper.selectById(id);
         if (r == null || r.getDelFlag() != null && r.getDelFlag() == 1) {

@@ -213,7 +213,7 @@ public class ExamAppointmentServiceImpl extends ServiceImpl<BizExamAppointmentMa
             remark = "急诊绿色通道：申请单未缴费先占号。" + (remark == null ? "" : " " + remark);
         }
         BizExamAppointment appt = doBook(apply, dto.getDeviceId(), dto.getExamDate(), dto.getStartTime(),
-                prevStatus, remark);
+                prevStatus, remark, false);
         notifyDoctor(appt, "检查预约成功");
         return getDetail(appt.getId());
     }
@@ -245,7 +245,7 @@ public class ExamAppointmentServiceImpl extends ServiceImpl<BizExamAppointmentMa
                 ExamAppointStatusEnum.CANCELLED.getCode(), operatorUser.getRealName());
         BizExamAppointment fresh = doBook(apply, dto.getDeviceId(), dto.getExamDate(), dto.getStartTime(),
                 prevStatus, "改约自 " + old.getApptNo() + "（" + old.getExamDate() + " " + old.getStartTime()
-                        + "-" + old.getEndTime() + " @" + old.getDeviceName() + "）；原因：" + dto.getReason());
+                        + "-" + old.getEndTime() + " @" + old.getDeviceName() + "）；原因：" + dto.getReason(), false);
         notifyDoctor(fresh, "检查改约");
         return getDetail(fresh.getId());
     }
@@ -355,9 +355,112 @@ public class ExamAppointmentServiceImpl extends ServiceImpl<BizExamAppointmentMa
      * <p>本方法会为候选设备×日期补齐号源格子（幂等写入），因为「有没有号」这个
      * 问题的答案本身就依赖格子存在；不补齐就只能报"未生成号源"，等于没回答问题。
      */
+    // ---------- 患者自助口径（小程序 /miniapp/exam） ----------
+
+    @Override
+    public PageResult<ExamApptVO.ApplyVO> pendingAppliesForPatient(Long patientId, int pageNum, int pageSize) {
+        requirePatient(patientId);
+        ExamApptDTO.ApplyQuery q = new ExamApptDTO.ApplyQuery();
+        q.setPageNum(pageNum);
+        q.setPageSize(pageSize);
+        // 收口在服务端：患者只看得到自己的申请单，前端传谁都不影响
+        q.setPatientId(patientId);
+        return pendingListPage(q);
+    }
+
+    @Override
+    public ExamApptVO.RecommendVO recommendForPatient(Long patientId, Long applyId, LocalDate examDate, String afterTime) {
+        requirePatient(patientId);
+        ExamApptDTO.Recommend dto = new ExamApptDTO.Recommend();
+        dto.setApplyId(applyId);
+        dto.setExamDate(examDate);
+        dto.setAfterTime(afterTime);
+        return doRecommend(dto, true, patientId);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public ExamApptVO.ApptDetailVO bookForPatient(Long patientId, Long applyId, Long deviceId,
+                                                  LocalDate examDate, String startTime) {
+        requirePatient(patientId);
+        InspectionApplyBriefVO apply = requireApply(applyId);
+        if (!Objects.equals(patientId, apply.getPatientId())) {
+            throw new BusinessException("无权为该检查申请预约");
+        }
+        int prevStatus = gateApplyStatus(apply);
+        BizExamAppointment appt = doBook(apply, deviceId, examDate, startTime, prevStatus, "患者自助预约", true);
+        notifyDoctor(appt, "检查预约成功");
+        return detailOf(appt);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void cancelForPatient(Long patientId, Long apptId, String reason) {
+        requirePatient(patientId);
+        BizExamAppointment appt = requireApptForPatient(apptId, patientId);
+        if (appt.getActiveFlag() == null) {
+            throw new BusinessException("预约单 " + appt.getApptNo() + " 已终结");
+        }
+        if (appt.getStatus() != ExamAppointStatusEnum.BOOKED.getCode()) {
+            throw new BusinessException("仅「已预约」可取消（当前："
+                    + dictCacheService.getDicDataLabel(DictTypeConst.EXAM_APPOINT_STATUS, appt.getStatus())
+                    + "）；已到检请到检查科室前台办理");
+        }
+        releaseOld(appt, TextUtil.hasText(reason) ? TextUtil.trim(reason) : "患者自助取消",
+                ExamAppointStatusEnum.CANCELLED.getCode(), "患者自助：" + appt.getPatientName());
+    }
+
+    @Override
+    public PageResult<ExamApptVO.ApptVO> appointmentsForPatient(Long patientId, int pageNum, int pageSize) {
+        requirePatient(patientId);
+        Page<BizExamAppointment> page = bizExamAppointmentMapper.selectPage(
+                new Page<>(pageNum, pageSize),
+                new LambdaQueryWrapper<BizExamAppointment>()
+                        .eq(BizExamAppointment::getPatientId, patientId)
+                        .orderByDesc(BizExamAppointment::getExamDate)
+                        .orderByDesc(BizExamAppointment::getId));
+        List<ExamApptVO.ApptVO> records = page.getRecords().stream().map(this::toApptVo).toList();
+        return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(), records);
+    }
+
+    private void requirePatient(Long patientId) {
+        if (patientId == null) {
+            throw new BusinessException("就诊人不能为空");
+        }
+    }
+
+    /** 患者侧取单：只校验归属，不校验岗位科室（患者没有科室，走员工侧 requireAppt 会被拦） */
+    private BizExamAppointment requireApptForPatient(Long apptId, Long patientId) {
+        BizExamAppointment appt = apptId == null ? null : bizExamAppointmentMapper.selectById(apptId);
+        if (appt == null) {
+            throw new BusinessException("检查预约单不存在：" + apptId);
+        }
+        if (!Objects.equals(patientId, appt.getPatientId())) {
+            throw new BusinessException("无权操作该预约单");
+        }
+        return appt;
+    }
+
+    /** 患者侧详情：复用员工侧装配逻辑，但不经过按科室收口的 getDetail */
+    private ExamApptVO.ApptDetailVO detailOf(BizExamAppointment appt) {
+        ExamApptVO.ApptDetailVO vo = new ExamApptVO.ApptDetailVO();
+        BeanUtils.copyProperties(toApptVo(appt), vo);
+        vo.setPrevApplyStatusText(dictCacheService.getDicDataLabel(DictTypeConst.INSPECTION_APPLY_STATUS, appt.getPrevApplyStatus()));
+        vo.setApplyNoSnapshot(appt.getApplyNo());
+        return vo;
+    }
+
     @Transactional(rollbackFor = Exception.class)
     public ExamApptVO.RecommendVO recommend(ExamApptDTO.Recommend dto) {
+        return doRecommend(dto, false, null);
+    }
+
+    /** 时段推荐公共实现；patientSelf=true 时校验申请单归属并跳过岗位科室过滤 */
+    private ExamApptVO.RecommendVO doRecommend(ExamApptDTO.Recommend dto, boolean patientSelf, Long patientId) {
         InspectionApplyBriefVO apply = requireApply(dto.getApplyId());
+        if (patientSelf && !Objects.equals(patientId, apply.getPatientId())) {
+            throw new BusinessException("无权为该检查申请预约");
+        }
         ExamApptVO.RecommendVO vo = new ExamApptVO.RecommendVO();
         vo.setApplyId(apply.getId());
         vo.setItemName(apply.getInspectionItemName());
@@ -381,7 +484,7 @@ public class ExamAppointmentServiceImpl extends ServiceImpl<BizExamAppointmentMa
                 continue;
             }
             // 时段推荐只给本岗位授权科室的设备（设备未绑科室的不拦）
-            if (device.getDeptId() != null && !deptScopeService.canAccessDept(device.getDeptId())) {
+            if (!patientSelf && device.getDeptId() != null && !deptScopeService.canAccessDept(device.getDeptId())) {
                 continue;
             }
             // 时长必须按「这台设备做这个项目」算：1.5T 比 3.0T 慢，覆盖列不同
@@ -432,17 +535,20 @@ public class ExamAppointmentServiceImpl extends ServiceImpl<BizExamAppointmentMa
     }
 
     private BizExamAppointment doBook(InspectionApplyBriefVO apply, Long deviceId, LocalDate examDate,
-                                      String startTime, Integer prevStatus, String remark) {
+                                      String startTime, Integer prevStatus, String remark, boolean patientSelf) {
         CurrentUser operatorUser = UserUtils.getCurrentUser();
-        if (operatorUser == null) {
+        if (!patientSelf && operatorUser == null) {
             throw new BusinessException("当前用户信息不存在");
         }
+        // 操作人口径：员工侧取登录人姓名；患者自助取就诊人姓名，落库能看出「这单是患者自己约的」
+        String operatorName = patientSelf ? apply.getPatientName() : operatorUser.getRealName();
         BizExamDevice device = bizExamDeviceMapper.selectForUpdate(deviceId);
         if (device == null) {
             throw new BusinessException("预约设备不存在：" + deviceId);
         }
         // B类收口：前端选设备/科室是合法业务，但只能选本岗位授权科室的设备（全院角色不受限）
-        if (device.getDeptId() != null) {
+        // 患者自助没有岗位科室，跳过这道闸
+        if (!patientSelf && device.getDeptId() != null) {
             deptScopeService.resolveDeptId(device.getDeptId());
         }
         if (device.getStatus() != ExamDeviceStatusEnum.OPEN.getCode()) {
@@ -546,7 +652,7 @@ public class ExamAppointmentServiceImpl extends ServiceImpl<BizExamAppointmentMa
         appt.setEndTime(ExamGrid.toHHmm(endMin));
         appt.setIsEmergency(apply.getIsEmergency());
         appt.setStatus(ExamAppointStatusEnum.BOOKED.getCode());
-        appt.setBookBy(operatorUser.getRealName());
+        appt.setBookBy(operatorName);
         appt.setBookTime(now);
         appt.setRemark(TextUtil.cut(remark, 480));
         bizExamAppointmentMapper.insert(appt);
@@ -554,7 +660,7 @@ public class ExamAppointmentServiceImpl extends ServiceImpl<BizExamAppointmentMa
         examSlotService.claim(device, examDate, cells, span);
 
         LocalDateTime appointmentTime = LocalDateTime.of(examDate, LocalTime.of(startMin / 60, startMin % 60));
-        if (examApplyWriterMapper.markBooked(apply.getId(), appointmentTime, operatorUser.getRealName()) == 0) {
+        if (examApplyWriterMapper.markBooked(apply.getId(), appointmentTime, operatorName) == 0) {
             throw new BusinessException("申请单状态推进失败（可能已被他人处理），预约已回滚，请刷新后重试");
         }
         return appt;

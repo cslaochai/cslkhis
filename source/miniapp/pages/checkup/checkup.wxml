@@ -1,0 +1,47 @@
+<view class="page">
+  <view class="card" wx:for="{{list}}" wx:key="recordId" data-id="{{item.recordId}}" bindtap="onTapItem">
+    <view class="row">
+      <text class="title">{{item.packageName || '体检'}}</text>
+      <text class="status">{{item.recordStatusText}}</text>
+    </view>
+    <view class="row sub">
+      <text>{{item.recordNo}}</text>
+      <text>{{item.checkupDate || ''}}</text>
+    </view>
+  </view>
+
+  <view class="empty" wx:if="{{!loading && list.length === 0}}">暂无体检记录</view>
+</view>
+
+<view class="mask" wx:if="{{detail}}" bindtap="onCloseDetail">
+  <view class="sheet" catchtap="noop">
+    <text class="sheet-title">体检报告</text>
+    <view class="kv"><text class="k">体检单号</text><text class="v">{{detail.recordNo}}</text></view>
+    <view class="kv"><text class="k">套餐</text><text class="v">{{detail.packageName}}</text></view>
+    <view class="kv"><text class="k">体检日期</text><text class="v">{{detail.checkupDate}}</text></view>
+    <view class="kv"><text class="k">状态</text><text class="v">{{detail.recordStatusText}}</text></view>
+    <view class="kv" wx:if="{{detail.doctorName}}"><text class="k">总检医生</text><text class="v">{{detail.doctorName}}</text></view>
+    <view class="kv" wx:if="{{detail.reportTime}}"><text class="k">报告时间</text><text class="v">{{detail.reportTime}}</text></view>
+
+    <view class="block" wx:if="{{detail.conclusion}}">
+      <text class="block-title">总检结论</text>
+      <text class="block-text">{{detail.conclusion}}</text>
+    </view>
+
+    <view class="block" wx:if="{{detail.items.length > 0}}">
+      <text class="block-title">逐项结果</text>
+      <view class="item" wx:for="{{detail.items}}" wx:key="itemName">
+        <view class="row">
+          <text class="item-name">{{item.itemName}}</text>
+          <text class="item-flag {{item.abnormalFlag === 1 ? 'abnormal' : ''}}">{{item.abnormalText}}</text>
+        </view>
+        <view class="row sub">
+          <text>{{item.resultValue || '—'}}</text>
+          <text>{{item.refStandard || ''}}</text>
+        </view>
+        <text class="item-summary" wx:if="{{item.summaryText}}">{{item.summaryText}}</text>
+      </view>
+    </view>
+    <view class="empty small" wx:if="{{!detail.items || detail.items.length === 0}}">报告尚未出具逐项结果</view>
+  </view>
+</view>

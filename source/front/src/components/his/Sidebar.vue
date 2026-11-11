@@ -48,6 +48,7 @@
             class="grid transition-all duration-200"
         >
           <div class="min-h-0 space-y-0.5 overflow-hidden">
+            <!-- 直接页面（menuType=2） -->
             <div
                 v-for="item in group.items"
                 :key="item.href"
@@ -71,6 +72,45 @@
                   class="shrink-0 whitespace-nowrap transition-opacity duration-200"
               >{{ item.label }}</span>
             </div>
+
+            <!-- 子分组（嵌套目录 menuType=1）：分组 → 子分组 → 页面，支持三层（如药事管理/财务结算） -->
+            <template v-for="sg in group.subgroups" :key="subKey(group.title, sg.title)">
+              <div
+                  :class="isSubgroupActive(group, sg) ? 'text-white' : 'text-white/80'"
+                  :style="{paddingLeft: sidebarCollapsed ? '15px' : '30px'}"
+                  class="flex cursor-pointer items-center gap-2 overflow-hidden rounded-lg py-1.5 pr-3 text-[12px] font-medium hover:bg-white/10"
+                  @click="toggleGroup(subKey(group.title, sg.title))"
+              >
+                <component :is="sg.icon" class="h-3.5 w-3.5 shrink-0 opacity-80"/>
+                <span :class="sidebarCollapsed ? 'opacity-0' : 'opacity-100'" class="shrink-0 whitespace-nowrap">{{ sg.title }}</span>
+                <component
+                    :is="isGroupCollapsed(subKey(group.title, sg.title)) ? ArrowRight : ArrowDown"
+                    :class="sidebarCollapsed ? 'opacity-0' : 'opacity-100'"
+                    class="h-3 w-3 shrink-0 transition-[opacity,transform] duration-200"/>
+              </div>
+              <div
+                  :style="{
+                    gridTemplateRows: isGroupCollapsed(subKey(group.title, sg.title)) ? '0fr' : '1fr',
+                    opacity: isGroupCollapsed(subKey(group.title, sg.title)) ? 0 : 1,
+                  }"
+                  class="grid transition-all duration-200"
+              >
+                <div class="min-h-0 space-y-0.5 overflow-hidden">
+                  <div
+                      v-for="item in sg.items"
+                      :key="item.href"
+                      :class="isActive(item.href) ? 'sidebar-item-active bg-white/[0.16] text-white' : 'text-slate-200 hover:bg-white/10 hover:text-white'"
+                      :style="{paddingLeft: sidebarCollapsed ? '15px' : '52px', paddingRight: sidebarCollapsed ? '6px' : '12px'}"
+                      :title="sidebarCollapsed ? item.label : undefined"
+                      class="sidebar-item relative flex cursor-pointer items-center gap-3 overflow-hidden rounded-lg py-2 text-[13px] font-normal"
+                      @click="navigate(item.href)"
+                  >
+                    <component :is="item.icon" class="h-[18px] w-[18px] shrink-0"/>
+                    <span :class="sidebarCollapsed ? 'opacity-0' : 'opacity-100'" class="shrink-0 whitespace-nowrap transition-opacity duration-200">{{ item.label }}</span>
+                  </div>
+                </div>
+              </div>
+            </template>
           </div>
         </div>
       </div>
@@ -119,26 +159,41 @@ function bySortOrder(a, b) {
   return (a.sortOrder ?? Number.MAX_SAFE_INTEGER) - (b.sortOrder ?? Number.MAX_SAFE_INTEGER);
 }
 
-/** 把后端菜单树映射成侧边栏分组结构 */
+/**
+ * 把后端菜单树映射成侧边栏分组结构。
+ * 支持三层：分组(menuType=1) → 子分组(menuType=1) → 页面(menuType=2)。
+ * 普通两层结构（分组下直接挂页面）保持原行为；嵌套目录（如药事管理/财务结算）
+ * 会被拆成「分组 → 子分组 → 页面」，否则子目录会被旧的两层过滤整组隐藏。
+ */
 function toNavGroups(nodes) {
   return nodes
       .filter(node => node.menuType === 1 && node.isVisible === 1 && node.status === 1)
       .slice()
       .sort(bySortOrder)
-      .map(directory => ({
-        title: directory.menuName,
-        items: (directory.children || [])
-            .filter(child => child.menuType === 2 && child.isVisible === 1 && child.status === 1)
-            .slice()
-            .sort(bySortOrder)
-            .map(child => ({
-              href: child.path,
-              label: child.menuName,
-              icon: resolveIcon(child.icon),
-            })),
-      }))
-      // 目录下一个可见菜单都没有时，不渲染空标题
-      .filter(group => group.items.length > 0);
+      .map(directory => {
+        const kids = (directory.children || [])
+            .filter(c => c.isVisible === 1 && c.status === 1)
+            .sort(bySortOrder);
+        // 直接页面
+        const pages = kids
+            .filter(c => c.menuType === 2)
+            .map(c => ({href: c.path, label: c.menuName, icon: resolveIcon(c.icon)}));
+        // 子分组（嵌套目录）：只保留「下有可见页面」的子分组，避免空标题
+        const subgroups = kids
+            .filter(c => c.menuType === 1)
+            .map(sub => ({
+              title: sub.menuName,
+              icon: resolveIcon(sub.icon),
+              items: (sub.children || [])
+                  .filter(c => c.menuType === 2 && c.isVisible === 1 && c.status === 1)
+                  .sort(bySortOrder)
+                  .map(c => ({href: c.path, label: c.menuName, icon: resolveIcon(c.icon)})),
+            }))
+            .filter(sg => sg.items.length > 0);
+        return {title: directory.menuName, icon: resolveIcon(directory.icon), items: pages, subgroups};
+      })
+      // 分组下一个可见菜单都没有时，不渲染空标题
+      .filter(group => group.items.length > 0 || group.subgroups.length > 0);
 }
 
 async function loadMenus(force = false) {
@@ -160,33 +215,47 @@ async function loadMenus(force = false) {
   }
 }
 
-// 分组折叠状态（key 用分组标题）
+// 分组折叠状态（key：顶层分组用标题；子分组用「分组 / 子分组」复合 key）
 const collapsedGroups = ref(new Set());
-// 初始化：根据当前路由找到所在分组，展开该分组，折叠其他分组
+const subKey = (g, s) => `${g} / ${s}`;
+// 初始化：根据当前路由找到所在分组/子分组，展开它们，折叠其余
 const initGroupState = () => {
   const currentPath = route.path;
-  let activeGroupTitle = '';
+  const active = new Set();
   for (const group of navGroups.value) {
-    if (group.items.some(item => isPathMatch(currentPath, item.href))) {
-      activeGroupTitle = group.title;
-      break;
+    const groupHit = group.items.some(i => isPathMatch(currentPath, i.href));
+    const hitSubs = group.subgroups.filter(sg => sg.items.some(i => isPathMatch(currentPath, i.href)));
+    if (groupHit || hitSubs.length) {
+      active.add(group.title);
+      hitSubs.forEach(sg => active.add(subKey(group.title, sg.title)));
     }
   }
-  // 折叠所有分组，除了当前活跃的
-  collapsedGroups.value = new Set(navGroups.value.filter(g => g.title !== activeGroupTitle).map(g => g.title));
+  const allKeys = [];
+  for (const group of navGroups.value) {
+    allKeys.push(group.title);
+    group.subgroups.forEach(sg => allKeys.push(subKey(group.title, sg.title)));
+  }
+  // 折叠所有分组/子分组，除了当前活跃的
+  collapsedGroups.value = new Set(allKeys.filter(k => !active.has(k)));
 };
-const toggleGroup = (title) => {
-  if (collapsedGroups.value.has(title)) {
-    collapsedGroups.value.delete(title);
+const toggleGroup = (key) => {
+  if (collapsedGroups.value.has(key)) {
+    collapsedGroups.value.delete(key);
   } else {
-    collapsedGroups.value.add(title);
+    collapsedGroups.value.add(key);
   }
 };
-const isGroupCollapsed = (title) => collapsedGroups.value.has(title);
-// 检查分组内是否有当前路由的子项（用于高亮分组标题）
+const isGroupCollapsed = (key) => collapsedGroups.value.has(key);
+// 高亮：分组本身或任一子分组命中当前路由
 const isGroupActive = (group) => {
   const currentPath = route.path;
-  return group.items.some(item => isPathMatch(currentPath, item.href));
+  return group.items.some(item => isPathMatch(currentPath, item.href))
+      || group.subgroups.some(sg => sg.items.some(item => isPathMatch(currentPath, item.href)));
+};
+// 子分组命中当前路由时高亮子分组标题
+const isSubgroupActive = (group, sg) => {
+  const currentPath = route.path;
+  return sg.items.some(item => isPathMatch(currentPath, item.href));
 };
 
 // 路由匹配：必须整段相等或以后续 / 为边界，避免 /pharmacy-window 误命中 /pharmacy

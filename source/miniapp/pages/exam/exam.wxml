@@ -1,0 +1,73 @@
+<view class="page">
+  <view class="tabs">
+    <view class="tab {{tab === 'pending' ? 'active' : ''}}" bindtap="switchTab" data-tab="pending">待预约</view>
+    <view class="tab {{tab === 'mine' ? 'active' : ''}}" bindtap="switchTab" data-tab="mine">我的检查</view>
+  </view>
+
+  <view wx:if="{{tab === 'pending'}}">
+    <view wx:if="{{pending.length === 0}}" class="empty">
+      <text>暂无待预约的检查</text>
+      <text class="empty-sub">医生开单并缴费后，检查项目会出现在这里</text>
+    </view>
+    <view class="card" wx:for="{{pending}}" wx:key="applyId">
+      <view class="card-head">
+        <text class="card-title">{{item.itemName || '检查项目'}}</text>
+        <text class="tag {{item.isEmergency === 1 ? 'tag-urgent' : ''}}">{{item.applyStatusText}}</text>
+      </view>
+      <view class="row"><text class="label">申请单号</text><text class="value">{{item.applyNo}}</text></view>
+      <view class="row" wx:if="{{item.bodyPart}}"><text class="label">检查部位</text><text class="value">{{item.bodyPart}}</text></view>
+      <view class="row"><text class="label">开单科室</text><text class="value">{{item.applyDeptName}} {{item.doctorName}}</text></view>
+      <view class="row" wx:if="{{item.visitDate}}"><text class="label">就诊日期</text><text class="value">{{item.visitDate}}</text></view>
+      <view class="row" wx:if="{{item.deviceCount === 0}}">
+        <text class="label warn">提示</text>
+        <text class="value warn">暂无可预约设备，请联系医技科室</text>
+      </view>
+      <button class="btn-primary" bindtap="onChoose" data-apply="{{item}}" disabled="{{item.deviceCount === 0}}">选择时段</button>
+    </view>
+  </view>
+
+  <view wx:if="{{tab === 'mine'}}">
+    <view wx:if="{{mine.length === 0}}" class="empty">
+      <text>还没有检查预约</text>
+      <text class="empty-sub">预约成功后可在到院直接签到检查</text>
+    </view>
+    <view class="card" wx:for="{{mine}}" wx:key="apptId">
+      <view class="card-head">
+        <text class="card-title">{{item.itemName || '检查'}}</text>
+        <text class="tag">{{item.statusText}}</text>
+      </view>
+      <view class="row"><text class="label">检查时间</text><text class="value strong">{{item.examDate}} {{item.timeRange}}</text></view>
+      <view class="row" wx:if="{{item.examDeptName}}"><text class="label">检查科室</text><text class="value">{{item.examDeptName}}</text></view>
+      <view class="row" wx:if="{{item.roomName}}"><text class="label">检查室</text><text class="value">{{item.roomName}}</text></view>
+      <view class="row" wx:if="{{item.deviceName}}"><text class="label">设备</text><text class="value">{{item.deviceName}}</text></view>
+      <view class="row"><text class="label">预约单号</text><text class="value">{{item.apptNo}}</text></view>
+      <button wx:if="{{item.status === 1 && item.activeFlag === 1}}" class="btn-ghost" bindtap="onCancel" data-appt="{{item}}">取消预约</button>
+    </view>
+  </view>
+
+  <!-- 选时段浮层 -->
+  <view wx:if="{{apply}}" class="mask" bindtap="closeSheet"></view>
+  <view wx:if="{{apply}}" class="sheet">
+    <view class="sheet-head">
+      <text class="sheet-title">{{apply.itemName || '选择检查时段'}}</text>
+      <text class="sheet-close" bindtap="closeSheet">关闭</text>
+    </view>
+    <scroll-view scroll-y class="sheet-body">
+      <view wx:if="{{slotsLoading}}" class="empty">加载中…</view>
+      <view wx:elif="{{slots.length === 0}}" class="empty">
+        <text>暂无可约时段</text>
+        <text class="empty-sub">可换一天再试，或联系医技科室</text>
+      </view>
+      <view wx:for="{{slots}}" wx:key="index" class="slot" bindtap="onBook" data-slot="{{item}}">
+        <view class="slot-main">
+          <text class="slot-date">{{item.examDate}}</text>
+          <text class="slot-time">{{item.startTime}}-{{item.endTime}}</text>
+        </view>
+        <view class="slot-side">
+          <text class="slot-room">{{item.roomName}}{{item.deviceName ? ' · ' + item.deviceName : ''}}</text>
+          <text class="slot-left">余 {{item.availableSource}}</text>
+        </view>
+      </view>
+    </scroll-view>
+  </view>
+</view>

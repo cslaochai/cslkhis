@@ -61,10 +61,25 @@ export function loadMenuTree(force = false) {
 export function findMenuByPath(tree, path) {
     for (const directory of tree || []) {
         if (directory.menuType !== 1) continue
-        for (const menu of directory.children || []) {
-            if (menu.menuType === 2 && menu.path === path) {
-                return {directory, menu}
-            }
+        const menu = findPageUnder(directory, path)
+        if (menu) return {directory, menu}
+    }
+    return null
+}
+
+/**
+ * 在目录节点下递归查找 path 命中的页面（menuType=2）。
+ * 支持三层及以上嵌套（如 药事管理 → 子分组 → 页面），旧实现只查直接子节点，
+ * 会导致嵌套页面的面包屑找不到所属目录。
+ */
+function findPageUnder(node, path) {
+    for (const child of node.children || []) {
+        if (child.menuType === 2 && child.path === path) {
+            return child
+        }
+        if (child.menuType === 1) {
+            const found = findPageUnder(child, path)
+            if (found) return found
         }
     }
     return null

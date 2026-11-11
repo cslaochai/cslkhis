@@ -21,7 +21,12 @@
     "pages/triage/triage",
     "pages/chat/chat",
     "pages/previsit/previsit",
-    "pages/followup/followup"
+    "pages/followup/followup",
+    "pages/exam/exam",
+    "pages/bill/bill",
+    "pages/survey/survey",
+    "pages/invoice/invoice",
+    "pages/checkup/checkup"
   ],
   "window": {
     "backgroundTextStyle": "light",

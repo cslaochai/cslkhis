@@ -1,0 +1,78 @@
+<view class="page">
+  <view wx:if="{{tasks.length === 0 && !loading}}" class="empty">
+    <text>暂无待填问卷</text>
+    <text class="empty-sub">出院或就诊后，医院会把评价问卷推送到这里</text>
+  </view>
+
+  <view class="card" wx:for="{{tasks}}" wx:key="dispatchId" bindtap="onOpen" data-task="{{item}}">
+    <view class="card-head">
+      <text class="card-title">{{item.templateName || '满意度问卷'}}</text>
+      <text class="tag">去评价 ›</text>
+    </view>
+    <view class="row" wx:if="{{item.sceneText}}"><text class="label">场景</text><text class="value">{{item.sceneText}}</text></view>
+    <view class="row" wx:if="{{item.deptName}}"><text class="label">科室</text><text class="value">{{item.deptName}}</text></view>
+    <view class="row" wx:if="{{item.pushTime}}"><text class="label">发放时间</text><text class="value">{{item.pushTime}}</text></view>
+    <view class="row" wx:if="{{item.expireTime}}"><text class="label">截止时间</text><text class="value">{{item.expireTime}}</text></view>
+  </view>
+
+  <view wx:if="{{paper}}" class="mask" bindtap="closePaper"></view>
+  <view wx:if="{{paper}}" class="sheet">
+    <view class="sheet-head">
+      <text class="sheet-title">{{paper.templateName || '满意度问卷'}}</text>
+      <text class="sheet-close" bindtap="closePaper">关闭</text>
+    </view>
+    <scroll-view scroll-y class="sheet-body">
+      <view wx:for="{{answers}}" wx:key="itemId" class="question">
+        <view class="q-head">
+          <text class="q-title">{{item.seqNo ? item.seqNo + '. ' : ''}}{{item.title}}</text>
+          <text wx:if="{{item.required === 1}}" class="q-required">必答</text>
+        </view>
+
+        <!-- 量表：1..max -->
+        <view wx:if="{{item.questionType === 1}}" class="score-row">
+          <view wx:for="{{item.options}}" wx:for-item="s" wx:for-index="si" wx:key="*this"
+                class="score {{item.score === s ? 'score-active' : ''}}"
+                bindtap="onScore" data-item="{{item.itemId}}" data-score="{{s}}">{{s}}</view>
+        </view>
+        <view wx:if="{{item.questionType === 1}}" class="score-hint">
+          <text>1 = 很不满意</text><text>{{item.maxScore}} = 很满意</text>
+        </view>
+
+        <!-- NPS：0..10 -->
+        <view wx:if="{{item.questionType === 4}}" class="score-row nps-row">
+          <view wx:for="{{item.options}}" wx:for-item="s" wx:for-index="si" wx:key="*this"
+                class="score small {{item.score === s ? 'score-active' : ''}}"
+                bindtap="onScore" data-item="{{item.itemId}}" data-score="{{s}}">{{s}}</view>
+        </view>
+        <view wx:if="{{item.questionType === 4}}" class="score-hint">
+          <text>0 = 完全不会推荐</text><text>{{item.maxScore}} = 非常愿意推荐</text>
+        </view>
+
+        <!-- 单选/多选：题目表未存选项清单，按题干填写所选文案 -->
+        <input wx:if="{{item.questionType === 2 || item.questionType === 3}}" class="q-input"
+               placeholder="{{item.questionType === 3 ? '按题干填写所选选项，多项用「；」分隔' : '按题干填写所选项'}}"
+               value="{{item.optionLabel}}" bindinput="onOption" data-item="{{item.itemId}}"/>
+
+        <!-- 开放文本 -->
+        <textarea wx:if="{{item.questionType === 5}}" class="q-textarea" placeholder="请填写您的意见"
+                  value="{{item.textValue}}" bindinput="onText" data-item="{{item.itemId}}"/>
+
+        <view wx:if="{{item.required !== 1}}" class="q-optional">选答</view>
+      </view>
+
+      <view class="question">
+        <view class="q-head"><text class="q-title">补充意见</text></view>
+        <textarea class="q-textarea" placeholder="还有什么想告诉我们的（选填）"
+                  value="{{commentText}}" bindinput="onComment"/>
+      </view>
+
+      <view class="anon-row">
+        <text class="anon-label">匿名提交</text>
+        <switch checked="{{anonymous}}" bindchange="onAnonymous" color="#2b6cb0"/>
+      </view>
+
+      <button class="btn-primary" bindtap="onSubmit" loading="{{submitting}}" disabled="{{submitting}}">提交评价</button>
+      <view class="bottom-space"></view>
+    </scroll-view>
+  </view>
+</view>

@@ -274,6 +274,26 @@ public class ChargeFacadeServiceImpl implements ChargeFacadeService {
     }
 
     @Override
+    public List<BizSettlementBillVO> listBillsByPatient(Long patientId, int limit) {
+        if (patientId == null) {
+            return List.of();
+        }
+        int size = Math.min(Math.max(limit, 1), 100);
+        List<BizSettlementBill> bills = bizSettlementBillMapper.selectList(
+                new LambdaQueryWrapper<BizSettlementBill>()
+                        .eq(BizSettlementBill::getPatientId, patientId)
+                        .orderByDesc(BizSettlementBill::getBillTime)
+                        .last("LIMIT " + size));
+        List<BizSettlementBillVO> result = new ArrayList<>(bills.size());
+        for (BizSettlementBill bill : bills) {
+            BizSettlementBillVO vo = new BizSettlementBillVO();
+            BeanUtils.copyProperties(bill, vo);
+            result.add(vo);
+        }
+        return result;
+    }
+
+    @Override
     public List<BillItemVO> listBillItems(Long billId) {
         if (billId == null) {
             return List.of();

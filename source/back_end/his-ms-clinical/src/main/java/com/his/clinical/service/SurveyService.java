@@ -76,4 +76,24 @@ public interface SurveyService {
      * 满意度看板（templateId/scene 可空=全部；科室范围强制收口）
      */
     SurveyStatVO stat(Long templateId, Integer scene, String dateFrom, String dateTo);
+
+    // ---------- 患者自助填报（小程序 /miniapp/survey） ----------
+
+    /**
+     * 我的待填问卷：未回收、未过期。
+     */
+    java.util.List<com.his.spi.vo.PatientSurveyTaskVO> myPendingTasks(Long patientId);
+
+    /**
+     * 问卷卷面（题目 + 是否已填）。
+     */
+    com.his.spi.vo.PatientSurveyPaperVO paperForPatient(Long patientId, Long dispatchId);
+
+    /**
+     * 患者提交答卷：按发放单归属校验，跳过岗位科室收口，填报方式固定为患者自填。
+     *
+     * @return 答卷ID
+     */
+    Long submitAnswerForPatient(Long patientId, Long dispatchId, Integer anonymousFlag, String commentText,
+                                java.util.List<SurveyAnswerUpsertDTO.Item> items);
 }

@@ -1,12 +1,5 @@
 <template>
   <div class="antibiotic-catalog-page" data-testid="antibiotic-catalog-view">
-    <el-alert
-      type="info"
-      :closable="false"
-      show-icon
-      title="抗菌药物分级管理"
-      description="三级目录（非限制使用级 / 限制使用级 / 特殊使用级）是开方闸的依据：医师授权级别必须 ≥ 药品分级才允许开方（医师那一侧在「抗菌药物处方权管理」菜单维护）。没有 DDD 值的抗菌药进不了使用强度统计 —— 纳入目录时 DDD 值与每单位含药量必须一起填（发药单位是盒/瓶/支，不是最小制剂单位）。" />
-
     <el-tabs v-model="activeTab" class="main-tabs">
       <!-- ============ tab1 分级目录 ============ -->
       <el-tab-pane label="分级目录" name="catalog">

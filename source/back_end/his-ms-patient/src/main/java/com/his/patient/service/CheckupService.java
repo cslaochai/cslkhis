@@ -46,6 +46,11 @@ public interface CheckupService {
     IPage<CheckupVO.RecordVO> recordPage(CheckupDTO.RecordQuery dto);
 
     /**
+     * 我的体检记录（患者自助查询，只按就诊人ID取，不对科室/岗位收口）。
+     */
+    IPage<CheckupVO.RecordVO> myRecords(Long patientId, int pageNum, int pageSize);
+
+    /**
      * 读体检登记与其结果明细，不改动单据状态。
      * 供出总检报告前核对全部明细结果的环节取数。
      */

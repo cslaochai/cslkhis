@@ -194,6 +194,17 @@ public interface ChargeFacadeService {
     List<BillItemVO> listBillItems(Long billId);
 
     /**
+     * 患者名下结算账单（小程序「费用明细」列表用）：按结算生成时间倒序，只出账单头。
+     *
+     * <p>为什么单开：{@link #pendingBills(Long)} 只回答「还欠多少」，
+     * 患者查历史已缴账单、按就诊逐笔核对时必须能看到全部状态（含已支付/已退费/已作废）。</p>
+     *
+     * @param patientId 患者ID（空返回空列表）
+     * @param limit     最大条数（服务端夹到 1-100）
+     */
+    List<BizSettlementBillVO> listBillsByPatient(Long patientId, int limit);
+
+    /**
      * 该账单最近一次医保结算简要。
      *
      * @return 未走医保结算时返回 {@code null}

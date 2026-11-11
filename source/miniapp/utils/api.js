@@ -239,6 +239,52 @@ export const followupApi = {
   reply: (data) => post('/miniapp/followup/reply', data)
 }
 
+// ========== 检查预约（/miniapp/exam PATIENT 鉴权） ==========
+// 缴费后自助约时段：待预约申请 → 可约时段 → 预约/取消。
+// 时段由医技科室已排的设备档期算出，患者侧只能看有设备且有余号的格子。
+export const examApi = {
+  // 待预约检查申请（分页）
+  pending: (patientId, pageNum = 1, pageSize = 20) => get('/miniapp/exam/pending', { patientId, pageNum, pageSize }),
+  // 可选时段：applyId 必传，examDate/afterTime 可空（空=不限日期/不限时段）
+  slots: (params) => get('/miniapp/exam/slots', params),
+  // 预约（提交后预约单立即生效，到院直接签到检查）
+  book: (data) => post('/miniapp/exam/book', data),
+  // 取消预约（联动释放设备号源）
+  cancel: (data) => post('/miniapp/exam/cancel', data),
+  // 我的检查预约（分页）
+  myAppointments: (patientId, pageNum = 1, pageSize = 20) => get('/miniapp/exam/myAppointments', { patientId, pageNum, pageSize })
+}
+
+// ========== 费用明细（/miniapp/bill PATIENT 鉴权） ==========
+// 全部状态账单（含已支付/已退费），与「门诊缴费」只出待缴清单互补。
+export const billApi = {
+  list: (patientId, limit = 50) => get('/miniapp/bill/list', { patientId, limit }),
+  detail: (patientId, billId) => get('/miniapp/bill/detail', { patientId, billId })
+}
+
+// ========== 满意度评价（/miniapp/survey PATIENT 鉴权） ==========
+export const surveyApi = {
+  // 我的待填问卷（已回收/已过期的不出）
+  pending: (patientId) => get('/miniapp/survey/pending', { patientId }),
+  // 卷面题目 + 是否已填（已填可重填覆盖）
+  paper: (patientId, dispatchId) => get('/miniapp/survey/paper', { patientId, dispatchId }),
+  // 提交答卷（fillSource 由后端固定为患者自填）
+  submit: (data) => post('/miniapp/survey/submit', data)
+}
+
+// ========== 电子票据（/miniapp/invoice PATIENT 鉴权） ==========
+// 只查看已开具票据；开票、作废仍是收费员动作。
+export const invoiceApi = {
+  list: (patientId, pageNum = 1, pageSize = 20) => get('/miniapp/invoice/list', { patientId, pageNum, pageSize }),
+  detail: (patientId, invoiceId) => get('/miniapp/invoice/detail', { patientId, invoiceId })
+}
+
+// ========== 体检报告（/miniapp/checkup PATIENT 鉴权） ==========
+export const checkupApi = {
+  list: (patientId, pageNum = 1, pageSize = 20) => get('/miniapp/checkup/list', { patientId, pageNum, pageSize }),
+  detail: (patientId, recordId) => get('/miniapp/checkup/detail', { patientId, recordId })
+}
+
 // ========== 通用：带患者ID 的便捷封装 ==========
 export function withPatientId() {
   return getPatientId()

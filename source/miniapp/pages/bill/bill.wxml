@@ -1,0 +1,61 @@
+<view class="page">
+  <view wx:if="{{bills.length === 0 && !loading}}" class="empty">
+    <text>暂无账单记录</text>
+    <text class="empty-sub">挂号、门诊结算后会生成账单</text>
+  </view>
+
+  <view class="card" wx:for="{{bills}}" wx:key="billId" bindtap="onOpen" data-id="{{item.billId}}">
+    <view class="card-head">
+      <text class="card-title">{{item.billTypeText || '费用账单'}}</text>
+      <text class="tag {{item.billStatus === 1 ? 'tag-warn' : ''}}">{{item.billStatusText}}</text>
+    </view>
+    <view class="row"><text class="label">账单号</text><text class="value">{{item.billNo}}</text></view>
+    <view class="row"><text class="label">时间</text><text class="value">{{item.billTime}}</text></view>
+    <view class="amounts">
+      <view class="amount"><text class="num">{{item.totalText}}</text><text class="unit">总额</text></view>
+      <view class="amount"><text class="num">{{item.paidText}}</text><text class="unit">已缴</text></view>
+      <view class="amount"><text class="num {{item.billStatus === 1 ? 'warn' : ''}}">{{item.unpaidText}}</text><text class="unit">待缴</text></view>
+    </view>
+    <text class="link">查看明细 ›</text>
+  </view>
+
+  <view wx:if="{{detailLoading}}" class="empty">加载中…</view>
+
+  <view wx:if="{{detail}}" class="mask" bindtap="closeDetail"></view>
+  <view wx:if="{{detail}}" class="sheet">
+    <view class="sheet-head">
+      <text class="sheet-title">账单明细</text>
+      <text class="sheet-close" bindtap="closeDetail">关闭</text>
+    </view>
+    <scroll-view scroll-y class="sheet-body">
+      <view class="section">
+        <view class="row"><text class="label">账单号</text><text class="value">{{detail.billNo}}</text></view>
+        <view class="row"><text class="label">类型</text><text class="value">{{detail.billTypeText}}</text></view>
+        <view class="row"><text class="label">状态</text><text class="value">{{detail.billStatusText}}</text></view>
+        <view class="row" wx:if="{{detail.billTime}}"><text class="label">时间</text><text class="value">{{detail.billTime}}</text></view>
+      </view>
+
+      <view class="section">
+        <view class="row"><text class="label">应收合计</text><text class="value">{{detail.total}} 元</text></view>
+        <view class="row"><text class="label">医保统筹</text><text class="value">{{detail.pool}} 元</text></view>
+        <view class="row"><text class="label">个账支付</text><text class="value">{{detail.account}} 元</text></view>
+        <view class="row"><text class="label">个人自付</text><text class="value">{{detail.self}} 元</text></view>
+        <view class="row"><text class="label">应缴</text><text class="value strong">{{detail.payable}} 元</text></view>
+        <view class="row"><text class="label">已缴</text><text class="value">{{detail.paid}} 元</text></view>
+        <view class="row"><text class="label">待缴</text><text class="value strong">{{detail.unpaid}} 元</text></view>
+      </view>
+
+      <view class="section">
+        <text class="section-title">费用项目</text>
+        <view wx:for="{{detail.items}}" wx:key="index" class="item-row">
+          <view class="item-main">
+            <text class="item-name">{{item.itemName}}</text>
+            <text class="item-sub">自付 {{item.selfText}} 元</text>
+          </view>
+          <text class="item-amount">{{item.amountText}} 元</text>
+        </view>
+        <view wx:if="{{detail.items.length === 0}}" class="empty">该账单没有明细行</view>
+      </view>
+    </scroll-view>
+  </view>
+</view>

@@ -4,6 +4,7 @@ import com.his.common.base.PageResult;
 import com.his.medicaltech.dto.ExamApptDTO;
 import com.his.medicaltech.vo.ExamApptVO;
 
+import java.time.LocalDate;
 import java.util.List;
 
 /**
@@ -82,4 +83,38 @@ public interface ExamAppointmentService {
      * 用于预约受理弹框打开时给出「换个时段」候选，供受理人挑一个再占号。
      */
     ExamApptVO.RecommendVO recommend(ExamApptDTO.Recommend dto);
+
+    // ---------- 患者自助口径（小程序 /miniapp/exam） ----------
+    // 为什么单开一组：员工侧方法全程按「当前登录员工」收口 —— 操作人取真实姓名、
+    // 候选设备按岗位授权科室过滤。患者账号没有 employeeId、也没有岗位科室，
+    // 直接复用员工方法会在 UserUtils 判空与 DeptScopeGuard 两处被拒。
+    // 患者侧因此显式收「就诊人ID」，跳过岗位科室过滤，操作人落患者姓名。
+
+    /**
+     * 患者待预约检查申请：只查该就诊人名下已缴费/急诊已提交、且尚无在办预约的申请。
+     *
+     * @param patientId 就诊人ID（由患者登录态解析，不接受前端自报）
+     */
+    PageResult<ExamApptVO.ApplyVO> pendingAppliesForPatient(Long patientId, int pageNum, int pageSize);
+
+    /**
+     * 患者可选时段：与员工侧同一套号源与时长判定，但不按岗位科室过滤设备。
+     */
+    ExamApptVO.RecommendVO recommendForPatient(Long patientId, Long applyId, LocalDate examDate, String afterTime);
+
+    /**
+     * 患者占号预约：申请单归属校验通过后按所选设备时段占号。
+     */
+    ExamApptVO.ApptDetailVO bookForPatient(Long patientId, Long applyId, Long deviceId,
+                                           LocalDate examDate, String startTime);
+
+    /**
+     * 患者自助取消：只放开「已预约」，终态与退号口径与员工侧一致。
+     */
+    void cancelForPatient(Long patientId, Long apptId, String reason);
+
+    /**
+     * 患者预约记录：按就诊人分页查预约单（含已终结单，供小程序「我的检查」列表）。
+     */
+    PageResult<ExamApptVO.ApptVO> appointmentsForPatient(Long patientId, int pageNum, int pageSize);
 }

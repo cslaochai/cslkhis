@@ -1,5 +1,6 @@
 package com.his.clinical.service.impl;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -20,6 +21,9 @@ import com.his.clinical.support.FollowupTaskSnapshot;
 import com.his.clinical.vo.*;
 import com.his.common.entity.CurrentUser;
 import com.his.spi.service.DeptScopeService;
+import com.his.spi.vo.PatientSurveyPaperVO;
+import com.his.spi.vo.PatientSurveyQuestionVO;
+import com.his.spi.vo.PatientSurveyTaskVO;
 import com.his.common.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -30,6 +34,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 /**
@@ -219,12 +225,24 @@ public class SurveyServiceImpl extends ServiceImpl<BizSurveyAnswerMapper, BizSur
     @Override
     @Transactional(rollbackFor = Exception.class)
     public SurveyAnswerVO submitAnswer(SurveyAnswerUpsertDTO dto) {
+        Long answerId = submitAnswerInternal(dto, false, null);
+        return answerGetById(answerId);
+    }
+
+    /** 答卷回收公共实现；patientSelf=true 时按发放单归属校验、跳过岗位科室收口 */
+    private Long submitAnswerInternal(SurveyAnswerUpsertDTO dto, boolean patientSelf, Long patientId) {
         CurrentUser operatorUser = UserUtils.getCurrentUser();
-        if (operatorUser == null) {
+        if (!patientSelf && operatorUser == null) {
             throw new BusinessException("当前用户信息不存在");
         }
         BizSurveyDispatch dispatch = requireDispatch(dto.getDispatchId());
-        deptScopeService.assertDeptAccessible(dispatch.getDeptId());
+        if (patientSelf) {
+            if (!Objects.equals(patientId, dispatch.getPatientId())) {
+                throw new BusinessException("无权提交该问卷");
+            }
+        } else {
+            deptScopeService.assertDeptAccessible(dispatch.getDeptId());
+        }
         if (Objects.equals(dispatch.getDispatchStatus(), SurveyDispatchStatusEnum.EXPIRED.getCode())) {
             throw new BusinessException("该发放单已过期");
         }
@@ -237,6 +255,9 @@ public class SurveyServiceImpl extends ServiceImpl<BizSurveyAnswerMapper, BizSur
 
         Map<Long, BizSurveyItem> paper = paperOf(dispatch.getTemplateId());
         List<SurveyAnswerItemVO> submitted = validateAndBuild(dto.getItems(), paper);
+        // 操作人口径：员工侧取登录人（并落员工ID供绩效归因）；患者自填落就诊人姓名，员工ID留空
+        String operatorName = patientSelf ? dispatch.getPatientName() : operatorUser.getRealName();
+        Long operatorEmployeeId = patientSelf ? null : operatorUser.getEmployeeId();
         boolean isNew = answer == null;
         if (isNew) {
             answer = new BizSurveyAnswer();
@@ -249,14 +270,16 @@ public class SurveyServiceImpl extends ServiceImpl<BizSurveyAnswerMapper, BizSur
             answer.setPatientName(dispatch.getPatientName());
             answer.setDeptId(dispatch.getDeptId());
             answer.setDeptName(dispatch.getDeptName());
-            answer.setCreateBy(operatorUser.getRealName());
+            answer.setCreateBy(operatorName);
         }
         // 患者身份与科室一律取自发放单，不接收前端传值：否则改个 patientId 就能把意见挂到别人头上
         answer.setAnswerStatus(AnswerStatusEnum.VALID.getCode());
-        answer.setFillSource(dto.getFillSource() == null ? FillSourceEnum.AGENT.getCode() : dto.getFillSource());
+        answer.setFillSource(dto.getFillSource() == null
+                ? (patientSelf ? FillSourceEnum.SELF.getCode() : FillSourceEnum.AGENT.getCode())
+                : dto.getFillSource());
         answer.setAnonymousFlag(Objects.equals(dto.getAnonymousFlag(), 1) ? 1 : 0);
-        answer.setFillEmployeeId(operatorUser.getEmployeeId());
-        answer.setFillEmployeeName(TextUtil.cut(operatorUser.getRealName(), 64));
+        answer.setFillEmployeeId(operatorEmployeeId);
+        answer.setFillEmployeeName(TextUtil.cut(operatorName, 64));
         answer.setFillTime(TimeUtil.nowSeconds());
         answer.setCommentText(TextUtil.cut(dto.getCommentText(), 1000));
         answer.setRemark(TextUtil.cut(dto.getRemark(), 512));
@@ -288,7 +311,92 @@ public class SurveyServiceImpl extends ServiceImpl<BizSurveyAnswerMapper, BizSur
             answer.setDisputeCaseId(caseId);
             bizSurveyAnswerMapper.updateById(answer);
         }
-        return answerGetById(answer.getId());
+        return answer.getId();
+    }
+
+    // ---------- 患者自助填报 ----------
+
+    @Override
+    public List<PatientSurveyTaskVO> myPendingTasks(Long patientId) {
+        if (patientId == null) {
+            return List.of();
+        }
+        LocalDateTime now = TimeUtil.nowSeconds();
+        List<BizSurveyDispatch> list = bizSurveyDispatchMapper.selectList(
+                new LambdaQueryWrapper<BizSurveyDispatch>()
+                        .eq(BizSurveyDispatch::getPatientId, patientId)
+                        .in(BizSurveyDispatch::getDispatchStatus,
+                                SurveyDispatchStatusEnum.PENDING_PUSH.getCode(),
+                                SurveyDispatchStatusEnum.PUSHED.getCode())
+                        .and(w -> w.isNull(BizSurveyDispatch::getExpireTime)
+                                .or().gt(BizSurveyDispatch::getExpireTime, now))
+                        .orderByDesc(BizSurveyDispatch::getPushTime));
+        return list.stream().map(this::toTask).toList();
+    }
+
+    @Override
+    public PatientSurveyPaperVO paperForPatient(Long patientId, Long dispatchId) {
+        BizSurveyDispatch dispatch = requireDispatch(dispatchId);
+        if (!Objects.equals(patientId, dispatch.getPatientId())) {
+            throw new BusinessException("无权查看该问卷");
+        }
+        List<BizSurveyItem> items = bizSurveyItemMapper.selectByTemplate(dispatch.getTemplateId());
+        PatientSurveyPaperVO vo = new PatientSurveyPaperVO();
+        vo.setDispatchId(dispatch.getId());
+        vo.setTemplateName(dispatch.getTemplateName());
+        vo.setDeptName(dispatch.getDeptName());
+        vo.setAnswered(dispatch.getAnswerId() == null ? 0 : 1);
+        vo.setItems(items.stream().map(this::toQuestion).toList());
+        if (dispatch.getAnswerId() != null) {
+            BizSurveyAnswer answer = bizSurveyAnswerMapper.selectById(dispatch.getAnswerId());
+            if (answer != null) {
+                vo.setCommentText(answer.getCommentText());
+            }
+        }
+        return vo;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public Long submitAnswerForPatient(Long patientId, Long dispatchId, Integer anonymousFlag, String commentText,
+                                       List<SurveyAnswerUpsertDTO.Item> items) {
+        if (patientId == null) {
+            throw new BusinessException("就诊人不能为空");
+        }
+        SurveyAnswerUpsertDTO dto = new SurveyAnswerUpsertDTO();
+        dto.setDispatchId(dispatchId);
+        dto.setFillSource(FillSourceEnum.SELF.getCode());
+        dto.setAnonymousFlag(Objects.equals(anonymousFlag, 1) ? 1 : 0);
+        dto.setCommentText(commentText);
+        dto.setItems(items);
+        return submitAnswerInternal(dto, true, patientId);
+    }
+
+    private PatientSurveyTaskVO toTask(BizSurveyDispatch dispatch) {
+        PatientSurveyTaskVO vo = new PatientSurveyTaskVO();
+        vo.setDispatchId(dispatch.getId());
+        vo.setTemplateName(dispatch.getTemplateName());
+        vo.setSceneText(SurveySceneEnum.getLabel(dispatch.getScene()));
+        vo.setDeptName(dispatch.getDeptName());
+        vo.setExpireTime(timeText(dispatch.getExpireTime()));
+        vo.setPushTime(timeText(dispatch.getPushTime()));
+        return vo;
+    }
+
+    private PatientSurveyQuestionVO toQuestion(BizSurveyItem item) {
+        PatientSurveyQuestionVO vo = new PatientSurveyQuestionVO();
+        vo.setItemId(item.getId());
+        vo.setSeqNo(item.getSeqNo());
+        vo.setTitle(item.getTitle());
+        vo.setQuestionType(item.getQuestionType());
+        vo.setRequired(item.getRequired());
+        vo.setMaxScore(item.getMaxScore());
+        vo.setDimension(item.getDimension());
+        return vo;
+    }
+
+    private String timeText(LocalDateTime value) {
+        return value == null ? null : DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").format(value);
     }
 
     @Override
