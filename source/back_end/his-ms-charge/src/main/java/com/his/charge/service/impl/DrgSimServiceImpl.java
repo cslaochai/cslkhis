@@ -13,6 +13,7 @@ import com.his.common.enums.DrgSimStatusEnum;
 import com.his.charge.mapper.DrgSimMapper;
 import com.his.charge.service.DrgSimService;
 import com.his.charge.support.DrgFacts;
+import com.his.charge.support.DrgGroupDiagnosis;
 import com.his.charge.support.DrgGrouper;
 import com.his.charge.support.DrgScheme;
 import com.his.charge.support.DrgSchemeCache;
@@ -45,6 +46,7 @@ public class DrgSimServiceImpl extends ServiceImpl<DrgSimMapper, DrgSimResult> i
     private final DrgSimMapper drgSimMapper;
     private final DrgGrouper grouper;
     private final DrgSchemeCache drgSchemeCache;
+    private final DrgGroupDiagnosis drgGroupDiagnosis;
 
     /**
      * 金额归一到两位小数；没有值就是 null，不兜 0。
@@ -81,8 +83,9 @@ public class DrgSimServiceImpl extends ServiceImpl<DrgSimMapper, DrgSimResult> i
 
         // 版本必须来自显式入参或"医保付费"参数配置，不做任何代码兜底
         String version = TextUtil.hasText(dto.getVersion()) ? dto.getVersion().trim() : drgSchemeCache.requireVersion();
-        DrgGrouper.GroupResult g = grouper.group(new DrgFacts(icd, mainOpers, otherDiags, otherOpers,
-                s.getGender(), s.getAge(), s.getAgeUnit(), s.getBirthWeight()), version);
+        DrgFacts facts = new DrgFacts(icd, mainOpers, otherDiags, otherOpers,
+                s.getGender(), s.getAge(), s.getAgeUnit(), s.getBirthWeight());
+        DrgGrouper.GroupResult g = grouper.group(facts, version);
         boolean grouped = g.grouped();
         BigDecimal pay = g.payStandard();
         // 支付标准未下发时盈亏算不出来，留 null，不拿 0 减实际费用冒充超支
@@ -114,7 +117,7 @@ public class DrgSimServiceImpl extends ServiceImpl<DrgSimMapper, DrgSimResult> i
         r.setProfitAmount(profit);
         r.setSimStatus(g.ambiguous() ? DrgSimStatusEnum.AMBIGUOUS.getCode()
                 : grouped ? DrgSimStatusEnum.GROUPED.getCode() : DrgSimStatusEnum.UNGROUPED.getCode());
-        r.setRuleNote(g.ruleNote());
+        r.setRuleNote(drgGroupDiagnosis.explain(g.ruleNote(), facts, g.grouped(), g.ambiguous()));
         r.setUpdateBy(UserUtils.getCurrentUser().getRealName());
         if (create) {
             try {
@@ -334,6 +337,22 @@ public class DrgSimServiceImpl extends ServiceImpl<DrgSimMapper, DrgSimResult> i
         }
         vo.setWarnings(warnings);
         return vo;
+    }
+
+    /**
+     * 重载指定版本的方案快照：丢弃 → 立即装载一次 → 把装载结果当健康检查回给调用方。
+     *
+     * <p>不这样做的话，丢弃只是把内存里的旧快照删掉，下一个入组请求才重建：改坏了的规则会先被真实病例命中，
+     * 运维只能在事后看日志。这里把装载前置到运维动作上，装载期的缺失集合/数量不符当场就看得见。
+     */
+    @Override
+    public DrgSimVO.SchemeHealth refreshScheme(String version) {
+        String v = TextUtil.hasText(version) ? version.trim() : drgSchemeCache.requireVersion();
+        long start = System.currentTimeMillis();
+        drgSchemeCache.evict(v);
+        drgSchemeCache.get(v);
+        log.info("[DRG方案] 版本 {} 快照已重载，耗时 {} ms", v, System.currentTimeMillis() - start);
+        return schemeHealth(v);
     }
 
     /**

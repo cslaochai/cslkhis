@@ -47,6 +47,8 @@
         <module>his-ms-operation</module>
         <module>his-ms-ai</module>
         <module>his-ms-app</module>
+        <!-- 故障演练沙箱：独立进程/独立端口，不被 his-web 依赖，随整体构建但不进生产包 -->
+        <module>his-web-fault</module>
         <module>his-web</module>
     </modules>
 

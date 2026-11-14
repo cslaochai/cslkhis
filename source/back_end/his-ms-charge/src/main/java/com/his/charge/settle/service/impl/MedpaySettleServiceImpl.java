@@ -21,6 +21,7 @@ import com.his.charge.support.DipFacts;
 import com.his.charge.support.DipGrouper;
 import com.his.charge.support.DipSchemeCache;
 import com.his.charge.support.DrgFacts;
+import com.his.charge.support.DrgGroupDiagnosis;
 import com.his.charge.support.DrgGrouper;
 import com.his.charge.support.DrgSchemeCache;
 import com.his.spi.service.SystemConfigFacadeService;
@@ -57,6 +58,7 @@ public class MedpaySettleServiceImpl implements MedpaySettleService {
     private final DrgSchemeCache drgSchemeCache;
     private final DipSchemeCache dipSchemeCache;
     private final DrgSimMapper drgSimMapper;
+    private final DrgGroupDiagnosis drgGroupDiagnosis;
     private final DipSimMapper dipSimMapper;
     private final SystemConfigFacadeService sysConfigService;
 
@@ -173,15 +175,16 @@ public class MedpaySettleServiceImpl implements MedpaySettleService {
                     : drgSimMapper.selectOtherOperCodes(row.getAdmissionId());
             List<String> otherDiags = row.getAdmissionId() == null ? List.of()
                     : drgSimMapper.selectOtherDiagCodes(row.getAdmissionId());
-            DrgGrouper.GroupResult g = drgGrouper.group(
-                    new DrgFacts(row.getMainDiagnosisCode(), mainOpers, otherDiags, otherOpers,
-                            row.getGender(), row.getAge(), row.getAgeUnit(), row.getBirthWeight()), version);
+            DrgFacts facts = new DrgFacts(row.getMainDiagnosisCode(), mainOpers, otherDiags, otherOpers,
+                    row.getGender(), row.getAge(), row.getAgeUnit(), row.getBirthWeight());
+            DrgGrouper.GroupResult g = drgGrouper.group(facts, version);
             grouped = g.grouped();
             weight = grouped ? g.weight() : null;
             rate = drgRate();
             groupCode = grouped ? g.drgCode() : null;
             groupName = g.drgName();
-            ruleNote = g.ruleNote();
+            // 未入组时补「编码口径/维度缺失」说明，与模拟器同一处口径，避免两条链路对同一病例给出不同理由
+            ruleNote = drgGroupDiagnosis.explain(g.ruleNote(), facts, g.grouped(), g.ambiguous());
         }
 
         BigDecimal actual = money(row.getTotalAmount());

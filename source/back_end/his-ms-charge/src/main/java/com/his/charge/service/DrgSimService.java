@@ -25,6 +25,17 @@ public interface DrgSimService {
     DrgSimVO.SchemeHealth schemeHealth(String version);
 
     /**
+     * 丢弃并重载指定版本的分组方案快照（分组目录/码集合改完后调用，不需要重启服务）。
+     *
+     * <p>装载是「按版本惰性」的：丢弃之后不主动重建一次就只是把旧快照丢了，下一个入组请求才装载，
+     * 运维看不到这次装载是否报出缺失集合，所以这里显式装载一次并把健康检查结果回给调用方。
+     *
+     * @param version 分组方案版本；不传取当前默认版本（未配置直接报业务异常）
+     * @return 重载后的方案健康检查（真组数量、缺失集合、规则可信度）
+     */
+    DrgSimVO.SchemeHealth refreshScheme(String version);
+
+    /**
      * 实时聚合 DI_xxx 集合的 ICD-10 前3位前缀分布（只读，仅用于前端目录页展示提示）。
      *
      * @param version 分组方案版本（3.0 / chs-drg-2.0）

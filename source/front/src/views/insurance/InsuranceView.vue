@@ -668,9 +668,6 @@
         </div>
       </template>
       <div v-loading="reportLoading" class="space-y-3">
-        <el-alert :closable="false" description="点『报盘上传』后：后端把结算清单+收费明细组装成 2304 报文 → 写入报文台账 → 经 InsuranceGateway 发往医保前置机（当前无联调环境，走 Mock 实现，回执直接回显）→ 回执成功后清单转『已上传』。拿到医保局规范后只需替换网关实现，报文在此处逐条可查。" show-icon
-                  title="发送给谁、从哪发送？"
-                  type="info"/>
         <el-table :data="reports" border empty-text="该清单还没有发出过报文" size="small">
           <el-table-column label="类型" width="100">
             <template #default="{ row }">{{ reportTypeMap[row.reportType] || '-' }}</template>

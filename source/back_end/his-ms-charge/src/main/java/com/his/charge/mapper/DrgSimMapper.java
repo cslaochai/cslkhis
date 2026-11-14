@@ -171,6 +171,30 @@ public interface DrgSimMapper extends BaseMapper<DrgSimResult> {
     List<CcMccRowVO> ccmccList(@Param("version") String version);
 
     /**
+     * 诊断编码在字典里的口径归属（1-存在医保版贯标码 0-只有历史缩写码 null-字典无此码）。
+     *
+     * <p>按归一口径比较（去点、去空格、大写）：首页存的是字典原样（如 J18.001），分组事实存的是
+     * 归一码（J18001），直接等值查询永远查不到。取 MAX 而不是 LIMIT 1：同一归一码若同时存在贯标行与
+     * 历史行，说明该码本身能被官方集合命中，不该提示改码。
+     */
+    @Select("""
+            SELECT MAX(code_std) FROM sys_icd10
+             WHERE del_flag = 0
+               AND REPLACE(REPLACE(UPPER(icd_code), '.', ''), ' ', '') = #{code}
+            """)
+    Integer diagCodeStd(@Param("code") String code);
+
+    /**
+     * 手术操作编码在字典里的口径归属，口径同上（sys_icd9cm3 的编码列是 op_code）
+     */
+    @Select("""
+            SELECT MAX(code_std) FROM sys_icd9cm3
+             WHERE del_flag = 0
+               AND REPLACE(REPLACE(UPPER(op_code), '.', ''), ' ', '') = #{code}
+            """)
+    Integer operCodeStd(@Param("code") String code);
+
+    /**
      * 检查目标 DI 集合是否存在（MDCA 先期分组等特殊 MDC 没有主诊断集合）
      */
     @Select("""

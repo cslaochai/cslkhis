@@ -70,6 +70,13 @@ public class DrgSimController {
         return Result.success(drgSimService.schemeHealth(version));
     }
 
+    @PreAuthorize("hasAuthority('system:config:add')")
+    @Operation(summary = "重载分组方案快照（分组目录/码集合改完后调用，无需重启）")
+    @PostMapping("/scheme/refresh")
+    public Result<DrgSimVO.SchemeHealth> refreshScheme(@RequestParam(required = false) String version) {
+        return Result.success("分组方案快照已重载", drgSimService.refreshScheme(version));
+    }
+
     /**
      * MDC 主诊断 ICD 前缀分布（实时聚合 biz_drg_set 的 DI_xxx 集合）。
      *
