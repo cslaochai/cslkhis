@@ -1,9 +1,24 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<!--
+  his-web —— 启动层（全仓唯一可执行模块）
+  职责：
+    1) 应用入口：com.his.HisApplication（@SpringBootApplication + @MapperScan("com.his.**.mapper") + 定时/异步开关）；
+    2) 装配型配置：Spring / MyBatis-Plus / Security / CORS / 静态资源 / 全局绑定（config 包）；
+    3) 横切支撑：TraceId、接口指标、慢 SQL 计时（support 包）；
+    4) 启动期校验器：数据源、权限、向量库连通性（validator 包），起不来就别放行流量；
+    5) 运行配置：application.yml / application-dev.yml / application-pro.yml / logback-spring.xml。
+  边界：本模块不写业务逻辑。Service / Controller / Mapper 一律下沉到对应 his-ms-* 域模块，
+       这里只允许"把各域粘起来"的配置类，配置类也不注入具体业务 Service。
+  产物：jar → repackage 出可执行 fat jar，产物名 his-backend，运维只认这一个文件。
+-->
 <project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xmlns="http://maven.apache.org/POM/4.0.0"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
+    <!-- 父 = 聚合根 his-backend：Java 21、依赖版本、spring-boot-starter-parent（3.2.5）全部继承。
+         本 pom 内除 plugin 内部引用外不写任何 <version>：第三方版本一律由根 pom 的 dependencyManagement 定，
+         两处各写一份必然漂移，升级时只会改一处、另一处留旧版本。 -->
     <parent>
         <groupId>com.his</groupId>
         <artifactId>his-backend</artifactId>
@@ -11,68 +26,100 @@
         <relativePath>../pom.xml</relativePath>
     </parent>
 
+    <!-- artifactId = 构建坐标；packaging 固定 jar（启动层不可能是 pom/war）；
+         name 与 artifactId 同名、description 写"启动层"职责，Maven 报告与 IDE 模块树里能直接认出这是入口模块 -->
     <artifactId>his-web</artifactId>
     <packaging>jar</packaging>
     <name>his-web</name>
     <description>启动层：应用入口、Spring/MyBatis-Plus/Security 配置、CORS、静态资源、运行配置</description>
 
     <dependencies>
+        <!-- ===== 公共底座与跨模块契约（所有业务域都建立在二者之上） ===== -->
+        <!-- 统一响应体、分页基类 PageParam、基础实体、全仓枚举、业务异常与全局异常处理 -->
         <dependency>
             <groupId>com.his</groupId>
             <artifactId>his-core-common</artifactId>
         </dependency>
+        <!-- 跨模块端口契约 + 跨域 VO/DTO：启动层只经端口间接访问别的域，不碰它们的 entity/mapper -->
         <dependency>
             <groupId>com.his</groupId>
             <artifactId>his-core-spi</artifactId>
         </dependency>
+
+        <!-- ===== 业务域：必须全量引入，缺一个就等于该域"整块消失" =====
+             原因：HisApplication 上是 @MapperScan("com.his.**.mapper")，各域 Controller 也靠包扫描注册。
+             某域 jar 不在 classpath 时，构建不报错、启动也不报错，但它的 mapper 绑定不到、接口直接 404，
+             现场表现是"这个模块的页面全空"，排查成本极高。
+             顺序按业务链路走一遍：平台 → 患者 → 住院 → 临床 → 医技 → 收费 → 门诊 → 药房 → 手术 → AI → 工作流 → 患者端。 -->
+
+        <!-- 平台域：组织/用户/角色/岗位/菜单权限/字典/参数/操作日志与审计/消息/工作台/科室·病区·诊室/设备台账/电子签名（证书） -->
         <dependency>
             <groupId>com.his</groupId>
             <artifactId>his-ms-platform</artifactId>
         </dependency>
+        <!-- 患者域：患者主档/EMPI 合并/标签/就诊人/医患关系/过敏·既往·家族·手术·用药史/体检/在线咨询/远程会诊 -->
         <dependency>
             <groupId>com.his</groupId>
             <artifactId>his-ms-patient</artifactId>
         </dependency>
+        <!-- 住院域：入院/床位分配与等待/住院医嘱与执行/护理文书与质控/转科/出院与带药/住院病历/ICU/死亡登记/膳食/会诊转诊/VTE/危急值 -->
         <dependency>
             <groupId>com.his</groupId>
             <artifactId>his-ms-inpatient</artifactId>
         </dependency>
+        <!-- 临床文书域：病历/病案归档/病历质控/临床路径/处方/检查检验申请/慢病/随访/院感/公卫上报/处方点评/不良事件/投诉/病历签名/单病种 -->
         <dependency>
             <groupId>com.his</groupId>
             <artifactId>his-ms-clinical</artifactId>
         </dependency>
+        <!-- 医技执行域：检验 LIS/检查影像 PACS/报告/危急值/心电/病理/内镜/血库输血/透析/门诊输液/医技质控/皮肤试验/医疗废物 -->
         <dependency>
             <groupId>com.his</groupId>
             <artifactId>his-ms-medicaltech</artifactId>
         </dependency>
+        <!-- 收费支付域：记账/结算/优惠/医保目录·对照·结算/支付渠道（微信·支付宝·银联）/退款/票据/班结日结/欠费管控/DRG-DIP/病案申诉 -->
         <dependency>
             <groupId>com.his</groupId>
             <artifactId>his-ms-charge</artifactId>
         </dependency>
+        <!-- 门诊域：预约挂号/号源排班/门诊站点/分诊/排队叫号/急诊/值班/班次/考勤/人力需求/复诊费策略 -->
         <dependency>
             <groupId>com.his</groupId>
             <artifactId>his-ms-outpatient</artifactId>
         </dependency>
+        <!-- 药品耗材域：药品字典/库存/调拨/发药与退药/处方调剂/抗菌药物管控/采购/耗材/CSSD/PIVAS/盘点/追溯/麻精专册/代煎 -->
         <dependency>
             <groupId>com.his</groupId>
             <artifactId>his-ms-pharmacy</artifactId>
         </dependency>
+        <!-- 手术麻醉域：手术申请/手术间/器械清点/麻醉访视与记录/PACU 复苏/麻醉随访/日间手术/安全核查/麻醉用药 -->
         <dependency>
             <groupId>com.his</groupId>
             <artifactId>his-ms-operation</artifactId>
         </dependency>
+        <!-- AI 能力域：知识库 RAG/智能问答/提示词模板/评测集与评测运行/调用日志/检验检查智能解读 -->
         <dependency>
             <groupId>com.his</groupId>
             <artifactId>his-ms-ai</artifactId>
         </dependency>
+        <!-- 工作流模块：流程定义（审批流/AI 集成流）、流程实例、待办与流转轨迹 -->
         <dependency>
             <groupId>com.his</groupId>
             <artifactId>his-ms-workflow</artifactId>
         </dependency>
+        <!-- 患者端小程序接口：微信登录/挂号预约/自助复诊/缴费支付/报告查询/排队/押金/消息订阅/服务工单/分诊/FAQ -->
         <dependency>
             <groupId>com.his</groupId>
             <artifactId>his-ms-app</artifactId>
         </dependency>
+
+        <!-- ===== 运维观测 =====
+             actuator：健康检查与就绪探针（/actuator/health），容器与发包脚本的存活判据；
+             prometheus registry：把指标暴露成 /actuator/prometheus 供采集。
+             两个指标的来源都在本模块 support 包，且都要注入 MeterRegistry：
+               ApiResultMetricsAdvice  —— 按接口结果计数（成功/业务码/异常）；
+               SlowSqlMetricsInterceptor —— 慢 SQL 计时。
+             删掉 micrometer-registry-prometheus 不会报错，只会让 Registry 退化成 no-op：指标全丢、监控面板静默空白。 -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-actuator</artifactId>
@@ -81,6 +128,10 @@
             <groupId>io.micrometer</groupId>
             <artifactId>micrometer-registry-prometheus</artifactId>
         </dependency>
+
+        <!-- ===== 数据库驱动 =====
+             只在运行期需要：Hikari 按 URL 反射加载驱动，本模块源码零引用 JDBC 编译期 API。
+             故 scope=runtime：编译期不参与、也不会被其他模块经本模块传递拿到驱动类（驱动版本必须跟数据库/字符集一起验，不该散落到各域）。 -->
         <dependency>
             <groupId>com.mysql</groupId>
             <artifactId>mysql-connector-j</artifactId>
@@ -89,8 +140,15 @@
     </dependencies>
 
     <build>
+        <!-- 产物名固定 his-backend，与根 artifactId 一致。
+             改它等于改运维脚本、容器 ENTRYPOINT 与发布包名，属发布口径变更，非必要不动。 -->
         <finalName>his-backend</finalName>
         <plugins>
+            <!-- Spring Boot 打包器：把依赖、启动器、Loader 塞进同一个 jar（repackage），不 repackage 出来的就是"不能 java -jar"的普通 jar。
+                 - mainClass 显式写死，不靠自动探测：聚合构建下自动探测可能扫到别的模块的 main；
+                 - executions 显式绑 repackage：省掉会退化成依赖 spring-boot-starter-parent 的默认执行，
+                   parent 一换版本或本模块另加 plugin 配置，repackage 就静默消失，产物变成"有依赖、没有 Main-Class"的不可执行 jar；
+                 - lombok 已由根 pom 的 pluginManagement 统一排除，fat jar 里不会多带一份注解处理器。 -->
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
@@ -108,4 +166,9 @@
             </plugin>
         </plugins>
     </build>
+
+    <!-- 刻意不在此声明的依赖，避免后人"补全"：
+         his-ca-sdk      —— CA 国密 SDK（SM2 验签 + 开放接口客户端）由 his-ms-platform 传递引入，证书/签名只在该域被调用，启动层不直接引用；
+         his-web-fault   —— 故障演练沙箱是独立进程/独立端口，永不进入业务包；
+         lombok、spring-boot-starter-test、spring-security-test —— 根 pom 已对全部子模块统一声明，子 pom 再写一遍就是重复。 -->
 </project>
