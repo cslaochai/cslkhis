@@ -92,7 +92,8 @@ public class EmployeePostServiceImpl extends ServiceImpl<SysEmployeePostMapper, 
         }
         // 登录落点只认生效中的岗位（sql/113）：已失效/尚未生效的角色不能签出 token
         List<EmployeePostVO> posts = listActivePosts(employeeId);
-        Long primaryDeptId = listPosts(employeeId).stream()
+        // 「主科室」也只认今天生效的那条：提前录入的未来主岗位不能把登录落点提前挪走
+        Long primaryDeptId = posts.stream()
                 .filter(p -> Objects.equals(YesOrNoEnum.YES.getCode(), p.getIsPrimary()))
                 .map(EmployeePostVO::getDeptId)
                 .findFirst()
@@ -203,12 +204,26 @@ public class EmployeePostServiceImpl extends ServiceImpl<SysEmployeePostMapper, 
      * <p>员工表上这两个字段仍是「这个人在哪个科室」的取数口径（号源、排班名册、
      * 病历签名等都直接读它），而岗位表里它是那**唯一一条**主岗位的科室。
      * 谁写岗位谁负责回填，否则两边会漂：改了岗位、员工表还停在旧科室。
+     *
+     * <p>只回填「今天生效」的主岗位：提前录入「7 月起 B 科」时，6 月这一天
+     * 人还在 A 科，快照不能提前换成 B，否则本月护理名册当场少一个人。
      */
     private void syncPrimaryDept(Long employeeId, EmployeePostVO primary) {
+        if (primary == null) {
+            return;
+        }
+        LocalDate today = LocalDate.now();
+        if (primary.getEffectiveDate() != null && today.isBefore(primary.getEffectiveDate())) {
+            // 主岗位还没到生效日：保持当前快照不动，等生效后再由下一次保存/刷新回填
+            return;
+        }
+        if (primary.getExpireDate() != null && today.isAfter(primary.getExpireDate())) {
+            return;
+        }
         sysEmployeeMapper.update(null, new LambdaUpdateWrapper<SysEmployee>()
                 .eq(SysEmployee::getId, employeeId)
-                .set(SysEmployee::getDeptId, primary == null ? null : primary.getDeptId())
-                .set(SysEmployee::getDeptName, primary == null ? null : primary.getDeptName()));
+                .set(SysEmployee::getDeptId, primary.getDeptId())
+                .set(SysEmployee::getDeptName, primary.getDeptName()));
     }
 
     /**
@@ -259,6 +274,9 @@ public class EmployeePostServiceImpl extends ServiceImpl<SysEmployeePostMapper, 
     }
 
     private void checkNoDuplicate(List<EmployeePostDTO> rows) {
+        // 唯一键 uk_emp_role_dept(employee_id, role_id, dept_id) 不含日期：
+        // 同一角色在同一科室只能配一条。「A 科 → B 科 → 再回 A 科」这种同科室多段
+        // 要等唯一键加上 effective_date 之后才开放，此处先按库约束挡住，避免落到 500 Duplicate entry
         Set<String> seen = new HashSet<>();
         for (EmployeePostDTO row : rows) {
             if (!TextUtil.hasText(row.getRoleCode()) || row.getDeptId() == null) {

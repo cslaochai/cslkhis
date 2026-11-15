@@ -1,3 +1,13 @@
+# 医院身份：两环境同值，只在共享文件声明一次（dev / pro 不再重复）
+his:
+  # 机构名
+  organization: 长沙市麓康医院
+  # 医院统一社会信用代码（18 位）：法人和其他组织的唯一身份标识
+  organization-credit-code: "91430100MA4L5K2N3T"
+  # 慢 SQL 阈值（毫秒）：超过即打 warn 并计入 his_sql_slow_total
+  observability:
+    slow-sql-millis: ${HIS_SLOW_SQL_MILLIS:500}
+
 spring:
   profiles:
     active: ${SPRING_PROFILES_ACTIVE:dev}
@@ -84,16 +94,7 @@ management:
         http.server.requests: true
       slo:
         http.server.requests: 100ms,300ms,500ms,1s,3s
-# 医院身份：两环境同值，只在共享文件声明一次（dev / pro 不再重复）
 
-his:
-  # 机构名
-  organization: 长沙市麓康医院
-  # 医院统一社会信用代码（18 位）：法人和其他组织的唯一身份标识
-  organization-credit-code: "91430100MA4L5K2N3T"
-  # 慢 SQL 阈值（毫秒）：超过即打 warn 并计入 his_sql_slow_total
-  observability:
-    slow-sql-millis: ${HIS_SLOW_SQL_MILLIS:500}
 # token 有效期两环境一致；签名密钥属环境项，落 profile 文件
 
 jwt:

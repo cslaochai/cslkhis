@@ -189,7 +189,7 @@ public class BizScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, BizSc
     @Override
     public List<NurseScheduleVO.Nurse> nurseSelectList(Integer unitType, Long unitId, String keyword) {
         NurseScheduleVO.Ward ward = requireUnit(unitType, unitId);
-        return bizScheduleMapper.selectNurses(ward.getDeptId(), TextUtil.trimToNull(keyword), NURSE_LIMIT);
+        return bizScheduleMapper.selectNurses(ward.getDeptId(), TextUtil.trimToNull(keyword), NURSE_LIMIT, null);
     }
 
     @Override
@@ -205,7 +205,8 @@ public class BizScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, BizSc
         LocalDate start = mondayOf(query.getWeekStart() == null ? LocalDate.now() : query.getWeekStart());
         LocalDate end = start.plusDays(6);
 
-        List<NurseScheduleVO.Nurse> nurses = bizScheduleMapper.selectNurses(ward.getDeptId(), null, NURSE_LIMIT);
+        // 行轴按「本周起始日的岗位归属」取人：月中转科不会让整周名单在中途对不上
+        List<NurseScheduleVO.Nurse> nurses = bizScheduleMapper.selectNurses(ward.getDeptId(), null, NURSE_LIMIT, start);
         List<NurseScheduleVO.Cell> cells = selectCells(ward, start, end);
         cells.forEach(c -> {
             c.setScheduleStatusText(StaffDutyStatusEnum.getLabel(c.getScheduleStatus()));
@@ -267,9 +268,10 @@ public class BizScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, BizSc
             throw new BusinessException("该员工不在在册护理名单里（需为在职的护士/护师/护工，"
                     + "且岗位类别是「护理」或「护工护理辅助」，工号可在员工档案核对）");
         }
-        if (!Objects.equals(ward.getDeptId(), nurse.getDeptId())) {
-            throw new BusinessException("护士「" + nurse.getNurseName() + "」属于「" + nurse.getDeptName()
-                    + "」，不能排进「" + ward.getWardName() + "」——跨单元支援请先在员工档案调整所属科室");
+        if (bizScheduleMapper.countEmployeeInDeptAt(nurse.getEmployeeId(), ward.getDeptId(), dto.getScheduleDate()) == 0) {
+            throw new BusinessException("护士「" + nurse.getNurseName() + "」在 " + dto.getScheduleDate()
+                    + " 不属于「" + ward.getWardName() + "」——跨单元支援请先在员工档案把岗位改到本病区（可填未来生效日期），"
+                    + "临时支援请先登记借调单");
         }
 
         NurseScheduleVO.ShiftOption shift = null;
@@ -719,7 +721,7 @@ public class BizScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, BizSc
         if (sourceStart.equals(targetStart)) {
             throw new BusinessException("来源周与目标周是同一周，复制没有意义");
         }
-        List<NurseScheduleVO.Nurse> nurses = bizScheduleMapper.selectNurses(ward.getDeptId(), null, NURSE_LIMIT);
+        List<NurseScheduleVO.Nurse> nurses = bizScheduleMapper.selectNurses(ward.getDeptId(), null, NURSE_LIMIT, sourceStart);
         List<NurseScheduleVO.Cell> source = selectCells(ward, sourceStart, sourceStart.plusDays(6));
         List<NurseScheduleVO.Cell> target = selectCells(ward, targetStart, targetStart.plusDays(6));
 
@@ -735,7 +737,14 @@ public class BizScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, BizSc
         int copied = 0;
         int skippedFilled = 0;
         int blankSource = 0;
+        int skippedLeft = 0;
         for (NurseScheduleVO.Nurse nurse : nurses) {
+            // 复制到的是目标周：这里按「目标周起始日」重判归属，
+            // 来源周还在本病区、目标周已转走的人不能整周搬过去
+            if (bizScheduleMapper.countEmployeeInDeptAt(nurse.getEmployeeId(), ward.getDeptId(), targetStart) == 0) {
+                skippedLeft++;
+                continue;
+            }
             for (int day = 1; day <= 7; day++) {
                 String key = nurse.getEmployeeId() + "|" + day;
                 if (written.contains(key)) {
@@ -775,7 +784,8 @@ public class BizScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, BizSc
         result.setCopiedCount(copied);
         result.setSkippedCount(skippedFilled);
         result.setMessage("已复制 " + copied + " 格；目标周已有 " + skippedFilled + " 格未覆盖；来源周空白 "
-                + blankSource + " 格无内容可复制");
+                + blankSource + " 格无内容可复制"
+                + (skippedLeft > 0 ? "；" + skippedLeft + " 人目标周已不属于本病区，未复制" : ""));
         nurseScheduleLogService.record(null, NurseScheduleChangeTypeEnum.COPY_WEEK, copied,
                 result.getMessage(), weekSnapshot(ward), null, null);
         return result;
@@ -811,9 +821,12 @@ public class BizScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, BizSc
             if (nurse == null) {
                 throw new BusinessException("该员工不在在册护理名单里（需为在职的护士/护师/护工，岗位类别是「护理」或「护工护理辅助」）");
             }
-            if (!Objects.equals(ward.getDeptId(), nurse.getDeptId())) {
-                throw new BusinessException("护士「" + nurse.getNurseName() + "」属于「" + nurse.getDeptName()
-                        + "」，不能排进「" + ward.getWardName() + "」——跨单元支援请先在员工档案调整所属科室");
+            // 批量铺的人要逐日复核归属：同一个人可能只在其中几天算本病区的人
+            for (LocalDate date : dto.getScheduleDates()) {
+                if (bizScheduleMapper.countEmployeeInDeptAt(nurse.getEmployeeId(), ward.getDeptId(), date) == 0) {
+                    throw new BusinessException("护士「" + nurse.getNurseName() + "」在 " + date
+                            + " 不属于「" + ward.getWardName() + "」——跨单元支援请先登记借调单");
+                }
             }
             nurseMap.put(item.getEmployeeId(), nurse);
         }
@@ -910,7 +923,7 @@ public class BizScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, BizSc
      */
     private List<NurseScheduleVO.Warning> warningsOf(NurseScheduleVO.Ward ward, LocalDate startDate, LocalDate endDate) {
         List<NurseScheduleVO.Cell> cells = selectCells(ward, startDate, endDate);
-        List<NurseScheduleVO.Nurse> nurses = bizScheduleMapper.selectNurses(ward.getDeptId(), null, NURSE_LIMIT);
+        List<NurseScheduleVO.Nurse> nurses = bizScheduleMapper.selectNurses(ward.getDeptId(), null, NURSE_LIMIT, startDate);
         return buildWarnings(ward, startDate, endDate, nurses, cells);
     }
 
@@ -923,7 +936,7 @@ public class BizScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, BizSc
         LocalDate end = ym.atEndOfMonth();
         int days = ym.lengthOfMonth();
 
-        List<NurseScheduleVO.Nurse> nurses = bizScheduleMapper.selectNurses(ward.getDeptId(), null, NURSE_LIMIT);
+        List<NurseScheduleVO.Nurse> nurses = bizScheduleMapper.selectNurses(ward.getDeptId(), null, NURSE_LIMIT, start);
         Map<Long, NurseScheduleVO.Workload> byEmployee = new LinkedHashMap<>();
         for (NurseScheduleVO.Workload w : bizScheduleMapper.selectWorkload(
                 coreOrgTypeOf(ward), ward.getWardId(), start, end)) {

@@ -831,6 +831,7 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, Biz
             throw new BusinessException("来源区间内没有排班可复制");
         }
         int copied = 0;
+        int skippedNoPost = 0;
         for (BizSchedule source : sources) {
             // STAFF 域复制跳过医生/护理/护工行：员工排班页只排医技/药学/收费/行政等岗位，
             // 历史遗留或误登记的医生/护理行（如曾洁 10-27 休息）复制会原样搬到下周，
@@ -880,12 +881,23 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, Biz
                 // 目标周这天这个人已经是休息/请假了，复制不能把请好的假改成上班
                 continue;
             }
+            // 复制的落点是新的一周：人要按「目标日」的岗位归属重判一次，
+            // 上周还在本病区、这周已转走的人不能原样搬过来（源行的 employee_post_id 也已经过期）
+            EmployeePostBriefVO targetPost = systemFacadeService.findEmployeePostAt(
+                    copy.getEmployeeId(), copy.getDeptId(), targetDate);
+            if (targetPost == null) {
+                skippedNoPost++;
+                continue;
+            }
+            copy.setEmployeePostId(targetPost.getId());
             assertNoOverlap(copy);
             save(copy);
             copied++;
         }
         if (copied == 0) {
-            throw new BusinessException("目标区间已经排满，没有需要补的空缺");
+            throw new BusinessException(skippedNoPost > 0
+                    ? "目标区间没有可复制的人：符合条件的 " + skippedNoPost + " 条在目标日已不属于本科室（多为人员已转科）"
+                    : "目标区间已经排满，没有需要补的空缺");
         }
         return copied;
     }
@@ -1167,7 +1179,7 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, Biz
         if (isDisabled(employee.getStatus())) {
             throw new BusinessException("「" + employee.getEmpName() + "」已停用，不能排班");
         }
-        EmployeePostBriefVO post = resolvePost(employee, schedule.getDeptId(), employeePostId);
+        EmployeePostBriefVO post = resolvePost(employee, schedule, employeePostId);
         schedule.setEmployeeId(employee.getId());
         schedule.setEmpCode(employee.getEmpCode());
         schedule.setEmployeeName(employee.getEmpName());
@@ -1175,12 +1187,32 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, Biz
         schedule.setStaffType(staffTypeOf(post, employee));
     }
 
-    private EmployeePostBriefVO resolvePost(EmployeeBriefVO employee, Long deptId, Long employeePostId) {
+    /**
+     * 选定岗位：按<b>班次日期</b>判定这个人是不是这个单元的人，判不出来就报错。
+     *
+     * <p>不能回落主岗位：主岗位是「今天」的快照，排班是未来或历史事实。
+     * 回落会让「7 月转去 B 科」的人 6 月在 B 科照样排成功，
+     * 也会让转走的人在 A 科继续被排，等于转岗在排班层没发生。
+     */
+    private EmployeePostBriefVO resolvePost(EmployeeBriefVO employee, BizSchedule schedule, Long employeePostId) {
         if (employeePostId != null) {
             EmployeePostBriefVO post = systemFacadeService.findEmployeePost(employeePostId);
             if (post == null || !Objects.equals(post.getEmployeeId(), employee.getId())) {
                 throw new BusinessException("所选岗位不属于这个人，请重新选择");
             }
+            // 编辑回显会带回上次的岗位ID：那条岗位必须仍覆盖本次班次日期
+            LocalDate date = schedule.getScheduleDate();
+            if (date != null) {
+                if ((post.getEffectiveDate() != null && date.isBefore(post.getEffectiveDate()))
+                        || (post.getExpireDate() != null && date.isAfter(post.getExpireDate()))) {
+                    throw new BusinessException("所选岗位在 " + date + " 不在有效期内，请重新选择岗位");
+                }
+            }
+            return post;
+        }
+        EmployeePostBriefVO post = systemFacadeService.findEmployeePostAt(
+                employee.getId(), schedule.getDeptId(), schedule.getScheduleDate());
+        if (post != null) {
             return post;
         }
         List<EmployeePostBriefVO> posts = systemFacadeService.listEmployeePosts(employee.getId());
@@ -1188,19 +1220,16 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, Biz
             throw new BusinessException("「" + employee.getEmpName() + "」还没有分配岗位，"
                     + "请先在员工档案里配置岗位（岗位类别决定这个班能不能排给他）");
         }
-        if (deptId != null && deptId != ID_NONE) {
-            for (EmployeePostBriefVO post : posts) {
-                if (Objects.equals(post.getDeptId(), deptId)) {
-                    return post;
-                }
-            }
+        if (schedule.getDeptId() == null || Objects.equals(schedule.getDeptId(), ID_NONE)) {
+            // 全院单元不绑科室，取「当日主岗位」；取不到说明这人在该日没有任何生效岗位
+            throw new BusinessException("「" + employee.getEmpName() + "」在 " + schedule.getScheduleDate()
+                    + " 没有生效中的岗位，请先在员工档案配置岗位或核对生效/失效日期");
         }
-        for (EmployeePostBriefVO post : posts) {
-            if (Objects.equals(YesOrNoEnum.YES.getCode(), post.getIsPrimary())) {
-                return post;
-            }
-        }
-        return posts.get(0);
+        // 有人有岗位，但没有一条覆盖这个单元/这个日期 —— 转科未生效、跨科借调未开单、或岗位配错了
+        throw new BusinessException("「" + employee.getEmpName() + "」在 " + schedule.getScheduleDate()
+                + " 不属于「" + schedule.getOrgName() + "」：该科室没有他当日有效的岗位。"
+                + "转科请先在员工档案把他的岗位改到本科室（可填未来生效日期），"
+                + "临时支援请先登记借调单");
     }
 
     private Integer staffTypeOf(EmployeePostBriefVO post, EmployeeBriefVO employee) {

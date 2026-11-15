@@ -73,13 +73,10 @@
             <groupId>com.his</groupId>
             <artifactId>his-ms-app</artifactId>
         </dependency>
-        <!-- 业务模块（his-web 为启动聚合层，属特例，允许依赖全部业务模块） -->
-        <!-- 可观测：指标端点。management 端口独立（见 application.yml），与控制台 /api 分开暴露 -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-actuator</artifactId>
         </dependency>
-        <!-- /actuator/prometheus 文本格式：虚拟机上的 Prometheus 抓这里 -->
         <dependency>
             <groupId>io.micrometer</groupId>
             <artifactId>micrometer-registry-prometheus</artifactId>
@@ -102,7 +99,6 @@
                 </configuration>
                 <executions>
                     <execution>
-                        <!-- id 必须与父 pom 的同名执行一致，否则两条执行并存、胖 jar 重复打包两遍 -->
                         <id>repackage</id>
                         <goals>
                             <goal>repackage</goal>

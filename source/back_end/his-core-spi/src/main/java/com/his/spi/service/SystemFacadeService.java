@@ -11,6 +11,7 @@ import com.his.spi.vo.RoleBriefVO;
 import com.his.spi.vo.UserBriefVO;
 import com.his.spi.vo.WardBriefVO;
 
+import java.time.LocalDate;
 import java.util.Collection;
 import java.util.List;
 
@@ -130,6 +131,25 @@ public interface SystemFacadeService {
      * @return 无岗位返回空列表（调用方据此提示「请先配置岗位」）
      */
     List<EmployeePostBriefVO> listEmployeePosts(Long employeeId);
+
+    /**
+     * 按「员工 + 科室 + 判定日期」取岗位，回答「这个人这一天是不是这个科的人」。
+     *
+     * <p>用于排班：班次是未来的、岗位是分段的（1–6 月 A 科、7–12 月 B 科），
+     * 只有按<b>班次日期</b>判定才对得上。判定顺序：
+     * <ol>
+     *   <li>先在该科室找与日期区间相交的岗位行（同科室多段时取命中区间的那条）；</li>
+     *   <li>该科室没有时，沿 {@code sys_department.parent_id} 逐级上溯（上限 8 层），
+     *       让「岗位挂大科、排班排二级科室」的医院也能匹配；</li>
+     *   <li>都没有返回 {@code null} —— 由调用方报错，<b>不允许回落主岗位</b>。</li>
+     * </ol>
+     *
+     * @param employeeId 员工ID（为空直接返回 null）
+     * @param deptId     科室ID；为 {@code null} 或 0 表示「全院排班」，此时取该日有效的主岗位
+     * @param date       判定日期（班次日期）；为 {@code null} 视为不限有效期（兼容历史调用）
+     * @return 无匹配岗位返回 {@code null}
+     */
+    EmployeePostBriefVO findEmployeePostAt(Long employeeId, Long deptId, LocalDate date);
 
     /**
      * 按角色ID取角色摘要（岗位类别的唯一来源）。

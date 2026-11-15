@@ -1,11 +1,4 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!--
-  日志落地策略（为什么不用 Boot 默认配置）：
-  1. 默认配置只输出 console。容器里 console 进 docker json-file，没有轮转上限，长期运行会把磁盘写满；
-     这里落文件并按「单文件 100MB / 保留 15 天 / 总量 2GB」三重上限滚动。
-  2. 报错要能单独捞：error 单独一份 error.log，排查时不用在几万行业务日志里 grep。
-  3. 每行带 traceId：一次请求打出的十几行日志靠它对得起来（值由 TraceIdFilter 写进 MDC）。
--->
 <configuration>
     <springProperty scope="context" name="LOG_DIR" source="logging.file.path" defaultValue="logs"/>
     <property name="LOG_PATTERN"

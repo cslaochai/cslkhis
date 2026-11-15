@@ -147,6 +147,11 @@ public interface BizScheduleMapper extends BaseMapper<BizSchedule> {
 
     /**
      * 护士候选（矩阵的行轴）：按工号定序，行序稳定，复制上周才认得出「同一个人」
+     *
+     * <p>带 {@code date} 时按<b>该日有效的岗位行</b>判定是否算本科室的人
+     * （护理排班是按周/按月回看未来的，读 {@code sys_employee.dept_id} 主科室快照
+     * 会让 7 月才转来的人在整个 6 月缺席、7 月才转走的人 7 月还在）。
+     * 一条岗位都没有的老员工按主科室快照兜底，避免存量名册整批消失。
      */
     @Select("""
             <script>
@@ -154,7 +159,23 @@ public interface BizScheduleMapper extends BaseMapper<BizSchedule> {
                    e.title AS nurseTitle, e.dept_id AS deptId, e.dept_name AS deptName
               FROM sys_employee e
              WHERE """ + NURSE_WHERE + """
-            <if test="deptId != null"> AND e.dept_id = #{deptId}</if>
+            <if test="deptId != null">
+              <choose>
+                <when test="date != null">
+                  AND (
+                    EXISTS (SELECT 1 FROM sys_employee_post p
+                             WHERE p.employee_id = e.id AND p.dept_id = #{deptId}
+                               AND (p.effective_date IS NULL OR p.effective_date &lt;= #{date})
+                               AND (p.expire_date IS NULL OR p.expire_date &gt;= #{date}))
+                    OR (e.dept_id = #{deptId}
+                        AND NOT EXISTS (SELECT 1 FROM sys_employee_post p2 WHERE p2.employee_id = e.id))
+                  )
+                </when>
+                <otherwise>
+                  AND e.dept_id = #{deptId}
+                </otherwise>
+              </choose>
+            </if>
             <if test="keyword != null and keyword != ''">
               AND (e.emp_name LIKE CONCAT('%', #{keyword}, '%') OR e.emp_code LIKE CONCAT('%', #{keyword}, '%'))
             </if>
@@ -164,7 +185,8 @@ public interface BizScheduleMapper extends BaseMapper<BizSchedule> {
             """)
     List<NurseScheduleVO.Nurse> selectNurses(@Param("deptId") Long deptId,
                                              @Param("keyword") String keyword,
-                                             @Param("limit") int limit);
+                                             @Param("limit") int limit,
+                                             @Param("date") LocalDate date);
 
     /**
      * 单个在册护士快照；不是护理岗/已停用直接查不出来（返回 null 由服务层报错）。
@@ -177,6 +199,35 @@ public interface BizScheduleMapper extends BaseMapper<BizSchedule> {
              AND e.id = #{employeeId}
             """)
     NurseScheduleVO.Nurse selectNurse(@Param("employeeId") Long employeeId);
+
+    /**
+     * 这个人在指定科室、指定日期算不算在册（1=算 0=不算）。
+     *
+     * <p>与 {@link #selectNurses} 的姓名/id 过滤口径一致：按当日有效的岗位行判定，
+     * 一条岗位都没有的老员工按主科室快照兜底。
+     * {@code date} 为空时只看「有没有本科室岗位」（不看有效期），供模板保存这种无固定日期的场景用。
+     */
+    @Select("""
+            <script>
+            SELECT COUNT(1)
+              FROM sys_employee e
+             WHERE e.id = #{employeeId}
+               AND (
+                 EXISTS (SELECT 1 FROM sys_employee_post p
+                          WHERE p.employee_id = e.id AND p.dept_id = #{deptId}
+                    <if test="date != null">
+                            AND (p.effective_date IS NULL OR p.effective_date &lt;= #{date})
+                            AND (p.expire_date IS NULL OR p.expire_date &gt;= #{date})
+                    </if>
+                        )
+                 OR (e.dept_id = #{deptId}
+                     AND NOT EXISTS (SELECT 1 FROM sys_employee_post p2 WHERE p2.employee_id = e.id))
+               )
+            </script>
+            """)
+    int countEmployeeInDeptAt(@Param("employeeId") Long employeeId,
+                              @Param("deptId") Long deptId,
+                              @Param("date") LocalDate date);
 
     /**
      * 护理班次（use_scope=2 且启用）：矩阵格子唯一可选的班次来源

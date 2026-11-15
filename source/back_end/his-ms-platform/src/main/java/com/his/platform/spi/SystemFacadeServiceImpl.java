@@ -2,6 +2,7 @@ package com.his.platform.spi;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.his.common.enums.EnableStatusEnum;
+import com.his.common.enums.YesOrNoEnum;
 import com.his.spi.dto.PatientAccountCreateDTO;
 import com.his.spi.service.SystemFacadeService;
 import com.his.spi.vo.ClinicRoomBriefVO;
@@ -38,9 +39,13 @@ import com.his.common.util.TextUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
+import java.util.Set;
 
 /**
  * 系统主数据对外端口实现：主档实体的读取与摘要转换只在本类发生，实体不出模块。
@@ -195,6 +200,65 @@ public class SystemFacadeServiceImpl implements SystemFacadeService {
             result.add(toPostBrief(post));
         }
         return result;
+    }
+
+    /**
+     * 按「员工 + 科室 + 判定日期」取岗位：同科室多段时取命中区间的那条，
+     * 本科室没有时沿科室树逐级上溯（上限 8 层），都没有返回 null。
+     *
+     * <p>不回落主岗位是刻意的：排班是未来事实，主岗位是「今天」的快照，
+     * 拿快照兜底会让转走的人在原科室照样排成功，等于转岗在排班层没发生。
+     */
+    @Override
+    public EmployeePostBriefVO findEmployeePostAt(Long employeeId, Long deptId, LocalDate date) {
+        if (employeeId == null) {
+            return null;
+        }
+        List<SysEmployeePost> posts = sysEmployeePostMapper.selectList(
+                new LambdaQueryWrapper<SysEmployeePost>()
+                        .eq(SysEmployeePost::getEmployeeId, employeeId)
+                        .orderByAsc(SysEmployeePost::getEffectiveDate)
+                        .orderByAsc(SysEmployeePost::getId));
+        List<SysEmployeePost> alive = posts.stream().filter(p -> coversDate(p, date)).toList();
+        if (alive.isEmpty()) {
+            return null;
+        }
+        if (deptId == null || deptId == 0L) {
+            // 全院级排班：不指定科室，取该日有效的主岗位，没有主岗位退当天第一条
+            return toPostBrief(alive.stream()
+                    .filter(p -> Objects.equals(YesOrNoEnum.YES.getCode(), p.getIsPrimary()))
+                    .findFirst()
+                    .orElse(alive.get(0)));
+        }
+        Long cursor = deptId;
+        Set<Long> visited = new HashSet<>();
+        // 上限 8 层：科室树正常 3~4 层，防脏数据成环
+        for (int depth = 0; depth < 8 && cursor != null && cursor > 0 && visited.add(cursor); depth++) {
+            Long current = cursor;
+            SysEmployeePost hit = alive.stream()
+                    .filter(p -> Objects.equals(p.getDeptId(), current))
+                    .findFirst()
+                    .orElse(null);
+            if (hit != null) {
+                return toPostBrief(hit);
+            }
+            SysDepartment dept = sysDepartmentMapper.selectById(current);
+            cursor = dept == null ? null : dept.getParentId();
+        }
+        return null;
+    }
+
+    /**
+     * 岗位行是否覆盖判定日期；日期为空视为不限有效期（兼容历史调用）。
+     */
+    private boolean coversDate(SysEmployeePost post, LocalDate date) {
+        if (date == null) {
+            return true;
+        }
+        if (post.getEffectiveDate() != null && date.isBefore(post.getEffectiveDate())) {
+            return false;
+        }
+        return post.getExpireDate() == null || !date.isAfter(post.getExpireDate());
     }
 
     @Override
@@ -429,6 +493,8 @@ public class SystemFacadeServiceImpl implements SystemFacadeService {
         vo.setRoleId(post.getRoleId());
         vo.setDeptId(post.getDeptId());
         vo.setIsPrimary(post.getIsPrimary());
+        vo.setEffectiveDate(post.getEffectiveDate());
+        vo.setExpireDate(post.getExpireDate());
         return vo;
     }
 

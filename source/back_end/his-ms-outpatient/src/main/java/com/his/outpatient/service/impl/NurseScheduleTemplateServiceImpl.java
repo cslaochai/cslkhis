@@ -192,9 +192,9 @@ public class NurseScheduleTemplateServiceImpl extends ServiceImpl<BizNurseSchedu
                 throw new BusinessException("护士「" + (src.getEmployeeName() == null ? src.getEmployeeId() : src.getEmployeeName())
                         + "」不在在册护理名单里（需为在职护士/护师/护工）");
             }
-            if (!Objects.equals(ward.getDeptId(), nurse.getDeptId())) {
-                throw new BusinessException("护士「" + nurse.getNurseName() + "」属于「" + nurse.getDeptName()
-                        + "」，不能排进「" + ward.getWardName() + "」——跨单元支援请先调整所属科室");
+            if (bizScheduleMapper.countEmployeeInDeptAt(nurse.getEmployeeId(), ward.getDeptId(), null) == 0) {
+                throw new BusinessException("护士「" + nurse.getNurseName() + "」在「" + ward.getWardName()
+                        + "」没有岗位，不能排进本病区的模板");
             }
             StaffDutyStatusEnum status = StaffDutyStatusEnum.fromCode(src.getScheduleStatus());
             if (status == null) {
@@ -360,9 +360,10 @@ public class NurseScheduleTemplateServiceImpl extends ServiceImpl<BizNurseSchedu
                 continue;
             }
             NurseScheduleVO.Nurse nurse = bizScheduleMapper.selectNurse(item.getEmployeeId());
-            if (nurse == null || !Objects.equals(ward.getDeptId(), nurse.getDeptId())) {
+            // 套用是按具体日期生成排班的，归属要按那天算：月中转走的人 7 月这一周就该被跳过
+            if (nurse == null || bizScheduleMapper.countEmployeeInDeptAt(nurse.getEmployeeId(), ward.getDeptId(), date) == 0) {
                 skippedInvalid++;
-                log.warn("套用模板 {} 跳过护士 {}：不在「{}」在册", tpl.getId(), item.getEmployeeId(), ward.getWardName());
+                log.warn("套用模板 {} 跳过护士 {}：{} 不在「{}」在册", tpl.getId(), item.getEmployeeId(), date, ward.getWardName());
                 continue;
             }
             StaffDutyStatusEnum status = StaffDutyStatusEnum.fromCode(item.getScheduleStatus());
