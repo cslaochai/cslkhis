@@ -30,6 +30,12 @@
         <wx-java.version>4.6.0</wx-java.version>
         <alipay-sdk.version>4.38.0.ALL</alipay-sdk.version>
         <rocketmq-spring.version>2.3.2</rocketmq-spring.version>
+        <bouncycastle.version>1.78.1</bouncycastle.version>
+        <pdfbox.version>2.0.31</pdfbox.version>
+        <poi.version>5.2.5</poi.version>
+        <milvus.version>2.5.17</milvus.version>
+        <spring-ai-alibaba.version>1.0.0.1</spring-ai-alibaba.version>
+        <lombok.version>1.18.32</lombok.version>
     </properties>
 
     <modules>
@@ -46,6 +52,7 @@
         <module>his-ms-pharmacy</module>
         <module>his-ms-operation</module>
         <module>his-ms-ai</module>
+        <module>his-ms-workflow</module>
         <module>his-ms-app</module>
         <!-- 故障演练沙箱：独立进程/独立端口，不被 his-web 依赖，随整体构建但不进生产包 -->
         <module>his-web-fault</module>
@@ -123,6 +130,11 @@
             </dependency>
             <dependency>
                 <groupId>com.his</groupId>
+                <artifactId>his-ms-workflow</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.his</groupId>
                 <artifactId>his-ms-app</artifactId>
                 <version>${project.version}</version>
             </dependency>            <!-- ===== 第三方 ===== -->
@@ -184,6 +196,44 @@
                 <groupId>org.apache.rocketmq</groupId>
                 <artifactId>rocketmq-spring-boot-starter</artifactId>
                 <version>${rocketmq-spring.version}</version>
+            </dependency>
+
+            <!-- 国密：SM2 签名/验签、csssl 证书链（CA 推送与医保链路共用，版本必须一致） -->
+            <dependency>
+                <groupId>org.bouncycastle</groupId>
+                <artifactId>bcprov-jdk18on</artifactId>
+                <version>${bouncycastle.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.bouncycastle</groupId>
+                <artifactId>bcpkix-jdk18on</artifactId>
+                <version>${bouncycastle.version}</version>
+            </dependency>
+
+            <!-- 文档解析：病历/清单类 PDF、Excel 抽取 -->
+            <dependency>
+                <groupId>org.apache.pdfbox</groupId>
+                <artifactId>pdfbox</artifactId>
+                <version>${pdfbox.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.poi</groupId>
+                <artifactId>poi-ooxml</artifactId>
+                <version>${poi.version}</version>
+            </dependency>
+
+            <!-- 向量库：知识库检索 -->
+            <dependency>
+                <groupId>io.milvus</groupId>
+                <artifactId>milvus-sdk-java</artifactId>
+                <version>${milvus.version}</version>
+            </dependency>
+
+            <!-- AI 图运行时：只用于 AI 能力内部的多步编排，不接管工作流审批 -->
+            <dependency>
+                <groupId>com.alibaba.cloud.ai</groupId>
+                <artifactId>spring-ai-alibaba-graph-core</artifactId>
+                <version>${spring-ai-alibaba.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>

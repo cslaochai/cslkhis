@@ -50,6 +50,8 @@ curl http://127.0.0.1:18090/fault/status
 | 日志采集 | Windows 装 Filebeat / Promtail / Vector，输入 `run/logs/*.log`，输出到 VM 的 Logstash / Loki | ELK / Loki 监控 |
 | 跑在 VM | 把 jar 放到 Linux VM，`java -jar` 启动；Windows 用 `ssh -L 18090:127.0.0.1:18090 user@vm` 隧道 | 要 `top -Hp`、`jstack`、`jstat` 真数据 |
 
+完整节点与拓扑见 `施工手册/14-故障演练/10-日志监控链路.md`。
+
 Actuator 目前只在 `127.0.0.1:18090` 开 `health/info/metrics/threaddump/heapdump/loggers`，没有 Prometheus 端点；
 VM 里的 Prometheus 要抓 JVM 指标，需要另加 `micrometer-registry-prometheus` 并把 management 端口单独暴露。
 
@@ -112,7 +114,7 @@ curl http://127.0.0.1:18090/fault/catalog
 ```
 his-web-fault/
 ├── run-web-fault.cmd               # 带 JVM 参数的启动脚本（OOM dump / NMT / GC 日志）
-└── src/main/java/com/his/faultlab/
+└── src/main/java/com/his/webfault/
     ├── controller/FaultLabController.java     # 所有触发器（POST）
     ├── service/impl/FaultLabServiceImpl.java  # 参数夹取 + 状态拼装
     ├── support/                               # 每类故障一个类，互不复用

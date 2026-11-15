@@ -23,7 +23,8 @@ public enum AiBizTypeEnum {
     FOLLOWUP("followup", "随访话术"),
     INSURANCE_AUDIT("insurance_audit", "医保审核"),
     DETERIORATION_ALERT("deterioration_alert", "危重预警"),
-    NURSING_HANDOVER("nursing_handover", "护理交接班");
+    NURSING_HANDOVER("nursing_handover", "护理交接班"),
+    FLOW("flow", "工作流节点");
 
     private final String code;
     private final String label;

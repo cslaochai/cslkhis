@@ -1,5 +1,12 @@
 package com.his.ai.service.impl;
 
+import com.alibaba.cloud.ai.graph.CompiledGraph;
+import com.alibaba.cloud.ai.graph.OverAllState;
+import com.alibaba.cloud.ai.graph.StateGraph;
+import com.alibaba.cloud.ai.graph.action.AsyncEdgeAction;
+import com.alibaba.cloud.ai.graph.action.AsyncNodeAction;
+import com.alibaba.cloud.ai.graph.exception.GraphStateException;
+import com.alibaba.cloud.ai.graph.state.strategy.ReplaceStrategy;
 import com.his.ai.constant.AiCapabilityKeys;
 import com.his.ai.dto.AiCallDTO;
 import com.his.ai.dto.EmrQcExecuteDTO;
@@ -50,6 +57,34 @@ public class EmrQcCapabilityImpl         implements EmrQcCapability {
     private static final int ERROR_DETAIL_MAX_LENGTH = 1000;
 
     private static final int OUTPUT_TOKEN_LIMIT = 2048;
+
+    /**
+     * 质控图：硬规则 → 模型判定 → （失败走降级分支）→ 汇总。
+     * 图只做计算编排，落库与出参组装仍留在 execute()，避免把事务边界交给图。
+     */
+    private static final String GRAPH_NAME = "emr-qc-inherent";
+
+    private static final String NODE_HARD_RULE = "hard_rule";
+
+    private static final String NODE_AI_JUDGE = "ai_judge";
+
+    private static final String NODE_DEGRADE = "degrade";
+
+    private static final String NODE_FINALIZE = "finalize";
+
+    private static final String STATE_RECORD = "record";
+
+    private static final String STATE_HARD_ISSUES = "hardIssues";
+
+    private static final String STATE_LLM_ISSUES = "llmIssues";
+
+    private static final String STATE_SUMMARY = "summary";
+
+    private static final String STATE_LLM_OK = "llmOk";
+
+    private static final String STATE_DEGRADE_REASON = "degradeReason";
+
+    private static final String STATE_FINAL_ISSUES = "finalIssues";
 
     /**
      * 必填项硬规则：字段取值器 + 中文名 + 缺失时的严重程度。
@@ -158,7 +193,7 @@ public class EmrQcCapabilityImpl         implements EmrQcCapability {
     }
 
     /**
-     * 执行病历内涵质控
+     * 执行病历内涵质控（由 Graph 编排：硬规则 → 模型判定 → 降级/汇总）
      */
     public EmrQcResultVO execute(EmrQcExecuteDTO dto) {
         long start = System.currentTimeMillis();
@@ -169,20 +204,30 @@ public class EmrQcCapabilityImpl         implements EmrQcCapability {
         }
 
         EmrQcResultVO vo = new EmrQcResultVO();
-        List<EmrQcIssueVO> issues = new ArrayList<>(checkRequiredFields(record));
-
-        Optional<EmrQcLlmOutputDTO> llmOutput = callModel(record);
-        if (llmOutput.isPresent()) {
-            issues.addAll(toIssues(llmOutput.get()));
-            vo.setSummary(TextUtil.cut(llmOutput.get().getSummary(), 200, ""));
-        } else {
+        List<EmrQcIssueVO> issues;
+        Optional<OverAllState> result = runGraph(record);
+        if (result.isEmpty()) {
+            // 图本身没跑起来（构建失败/节点抛异常）：仍要给质控员结论，退回到硬规则
+            issues = checkRequiredFields(record);
             vo.setDegraded(true);
-            vo.setDegradeReason(aiExecutionService.degradeReasonOf(AiCapabilityKeys.EMR_QC)
-                    + "；本次仅返回必填项规则检查结果");
+            vo.setDegradeReason("质控图执行异常，本次仅返回必填项规则检查结果");
             vo.setSummary("大模型内涵质控未执行，以下仅为必填项规则检查结果。");
+        } else {
+            OverAllState state = result.get();
+            issues = dedupeAndSort(asIssueList(state.data().get(STATE_FINAL_ISSUES)));
+            if (!Boolean.TRUE.equals(state.data().get(STATE_LLM_OK))) {
+                Object reason = state.data().get(STATE_DEGRADE_REASON);
+                String degradeText = reason == null
+                        ? aiExecutionService.degradeReasonOf(AiCapabilityKeys.EMR_QC)
+                        : String.valueOf(reason);
+                vo.setDegraded(true);
+                vo.setDegradeReason(TextUtil.cut(degradeText + "；本次仅返回必填项规则检查结果", 200, ""));
+                vo.setSummary("大模型内涵质控未执行，以下仅为必填项规则检查结果。");
+            } else {
+                vo.setSummary(TextUtil.cut(String.valueOf(state.data().getOrDefault(STATE_SUMMARY, "")), 200, ""));
+            }
         }
 
-        issues = dedupeAndSort(issues);
         vo.setIssues(issues);
         vo.setIssueCount(issues.size());
         vo.setMaxSeverity(issues.stream()
@@ -196,6 +241,101 @@ public class EmrQcCapabilityImpl         implements EmrQcCapability {
 
         vo.setLatencyMs(System.currentTimeMillis() - start);
         return vo;
+    }
+
+    private volatile CompiledGraph qcGraph;
+
+    /**
+     * 图是单例：节点里的行为全部来自 state 与本次请求的 record，没有跨请求可变状态
+     */
+    private CompiledGraph qcGraph() {
+        CompiledGraph local = qcGraph;
+        if (local != null) {
+            return local;
+        }
+        synchronized (this) {
+            if (qcGraph == null) {
+                qcGraph = buildGraph();
+            }
+            return qcGraph;
+        }
+    }
+
+    private CompiledGraph buildGraph() {
+        StateGraph graph = new StateGraph(GRAPH_NAME, () -> {
+            OverAllState state = new OverAllState();
+            state.registerKeyAndStrategy(STATE_RECORD, new ReplaceStrategy());
+            state.registerKeyAndStrategy(STATE_HARD_ISSUES, new ReplaceStrategy());
+            state.registerKeyAndStrategy(STATE_LLM_ISSUES, new ReplaceStrategy());
+            state.registerKeyAndStrategy(STATE_SUMMARY, new ReplaceStrategy());
+            state.registerKeyAndStrategy(STATE_LLM_OK, new ReplaceStrategy());
+            state.registerKeyAndStrategy(STATE_DEGRADE_REASON, new ReplaceStrategy());
+            state.registerKeyAndStrategy(STATE_FINAL_ISSUES, new ReplaceStrategy());
+            return state;
+        });
+        try {
+            graph.addNode(NODE_HARD_RULE, AsyncNodeAction.node_async(state ->
+                    Map.of(STATE_HARD_ISSUES, checkRequiredFields(recordOf(state)))));
+            graph.addNode(NODE_AI_JUDGE, AsyncNodeAction.node_async(state -> judgeByModel(recordOf(state))));
+            graph.addNode(NODE_DEGRADE, AsyncNodeAction.node_async(state ->
+                    Map.of(STATE_SUMMARY, "大模型内涵质控未执行，以下仅为必填项规则检查结果。")));
+            graph.addNode(NODE_FINALIZE, AsyncNodeAction.node_async(state -> {
+                List<EmrQcIssueVO> merged = new ArrayList<>(asIssueList(state.data().get(STATE_HARD_ISSUES)));
+                merged.addAll(asIssueList(state.data().get(STATE_LLM_ISSUES)));
+                return Map.of(STATE_FINAL_ISSUES, dedupeAndSort(merged));
+            }));
+
+            graph.addEdge(StateGraph.START, NODE_HARD_RULE);
+            graph.addEdge(NODE_HARD_RULE, NODE_AI_JUDGE);
+            graph.addConditionalEdges(NODE_AI_JUDGE,
+                    AsyncEdgeAction.edge_async(state -> Boolean.TRUE.equals(state.data().get(STATE_LLM_OK))
+                            ? NODE_FINALIZE : NODE_DEGRADE),
+                    Map.of(NODE_FINALIZE, NODE_FINALIZE, NODE_DEGRADE, NODE_DEGRADE));
+            graph.addEdge(NODE_DEGRADE, NODE_FINALIZE);
+            graph.addEdge(NODE_FINALIZE, StateGraph.END);
+            return graph.compile();
+        } catch (GraphStateException ex) {
+            throw new IllegalStateException("病历内涵质控图构建失败", ex);
+        }
+    }
+
+    private Optional<OverAllState> runGraph(AiMedicalRecordContentVO record) {
+        try {
+            return qcGraph().invoke(Map.of(STATE_RECORD, record));
+        } catch (Exception ex) {
+            log.error("[AI-病历质控] 质控图执行失败，退回硬规则", ex);
+            return Optional.empty();
+        }
+    }
+
+    /**
+     * 模型判定节点：一次调用，成功则带回问题清单与总结，失败只留降级原因
+     */
+    private Map<String, Object> judgeByModel(AiMedicalRecordContentVO record) {
+        Optional<EmrQcLlmOutputDTO> llmOutput = callModel(record);
+        Map<String, Object> patch = new HashMap<>();
+        patch.put(STATE_LLM_OK, llmOutput.isPresent());
+        if (llmOutput.isEmpty()) {
+            patch.put(STATE_DEGRADE_REASON, aiExecutionService.degradeReasonOf(AiCapabilityKeys.EMR_QC));
+            return patch;
+        }
+        EmrQcLlmOutputDTO output = llmOutput.get();
+        patch.put(STATE_LLM_ISSUES, toIssues(output));
+        patch.put(STATE_SUMMARY, TextUtil.cut(output.getSummary(), 200, ""));
+        return patch;
+    }
+
+    private static AiMedicalRecordContentVO recordOf(OverAllState state) {
+        Object record = state.data().get(STATE_RECORD);
+        if (!(record instanceof AiMedicalRecordContentVO value)) {
+            throw new IllegalStateException("质控图缺少病历入参");
+        }
+        return value;
+    }
+
+    @SuppressWarnings("unchecked")
+    private static List<EmrQcIssueVO> asIssueList(Object value) {
+        return value instanceof List<?> list ? (List<EmrQcIssueVO>) list : List.of();
     }
 
     /**

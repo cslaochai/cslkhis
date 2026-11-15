@@ -31,6 +31,8 @@ spring:
       maximum-pool-size: 10
       minimum-idle: 5
       connection-test-query: SELECT 1
+      # 连接池 MXBean：不开则 hikaricp_connections_* 指标一个都不出现，看板空白且零报错
+      register-mbeans: true
   data:
     redis:
       port: 6379
@@ -41,6 +43,47 @@ server:
   port: 8080
   servlet:
     context-path: /api
+  tomcat:
+    # Tomcat 不注册 MBean 时 actuator 拿不到 tomcat_threads_*，线程池打满只能靠猜
+    mbeanregistry:
+      enabled: true
+
+# 可观测端点：独立端口，和业务 /api 分开（业务口不暴露指标，也不走 JWT 鉴权链）
+# dev 由 application-dev.yml 覆盖 address 为 0.0.0.0，供虚拟机上的 Prometheus 抓取；
+# 默认只绑回环，生产按需注入 HIS_MGMT_ADDRESS
+management:
+  server:
+    port: ${HIS_MGMT_PORT:18080}
+    address: ${HIS_MGMT_ADDRESS:127.0.0.1}
+  endpoints:
+    web:
+      exposure:
+        # 只要这四类；heapdump/threaddump 这类带敏感数据的端点不对外暴露
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: always
+      probes:
+        enabled: true
+      group:
+        # 存活 = 进程活着；就绪 = 数据库/Redis 可用。两者混用会让依赖抖动直接把实例判死
+        liveness:
+          include: livenessState,ping
+        readiness:
+          include: readinessState,db,redis
+          show-details: never
+  metrics:
+    tags:
+      application: his-backend
+    web:
+      server:
+        # 单值上限：未命中路由的 404（原始 URI 带主键）会把标签基数打爆，超出即丢弃
+        max-uri-tags: 50
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true
+      slo:
+        http.server.requests: 100ms,300ms,500ms,1s,3s
 # 医院身份：两环境同值，只在共享文件声明一次（dev / pro 不再重复）
 
 his:
@@ -48,6 +91,9 @@ his:
   organization: 长沙市麓康医院
   # 医院统一社会信用代码（18 位）：法人和其他组织的唯一身份标识
   organization-credit-code: "91430100MA4L5K2N3T"
+  # 慢 SQL 阈值（毫秒）：超过即打 warn 并计入 his_sql_slow_total
+  observability:
+    slow-sql-millis: ${HIS_SLOW_SQL_MILLIS:500}
 # token 有效期两环境一致；签名密钥属环境项，落 profile 文件
 
 jwt:
@@ -87,3 +133,7 @@ rocketmq:
 logging:
   level:
     com.his: info
+  # 落盘目录：logback-spring.xml 通过 springProperty 读这里（自定义 logback 配置下 logging.file.* 不再生效，
+  # 但 logging.file.path 本身仍可作为占位符来源）。容器里由 compose 挂卷到 /app/logs
+  file:
+    path: ${HIS_LOG_DIR:logs}

@@ -28,7 +28,6 @@
         <dependency>
             <groupId>org.bouncycastle</groupId>
             <artifactId>bcprov-jdk18on</artifactId>
-            <version>1.78.1</version>
         </dependency>
         <!-- CA SDK：SM2 验签 + 事件 DTO + API 客户端（同 reactor 模块）。
              不能加 optional：optional 会阻断传递依赖，his-web 打 fat jar 时不会带这个 jar，
@@ -49,7 +48,7 @@
                         <path>
                             <groupId>org.projectlombok</groupId>
                             <artifactId>lombok</artifactId>
-                            <version>1.18.32</version>
+                            <version>${lombok.version}</version>
                         </path>
                     </annotationProcessorPaths>
                 </configuration>

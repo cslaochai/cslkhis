@@ -27,7 +27,9 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(BusinessException.class)
     public Result<?> handleBusinessException(BusinessException e) {
-        log.error("业务异常: {}", e.getMessage());
+        // 业务异常 = 规则拒绝（余额不足 / 重复提交 / 状态机不允许），不是服务端故障。
+        // 这里打 error 会让 error.log 和告警规则里九成是无害提示，真故障被淹掉 —— 必须 warn。
+        log.warn("业务异常[{}]: {}", e.getCode(), e.getMessage());
         return Result.error(e.getCode(), e.getMessage());
     }
 

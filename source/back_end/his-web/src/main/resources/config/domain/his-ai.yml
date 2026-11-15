@@ -57,6 +57,10 @@ his:
       nursing_handover: true
       # 语音口述转写（G-14）：ASR 确定性转换，失败如实报错——语音没有规则兜底文本，造文本即造假病历
       voice_transcribe: true
+      # 工作流 AI 节点：关掉后自动节点全部降级（记轨迹、流程继续走，业务不中断）
+      flow_ai_node: true
+      # 工作流意图路由：关掉后 dispatch 只能按 flowCode 直连，不再自动分流
+      flow_intent_route: true
     # 单能力超时覆盖（毫秒），未配置的回落 timeout-ms
     timeouts:
       icd10: 8000        # 同步路径，医生在等
@@ -89,6 +93,10 @@ his:
       nursing_handover: 10000
       # 语音转写：ASR 同步转写，医生在等；超时如实报错不造文本
       voice_transcribe: 20000
+      # 工作流自动节点：模型挂掉不阻塞流程（降级继续走），超时不必太长
+      flow_ai_node: 15000
+      # 意图路由：患者在小程序里等回复，超时按「没识别出来」处理，让患者补充描述
+      flow_intent_route: 8000
 
     # 按能力覆盖模型（G-16 多模型路由）：命中即该能力整体换模型（含 lite 分流），未配的回落 ai.model
     models:

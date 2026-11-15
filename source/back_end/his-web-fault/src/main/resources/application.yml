@@ -54,7 +54,7 @@ fault:
 
 logging:
   level:
-    com.his.faultlab: info
+    com.his.webfault: info
     org.springframework: warn
   file:
     name: run/logs/his-web-fault.log

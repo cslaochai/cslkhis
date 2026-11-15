@@ -13,6 +13,13 @@ const routes = [
             {path: '', name: 'Workbench', component: () => import('@/views/dashboard/WorkbenchView.vue')},
             {path: 'messages', name: 'Messages', component: () => import('@/views/messages/MessagesView.vue')},
             {
+                // 统一待办：消息待办 + 流程待办聚合成一张列表（菜单 sys_menu 29654，门户目录 100）
+                path: 'todos',
+                name: 'UnifiedTodo',
+                component: () => import('@/views/todos/UnifiedTodoView.vue'),
+                meta: {title: '统一待办'}
+            },
+            {
                 path: 'appointments',
                 name: 'Appointments',
                 component: () => import('@/views/appointments/AppointmentsView.vue')
@@ -906,6 +913,22 @@ const routes = [
                 name: 'KnowledgeGraph',
                 component: () => import('@/views/ai/KnowledgeGraphView.vue'),
                 meta: {title: '知识图谱'}
+            },
+            {
+                // 菜单由 sys_menu 29652 分发（目录 29651 工作流，仅授系统管理员 role_id=1）
+                // 流程待办不单开页面：并入门户→消息待办（sys_menu 102）的同页签
+                path: 'workflow/definition',
+                name: 'WorkflowDefinition',
+                component: () => import('@/views/workflow/FlowDefinitionView.vue'),
+                meta: {title: '流程定义'}
+            },
+            {
+                // 拖拽设计器：挂在流程定义 path 之下，guard 按 '/workflow/definition' 前缀放行；
+                // 不进菜单（入口是列表页的新增/编辑按钮）
+                path: 'workflow/definition/designer/:id?',
+                name: 'WorkflowDesigner',
+                component: () => import('@/views/workflow/FlowDesignerView.vue'),
+                meta: {title: '流程设计器'}
             },
         ],
     },

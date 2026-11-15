@@ -168,6 +168,23 @@ public interface AiCapabilityKeys {
     public static final String VOICE_TRANSCRIBE = "voice_transcribe";
 
     /**
+     * 工作流 AI 节点（通用节点执行）
+     * <p>
+     * 工作流里每个「自动节点」配一个提示词模板编码 + 节点输入 JSON，走这条能力统一执行。
+     * 这样新增一个 AI 节点只需要在提示词管理里加模板，不用为每个节点写 Java。
+     * <b>只产出建议/文案/结构化事实，不写业务库、不产生审批结论。</b>
+     */
+    public static final String FLOW_AI_NODE = "flow_ai_node";
+
+    /**
+     * 工作流意图路由
+     * <p>
+     * 患者一句自由文本 → 从「已发布的流程候选」里选一条。模型只能选候选编码，自造编码丢弃；
+     * 识别不出来时返回空编码，由调用方决定追问还是走兜底分支，不猜。
+     */
+    public static final String FLOW_INTENT_ROUTE = "flow_intent_route";
+
+    /**
      * 连通性自检
      */
     public static final String HEALTH_CHECK = "health_check";

@@ -22,12 +22,10 @@
         <dependency>
             <groupId>org.bouncycastle</groupId>
             <artifactId>bcprov-jdk18on</artifactId>
-            <version>1.78.1</version>
         </dependency>
         <dependency>
             <groupId>org.bouncycastle</groupId>
             <artifactId>bcpkix-jdk18on</artifactId>
-            <version>1.78.1</version>
         </dependency>
         <!-- JSON 编解码（版本由 spring-boot-starter-parent 统一管理） -->
         <dependency>

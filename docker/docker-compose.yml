@@ -9,9 +9,22 @@ services:
     env_file: .env
     environment:
       TZ: Asia/Shanghai
-      JAVA_OPTS: -Xms512m -Xmx2g -XX:+UseG1GC -Duser.timezone=Asia/Shanghai
+      # OOM 现场必须留下：不 dump 就只能重启了事，事后一点证据都没有
+      # GC 日志单独落文件（容器日志只有 stdout，GC 详细信息进不去）
+      # NMT 用来分辨"堆正常但 RSS 涨"的堆外泄漏
+      JAVA_OPTS: >-
+        -Xms512m -Xmx2g -XX:+UseG1GC -Duser.timezone=Asia/Shanghai
+        -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/app/cslk-data/dumps
+        -Xlog:gc*:file=/app/logs/gc.log:time,uptime,level,tags:filecount=5,filesize=20M
+        -XX:NativeMemoryTracking=summary
+      # 指标端点在容器内绑 0.0.0.0（docker 的端口转发到不了容器 loopback），
+      # 但下面 ports 只发布到宿主 127.0.0.1，所以仍然只有本机（Prometheus）能抓
+      HIS_MGMT_ADDRESS: 0.0.0.0
+      HIS_LOG_DIR: /app/logs
     ports:
       - "8009:8080"
+      # 指标端口：只绑宿主回环，Prometheus 就在这台机器上，用 127.0.0.1:18080 抓
+      - "127.0.0.1:18080:18080"
     # MySQL / Redis 是宿主机上的进程（非容器），容器内用 host.docker.internal 回到宿主
     extra_hosts:
       - "host.docker.internal:host-gateway"
@@ -19,6 +32,14 @@ services:
       # 运行时数据卷：影像/导诊单等写在容器内 /app/cslk-data（compose 挂到宿主 ./cslk-data），
       # 医保国密证书同卷的 crypto 子目录；重建镜像不丢产物，私钥也不再打进 jar
       - ./cslk-data:/app/cslk-data
+      # 日志单独一卷：文件轮转上限在 logback-spring.xml 里（100MB×15 + 总量 2GB）
+      - ./cslk-logs:/app/logs
+    # docker 自己那份 json-file 也要设上限：默认无上限，长期运行会撑爆磁盘
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "5"
     healthcheck:
       test: [ "CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/8080" ]
       interval: 10s

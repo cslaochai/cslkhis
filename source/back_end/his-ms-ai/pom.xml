@@ -28,17 +28,79 @@
         <dependency>
             <groupId>org.apache.pdfbox</groupId>
             <artifactId>pdfbox</artifactId>
-            <version>2.0.31</version>
         </dependency>
         <dependency>
             <groupId>org.apache.poi</groupId>
             <artifactId>poi-ooxml</artifactId>
-            <version>5.2.5</version>
         </dependency>
         <dependency>
             <groupId>io.milvus</groupId>
             <artifactId>milvus-sdk-java</artifactId>
-            <version>2.5.17</version>
+        </dependency>
+        <!-- LangGraph 的 Java 版：只用于 AI 节点内部的「多步能力」，不接管工作流审批 -->
+        <dependency>
+            <groupId>com.alibaba.cloud.ai</groupId>
+            <artifactId>spring-ai-alibaba-graph-core</artifactId>
+            <exclusions>
+                <!-- 传递依赖里与 HIS 无关的重家伙：docker/redis/mongo/MCP/A2A 及各文档解析器 -->
+                <exclusion>
+                    <groupId>com.github.docker-java</groupId>
+                    <artifactId>docker-java</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>com.github.docker-java</groupId>
+                    <artifactId>docker-java-core</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>com.github.docker-java</groupId>
+                    <artifactId>docker-java-transport-zerodep</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.redisson</groupId>
+                    <artifactId>redisson</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.mongodb</groupId>
+                    <artifactId>mongodb-driver-sync</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>io.modelcontextprotocol.sdk</groupId>
+                    <artifactId>mcp</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>io.github.a2asdk</groupId>
+                    <artifactId>a2a-java-reference-server</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>io.github.a2asdk</groupId>
+                    <artifactId>a2a-java-sdk-server-common</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>io.github.a2asdk</groupId>
+                    <artifactId>a2a-java-sdk-client</artifactId>
+                </exclusion>
+                <!-- fastjson 1.2.83 带已知反序列化漏洞，HIS 不引 -->
+                <exclusion>
+                    <groupId>com.alibaba</groupId>
+                    <artifactId>fastjson</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>com.alibaba.cloud.ai</groupId>
+                    <artifactId>spring-ai-alibaba-starter-document-parser-tika</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>com.alibaba.cloud.ai</groupId>
+                    <artifactId>spring-ai-alibaba-starter-document-parser-markdown</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>com.alibaba.cloud.ai</groupId>
+                    <artifactId>spring-ai-alibaba-starter-document-parser-bshtml</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>com.alibaba.cloud.ai</groupId>
+                    <artifactId>spring-ai-alibaba-starter-document-parser-yaml</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
     </dependencies>
 
@@ -52,7 +114,7 @@
                         <path>
                             <groupId>org.projectlombok</groupId>
                             <artifactId>lombok</artifactId>
-                            <version>1.18.32</version>
+                            <version>${lombok.version}</version>
                         </path>
                     </annotationProcessorPaths>
                 </configuration>

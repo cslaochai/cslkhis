@@ -1,39 +1,49 @@
 <template>
   <div>
-    <!-- 搜索条件 -->
-    <el-card ref="queryCardRef" class="query-card mb-3" shadow="never">
-      <el-form class="flex flex-wrap items-center gap-2" inline>
-        <el-form-item label="消息内容">
-          <el-input v-model="searchForm.keyword" class="!w-48" clearable placeholder="请输入关键词"
-                    @keyup.enter="handleSearch"/>
-        </el-form-item>
-        <el-form-item label="业务类型">
-          <!-- 选项由 lib/messageCatalog 目录驱动（含危急值等全部码值，页面不再手写） -->
-          <el-select v-model="searchForm.bizType" class="!w-36" clearable filterable placeholder="全部">
-            <el-option v-for="opt in MESSAGE_TYPE_OPTIONS" :key="opt.value" :label="opt.label" :value="opt.value"/>
-          </el-select>
-        </el-form-item>
-        <el-form-item label="阅读状态">
-          <el-badge :hidden="unreadCount === 0" :max="99" :value="unreadCount" class="!block">
-            <el-select v-model="searchForm.readStatus" class="!w-28" clearable placeholder="全部">
-              <el-option label="未读" value="0"/>
-              <el-option label="已读" value="1"/>
+    <!-- 页内切换：消息通知 / 流程待办（流程待办仅对持有 workflow:task:handle 的岗位出现） -->
+    <div class="mb-3 flex items-center justify-between">
+      <el-radio-group v-model="activeTab">
+        <el-radio-button value="message">消息通知</el-radio-button>
+        <el-radio-button v-if="canHandleFlow" value="flow">流程待办</el-radio-button>
+      </el-radio-group>
+      <span v-if="activeTab === 'flow'" class="text-xs text-slate-400">只列出分派给当前岗位的流程待办</span>
+    </div>
+
+    <div v-show="activeTab === 'message'">
+      <!-- 搜索条件 -->
+      <el-card ref="queryCardRef" class="query-card mb-3" shadow="never">
+        <el-form class="flex flex-wrap items-center gap-2" inline>
+          <el-form-item label="消息内容">
+            <el-input v-model="searchForm.keyword" class="!w-48" clearable placeholder="请输入关键词"
+                      @keyup.enter="handleSearch"/>
+          </el-form-item>
+          <el-form-item label="业务类型">
+            <!-- 选项由 lib/messageCatalog 目录驱动（含危急值等全部码值，页面不再手写） -->
+            <el-select v-model="searchForm.bizType" class="!w-36" clearable filterable placeholder="全部">
+              <el-option v-for="opt in MESSAGE_TYPE_OPTIONS" :key="opt.value" :label="opt.label" :value="opt.value"/>
             </el-select>
-          </el-badge>
-        </el-form-item>
-        <el-form-item label="处理状态">
-          <!-- 待办型消息的处置回执（sql/70 handle_status）；通知型为空，选「待处理/已处理」即过滤待办 -->
-          <el-select v-model="searchForm.handleStatus" class="!w-28" clearable placeholder="全部">
-            <el-option label="待处理" value="0"/>
-            <el-option label="已处理" value="1"/>
-          </el-select>
-        </el-form-item>
-        <el-form-item class="ml-auto">
-          <el-button :icon="Search" type="primary" @click="handleSearch">搜索</el-button>
-          <el-button :icon="Refresh" @click="handleReset">重置</el-button>
-        </el-form-item>
-      </el-form>
-    </el-card>
+          </el-form-item>
+          <el-form-item label="阅读状态">
+            <el-badge :hidden="unreadCount === 0" :max="99" :value="unreadCount" class="!block">
+              <el-select v-model="searchForm.readStatus" class="!w-28" clearable placeholder="全部">
+                <el-option label="未读" value="0"/>
+                <el-option label="已读" value="1"/>
+              </el-select>
+            </el-badge>
+          </el-form-item>
+          <el-form-item label="处理状态">
+            <!-- 待办型消息的处置回执（sql/70 handle_status）；通知型为空，选「待处理/已处理」即过滤待办 -->
+            <el-select v-model="searchForm.handleStatus" class="!w-28" clearable placeholder="全部">
+              <el-option label="待处理" value="0"/>
+              <el-option label="已处理" value="1"/>
+            </el-select>
+          </el-form-item>
+          <el-form-item class="ml-auto">
+            <el-button :icon="Search" type="primary" @click="handleSearch">搜索</el-button>
+            <el-button :icon="Refresh" @click="handleReset">重置</el-button>
+          </el-form-item>
+        </el-form>
+      </el-card>
 
     <!-- 表格 -->
     <el-card class="table-card" shadow="never">
@@ -130,21 +140,66 @@
       </div>
     </el-card>
 
-    <!-- 详情/处理弹窗：全站唯一实现（含危急值确认接收 → 处置措施闭环） -->
-    <MessageProcessDialog
-        v-model="processVisible"
-        :message="processTarget"
-        @processed="handleProcessed"
-    />
+      <!-- 详情/处理弹窗：全站唯一实现（含危急值确认接收 → 处置措施闭环） -->
+      <MessageProcessDialog
+          v-model="processVisible"
+          :message="processTarget"
+          @processed="handleProcessed"
+      />
+    </div>
+
+    <!-- 流程待办（his-ms-workflow 的人工闸；只读他人待办不行，接口按当前登录岗位过滤） -->
+    <el-card v-show="activeTab === 'flow'" v-loading="flowLoading" class="table-card" shadow="never">
+      <el-table :data="flowTasks" :max-height="tableMaxHeight" stripe style="width: 100%">
+        <el-table-column label="流程" min-width="150" prop="flowName"/>
+        <el-table-column label="当前节点" min-width="140" prop="nodeName"/>
+        <el-table-column label="业务单据" width="200">
+          <template #default="{ row }">
+            <span class="text-slate-600">{{ row.businessId || '—' }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column align="center" label="状态" width="90">
+          <template #default="{ row }">
+            <span class="inline-block rounded bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">
+              {{ row.statusLabel }}
+            </span>
+          </template>
+        </el-table-column>
+        <el-table-column label="发起时间" prop="createTime" width="180"/>
+        <el-table-column align="center" fixed="right" label="操作" width="150">
+          <template #default="{ row }">
+            <el-button link type="success" @click.stop="handleFlowOpen(row, 'PASS')">通过</el-button>
+            <el-button link type="danger" @click.stop="handleFlowOpen(row, 'REJECT')">驳回</el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+      <div v-if="flowTasks.length === 0 && !flowLoading" class="py-12 text-center text-sm text-slate-400">
+        暂无流程待办
+      </div>
+      <div class="list-footer flex items-center justify-end">
+        <el-pagination
+            v-model:current-page="flowPagination.pageNum"
+            v-model:page-size="flowPagination.pageSize"
+            :page-sizes="PAGE_SIZES"
+            :total="flowPagination.total"
+            layout="total, sizes, prev, pager, next, jumper"
+            @size-change="handleFlowSizeChange"
+            @current-change="handleFlowCurrentChange"
+        />
+      </div>
+    </el-card>
+
+    <FlowTaskHandleEdit v-model="handleVisible" :mode="handleMode" :task="handleTask" @saved="loadFlowTasks"/>
   </div>
 </template>
 
 <script setup>
-import {onMounted, ref} from 'vue';
+import {onMounted, ref, watch} from 'vue';
 import {Refresh, Search, View} from '@element-plus/icons-vue';
 import {ElMessage} from 'element-plus';
 import {getMessageList, readMessage} from '@/api/system';
-import {hasAnyPermission, loadPermissions} from '@/lib/permission';
+import {flowMyTasks} from '@/api/workflow';
+import {hasAnyPermission, hasPermission, loadPermissions} from '@/lib/permission';
 import {
   MESSAGE_TYPE_OPTIONS,
   messageActionOwner,
@@ -156,6 +211,7 @@ import {
 } from '@/lib/messageCatalog';
 // 详情渲染 + 危急值闭环走全站唯一实现（Header 抽屉与消息页共用）
 import MessageProcessDialog from '@/components/his/MessageProcessDialog.vue';
+import FlowTaskHandleEdit from '@/views/workflow/FlowTaskHandleEdit.vue';
 import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination';
 import {useTableMaxHeight} from '@/lib/useTableMaxHeight';
 
@@ -268,10 +324,67 @@ const handleCurrentChange = (val) => {
   pagination.value.pageNum = val;
   loadData();
 };
+
+/* ---------- 流程待办（同一页签内，数据源 /workflow/runtime/listMyTasks） ---------- */
+const activeTab = ref('message');
+const canHandleFlow = ref(false);
+const flowLoading = ref(false);
+const flowTasks = ref([]);
+const flowPagination = ref({
+  pageNum: 1,
+  pageSize: DEFAULT_PAGE_SIZE,
+  total: 0,
+});
+
+const loadFlowTasks = async () => {
+  if (!canHandleFlow.value) return;
+  flowLoading.value = true;
+  try {
+    const res = await flowMyTasks({
+      pageNum: flowPagination.value.pageNum,
+      pageSize: flowPagination.value.pageSize,
+    });
+    if (res.code === 200) {
+      flowTasks.value = res.data?.records || [];
+      flowPagination.value.total = res.data?.total || 0;
+    }
+  } catch (error) {
+    console.error('加载流程待办失败:', error);
+  } finally {
+    flowLoading.value = false;
+  }
+};
+
+const handleFlowSizeChange = (val) => {
+  flowPagination.value.pageSize = val;
+  flowPagination.value.pageNum = 1;
+  loadFlowTasks();
+};
+
+const handleFlowCurrentChange = (val) => {
+  flowPagination.value.pageNum = val;
+  loadFlowTasks();
+};
+
+/* 通过/驳回弹窗 */
+const handleVisible = ref(false);
+const handleMode = ref('PASS');
+const handleTask = ref(null);
+const handleFlowOpen = (row, mode) => {
+  handleTask.value = row;
+  handleMode.value = mode;
+  handleVisible.value = true;
+};
+
+watch(activeTab, (val) => {
+  if (val === 'flow' && flowTasks.value.length === 0) loadFlowTasks();
+});
+
 onMounted(async () => {
   // 先判定当前角色权限再取数：否则首屏会先渲染成"可处理"，权限到位后再翻转成禁用，
   // 用户会看到按钮闪一下（也可能因此误以为处理过）
   await loadPermissions();
+  canHandleFlow.value = hasPermission('workflow:task:handle');
   loadData();
 });
 </script>

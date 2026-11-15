@@ -8,5 +8,8 @@ ENV JAVA_OPTS=""
 
 COPY his-backend.jar /app/app.jar
 EXPOSE 8080
+# 指标端口（与业务口分开，见 application.yml 的 management.server.port）
+EXPOSE 18080
 
-ENTRYPOINT ["sh", "-c", "exec java $JAVA_OPTS -jar /app/app.jar"]
+# 先建目录再起 JVM：HeapDumpPath / GC 日志目录必须已存在，否则 OOM 那一刻 dump 静默失败
+ENTRYPOINT ["sh", "-c", "mkdir -p /app/logs /app/cslk-data/dumps && exec java $JAVA_OPTS -jar /app/app.jar"]
