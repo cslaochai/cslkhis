@@ -171,8 +171,6 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
         wrapper.eq(queryDTO.getPatientId() != null, BizMedicalRecord::getPatientId, queryDTO.getPatientId())
                 .eq(queryDTO.getDoctorId() != null, BizMedicalRecord::getDoctorId, queryDTO.getDoctorId())
                 .eq(queryDTO.getDeptId() != null, BizMedicalRecord::getDeptId, queryDTO.getDeptId())
-                .in(deptScopeService.isScoped() && scopedDeptId == null,
-                        BizMedicalRecord::getDeptId, deptScopeService.allowedDeptIds())
                 .eq(queryDTO.getVisitDate() != null, BizMedicalRecord::getVisitDate, queryDTO.getVisitDate())
                 .ge(queryDTO.getVisitDateStart() != null, BizMedicalRecord::getVisitDate, queryDTO.getVisitDateStart())
                 .le(queryDTO.getVisitDateEnd() != null, BizMedicalRecord::getVisitDate, queryDTO.getVisitDateEnd())
@@ -182,6 +180,16 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
                         .like(BizMedicalRecord::getPatientName, queryDTO.getKeyword())
                         .or().like(BizMedicalRecord::getRecordNo, queryDTO.getKeyword())
                         .or().like(BizMedicalRecord::getRegistNo, queryDTO.getKeyword()))
+                // 数据范围收口：本科室病历 ∪ 本人书写过的病历。
+                // 后者是补写的入口 —— 医生从 A 科转到 B 科后，昨天在 A 科写的病历按当前岗位已不在范围内，
+                // 只看科室会让他连自己的病历都翻不到；「本人写的病历本人可见」不构成越权。
+                .and(deptScopeService.isScoped() && scopedDeptId == null, w -> {
+                    w.in(BizMedicalRecord::getDeptId, deptScopeService.allowedDeptIds());
+                    CurrentUser user = UserUtils.getCurrentUser();
+                    if (user != null && user.getEmployeeId() != null) {
+                        w.or().eq(BizMedicalRecord::getDoctorId, user.getEmployeeId());
+                    }
+                })
                 .orderByDesc(BizMedicalRecord::getSubmitTime)
                 .orderByDesc(BizMedicalRecord::getCreateTime)
                 // 必须补唯一二级键：submit_time / create_time 都是 DATETIME(0)（秒精度），
@@ -1499,9 +1507,17 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
         bizMedicalRecord.setRegistNo(appointInfo.getRegistNo());
         bizMedicalRecord.setDeptId(appointInfo.getDeptId());
         bizMedicalRecord.setDeptName(appointInfo.getDeptName());
-        bizMedicalRecord.setDoctorId(currentUser.getEmployeeId());
-        bizMedicalRecord.setDoctorName(currentUser.getRealName());
-        bizMedicalRecord.setVisitDate(LocalDate.now());
+        // 病历的科室 / 医生归属跟「就诊事实」走，不跟登录岗位走：
+        // 转科后回来补写昨天的病历，科室仍是当时接诊的科室、医生仍是接诊医生，
+        // 否则补写人（值班代补）会把归属改成自己、改成当前科室，科室质控与统计全跟着漂。
+        bizMedicalRecord.setDoctorId(appointInfo.getDoctorId() == null
+                ? currentUser.getEmployeeId() : appointInfo.getDoctorId());
+        bizMedicalRecord.setDoctorName(TextUtil.hasText(appointInfo.getDoctorName())
+                ? appointInfo.getDoctorName() : currentUser.getRealName());
+        // 跨日补写不能用「今天」：周五的门诊病历周一补写会记成周一。
+        // 就诊日期取挂号那天，补写时间另由 create_time / update_time 表达。
+        bizMedicalRecord.setVisitDate(appointInfo.getVisitDate() == null
+                ? LocalDate.now() : appointInfo.getVisitDate());
         bizMedicalRecord.setChiefComplaint(recordSaveDTO.getChiefComplaint());
         bizMedicalRecord.setPresentIllness(recordSaveDTO.getPresentIllness());
         bizMedicalRecord.setAllergyHistory(recordSaveDTO.getAllergyHistory());
@@ -1594,7 +1610,8 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
                 prescription.setRegistId(recordSaveDTO.getRegistId());
                 prescription.setDeptId(appointInfo.getDeptId());
                 prescription.setDeptName(appointInfo.getDeptName());
-                prescription.setVisitDate(LocalDate.now());
+                // 处方日期跟就诊日期走：跨日补写昨天的门诊，处方不能落成今天
+                prescription.setVisitDate(bizMedicalRecord.getVisitDate());
                 prescription.setPrescriptionType(prescriptionDTO.getPrescriptionType());
                 boolean tcmDecoctionRx = Integer.valueOf(3).equals(prescriptionDTO.getPrescriptionType());
                 if (tcmDecoctionRx) {
@@ -1790,7 +1807,7 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
             archive.setPatientNo(patientInfo.getPatientNo());
             archive.setPatientName(patientInfo.getPatientName());
             archive.setRegistId(appointInfo.getId());
-            archive.setVisitDate(LocalDate.now());
+            archive.setVisitDate(bizMedicalRecord.getVisitDate());
             archive.setDeptId(bizMedicalRecord.getDeptId());
             archive.setDeptName(bizMedicalRecord.getDeptName());
             archive.setDoctorId(bizMedicalRecord.getDoctorId());

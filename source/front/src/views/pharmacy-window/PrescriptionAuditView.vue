@@ -154,6 +154,8 @@
 
 <script setup>
 import {onMounted, ref} from 'vue';
+import {useRoute} from 'vue-router';
+import {msgDeeplinkOf, pickRowByDeeplink} from '@/lib/msgDeeplink';
 import {Check, CircleClose, Refresh, Search, Stamp, WarningFilled} from '@element-plus/icons-vue';
 import {ElMessage, ElMessageBox} from 'element-plus';
 import {auditPrescription, getPrescriptionListPage, rationalCheckPrescriptions} from '@/api/doctor';
@@ -301,7 +303,24 @@ const handleReturn = async (row) => {
 
   }
 };
-onMounted(() => {
-  loadData();
+/* ---------- 待办深链：处方审核/待发药待办跳进来，按处方号直接筛出那张处方 ---------- */
+const route = useRoute();
+const applyMsgDeeplink = async () => {
+  const link = msgDeeplinkOf(route);
+  if (link) {
+    keyword.value = link.keyword;
+    // 待办里的处方多半还没审，别被「只看未审核」开关挡掉
+    unauditedOnly.value = true;
+    pagination.value.pageNum = 1;
+  }
+  await loadData();
+  if (!link) return;
+  const hit = pickRowByDeeplink(list.value, link, (r) => [r.prescriptionNo, String(r.id)]);
+  ElMessage[hit ? 'success' : 'warning'](hit
+      ? `已定位到处方 ${hit.prescriptionNo || link.bizNo}`
+      : `未找到处方 ${link.bizNo || link.bizId}：可能已审核完成或不在当前筛选范围`);
+};
+onMounted(async () => {
+  await applyMsgDeeplink();
 });
 </script>

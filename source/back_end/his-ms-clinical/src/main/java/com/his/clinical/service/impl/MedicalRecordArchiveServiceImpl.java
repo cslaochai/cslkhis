@@ -125,9 +125,16 @@ public class MedicalRecordArchiveServiceImpl extends ServiceImpl<BizMedicalRecor
         if (recordIds.isEmpty()) {
             return;
         }
-        Map<Long, Integer> signMap = bizMedicalRecordMapper.selectBatchIds(recordIds).stream()
+        // 只取签名状态两列：selectBatchIds 会拉病历表全字段，任何一处实体/表列漂移都会整页 500；
+        // 同一病历被多条归档行引用时还会撞 Collectors.toMap 的 Duplicate key。
+        Map<Long, Integer> signMap = bizMedicalRecordMapper.selectList(
+                        new LambdaQueryWrapper<BizMedicalRecord>()
+                                .select(BizMedicalRecord::getId, BizMedicalRecord::getSignStatus)
+                                .in(BizMedicalRecord::getId, recordIds))
+                .stream()
                 .collect(Collectors.toMap(BizMedicalRecord::getId,
-                        r -> r.getSignStatus() == null ? ObjectSignStatusEnum.UNSIGNED.getCode() : r.getSignStatus()));
+                        r -> r.getSignStatus() == null ? ObjectSignStatusEnum.UNSIGNED.getCode() : r.getSignStatus(),
+                        (a, b) -> a));
         for (BizMedicalRecordArchiveVO vo : voList) {
             vo.setSignStatus(signMap.get(vo.getRecordId()));
         }

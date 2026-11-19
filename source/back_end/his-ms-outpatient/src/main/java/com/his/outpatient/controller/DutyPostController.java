@@ -36,8 +36,9 @@ public class DutyPostController {
     @GetMapping("/selectList")
     public Result<List<DutyPostSelectListVO>> selectList(@RequestParam(required = false) Integer dutyScope,
                                                          @RequestParam(required = false) Integer orgType,
-                                                         @RequestParam(required = false) Long orgId) {
-        return Result.success(dutyPostService.selectListVO(dutyScope, orgType, orgId));
+                                                         @RequestParam(required = false) Long orgId,
+                                                         @RequestParam(required = false) Long dutyTypeId) {
+        return Result.success(dutyPostService.selectListVO(dutyScope, orgType, orgId, dutyTypeId));
     }
 
     /**

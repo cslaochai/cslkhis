@@ -84,23 +84,23 @@ export function closeQrPayByBill(data) {
 
 // ==================== 门诊医保实时结算（收款窗口刷社保卡） ====================
 //
-// 时序：preSettle（2201 预结算拿 splits，不落库）→ 收费员跟患者核对 → formalSettle（2301 扣个账）
+// 时序：preSettle（2206 预结算拿 splits，不落库）→ 收费员跟患者核对 → formalSettle（2207 扣个账）
 // → 剩余 cashPay 再走现金/扫码。
 // 两个接口都按 billId 调，组 SettleRequest 由后端从账单+患者主档取，前端不拼费用明细。
 
-// 2201 预结算：返回统筹/个账/自付 splits，不落库
+// 2206 预结算：返回统筹/个账/自付 splits，不落库
 export function preSettleInsurance(billId) {
     return request.post('/charge/insurance/preSettle', null, {params: {billId}})
 }
 
-// 2301 正式结算：扣个账、出 YBZ 单号，同事务落个账流水+回写账单 splits
+// 2207 正式结算：扣个账、出 YBZ 单号，同事务落个账流水+回写账单 splits
 export function formalSettleInsurance(billId) {
     return request.post('/charge/insurance/formalSettle', null, {params: {billId}})
 }
 
 // ==================== 医保补结算（医保恢复后补报销降级自费账单） ====================
 //
-// 时序：supplementCheck（校验 + 2201 试算，不落库，展示拟退差额）→ 收费员核对 → supplement（补扣个账
+// 时序：supplementCheck（校验 + 2206 试算，不落库，展示拟退差额）→ 收费员核对 → supplement（补扣个账
 // → 账单回写医保 splits → 患者多付的差额按原收款流水原路退回 → 票据作废待重开）。
 // 只认带 [医保降级] 标记的已付清自费账单，重复调用按幂等拒绝。
 

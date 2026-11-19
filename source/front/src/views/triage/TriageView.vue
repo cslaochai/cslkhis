@@ -190,6 +190,7 @@
       <!-- 中栏：FIFO 队列主表（最宽） -->
       <div class="flex min-w-0 flex-1 flex-col rounded-lg border border-slate-200 bg-white shadow-sm">
         <el-table
+            ref="queueTable"
             v-loading="loading"
             :data="rows"
             height="100%"
@@ -543,6 +544,8 @@ import {QUEUE_STATUS, REGIST_TYPE, statusOf} from '@/lib/statusColor';
 import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination';
 import {shortQueueNo} from '@/lib/utils';
 import {patientGenderText} from '@/lib/patientGender';
+import {useRoute} from 'vue-router';
+import {msgDeeplinkOf, pickRowByDeeplink} from '@/lib/msgDeeplink';
 
 const loading = ref(false);
 const rows = ref([]);
@@ -899,6 +902,26 @@ const clearForm = () => {
     remark: '',
   };
 };
+
+/* ---------- 待办深链：分诊复评超时待办点「前往处理」进来，直接定位到该候诊患者 ----------
+   只跳 /triage 会落到今日队列首页，护士还要按号码翻（超时催办最怕这个）。 */
+const route = useRoute();
+const queueTable = ref(null);
+const applyMsgDeeplink = async () => {
+  const link = msgDeeplinkOf(route);
+  if (!link) return;
+  keyword.value = link.bizNo || link.bizId;
+  pagination.value.pageNum = 1;
+  await reload();
+  const row = pickRowByDeeplink(rows.value, link, (r) => [r.registNo, r.patientNo, r.patientId, r.registId, String(r.id), r.emergencyNo]);
+  if (!row) {
+    ElMessage.warning(`未按待办定位到候诊患者（${link.bizNo || link.bizId}）：可能已接诊、已过号或不在今日队列`);
+    return;
+  }
+  queueTable.value?.setCurrentRow(row);
+  await openTriage(row);
+  ElMessage.success(`已定位到候诊患者 ${row.patientName || ''}（${row.registNo || row.patientNo || link.bizNo}）`);
+};
 const handleSaveTriage = async () => {
   if (!selected.value) {
     ElMessage.warning('请先在中间队列中选择患者');
@@ -987,6 +1010,7 @@ onMounted(async () => {
   await reload();
   // 左栏待签到常驻展示，直接拉名单
   await loadUnchecked();
+  await applyMsgDeeplink();
   // 5 秒刷统计与监控（护士站要挂在墙上），列表不自动刷，避免正在点按钮时行被刷新掉
   timer = setInterval(() => {
     loadStats();

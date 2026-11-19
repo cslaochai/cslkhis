@@ -13,7 +13,29 @@
           />
         </div>
       </el-form-item>
-      <el-form-item :label="dutyKind === 'clinical' ? '值班点位' : '点位（留空＝总值班位）'" prop="postId">
+      <el-form-item v-if="dutyKind === 'admin'" label="值班线" prop="dutyTypeId">
+        <div data-testid="duty-type">
+          <el-select
+              v-model="formData.dutyTypeId"
+              clearable
+              placeholder="医疗总值班 / 护理总值班 / 行政总值班 / 院领导带班"
+              style="width: 100%"
+              @change="onTypeChange"
+          >
+            <el-option
+                v-for="t in typeOptions"
+                :key="t.id"
+                :label="t.manageable === false ? `${t.typeName}（归口${t.manageDeptName}）` : t.typeName"
+                :value="t.id"
+                :disabled="t.manageable === false"
+            />
+          </el-select>
+        </div>
+        <div class="mt-1 text-xs text-gray-500">
+          只有归口科室岗位能排这条线（灰掉的是别的部门的线）；选线后点位、班次、角色按线走
+        </div>
+      </el-form-item>
+      <el-form-item :label="dutyKind === 'clinical' ? '值班点位' : '点位（留空＝按值班线自动落位）'" prop="postId">
         <div data-testid="duty-post">
           <el-select
               v-model="formData.postId"
@@ -97,6 +119,7 @@
 import {computed, reactive, ref, watch} from 'vue'
 import {ElMessage} from 'element-plus'
 import {dutyRosterUpsert} from '@/api/dutyRoster'
+import {getDutyTypeList} from '@/api/dutyType'
 import {getDutyPostSelectList} from '@/api/dutyPost'
 import {dutyKindScope, useEmployeeSearch} from '@/lib/dutyRoster'
 
@@ -120,6 +143,7 @@ const formRef = ref(null)
 const formData = reactive({
   id: null,
   postId: null,
+  dutyTypeId: null,
   dutyDate: null,
   shiftType: 1,
   roleType: 1,
@@ -146,17 +170,43 @@ const rules = {
   }],
 }
 
-// 点位下拉：按值班种类过滤（总值班只有 4 个行政位，临床有 234 个科室位）
+// 点位下拉：按值班种类 + 值班线过滤（总值班是 4 条线 × 白/夜 × 主/副，临床是 234 个科室位）
 const postOptions = ref([])
 // 已按哪种值班种类拉过点位下拉；种类一换下次打开必须重拉
 const loadedScope = ref(null)
 
+// 值班线（值班类型）：医疗/护理/行政/院领导带班；manageable=false 的归口别处，不允许选
+const typeOptions = ref([])
+const loadTypeOptions = async () => {
+  try {
+    const res = await getDutyTypeList()
+    typeOptions.value = (res?.data || []).filter((t) => t.status === 1)
+  } catch {
+    typeOptions.value = []
+  }
+}
+
 const loadPostOptions = async () => {
   try {
-    const res = await getDutyPostSelectList({dutyScope: dutyKindScope(props.dutyKind)})
+    const res = await getDutyPostSelectList({
+      dutyScope: dutyKindScope(props.dutyKind),
+      dutyTypeId: formData.dutyTypeId || undefined,
+    })
     postOptions.value = res?.data || []
   } catch {
     postOptions.value = []
+  }
+}
+
+// 换值班线：点位、班次、角色全部重来（旧线的点位挂到新线上会排错人）
+const onTypeChange = async () => {
+  formData.postId = null
+  await loadPostOptions()
+  loadedScope.value = `${dutyKindScope(props.dutyKind)}:${formData.dutyTypeId || ''}`
+  const p = postOptions.value[0]
+  if (p) {
+    if (p.roleType) formData.roleType = p.roleType
+    formData.shiftType = p.shiftName && p.shiftName.includes('夜') ? 2 : 1
   }
 }
 
@@ -182,6 +232,7 @@ const onEmpChange = (id) => {
 const resetForm = () => {
   formData.id = null
   formData.postId = null
+  formData.dutyTypeId = null
   formData.dutyDate = null
   formData.shiftType = 1
   formData.roleType = 1
@@ -203,6 +254,7 @@ watch(visible, async (open) => {
   if (row) {
     formData.id = row.id
     formData.postId = row.postId || null
+    formData.dutyTypeId = row.dutyTypeId || null
     formData.dutyDate = row.dutyDate
     formData.shiftType = row.shiftType
     formData.roleType = row.roleType
@@ -213,10 +265,17 @@ watch(visible, async (open) => {
     formData.status = row.status ?? 1
     formData.remark = row.remark || ''
   }
+  if (props.dutyKind === 'admin' && !typeOptions.value.length) await loadTypeOptions()
+  // 新登记默认落在「行政总值班」（全院呼叫的就是这条线），排班员按需再切
+  if (props.dutyKind === 'admin' && !row && !formData.dutyTypeId) {
+    formData.dutyTypeId = (typeOptions.value.find((t) => t.typeCode === 'ADMIN') || {}).id || null
+  }
   const scope = dutyKindScope(props.dutyKind)
-  if (loadedScope.value !== scope) {
+  // 点位下拉跟着「种类 + 值班线」走：换了线必须重拉，否则下拉里全是别的线的位
+  const scopeKey = `${scope}:${formData.dutyTypeId || ''}`
+  if (loadedScope.value !== scopeKey) {
     await loadPostOptions()
-    loadedScope.value = scope
+    loadedScope.value = scopeKey
   }
   if (!empOptions.value.length) await searchEmployee('')
   // 点位可能不在当前种类下拉里（从另一类切过来的老数据），补进去保证回显是点位名而不是ID

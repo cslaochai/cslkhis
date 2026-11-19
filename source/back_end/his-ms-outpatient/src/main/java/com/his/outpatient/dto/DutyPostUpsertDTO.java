@@ -47,6 +47,11 @@ public class DutyPostUpsertDTO {
     private Long orgId;
 
     /**
+     * 值班类型ID（院级点位挂到具体值班线；科室值班点位留空）
+     */
+    private Long dutyTypeId;
+
+    /**
      * 班内角色（1-主班 2-副班）
      */
     @NotNull(message = "班内角色不能为空")

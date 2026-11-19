@@ -19,6 +19,10 @@ public class DutyPostVO {
     /** 点位名称 */
     private String postName;
 
+    /** 值班类型ID（院级点位挂的类型；科室值班点位为空） */
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long dutyTypeId;
+
     /** 责任范围（1-全院行政 2-急诊 3-感染 4-总务 5-信息 6-临床科室） */
     private Integer dutyScope;
     /** 责任范围文案（由枚举 label 渲染） */

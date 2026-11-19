@@ -189,6 +189,8 @@
  * 状态文案走字典（his_archive_code_status），tag 色与动作口径单点 lib/codeTask.js。
  */
 import {onMounted, reactive, ref} from 'vue';
+import {useRoute} from 'vue-router';
+import {msgDeeplinkOf, pickRowByDeeplink} from '@/lib/msgDeeplink';
 import {ElMessage} from 'element-plus';
 import {MagicStick, Refresh, Search} from '@element-plus/icons-vue';
 import {
@@ -386,10 +388,24 @@ const openDetail = (row) => {
   detailId.value = row.id;
   detailVisible.value = true;
 };
-onMounted(() => {
+/* ---------- 待办深链：编码任务退修待办跳进来，按任务单号直接筛出那一条 ---------- */
+const route = useRoute();
+const applyMsgDeeplink = async () => {
+  const link = msgDeeplinkOf(route);
+  if (!link) return;
+  query.taskNo = link.bizNo || '';
+  query.keyword = link.bizNo || link.bizId;
+  query.pageNum = 1;
+  await loadList();
+  const hit = pickRowByDeeplink(rows.value, link, (r) => [r.taskNo, String(r.id)]);
+  if (link.bizNo)
+    ElMessage[hit ? 'success' : 'warning'](hit ? `已定位到编码任务 ${link.bizNo}` : `未找到编码任务 ${link.bizNo}：可能已提交或不在当前筛选范围`);
+};
+onMounted(async () => {
   loadDicts();
   loadStats();
   loadEmployees();
-  loadList();
+  await loadList();
+  await applyMsgDeeplink();
 });
 </script>

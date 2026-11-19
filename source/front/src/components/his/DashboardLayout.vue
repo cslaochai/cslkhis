@@ -13,6 +13,7 @@
           class="flex-1 overflow-auto transition-all duration-300"
       >
         <main class="p-3">
+          <MsgDeeplinkBar/>
           <router-view/>
         </main>
       </div>
@@ -23,5 +24,6 @@
 <script setup>
 import Sidebar from './Sidebar.vue';
 import Header from './Header.vue';
+import MsgDeeplinkBar from './MsgDeeplinkBar.vue';
 import {sidebarCollapsed} from '@/lib/sidebarState';
 </script>

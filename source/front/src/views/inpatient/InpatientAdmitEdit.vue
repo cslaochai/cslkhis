@@ -64,11 +64,13 @@
               value-format="YYYY-MM-DD HH:mm:ss"
           />
         </el-form-item>
-        <el-form-item label="入院诊断编码">
-          <el-input v-model="admitForm.admitDiagnosisCode" placeholder="ICD-10，如 J18.9"/>
-        </el-form-item>
-        <el-form-item label="入院诊断名称">
-          <el-input v-model="admitForm.admitDiagnosisName" placeholder="如 肺炎"/>
+        <el-form-item label="入院诊断">
+          <el-select v-model="admitForm.admitDiagnosisCode" filterable remote reserve-keyword clearable
+                     :remote-method="searchIcdRemote" :loading="icdLoading" class="!w-full"
+                     placeholder="输入诊断名称 / 编码搜索" @change="onIcdSelect" @clear="onIcdClear">
+            <el-option v-for="o in icdOptions" :key="o.icdCode" :value="o.icdCode"
+                       :label="(o.icdCode || '') + ' ' + (o.icdName || '')"/>
+          </el-select>
         </el-form-item>
       </div>
       <el-form-item label="入院诊断(文本)">
@@ -91,6 +93,7 @@
 import {computed, reactive, ref, watch} from 'vue';
 import {ElMessage} from 'element-plus';
 import {admitInpatient, getInpatientBedList} from '@/api/inpatient';
+import {searchIcd10} from '@/api/system';
 import PatientSelect from '@/components/his/PatientSelect.vue';
 import {admitWayMap} from '@/lib/inpatient';
 
@@ -112,6 +115,8 @@ const visible = computed({
 
 const admitLoading = ref(false);
 const admitBeds = ref([]);
+const icdOptions = ref([]);
+const icdLoading = ref(false);
 const admitForm = reactive({
   patientId: null,
   admissionOrderId: null,
@@ -145,6 +150,10 @@ watch(visible, async (open) => {
       remark: `由住院证 ${row.orderNo} 收治`,
     });
     admitBeds.value = [];
+    // 住院证已带诊断：塞一条回显项，保证下拉能显示「编码 名称」而非裸编码
+    icdOptions.value = row.diagnosisCode
+      ? [{icdCode: row.diagnosisCode, icdName: row.diagnosisName || ''}]
+      : [];
     const matched = props.wards.filter((w) => String(w.deptId) === String(row.applyDeptId));
     if (matched.length === 1) {
       admitForm.wardId = matched[0].wardId;
@@ -156,6 +165,7 @@ watch(visible, async (open) => {
       admitWay: 1, diagnosis: '', admitDiagnosisCode: '', admitDiagnosisName: '', remark: '',
     });
     admitBeds.value = [];
+    icdOptions.value = [];
   }
 });
 
@@ -178,6 +188,34 @@ const onAdmitWardChange = async (wardId) => {
     admitBeds.value = [];
   }
 };
+
+// ICD-10 结构化诊断检索（复用 system.js searchIcd10，后端零改动）
+const searchIcdRemote = async (query) => {
+  const kw = (query || '').trim();
+  if (!kw) {
+    icdOptions.value = [];
+    return;
+  }
+  icdLoading.value = true;
+  try {
+    const res = await searchIcd10(kw);
+    icdOptions.value = res.data || [];
+  } catch (e) {
+    icdOptions.value = [];
+    console.error('检索 ICD 编码失败:', e);
+  } finally {
+    icdLoading.value = false;
+  }
+};
+const onIcdSelect = (code) => {
+  const opt = icdOptions.value.find((o) => o.icdCode === code);
+  admitForm.admitDiagnosisName = opt ? opt.icdName : admitForm.admitDiagnosisName;
+};
+const onIcdClear = () => {
+  admitForm.admitDiagnosisCode = '';
+  admitForm.admitDiagnosisName = '';
+};
+
 const submitAdmit = async () => {
   if (!admitForm.patientId)
     return ElMessage.warning('请选择患者');

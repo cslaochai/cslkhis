@@ -10,13 +10,12 @@
       <div v-if="row.diagnosis"><span class="text-gray-400">病历诊断：</span>{{ row.diagnosis }}</div>
     </div>
     <el-form label-width="100px">
-      <el-form-item label="主诊断编码" required>
-        <el-input v-model="submitForm.mainIcdCode" data-testid="ct-submit-code" maxlength="20"
-                  placeholder="ICD-10 编码，如 I10.x00"/>
-      </el-form-item>
-      <el-form-item label="主诊断名称" required>
-        <el-input v-model="submitForm.mainIcdName" data-testid="ct-submit-name" maxlength="200"
-                  placeholder="如 原发性高血压"/>
+      <el-form-item label="主诊断" required>
+        <IcdDiagnosisSelect
+            v-model:model-value="submitForm.mainIcdCode"
+            v-model:name="submitForm.mainIcdName"
+            data-testid="ct-submit-code"
+            placeholder="输入诊断名称 / 编码搜索"/>
       </el-form-item>
       <el-form-item label="其他诊断">
         <el-input v-model="submitForm.otherIcdText" :rows="3" maxlength="500" placeholder="其他诊断/手术 ICD，分号分隔（可空）"
@@ -36,6 +35,7 @@
 import {computed, reactive, ref, watch} from 'vue';
 import {ElMessage} from 'element-plus';
 import {submitCodeTask} from '@/api/codeTask';
+import IcdDiagnosisSelect from '@/components/his/IcdDiagnosisSelect.vue';
 
 const props = defineProps({
   modelValue: {type: Boolean, default: false},

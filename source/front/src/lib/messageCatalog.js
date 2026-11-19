@@ -104,6 +104,20 @@ const CATALOG = {
         severity: 'warning', kind: 'task',
         owner: '医生', permissions: ['portal:messages:view'],
     },
+    // 接通发送方（EmergencyServiceImpl.escalateReeval）：候诊超过应接诊时限仍未接诊
+    // → 催分诊台复评（受众：当班护理；级别只升不降）。闭环是「复评并调整级别」，落点在分诊工作站。
+    'emg-reeval': {
+        label: '急诊分诊复评到期', tagClass: 'bg-red-100 text-red-700',
+        severity: 'warning', kind: 'task',
+        owner: '急诊护士 / 分诊台', permissions: ['portal:messages:view'],
+    },
+    // 复评时级别上调 → 通知负责医生 / 当班医生。与 emg-reeval 分开计数，
+    // 否则同一条急诊先催过护士就会把医生的升级通知吞掉。落点在急诊医生工作站。
+    'emg-reeval-up': {
+        label: '急诊分诊级别上调', tagClass: 'bg-red-100 text-red-700',
+        severity: 'urgent', kind: 'task',
+        owner: '医生 / 急诊科主任', permissions: ['portal:messages:view'],
+    },
     // 接通发送方（sql/169）：发给「当日总值班」的全院协调待办，三个触发点 ——
     // ① EmergencyServiceImpl 候诊/留观升级阶梯走完仍没人接 ② BedCenterServiceImpl 跨科调配
     // ③ ReferralService 转诊登记与待确认超时。收件人是 DutyRosterService.current() 解析出的那个人，
@@ -197,6 +211,12 @@ const CATALOG = {
         severity: 'warning', kind: 'notify',
         owner: '病案编码员', permissions: ['portal:messages:view'],
     },
+    // 传染病报卡时限预警：限期未填报 → 按天提醒填报医师（公卫上报）。填报动作在「我的未报」完成
+    'infectious-report': {
+        label: '传染病报卡时限预警', tagClass: 'bg-rose-100 text-rose-700',
+        severity: 'warning', kind: 'notify',
+        owner: '医生 / 公卫科', permissions: ['portal:messages:view'],
+    },
     sign: {
         label: '签名待办提醒', tagClass: 'bg-indigo-100 text-indigo-700',
         severity: 'warning', kind: 'task',
@@ -210,6 +230,12 @@ const CATALOG = {
     arrears: {
         label: '欠费提醒', tagClass: 'bg-amber-100 text-amber-700',
         severity: 'warning', kind: 'notify',
+        owner: '收费员', permissions: ['portal:messages:view'],
+    },
+    // 收费/支付回执（库内历史码值，his-ms-charge 发出）：已收款结果通知，收费员查阅即可
+    pay: {
+        label: '支付结果', tagClass: 'bg-teal-100 text-teal-700',
+        severity: 'info', kind: 'notify',
         owner: '收费员', permissions: ['portal:messages:view'],
     },
     notice: {
@@ -232,6 +258,112 @@ const FALLBACK = {
     label: null, tagClass: 'bg-slate-100 text-slate-600',
     severity: 'info', kind: 'notify',
     owner: '—', permissions: ['portal:messages:view'],
+}
+
+/**
+ * 落地页面：收件箱只做提醒，真正的处置在业务页面完成（急诊接诊 / 分诊复评 / 值班日志签收 / 发药…）。
+ * 一类一条，与 CATALOG 的 bizType 一一对应 —— 新增码值时这里必须同步，否则弹框又退回「只显示一段正文」。
+ *
+ * bizNoKey：payload 里代表「业务单号」的字段。跳转时一并带上，目标页用它预填搜索/定位，
+ * 只跳路径不带单据 = 落到模块首页，用户还得自己翻（等于没落地）。
+ *
+ * 刻意为空的几类：
+ *   critical            危急值在弹框内闭环（确认接收 → 填处置措施）
+ *   duty-call / -esc    听班呼叫在弹框内闭环（到岗应答）
+ *   consult             组件内已有「前往会诊管理」按钮
+ *   notice              系统公告没有可去的页面
+ */
+const GOTO_TARGETS = {
+    regist: {path: '/appointments', label: '挂号预约', bizNoKey: 'registNo'},
+    appointment: {path: '/appointments', label: '挂号预约', bizNoKey: 'apptNo'},
+    'appt-remind': {path: '/appointments', label: '挂号预约', bizNoKey: 'apptNo'},
+    'regist-refund': {path: '/refund', label: '退费申请', bizNoKey: 'refundNo'},
+    prescription: {path: '/prescription-audit', label: '处方审核', bizNoKey: 'prescriptionNo'},
+    inspection: {path: '/inspection-workstation', label: '检查工作站', bizNoKey: 'examNo'},
+    report: {path: '/laboratory-workstation', label: '检验工作站', bizNoKey: 'reportNo'},
+    drug: {path: '/pharmacy', label: '药品库存', bizNoKey: 'drugCode'},
+    stock: {path: '/pharmacy', label: '药品库存', bizNoKey: 'drugCode'},
+    dispense: {path: '/pharmacy-window', label: '药房发药', bizNoKey: 'prescriptionNo'},
+    drugaudit: {path: '/prescription-audit', label: '处方审核', bizNoKey: 'prescriptionNo'},
+    'emg-wait': {path: '/emergency-doctor', label: '急诊医生工作站', bizNoKey: 'emergencyNo'},
+    'emg-obs': {path: '/emergency-doctor', label: '急诊医生工作站', bizNoKey: 'emergencyNo'},
+    'emg-ho': {path: '/emergency-doctor', label: '急诊医生工作站', bizNoKey: 'emergencyNo'},
+    'emg-reeval': {path: '/triage', label: '分诊工作站', bizNoKey: 'emergencyNo'},
+    'emg-reeval-up': {path: '/emergency-doctor', label: '急诊医生工作站', bizNoKey: 'emergencyNo'},
+    'duty-coord': {path: '/duty-log', label: '总值班日志', bizNoKey: 'referralNo'},
+    admit: {path: '/inpatient', label: '入出院管理', bizNoKey: 'admissionNo'},
+    'inpat-order': {path: '/inpatient-order', label: '住院医生站', bizNoKey: 'orderNo'},
+    'emr-arch': {path: '/archive-center', label: '病案管理', bizNoKey: 'recordNo'},
+    'emr-qc': {path: '/medical-record-qc', label: '病历质控', bizNoKey: 'qcNo'},
+    'arch-borrow': {path: '/archive-center', label: '病案管理', bizNoKey: 'borrowNo'},
+    'code-task': {path: '/archive-center', label: '病案管理', bizNoKey: 'taskNo'},
+    'infectious-report': {path: '/my-unreported', label: '我的未报', bizNoKey: 'registNo'},
+    sign: {path: '/sign-cert', label: '签名证书'},
+    settle: {path: '/insurance', label: '医保结算清单', bizNoKey: 'settleNo'},
+    arrears: {path: '/arrears-control', label: '欠费管控', bizNoKey: 'admissionNo'},
+    pay: {path: '/cashier', label: '收费结算窗口', bizNoKey: 'billNo'},
+    'death-cert': {path: '/death-certificate', label: '死亡证明登记', bizNoKey: 'certNo'},
+}
+
+/** payload 是 JSON 字符串（SysMessageVO.payload 为 String），脏数据不能把跳转打断 */
+const payloadOf = (message) => {
+    const raw = message?.payload
+    if (!raw) return null
+    if (typeof raw === 'object') return raw
+    try {
+        return JSON.parse(raw)
+    } catch (e) {
+        console.error('消息 payload 解析失败', e)
+        return null
+    }
+}
+
+/**
+ * 待办深链：目标路由 + 查询参数（from/bizType/bizId/bizNo）。
+ * 目标页凭 bizNo（界面上认得）或 bizId 定位到具体单据。
+ */
+/**
+ * 待办深链：目标路由 + 查询参数（from/bizType/bizId/bizNo）。
+ * 目标页凭 bizNo（界面上认得）或 bizId 定位到具体单据。
+ */
+export function messageGotoQuery(message) {
+    const target = messageGotoTarget(message?.bizType)
+    if (!target)
+        return null
+    const payload = payloadOf(message)
+    const bizNo = target.bizNoKey ? String(payload?.[target.bizNoKey] ?? '') : ''
+    return {
+        path: target.path,
+        query: {
+            from: 'msg',
+            bizType: String(message?.bizType ?? ''),
+            bizId: message?.bizId == null ? '' : String(message.bizId),
+            ...(bizNo ? {bizNo} : {}),
+        },
+    }
+}
+
+/**
+ * 截止处理时间：payload 里的绝对时间优先（deadlineTime/deadline…），
+ * 其次用「时限分钟 + 发送时间」推算（急诊候诊 targetSeeMinutes、危急值 deadlineMinutes）；
+ * 都没有返回空串，列表显示「—」表示这类消息本身没有办理时限。
+ */
+export function messageDeadline(message) {
+    const payload = payloadOf(message)
+    if (!payload) return ''
+    for (const key of ['deadlineTime', 'deadline', 'expectReturnDate', 'dueTime', 'expireTime', 'handleDeadline']) {
+        if (payload[key]) return String(payload[key]).replace('T', ' ').slice(0, 16)
+    }
+    // 只有危急值的 deadlineMinutes 是「从本条消息发出起算」的处置时限，可以推算；
+    // 急诊候诊的 targetSeeMinutes 起算点是挂号而非发消息，从 sendTime 加会算出一个还没到的假截止时间，故不推算。
+    const minutes = payload.deadlineMinutes
+    const base = message?.sendTime ? new Date(String(message.sendTime).replace(' ', 'T')) : null
+    if (minutes != null && base && !isNaN(base.getTime())) {
+        const due = new Date(base.getTime() + Number(minutes) * 60000)
+        const pad = (n) => String(n).padStart(2, '0')
+        return `${due.getFullYear()}-${pad(due.getMonth() + 1)}-${pad(due.getDate())} ${pad(due.getHours())}:${pad(due.getMinutes())}`
+    }
+    return ''
 }
 
 /** 紧急度权重：urgent 排最前（工作台排序用），其余按时间倒序 */
@@ -273,6 +405,11 @@ export function messageActionPermissions(bizType) {
 /** 这类站内信归属岗位（当前角色处理不了时的提示文案） */
 export function messageActionOwner(bizType) {
     return messageCatalogOf(bizType).owner
+}
+
+/** 这类站内信的落地页面（无则 undefined）：弹框据此渲染「前往…处理」，避免只给一段正文 */
+export function messageGotoTarget(bizType) {
+    return GOTO_TARGETS[bizType]
 }
 
 /** 筛选下拉选项（目录驱动，不会漏 critical） */

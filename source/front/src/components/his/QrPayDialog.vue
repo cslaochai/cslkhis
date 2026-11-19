@@ -74,7 +74,7 @@
         <p v-if="error" class="mt-2 text-center text-sm text-red-600">{{ error }}</p>
       </div>
 
-      <!-- 医保个账：刷社保卡→2201预结算→核对→2301扣个账→剩余cashPay转现金/扫码 -->
+      <!-- 医保个账：刷社保卡→2206预结算→核对→2207扣个账→剩余cashPay转现金/扫码 -->
       <div v-else-if="isInsurance" class="min-h-[236px] rounded-lg border border-slate-200 p-3 text-sm">
         <template v-if="!insuranceSplit">
           <div class="py-2 text-center text-slate-500">
@@ -83,7 +83,7 @@
           </div>
           <el-button :loading="insuranceLoading" data-testid="insurance-pre-settle" type="primary"
                      class="mt-2 w-full" @click="doPreSettle">
-            调医保预结算（2201）
+            调医保预结算（2206）
           </el-button>
         </template>
         <template v-else-if="!insuranceConfirmed">
@@ -106,7 +106,7 @@
           </div>
           <el-button :loading="insuranceLoading" data-testid="insurance-formal-settle" type="success"
                      class="mt-2 w-full" @click="doFormalSettle">
-            确认扣个账（2301）
+            确认扣个账（2207）
           </el-button>
         </template>
         <template v-else>
@@ -239,7 +239,7 @@ const PAY_STATUS_CLOSED = 2;
 const SCAN_METHOD = 'SCAN';
 /** 现金档的哨兵值（不是落库码值） */
 const CASH_METHOD = 'CASH';
-/** 医保个账档的哨兵值（收款窗口刷社保卡→2201预结算→2301扣个账） */
+/** 医保个账档的哨兵值（收款窗口刷社保卡→2206预结算→2207扣个账） */
 const INSURANCE_METHOD = 'INSURANCE';
 /** 支付方式码值 1-现金（PaymentMethodEnum.CASH） */
 const PAY_METHOD_CASH = 1;
@@ -273,11 +273,11 @@ const billDetail = ref(null);
 /** 出码返回的身份事实（服务端按 billId 查到的账单号/患者/金额），是头部显示的核对基准 */
 const billing = ref(null);
 const detailLoading = ref(false);
-/** 医保个账档：2201 预结算返回的 splits（统筹/个账/自付） */
+/** 医保个账档：2206 预结算返回的 splits（统筹/个账/自付） */
 const insuranceSplit = ref(null);
-/** 医保个账档：2201/2301 请求中 */
+/** 医保个账档：2206/2207 请求中 */
 const insuranceLoading = ref(false);
-/** 医保个账档：2301 已成功扣个账 */
+/** 医保个账档：2207 已成功扣个账 */
 const insuranceConfirmed = ref(false);
 /** 过期时刻在本地时钟上的落点（由服务端口径的剩余时长锚定） */
 const countdownDeadline = ref(0);
@@ -290,7 +290,7 @@ const isClosed = computed(() => Number(payStatus.value) === PAY_STATUS_CLOSED);
 const isCash = computed(() => method.value === CASH_METHOD);
 const isInsurance = computed(() => method.value === INSURANCE_METHOD);
 /** 这张账单是不是还需要手动走医保个账（settlementMode=2 且尚未 splits）：
- * 挂号时医保已自动 2301 结完（poolAmount>0），不显示医保档；
+ * 挂号时医保已自动 2207 结完（poolAmount>0），不显示医保档；
  * 诊中结算（收费台手动结账）settlementMode=2 但 poolAmount=0，才显示医保档让操作员刷社保卡。 */
 const isInsuranceBill = computed(() => {
   if (Number(summary.value.settlementMode) !== 2) return false;
@@ -543,7 +543,7 @@ function genRequestId() {
   return Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 10);
 }
 
-/** 2201 预结算：调医保平台算 splits，不落库 */
+/** 2206 预结算：调医保平台算 splits，不落库 */
 async function doPreSettle() {
   if (!props.billId) {
     error.value = '缺少账单';
@@ -561,7 +561,7 @@ async function doPreSettle() {
   }
 }
 
-/** 2301 正式结算：医保平台扣个账、出 YBZ 单号，HIS 同事务落个账流水+回写 splits */
+/** 2207 正式结算：医保平台扣个账、出 YBZ 单号，HIS 同事务落个账流水+回写 splits */
 async function doFormalSettle() {
   if (!props.billId || !insuranceSplit.value) {
     error.value = '请先预结算';

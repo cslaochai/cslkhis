@@ -3,8 +3,8 @@
     <DutyOfficerBar class="mb-3"/>
 
     <el-card ref="queryCardRef" class="query-card mb-3" shadow="never">
-      <div class="flex items-start justify-between gap-4">
-        <el-form :model="searchForm" inline>
+      <div class="query-grid-wrap">
+        <el-form class="query-grid" :model="searchForm">
           <el-form-item label="值班种类">
             <el-radio-group v-model="dutyKind" data-testid="duty-kind" @change="onDutyKindChange">
               <el-radio-button v-for="k in DUTY_KINDS" :key="k.value" :value="k.value">
@@ -12,40 +12,40 @@
               </el-radio-button>
             </el-radio-group>
           </el-form-item>
-          <el-form-item label="值班日期">
-            <el-date-picker
-                v-model="searchForm.beginDate"
-                clearable
-                placeholder="开始日期"
-                type="date"
-                value-format="YYYY-MM-DD"
-            />
+          <!-- 值班线：厂商的「自定义值班类型」在页面上的落点 —— 医疗/护理/行政/院领导带班各看各的 -->
+          <el-form-item v-if="dutyKind === 'admin'" label="值班线">
+            <el-select v-model="searchForm.dutyTypeId" clearable data-testid="duty-type-filter" placeholder="全部值班线"
+                       style="width: 100%">
+              <el-option v-for="t in dutyTypeOptions" :key="t.id" :label="t.typeName" :value="t.id"/>
+            </el-select>
           </el-form-item>
-          <el-form-item label="至">
+          <el-form-item class="is-daterange" label="值班日期">
             <el-date-picker
-                v-model="searchForm.endDate"
+                v-model="dateRange"
                 clearable
-                placeholder="结束日期"
-                type="date"
+                end-placeholder="结束日期"
+                range-separator="至"
+                start-placeholder="开始日期"
+                style="width: 100%"
+                type="daterange"
+                unlink-panels
                 value-format="YYYY-MM-DD"
             />
           </el-form-item>
           <el-form-item label="班次">
-            <el-select v-model="searchForm.shiftType" clearable placeholder="全部" style="width: 190px">
+            <el-select v-model="searchForm.shiftType" clearable placeholder="全部" style="width: 100%">
               <el-option v-for="s in SHIFTS" :key="s.value" :label="s.label" :value="s.value"/>
             </el-select>
           </el-form-item>
           <el-form-item label="角色">
-            <el-select v-model="searchForm.roleType" clearable placeholder="全部" style="width: 130px">
+            <el-select v-model="searchForm.roleType" clearable placeholder="全部" style="width: 100%">
               <el-option v-for="r in ROLES" :key="r.value" :label="r.label" :value="r.value"/>
             </el-select>
           </el-form-item>
-          <el-form-item>
-            <el-button :icon="Search" type="primary" @click="handleSearch">查询</el-button>
-            <el-button :icon="Refresh" @click="handleReset">重置</el-button>
-          </el-form-item>
         </el-form>
-        <div class="flex shrink-0 items-start gap-3">
+        <div class="query-grid-ops">
+          <el-button :icon="Search" type="primary" @click="handleSearch">查询</el-button>
+          <el-button :icon="Refresh" @click="handleReset">重置</el-button>
           <el-button v-perm="'org:duty:edit'" :icon="Plus" data-testid="duty-add" type="primary" @click="handleAdd">
             {{ dutyKind === 'clinical' ? '登记科室值班' : '登记排班' }}
           </el-button>
@@ -59,6 +59,11 @@
       <div data-testid="duty-table">
         <el-table v-loading="loading" :data="tableData" :max-height="tableMaxHeight" stripe>
           <el-table-column label="值班日期" prop="dutyDate" width="120"/>
+          <el-table-column label="值班线" prop="dutyTypeName" width="130">
+            <template #default="{ row }">
+              <span>{{ row.dutyTypeName || '—' }}</span>
+            </template>
+          </el-table-column>
           <el-table-column label="班次" prop="shiftTypeText" width="90"/>
           <el-table-column label="角色" prop="roleTypeText" width="90">
             <template #default="{ row }">
@@ -107,21 +112,11 @@
             </template>
           </el-table-column>
           <el-table-column label="换班原因" min-width="160" prop="substituteReason" show-overflow-tooltip/>
-          <el-table-column fixed="right" label="操作" width="320">
+          <!-- 操作列：只留两个主操作，其余收进「更多」——原来 7 个按钮平铺 320px，点错的代价是撤回发布态 -->
+          <el-table-column fixed="right" label="操作" width="210">
             <template #default="{ row }">
-              <el-button v-perm="'org:duty:edit'" :icon="Edit" link type="primary" @click="handleEdit(row)">修改
-              </el-button>
-              <el-button v-perm="'org:duty:substitute'" :icon="Switch" link type="warning" @click="openSubstitute(row)">
-                换班
-              </el-button>
-              <el-button
-                  v-if="row.substituted === 1"
-                  v-perm="'org:duty:substitute'"
-                  link
-                  type="info"
-                  @click="handleCancelSubstitute(row)"
-              >
-                撤回
+              <el-button v-perm="'org:duty:edit'" :icon="Edit" link type="primary" @click="handleEdit(row)">
+                修改
               </el-button>
               <el-button
                   v-if="row.publishStatus === PUBLISH_DRAFT"
@@ -134,7 +129,7 @@
                 提交审核
               </el-button>
               <el-button
-                  v-if="row.publishStatus === PUBLISH_PENDING"
+                  v-else-if="row.publishStatus === PUBLISH_PENDING"
                   v-perm="'org:duty:audit'"
                   :data-testid="`duty-publish-audit-${row.id}`"
                   link
@@ -143,27 +138,32 @@
               >
                 审核发布
               </el-button>
-              <el-button
-                  v-if="isPublishEffective(row.publishStatus)"
-                  v-perm="'org:duty:edit'"
-                  :data-testid="`duty-publish-adjust-${row.id}`"
-                  link
-                  type="warning"
-                  @click="handleAdjustStart(row)"
-              >
-                进入调班
-              </el-button>
-              <el-button
-                  v-perm="'org:duty:edit'"
-                  :data-testid="`duty-publish-recall-${row.id}`"
-                  link
-                  type="info"
-                  @click="handleRecallPublish(row)"
-              >
-                撤回发布态
-              </el-button>
-              <el-button v-perm="'org:duty:delete'" :icon="Delete" link type="danger" @click="handleDelete(row)">删除
-              </el-button>
+              <el-dropdown trigger="click" @command="(cmd) => handleRowCommand(cmd, row)">
+                <el-button link type="info" style="margin-left: 8px">
+                  更多<el-icon class="el-icon--right"><ArrowDown/></el-icon>
+                </el-button>
+                <template #dropdown>
+                  <el-dropdown-menu>
+                    <el-dropdown-item v-perm="'org:duty:substitute'" command="substitute" :icon="Switch">
+                      临时换班
+                    </el-dropdown-item>
+                    <el-dropdown-item v-if="row.substituted === 1" v-perm="'org:duty:substitute'"
+                                      command="cancelSubstitute">
+                      撤回换班
+                    </el-dropdown-item>
+                    <el-dropdown-item v-if="isPublishEffective(row.publishStatus)" v-perm="'org:duty:edit'"
+                                      command="adjust">
+                      进入调班
+                    </el-dropdown-item>
+                    <el-dropdown-item v-perm="'org:duty:edit'" command="recall">
+                      撤回发布态
+                    </el-dropdown-item>
+                    <el-dropdown-item v-perm="'org:duty:delete'" command="delete" :icon="Delete" divided>
+                      <span style="color: var(--el-color-danger)">删除</span>
+                    </el-dropdown-item>
+                  </el-dropdown-menu>
+                </template>
+              </el-dropdown>
             </template>
           </el-table-column>
         </el-table>
@@ -208,8 +208,7 @@
               <el-table-column label="夜班" prop="nightCount" width="70" align="center"/>
               <el-table-column label="主班" prop="primaryCount" width="70" align="center"/>
               <el-table-column label="副班" prop="secondaryCount" width="70" align="center"/>
-              <el-table-column label="总时长(分)" prop="totalMinutes" width="100" align="right"/>
-              <el-table-column label="总时长(时)" prop="totalHours" width="100" align="right"/>
+              <el-table-column label="总时长(时)" prop="totalHours" width="110" align="right"/>
             </el-table>
             <el-empty v-if="!workloadLoading && workloadResult.rows.length === 0" :image-size="60"
                       description="该月还没有已发布的值班排班"/>
@@ -277,7 +276,7 @@
 import {onMounted, ref} from 'vue'
 import {ElMessage, ElMessageBox} from 'element-plus'
 // ⚠ @element-plus/icons-vue 没有导出 Swap（写了会导致整个页面模块加载失败、菜单点了白屏）
-import {Delete, Edit, Plus, Refresh, Search, Switch} from '@element-plus/icons-vue'
+import {ArrowDown, Delete, Edit, Plus, Refresh, Search, Switch} from '@element-plus/icons-vue'
 import {
   checkDutyRoster,
   deleteDutyRoster,
@@ -289,6 +288,7 @@ import {
   getDutyRosterListPage,
   getDutyWorkload,
 } from '@/api/dutyRoster'
+import {getDutyTypeList} from '@/api/dutyType'
 import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination'
 import {useTableMaxHeight} from '@/lib/useTableMaxHeight'
 import {DUTY_KINDS} from '@/lib/dutyRoster'
@@ -323,7 +323,29 @@ const pagination = ref({pageNum: 1, pageSize: DEFAULT_PAGE_SIZE, total: 0})
 // 两卡式列表页：表格只设最大高度，超高内部滚动（口径参照 views/system/user/UserView.vue）
 const {queryCardRef, footerRef, tableMaxHeight} = useTableMaxHeight()
 
-const searchForm = ref({beginDate: null, endDate: null, shiftType: null, roleType: null})
+const searchForm = ref({dutyTypeId: null, shiftType: null, roleType: null})
+// 日期区间：默认本月（1 号 ~ 月末）。排班按月排、按月看，原来只查「昨天起往后 30 天」——
+// 库里 3300 多行却进来就是「共 0 条」，因为窗口之外的历史值守全被滤掉了。
+const thisMonthRange = () => {
+  const now = new Date()
+  const y = now.getFullYear()
+  const m = now.getMonth() + 1
+  const pad = (n) => String(n).padStart(2, '0')
+  const lastDay = new Date(y, m, 0).getDate()
+  return [`${y}-${pad(m)}-01`, `${y}-${pad(m)}-${pad(lastDay)}`]
+}
+const dateRange = ref(thisMonthRange())
+
+// 值班线（值班类型）：医疗总值班/护理总值班/行政总值班/院领导带班 —— 院办在「值班类型」页自己维护
+const dutyTypeOptions = ref([])
+const loadDutyTypes = async () => {
+  try {
+    const res = await getDutyTypeList()
+    dutyTypeOptions.value = (res?.data || []).filter((t) => t.status === 1)
+  } catch {
+    dutyTypeOptions.value = []
+  }
+}
 
 // 值班种类：全院总值班（行政位）vs 科室医师值班（sql/202 铺的临床位，39 个科室 × 一线/二线/三线）。
 // 两者同居 biz_duty_roster 一张表，靠 post_id 挂的点位分开 —— 页面必须让排班员先选是哪一类，
@@ -342,6 +364,7 @@ const subDialogVisible = ref(false)
 const subRow = ref(null)
 
 onMounted(() => {
+  loadDutyTypes()
   loadData()
 })
 
@@ -350,6 +373,8 @@ const loadData = async () => {
   try {
     const res = await getDutyRosterListPage({
       ...searchForm.value,
+      beginDate: dateRange.value?.[0] || null,
+      endDate: dateRange.value?.[1] || null,
       // 总值班：只认行政位（含无点位的老数据）；科室医师值班：只认临床位
       ...(dutyKind.value === 'admin' ? {adminOnly: true} : {dutyScope: 6}),
       pageNum: pagination.value.pageNum,
@@ -371,8 +396,18 @@ const handleSearch = () => {
   loadData()
 }
 const handleReset = () => {
-  searchForm.value = {beginDate: null, endDate: null, shiftType: null, roleType: null}
+  searchForm.value = {dutyTypeId: null, shiftType: null, roleType: null}
+  dateRange.value = thisMonthRange()
   handleSearch()
+}
+
+// 「更多」下拉的分发：换班/撤回换班/进入调班/撤回发布态/删除
+const handleRowCommand = (cmd, row) => {
+  if (cmd === 'substitute') return openSubstitute(row)
+  if (cmd === 'cancelSubstitute') return handleCancelSubstitute(row)
+  if (cmd === 'adjust') return handleAdjustStart(row)
+  if (cmd === 'recall') return handleRecallPublish(row)
+  if (cmd === 'delete') return handleDelete(row)
 }
 
 const handleAdd = () => {

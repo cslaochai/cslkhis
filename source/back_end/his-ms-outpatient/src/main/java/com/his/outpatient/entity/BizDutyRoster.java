@@ -58,6 +58,15 @@ public class BizDutyRoster extends BaseEntity {
     private Long postId;
 
     /**
+     * 值班类型ID（院级值守行冗余一列，列表按「值班线」筛；科室医师值班行为空）
+     *
+     * <p>冗余而不只靠点位带出：值班类型是院办维护的配置，点位改挂类型时历史行要能看出
+     * 「当时是哪条线的班」，靠 join 现算会把历史洗成今天的口径。
+     */
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long dutyTypeId;
+
+    /**
      * 员工排班ID（这个人这一班的在岗事实，换班后指向实际值班人）
      */
     @JsonSerialize(using = ToStringSerializer.class)

@@ -663,7 +663,7 @@ public class SettlementBillServiceImpl extends ServiceImpl<BizSettlementBillMapp
      * 账单行快照 + 逐行 split 占位。
      *
      * <p>出账时 pool/account/self 全部置 0 占位：真实 splits 由收款时调医保平台
-     * 2201/2301 返回后回写（见 InsuranceRealTimeSettleController）。
+     * 2206/2207 返回后回写（见 InsuranceRealTimeSettleController）。
      * 院内不再按规则表估算统筹——那是假数，跟医保平台实际分解结果对不上。
      */
     private List<BizSettlementBillItem> buildItems(BizFeeRecord first, List<BizFeeRecord> rows,
@@ -689,7 +689,7 @@ public class SettlementBillServiceImpl extends ServiceImpl<BizSettlementBillMapp
             item.setAmount(amount);
             item.setDiscountAmount(BigDecimal.ZERO);
 
-            // 出账时 splits 全部占位 0：收款时调 2201/2301 拿真实值后回写。
+            // 出账时 splits 全部占位 0：收款时调 2206/2207 拿真实值后回写。
             // 自费患者（未参保/停保/未带社保卡）一路都是 0，直接收全额，跟以前行为一致。
             item.setPoolAmount(BigDecimal.ZERO);
             item.setAccountAmount(BigDecimal.ZERO);

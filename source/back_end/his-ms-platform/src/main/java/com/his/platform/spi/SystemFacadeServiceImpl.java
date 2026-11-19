@@ -464,6 +464,7 @@ public class SystemFacadeServiceImpl implements SystemFacadeService {
         vo.setDeptName(employee.getDeptName());
         vo.setPhone(employee.getPhone());
         vo.setTitle(employee.getTitle());
+        vo.setPosition(employee.getPosition());
         vo.setStatus(employee.getStatus());
         vo.setIsFixed(employee.getIsFixed());
         vo.setIsRegistered(employee.getIsRegistered());

@@ -17,9 +17,13 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -29,6 +33,9 @@ public class SysMenuServiceImpl extends ServiceImpl<SysMenuMapper, SysMenu> impl
     private final SysMenuMapper sysMenuMapper;
     private final RolePermissionCache rolePermissionCache;
     private final UserIdentityCache userIdentityCache;
+
+    /** 门户目录 id：其下为登录即见的固定入口区（工作台 / 统一待办 / 急诊值班） */
+    private static final Long PORTAL_ROOT_ID = 100L;
 
     @Override
     public List<MenuVO> tree() {
@@ -55,8 +62,27 @@ public class SysMenuServiceImpl extends ServiceImpl<SysMenuMapper, SysMenu> impl
         List<SysMenu> menus = TextUtil.hasText(roleCode)
                 ? sysMenuMapper.selectMenusByEmployeeIdAndRole(user.getEmployeeId(), roleCode)
                 : sysMenuMapper.selectMenusByEmployeeId(user.getEmployeeId());
-        List<MenuVO> voList = menus.stream().map(this::toVO).collect(Collectors.toList());
+        List<MenuVO> voList = mergeWithPortalEntries(menus).stream().map(this::toVO).collect(Collectors.toList());
         return buildMenuTree(voList, 0L);
+    }
+
+    /**
+     * 门户入口区（工作台 / 统一待办 / 急诊值班）不按角色授权过滤：这几项是登录后第一眼要用的入口，
+     * 角色没被授就整片看不见等于「登进来没门」。只补 is_visible=1 且 status=1 的行，
+     * 被隐藏（如 102 消息中心）或停用的菜单不会被这条通路复活；其余菜单仍严格按 sys_role_menu 判定。
+     */
+    private List<SysMenu> mergeWithPortalEntries(List<SysMenu> granted) {
+        List<SysMenu> portal = lambdaQuery()
+                .and(w -> w.eq(SysMenu::getId, PORTAL_ROOT_ID).or().eq(SysMenu::getParentId, PORTAL_ROOT_ID))
+                .eq(SysMenu::getIsVisible, 1)
+                .eq(SysMenu::getStatus, 1)
+                .list();
+        Set<Long> grantedIds = granted.stream().map(SysMenu::getId).collect(Collectors.toCollection(HashSet::new));
+        List<SysMenu> merged = new ArrayList<>(granted);
+        portal.stream().filter(menu -> grantedIds.add(menu.getId())).forEach(merged::add);
+        merged.sort(Comparator.comparing(SysMenu::getSortOrder, Comparator.nullsLast(Comparator.naturalOrder()))
+                .thenComparing(SysMenu::getId));
+        return merged;
     }
 
     @Override

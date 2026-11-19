@@ -97,4 +97,9 @@ public class SysMessageVO {
      */
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime readTime;
+
+    /**
+     * 发送人（创建该消息的业务操作人姓名，取 sys_message.create_by）
+     */
+    private String createBy;
 }

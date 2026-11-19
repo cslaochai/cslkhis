@@ -30,4 +30,14 @@ public class MessagePageQueryDTO extends PageParam {
      * 关键词（模糊匹配标题、内容）
      */
     private String keyword;
+
+    /**
+     * 只看我发起的（按 create_by_id = 当前用户），用于「我发起」页签
+     */
+    private Boolean mine;
+
+    /**
+     * 只看通知型（handle_status 为空：无需处置、看完即算），用于「待阅」页签
+     */
+    private Boolean notifyOnly;
 }

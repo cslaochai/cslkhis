@@ -174,6 +174,8 @@
 
 <script setup>
 import {onMounted, reactive, ref} from 'vue';
+import {useRoute} from 'vue-router';
+import {msgDeeplinkOf, pickRowByDeeplink} from '@/lib/msgDeeplink';
 import {ElMessage, ElMessageBox} from 'element-plus';
 import {Bell, Plus, Refresh, Search} from '@element-plus/icons-vue';
 import {
@@ -373,9 +375,23 @@ const openDetail = (row) => {
   detailId.value = row.id;
   detailVisible.value = true;
 };
-onMounted(() => {
+/* ---------- 待办深链：借阅超期待办跳进来，按借阅单号直接筛出那一条 ---------- */
+const route = useRoute();
+const applyMsgDeeplink = async () => {
+  const link = msgDeeplinkOf(route);
+  if (!link) return;
+  query.borrowNo = link.bizNo || '';
+  query.keyword = link.bizNo || link.bizId;
+  query.pageNum = 1;
+  await loadList();
+  const hit = pickRowByDeeplink(rows.value, link, (r) => [r.borrowNo, String(r.id)]);
+  if (link.bizNo)
+    ElMessage[hit ? 'success' : 'warning'](hit ? `已定位到借阅单 ${link.bizNo}` : `未找到借阅单 ${link.bizNo}：可能已归还或不在当前筛选范围`);
+};
+onMounted(async () => {
   loadDicts();
   loadStats();
-  loadList();
+  await loadList();
+  await applyMsgDeeplink();
 });
 </script>

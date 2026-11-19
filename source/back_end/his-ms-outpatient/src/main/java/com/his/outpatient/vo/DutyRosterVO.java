@@ -38,6 +38,17 @@ public class DutyRosterVO {
     private String postName;
 
     /**
+     * 值班类型ID（医疗总值班/护理总值班/行政总值班/院领导带班；科室医师值班行为空）
+     */
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long dutyTypeId;
+
+    /**
+     * 值班类型名称
+     */
+    private String dutyTypeName;
+
+    /**
      * 责任范围（1-全院行政 2-急诊 3-感染 4-总务 5-信息 6-临床科室）
      */
     private Integer dutyScope;

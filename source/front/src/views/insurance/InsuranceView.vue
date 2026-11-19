@@ -453,14 +453,13 @@
                   </el-select>
                 </template>
               </el-table-column>
-              <el-table-column label="ICD-10 编码" width="140">
+              <el-table-column label="诊断（ICD-10）" min-width="220">
                 <template #default="{ row }">
-                  <el-input v-model="row.icdCode" placeholder="如 E11.9" size="small"/>
-                </template>
-              </el-table-column>
-              <el-table-column label="诊断名称" min-width="170">
-                <template #default="{ row }">
-                  <el-input v-model="row.icdName" placeholder="如 2型糖尿病" size="small"/>
+                  <IcdDiagnosisSelect
+                      v-model:model-value="row.icdCode"
+                      v-model:name="row.icdName"
+                      size="small"
+                      placeholder="选择诊断"/>
                 </template>
               </el-table-column>
               <el-table-column label="入院病情" width="130">
@@ -816,6 +815,7 @@ import {
 } from '@/api/settlement';
 import {auditSettlementCompliance, getSettlementCoding, saveSettlementCoding,} from '@/api/compliance';
 import {patientGenderText} from '@/lib/patientGender';
+import IcdDiagnosisSelect from '@/components/his/IcdDiagnosisSelect.vue';
 import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination';
 
 const loading = ref(false);

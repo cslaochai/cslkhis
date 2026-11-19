@@ -6,24 +6,31 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
+import com.his.common.constant.DictTypeConst;
+import com.his.common.entity.CurrentUser;
 import com.his.common.enums.*;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.TextUtil;
+import com.his.common.utils.UserUtils;
 import com.his.outpatient.dto.*;
 import com.his.outpatient.entity.BizDutyPost;
 import com.his.outpatient.entity.BizDutyRoster;
+import com.his.outpatient.entity.BizDutyType;
 import com.his.outpatient.entity.BizSchedule;
 import com.his.outpatient.entity.BizShift;
 import com.his.outpatient.mapper.BizDutyPostMapper;
 import com.his.outpatient.mapper.BizDutyRosterMapper;
 import com.his.outpatient.mapper.BizShiftMapper;
 import com.his.outpatient.service.DutyRosterService;
+import com.his.outpatient.service.DutyTypeService;
 import com.his.outpatient.service.ShiftService;
 import com.his.outpatient.service.StaffScheduleService;
 import com.his.outpatient.vo.DutyCheckVO;
 import com.his.outpatient.vo.DutyOfficerVO;
 import com.his.outpatient.vo.DutyRosterVO;
+import com.his.outpatient.vo.DutyTypeVO;
 import com.his.outpatient.vo.DutyWorkloadVO;
+import com.his.spi.service.DictCacheService;
 import com.his.spi.service.SystemFacadeService;
 import com.his.spi.vo.DeptBriefVO;
 import com.his.spi.vo.EmployeeBriefVO;
@@ -55,12 +62,6 @@ public class DutyRosterServiceImpl extends ServiceImpl<BizDutyRosterMapper, BizD
     private static final int DAY_START_HOUR = 8;
     private static final int NIGHT_START_HOUR = 18;
 
-    /**
-     * 列表默认窗口：昨天（凌晨解析用）起，往后 30 天
-     */
-    private static final int DEFAULT_BACK_DAYS = 1;
-    private static final int DEFAULT_FORWARD_DAYS = 30;
-
     private final ShiftService shiftService;
 
     private final StaffScheduleService staffScheduleService;
@@ -72,6 +73,26 @@ public class DutyRosterServiceImpl extends ServiceImpl<BizDutyRosterMapper, BizD
     private final BizShiftMapper bizShiftMapper;
 
     private final SystemFacadeService systemFacadeService;
+
+    /**
+     * 字典：职务码值（hospital_position）翻译，资质校验的报错要说人话
+     */
+    private final DictCacheService dictCacheService;
+
+    /**
+     * 值班类型（值班线）：归口科室判定与资质校验的唯一实现方
+     */
+    private final DutyTypeService dutyTypeService;
+
+    /**
+     * 行政总值班类型编码：全院呼叫的「总值班」指的是这条线，不是医疗/护理总值
+     */
+    private static final String TYPE_CODE_ADMIN = "ADMIN";
+
+    /**
+     * 院领导带班类型编码：行政总值当班日的二线
+     */
+    private static final String TYPE_CODE_LEADER = "LEADER";
 
     /**
      * 当前时刻的总值班（跨自然日的夜班按开始日解析）
@@ -106,13 +127,31 @@ public class DutyRosterServiceImpl extends ServiceImpl<BizDutyRosterMapper, BizD
      * 值班日志交班时用它推算接班人：白班交给同日夜班，夜班交给次日白班。
      */
     public DutyOfficerVO officerOf(LocalDate date, int shift) {
-        BizDutyRoster main = pick(date, shift, DutyRoleTypeEnum.PRIMARY.getCode());
-        BizDutyRoster row = main != null ? main : pick(date, shift, DutyRoleTypeEnum.SECONDARY.getCode());
+        // 「此刻全院谁负责」指行政总值班（夜里出事打的就是这条线的电话）；
+        // 医疗/护理总值是各条线内部的值班，混进来只会答错人。老库没有类型配置时回退到全域。
+        BizDutyRoster main = pick(date, shift, DutyRoleTypeEnum.PRIMARY.getCode(), typeIdOfCode(TYPE_CODE_ADMIN));
+        BizDutyRoster vice = pick(date, shift, DutyRoleTypeEnum.SECONDARY.getCode(), typeIdOfCode(TYPE_CODE_ADMIN));
+        if (main == null && vice == null) {
+            main = pick(date, shift, DutyRoleTypeEnum.PRIMARY.getCode(), typeIdOfCode(TYPE_CODE_LEADER));
+            vice = pick(date, shift, DutyRoleTypeEnum.SECONDARY.getCode(), typeIdOfCode(TYPE_CODE_LEADER));
+        }
+        if (main == null && vice == null) {
+            main = pick(date, shift, DutyRoleTypeEnum.PRIMARY.getCode(), null);
+            vice = pick(date, shift, DutyRoleTypeEnum.SECONDARY.getCode(), null);
+        }
+        BizDutyRoster row = main != null ? main : vice;
         if (row == null) {
-            return empty(String.format("%s %s 未排总值班（主班副班都没有），全院应急协调当前无人接手，请先在「总值班排班」登记",
+            return empty(String.format("%s %s 未排总值班（主班副班都没有），全院应急协调当前无人接手，请到「排班值守中心 → 全院总值班」登记",
                     date, shiftText(shift)));
         }
         return toOfficer(row, main == null);
+    }
+
+    /**
+     * 值班类型编码 → 类型ID（配置缺失时返回 null，调用侧按「不限类型」回退）
+     */
+    private Long typeIdOfCode(String typeCode) {
+        return dutyTypeService.idOfCode(typeCode);
     }
 
     /**
@@ -187,13 +226,17 @@ public class DutyRosterServiceImpl extends ServiceImpl<BizDutyRosterMapper, BizD
 
     // 排班维护
     public PageResult<DutyRosterVO> listPage(DutyRosterPageQueryDTO q) {
-        LocalDate begin = q.getBeginDate() != null ? q.getBeginDate() : LocalDate.now().minusDays(DEFAULT_BACK_DAYS);
-        LocalDate end = q.getEndDate() != null ? q.getEndDate() : LocalDate.now().plusDays(DEFAULT_FORWARD_DAYS);
+        LocalDate today = LocalDate.now();
+        YearMonth month = YearMonth.from(today);
+        LocalDate begin = q.getBeginDate() != null ? q.getBeginDate() : month.atDay(1);
+        LocalDate end = q.getEndDate() != null ? q.getEndDate() : month.atEndOfMonth();
         LambdaQueryWrapper<BizDutyRoster> w = new LambdaQueryWrapper<>();
         w.ge(BizDutyRoster::getDutyDate, begin)
                 .le(BizDutyRoster::getDutyDate, end)
                 .eq(q.getShiftType() != null, BizDutyRoster::getShiftType, q.getShiftType())
                 .eq(q.getRoleType() != null, BizDutyRoster::getRoleType, q.getRoleType())
+                // 按值班线筛：医疗/护理/行政/院领导带班各看各的
+                .eq(q.getDutyTypeId() != null, BizDutyRoster::getDutyTypeId, q.getDutyTypeId())
                 .eq(q.getEmployeeId() != null, BizDutyRoster::getEmployeeId, q.getEmployeeId());
         // 按点位 / 责任范围筛：临床医师值班与全院总值班同居一表，不看点位就分不开
         if (q.getPostId() != null) {
@@ -222,11 +265,13 @@ public class DutyRosterServiceImpl extends ServiceImpl<BizDutyRosterMapper, BizD
 
     /**
      * 某个责任范围下的全部点位ID（临床=6 一次能捞出 24 个科室位）
+     *
+     * <p>不看点位启停：历史值守行挂的是当时的点位，点位停用后这些行仍要能在列表里看到，
+     * 否则「这个月有人值过班」会凭空消失。
      */
     private List<Long> postIdsOfScope(Integer dutyScope) {
         List<BizDutyPost> posts = bizDutyPostMapper.selectList(new LambdaQueryWrapper<BizDutyPost>()
-                .eq(BizDutyPost::getDutyScope, dutyScope)
-                .eq(BizDutyPost::getStatus, EnableStatusEnum.ENABLED.getCode()));
+                .eq(BizDutyPost::getDutyScope, dutyScope));
         List<Long> ids = new ArrayList<>();
         for (BizDutyPost p : posts) {
             if (!Objects.equals(1, p.getDelFlag())) {
@@ -246,9 +291,16 @@ public class DutyRosterServiceImpl extends ServiceImpl<BizDutyRosterMapper, BizD
                 posts.put(p.getId(), p);
             }
         }
+        // 类型名称同样一次捞齐（类型是配置表，条数就个位数）
+        Map<Long, String> typeNames = new HashMap<>();
+        if (rows.stream().anyMatch(r -> r.getDutyTypeId() != null)) {
+            for (DutyTypeVO t : dutyTypeService.listVO()) {
+                typeNames.put(t.getId(), t.getTypeName());
+            }
+        }
         List<DutyRosterVO> vos = new ArrayList<>();
         for (BizDutyRoster r : rows) {
-            vos.add(toRosterVO(r, r.getPostId() == null ? null : posts.get(r.getPostId())));
+            vos.add(toRosterVO(r, r.getPostId() == null ? null : posts.get(r.getPostId()), typeNames));
         }
         return vos;
     }
@@ -261,6 +313,14 @@ public class DutyRosterServiceImpl extends ServiceImpl<BizDutyRosterMapper, BizD
         BizDutyPost post = resolvePost(dto, roleType);
         if (post != null) {
             assertPostStaffType(post, emp);
+        }
+        // 值班线：点位挂的类型优先（班次/角色/资质都是「位的属性」），入参类型只用于未建点位的老口径
+        Long dutyTypeId = post != null && post.getDutyTypeId() != null ? post.getDutyTypeId() : dto.getDutyTypeId();
+        BizDutyType dutyType = null;
+        if (dutyTypeId != null) {
+            dutyType = dutyTypeService.requireEnabled(dutyTypeId);
+            assertDutyLineManageable(dutyType);
+            assertQualified(dutyType, emp);
         }
         BizShift shift = post != null ? bizShiftMapper.selectById(post.getShiftId()) : dutyShiftOf(shiftType);
         if (post != null && shift == null) {
@@ -282,6 +342,7 @@ public class DutyRosterServiceImpl extends ServiceImpl<BizDutyRosterMapper, BizD
             row.setDutyDate(dto.getDutyDate());
         }
         boolean enabled = dto.getStatus() == null || !Objects.equals(EnableStatusEnum.DISABLED.getCode(), dto.getStatus());
+        row.setDutyTypeId(dutyTypeId);
         row.setShiftType(shiftCode);
         row.setRoleType(roleCode);
         row.setEmployeeId(emp.getId());
@@ -308,7 +369,23 @@ public class DutyRosterServiceImpl extends ServiceImpl<BizDutyRosterMapper, BizD
         log.info("值班排班{} date={} post={} shift={} role={} emp={}", insert ? "登记" : "修改",
                 row.getDutyDate(), post == null ? "-" : post.getPostName(),
                 row.getShiftType(), row.getRoleType(), row.getEmployeeName());
-        return toRosterVO(row, post);
+        return toRosterVO(row, post, typeNamesOf(row.getDutyTypeId()));
+    }
+
+    /**
+     * 单行的值班类型名称（登记回参用；列表走 {@link #toRosterVOs} 的批量取数）
+     */
+    private Map<Long, String> typeNamesOf(Long typeId) {
+        Map<Long, String> names = new HashMap<>();
+        if (typeId == null) {
+            return names;
+        }
+        for (DutyTypeVO t : dutyTypeService.listVO()) {
+            if (Objects.equals(t.getId(), typeId)) {
+                names.put(typeId, t.getTypeName());
+            }
+        }
+        return names;
     }
 
     /**
@@ -386,7 +463,30 @@ public class DutyRosterServiceImpl extends ServiceImpl<BizDutyRosterMapper, BizD
         if (!PublishStatusEnum.PENDING.getCode().equals(row.getPublishStatus())) {
             throw new BusinessException("只有待审核状态的值守排班可以审核发布");
         }
+        // 自审闸：与员工排班、护理排班同口径 —— 登记人不能自己审核发布
+        assertNotSelfAudit(row);
         updatePublishStatus(id, PublishStatusEnum.PUBLISHED.getCode(), row);
+    }
+
+    /**
+     * 自审闸：这一行最近一次提交/登记的人不能自己审核发布；留痕缺失（历史行）时放行，系统管理员豁免。
+     */
+    private void assertNotSelfAudit(BizDutyRoster row) {
+        CurrentUser user = UserUtils.getCurrentUser();
+        if (user == null || user.getEmployeeId() == null) {
+            return;
+        }
+        String role = user.getCurrentRole();
+        if (Objects.equals("admin", role)) {
+            return;
+        }
+        Long operator = row.getUpdateById() == null ? row.getCreateById() : row.getUpdateById();
+        if (operator == null) {
+            return;
+        }
+        if (Objects.equals(operator, user.getEmployeeId())) {
+            throw new BusinessException("总值班排班须由他人审核，不能自排自审");
+        }
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -447,6 +547,7 @@ public class DutyRosterServiceImpl extends ServiceImpl<BizDutyRosterMapper, BizD
                 .set(BizDutyRoster::getPhone, row.getPhone())
                 .set(BizDutyRoster::getShiftId, row.getShiftId())
                 .set(BizDutyRoster::getPostId, row.getPostId())
+                .set(BizDutyRoster::getDutyTypeId, row.getDutyTypeId())
                 .set(BizDutyRoster::getStaffScheduleId, row.getStaffScheduleId())
                 .set(BizDutyRoster::getStartTime, row.getStartTime())
                 .set(BizDutyRoster::getEndTime, row.getEndTime())
@@ -568,11 +669,19 @@ public class DutyRosterServiceImpl extends ServiceImpl<BizDutyRosterMapper, BizD
                 .eq(BizDutyPost::getShiftId, shift.getId())
                 .eq(BizDutyPost::getRoleType, roleType.getCode())
                 .eq(BizDutyPost::getDutyScope, DutyScopeEnum.ADMIN.getCode())
+                .eq(dto.getDutyTypeId() != null, BizDutyPost::getDutyTypeId, dto.getDutyTypeId())
                 .eq(BizDutyPost::getStatus, EnableStatusEnum.ENABLED.getCode())
                 .orderByAsc(BizDutyPost::getSortNo)
-                .orderByAsc(BizDutyPost::getId)
-                .last("LIMIT 1"));
-        return posts.isEmpty() ? null : posts.get(0);
+                .orderByAsc(BizDutyPost::getId));
+        if (posts.isEmpty()) {
+            return null;
+        }
+        // 同班次同角色有多个类型的点位（医疗/护理/行政各一条）时，不选类型会排到别人的线上
+        if (dto.getDutyTypeId() == null
+                && posts.stream().map(BizDutyPost::getDutyTypeId).filter(Objects::nonNull).distinct().count() > 1) {
+            throw new BusinessException("这个班次的点位分属多条值班线（医疗/护理/行政等），请先选值班类型再登记");
+        }
+        return posts.get(0);
     }
 
     /**
@@ -591,12 +700,80 @@ public class DutyRosterServiceImpl extends ServiceImpl<BizDutyRosterMapper, BizD
     }
 
     /**
+     * 按线授权：这条值班线只有归口科室的人能排，系统管理员豁免。
+     *
+     * <p>岗位制下「你是谁的人」= 当前岗位的科室，所以切到医务科岗位的人能排医疗线、
+     * 切到护理部岗位的人能排护理线 —— 权限不用另发一套，人换了岗就自动换线。
+     */
+    private void assertDutyLineManageable(BizDutyType type) {
+        CurrentUser user = UserUtils.getCurrentUser();
+        if (user == null || type.getManageDeptId() == null) {
+            return;
+        }
+        if (Objects.equals("admin", user.getCurrentRole())) {
+            return;
+        }
+        if (!Objects.equals(type.getManageDeptId(), user.getDeptId())) {
+            throw new BusinessException("「" + type.getTypeName() + "」归口" + type.getManageDeptName()
+                    + "排班，当前岗位是「" + TextUtil.blankToDefault(user.getDeptName(), "未设科室")
+                    + "」，请切换到归口科室岗位后再排这条线");
+        }
+    }
+
+    /**
+     * 资质校验：值班类型声明了允许的职务码值（字典 hospital_position），不符不许排。
+     *
+     * <p>对标厂商的 credential check：医疗总值班只允许科室正/副主任，护理总值班只允许护士长，
+     * 排错人等于夜里全院找不到能做决定的人。类型没配职务要求时视为不限。
+     */
+    private void assertQualified(BizDutyType type, EmployeeBriefVO emp) {
+        if (!TextUtil.hasText(type.getRequiredPositions())) {
+            return;
+        }
+        List<String> allowed = new ArrayList<>();
+        for (String code : type.getRequiredPositions().split(",")) {
+            if (TextUtil.hasText(code)) {
+                allowed.add(code.trim());
+            }
+        }
+        if (allowed.isEmpty()) {
+            return;
+        }
+        String position = TextUtil.trimToNull(emp.getPosition());
+        if (position == null) {
+            throw new BusinessException("「" + emp.getEmpName() + "」员工档案没有职务信息，无法确认是否具备"
+                    + type.getTypeName() + "资质，请先在员工档案补全职务");
+        }
+        if (!allowed.contains(position)) {
+            throw new BusinessException("「" + type.getTypeName() + "」要求职务为"
+                    + positionText(type.getRequiredPositions()) + "，而「" + emp.getEmpName() + "」是"
+                    + positionText(position) + "，排上去这个位顶不了事");
+        }
+    }
+
+    /**
+     * 职务码值 → 文案（字典 hospital_position）
+     */
+    private String positionText(String codes) {
+        List<String> labels = new ArrayList<>();
+        for (String code : codes.split(",")) {
+            String trimmed = code.trim();
+            if (trimmed.isEmpty()) {
+                continue;
+            }
+            labels.add(dictCacheService.getDicDataLabel(DictTypeConst.HOSPITAL_POSITION, trimmed));
+        }
+        return String.join("/", labels);
+    }
+
+    /**
      * 全部「全院行政」点位ID —— 「此刻谁负责」只在这些位上解析
+     *
+     * <p>同样不看启停：停用只意味着「以后不再往这个位排班」，不代表挂在上面的历史值守作废。
      */
     private List<Long> adminPostIds() {
         List<BizDutyPost> posts = bizDutyPostMapper.selectList(new LambdaQueryWrapper<BizDutyPost>()
-                .eq(BizDutyPost::getDutyScope, DutyScopeEnum.ADMIN.getCode())
-                .eq(BizDutyPost::getStatus, EnableStatusEnum.ENABLED.getCode()));
+                .eq(BizDutyPost::getDutyScope, DutyScopeEnum.ADMIN.getCode()));
         List<Long> ids = new ArrayList<>();
         for (BizDutyPost p : posts) {
             if (!Objects.equals(1, p.getDelFlag())) {
@@ -608,14 +785,17 @@ public class DutyRosterServiceImpl extends ServiceImpl<BizDutyRosterMapper, BizD
 
     /**
      * 取一行有效总值班（status=1）；同一键理论上只有一行，仍按 id 升序取第一条，绝不 selectOne 撞多行。
+     *
+     * @param dutyTypeId 值班类型（null=不限类型，老库回退用）
      */
-    private BizDutyRoster pick(LocalDate date, int shift, int role) {
+    private BizDutyRoster pick(LocalDate date, int shift, int role, Long dutyTypeId) {
         List<Long> adminIds = adminPostIds();
         LambdaQueryWrapper<BizDutyRoster> w = new LambdaQueryWrapper<>();
         w.eq(BizDutyRoster::getDutyDate, date)
                 .eq(BizDutyRoster::getShiftType, shift)
                 .eq(BizDutyRoster::getRoleType, role)
                 .eq(BizDutyRoster::getStatus, 1)
+                .eq(dutyTypeId != null, BizDutyRoster::getDutyTypeId, dutyTypeId)
                 // 只有已发布/已变更的值守才算数：草稿/待审核/调班中不得对外宣示「此刻谁负责」
                 .in(BizDutyRoster::getPublishStatus,
                         PublishStatusEnum.PUBLISHED.getCode(), PublishStatusEnum.CHANGED.getCode())
@@ -684,11 +864,13 @@ public class DutyRosterServiceImpl extends ServiceImpl<BizDutyRosterMapper, BizD
         return vo;
     }
 
-    private DutyRosterVO toRosterVO(BizDutyRoster r, BizDutyPost post) {
+    private DutyRosterVO toRosterVO(BizDutyRoster r, BizDutyPost post, Map<Long, String> typeNames) {
         boolean substituted = r.getSubstituteEmpId() != null;
         DutyRosterVO vo = new DutyRosterVO();
         vo.setId(r.getId());
         vo.setDutyDate(r.getDutyDate());
+        vo.setDutyTypeId(r.getDutyTypeId());
+        vo.setDutyTypeName(r.getDutyTypeId() == null ? null : typeNames.get(r.getDutyTypeId()));
         vo.setPostId(r.getPostId());
         vo.setPostName(post == null ? null : post.getPostName());
         vo.setDutyScope(post == null ? null : post.getDutyScope());

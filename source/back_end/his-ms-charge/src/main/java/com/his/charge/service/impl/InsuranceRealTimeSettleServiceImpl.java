@@ -38,7 +38,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * 门诊医保实时结算实现：2201 预结算、2301 正式结算（扣个账 + 回写账单 splits）。
+ * 门诊医保实时结算实现：2206 预结算、2207 正式结算（扣个账 + 回写账单 splits）。
  */
 @Slf4j
 @Service
@@ -61,7 +61,7 @@ public class InsuranceRealTimeSettleServiceImpl implements InsuranceRealTimeSett
         BizSettlementBill bill = requireBill(billId);
         List<BizSettlementBillItem> items = billItemMapper.selectByBill(billId);
         PatientBriefVO patient = patientFacadeService.findPatient(bill.getPatientId());
-        InsuranceChannelService.SettleRequest req = buildRequest(bill, items, patient, bill.getBillNo() + "-2201");
+        InsuranceChannelService.SettleRequest req = buildRequest(bill, items, patient, bill.getBillNo() + "-2206");
         InsuranceChannelService.SettleSplit split = insuranceChannelService.preSettle(req);
         if (split == null || split.getInfcode() == null || split.getInfcode() != 0) {
             throw new BusinessException("医保预结算失败：" + TextUtil.cut(split == null ? "无响应" : split.getErrMsg(), 200));
@@ -76,7 +76,7 @@ public class InsuranceRealTimeSettleServiceImpl implements InsuranceRealTimeSett
     @Transactional(rollbackFor = Exception.class)
     public InsuranceChannelService.SettleSplit formalSettle(Long billId) {
         BizSettlementBill bill = requireBill(billId);
-        // 幂等：已经做过 2301 就不重复扣个账
+        // 幂等：已经做过 2207 就不重复扣个账
         BizPaymentTxn existing = txnMapper.selectOne(new LambdaQueryWrapper<BizPaymentTxn>()
                 .eq(BizPaymentTxn::getBillId, billId)
                 .eq(BizPaymentTxn::getPayMethod, PaymentMethodEnum.INSURANCE_ACCOUNT.getCode())
@@ -89,8 +89,8 @@ public class InsuranceRealTimeSettleServiceImpl implements InsuranceRealTimeSett
 
         List<BizSettlementBillItem> items = billItemMapper.selectByBill(billId);
         PatientBriefVO patient = patientFacadeService.findPatient(bill.getPatientId());
-        // 2201 用 billNo-2301 作 tradeNo，医保侧按 tradeNo 幂等
-        InsuranceChannelService.SettleRequest req = buildRequest(bill, items, patient, bill.getBillNo() + "-2301");
+        // 2207 用 billNo-2207 作 tradeNo，医保侧按 tradeNo 幂等
+        InsuranceChannelService.SettleRequest req = buildRequest(bill, items, patient, bill.getBillNo() + "-2207");
         InsuranceChannelService.SettleSplit split = insuranceChannelService.formalSettle(req);
         if (split == null || split.getInfcode() == null || split.getInfcode() != 0) {
             // 防双收：超时等不确定失败时请求可能已到医保侧扣了个账，必须先 2305 冲正确认，
@@ -119,7 +119,7 @@ public class InsuranceRealTimeSettleServiceImpl implements InsuranceRealTimeSett
     }
 
     /**
-     * 组 2201/2301 请求：患者身份 + 账单行费用明细。
+     * 组 2206/2207 请求：患者身份 + 账单行费用明细。
      */
     private InsuranceChannelService.SettleRequest buildRequest(BizSettlementBill bill,
                                                                List<BizSettlementBillItem> items,
@@ -185,7 +185,7 @@ public class InsuranceRealTimeSettleServiceImpl implements InsuranceRealTimeSett
         txn.setCashierName(UserUtils.getCurrentUser().getRealName());
         txn.setTxnTime(LocalDateTime.now());
         txn.setTxnDate(LocalDate.now());
-        txn.setRemark("医保个账划扣（2301），医保余额扣后 ¥" + NumUtil.plain(split.getAccountBalanceAfter()));
+        txn.setRemark("医保个账划扣（2207），医保余额扣后 ¥" + NumUtil.plain(split.getAccountBalanceAfter()));
         txnMapper.insert(txn);
     }
 
@@ -241,7 +241,7 @@ public class InsuranceRealTimeSettleServiceImpl implements InsuranceRealTimeSett
     }
 
     /**
-     * 不确定态冲正确认：发 2305 撤销原 2301。回执成功 = 医保侧有单已冲正（个账已退）；回执「不存在」
+     * 不确定态冲正确认：发 2208 撤销原 2207。回执成功 = 医保侧有单已冲正（个账已退）；回执「不存在」
      * = 医保侧没扣过；两者都允许调用方安全降自费。冲正通道也不通 → 抛「状态未知」，禁止降级。
      */
     private void confirmNotSettledOrThrow(String billNo, String tradeNo) {
@@ -278,7 +278,7 @@ public class InsuranceRealTimeSettleServiceImpl implements InsuranceRealTimeSett
             return err;
         }
         InsuranceChannelService.SettleSplit split = insuranceChannelService.preSettle(
-                buildRequest(bill, items, patient, bill.getBillNo() + "-2201S"));
+                buildRequest(bill, items, patient, bill.getBillNo() + "-2206S"));
         if (split == null || split.getInfcode() == null || split.getInfcode() != 0) {
             InsuranceChannelService.SettleSplit err = split == null ? new InsuranceChannelService.SettleSplit() : split;
             err.setInfcode(-1);
@@ -296,7 +296,7 @@ public class InsuranceRealTimeSettleServiceImpl implements InsuranceRealTimeSett
         BizSettlementBill bill = requireSupplementBill(billId);
         List<BizSettlementBillItem> items = billItemMapper.selectByBill(billId);
         PatientBriefVO patient = patientFacadeService.findPatient(bill.getPatientId());
-        InsuranceChannelService.SettleRequest req = buildRequest(bill, items, patient, bill.getBillNo() + "-2301S");
+        InsuranceChannelService.SettleRequest req = buildRequest(bill, items, patient, bill.getBillNo() + "-2207S");
         InsuranceChannelService.SettleSplit split = insuranceChannelService.formalSettle(req);
         if (split == null || split.getInfcode() == null || split.getInfcode() != 0) {
             if (split != null && Boolean.TRUE.equals(split.getUncertain())) {
@@ -323,7 +323,7 @@ public class InsuranceRealTimeSettleServiceImpl implements InsuranceRealTimeSett
             billMapper.updateById(bill);
             settlementBillService.refreshFromTxns(bill.getId());
         } catch (Exception e) {
-            // 本地落库失败：医保侧 2301 已经扣了账，事务回滚后必须立刻冲正，不留两边不一致
+            // 本地落库失败：医保侧 2207 已经扣了账，事务回滚后必须立刻冲正，不留两边不一致
             InsuranceChannelService.Receipt rev = insuranceChannelService.cancelRealtimeSettle(
                     req.getTradeNo(), req.getTradeNo() + "-REV", "HIS 补结算本地落库失败自动冲正：" + e.getMessage());
             log.error("[医保补结算] 本地落库失败，医保侧冲正{} billNo={} tradeNo={}：{}",
@@ -393,7 +393,7 @@ public class InsuranceRealTimeSettleServiceImpl implements InsuranceRealTimeSett
         if (status == BillStatusEnum.VOIDED) {
             throw new BusinessException("账单 " + bill.getBillNo() + " 已作废，不能做医保结算");
         }
-        // 校验：只有医保联网结算方式的账单才调 2201/2301；自费/公费医疗/离休走别的通道
+        // 校验：只有医保联网结算方式的账单才调 2206/2207；自费/公费医疗/离休走别的通道
         if (bill.getSettlementMode() == null || bill.getSettlementMode() != 2) {
             throw new BusinessException("账单 " + bill.getBillNo() + " 不是医保结算方式，不能调医保实时结算");
         }

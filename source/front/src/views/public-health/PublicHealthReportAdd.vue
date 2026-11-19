@@ -10,11 +10,11 @@
         </el-select>
       </el-form-item>
       <el-form-item label="诊断" required>
-        <el-input v-model="form.diagnosis" data-testid="ph-form-diagnosis"
-                  placeholder="如 手足口病 / 新型冠状病毒感染"/>
-      </el-form-item>
-      <el-form-item label="ICD-10">
-        <el-input v-model="form.diagnosisCode" data-testid="ph-form-dxcode" placeholder="选填，如 B08.4"/>
+        <IcdDiagnosisSelect
+            v-model:model-value="form.diagnosisCode"
+            v-model:name="form.diagnosis"
+            data-testid="ph-form-diagnosis"
+            placeholder="输入诊断名称 / 编码搜索"/>
       </el-form-item>
       <el-form-item label="上报内容" required>
         <el-input v-model="form.reportContent" :rows="3" data-testid="ph-form-content"
@@ -42,6 +42,7 @@
 import {computed, reactive, ref, watch} from 'vue'
 import {ElMessage} from 'element-plus'
 import PatientSelect from '@/components/his/PatientSelect.vue'
+import IcdDiagnosisSelect from '@/components/his/IcdDiagnosisSelect.vue'
 import {submitPublicHealth} from '@/api/publicHealth'
 
 const props = defineProps({

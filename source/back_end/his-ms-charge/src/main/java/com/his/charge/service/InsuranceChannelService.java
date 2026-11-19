@@ -34,15 +34,18 @@ public interface InsuranceChannelService {
     InsuredStatus checkInsured(String insuranceNo, String idCard, String name);
 
     /**
-     * 2201 费用预结算（HIS 收费窗口实时调，医保平台算 splits，不落库）。
+     * 2206 门诊预结算（HIS 收费窗口实时调，医保平台算 splits，不落库）。
      *
      * <p>在收款弹层「医保个账」档点一下就调，返回统筹/个账/现金 splits 给收费员核对。
      * 与 {@link #checkInsured} 的区别：checkInsured 只查人在不在，这里连费用一起算。
+     *
+     * <p>预结算是只读试算：不扣款、不锁额度，结果只是参考快照。个账为参保人全局共享，
+     * 患者在别家机构同时就医扣账属正常并发，最终金额一律以 {@link #formalSettle} 返回为准。
      */
     SettleSplit preSettle(SettleRequest request);
 
     /**
-     * 2301 门诊正式结算（HIS 收费窗口实时调，医保平台当场扣个账、出医保结算单号）。
+     * 2207 门诊正式结算（HIS 收费窗口实时调，医保平台当场扣个账、出医保结算单号）。
      *
      * <p>收费员核对 splits 后点「确认医保结算」调一次；同一 tradeNo 幂等。
      * 成功后 HIS 侧只需再收 {@link SettleSplit#cashPay} 那段现金/扫码。
@@ -50,10 +53,10 @@ public interface InsuranceChannelService {
     SettleSplit formalSettle(SettleRequest request);
 
     /**
-     * 撤销医保侧实时结算（2305 冲正）：不确定态确认专用。
+     * 撤销医保侧实时结算（2208 门诊结算撤销）：不确定态确认专用。
      *
-     * <p>2301 超时等不确定失败后，请求可能已到医保侧扣了个账，HIS 不能无条件按失败降自费
-     * （否则医保扣了 + 患者又付现金 = 双收）。发 2305 按 origTradeNo 冲正：
+     * <p>2207 结算超时等不确定失败后，请求可能已到医保侧扣了个账，HIS 不能无条件按失败降自费
+     * （否则医保扣了 + 患者又付现金 = 双收）。发 2208 按 origTradeNo 冲正：
      * <ul>
      *   <li>回执成功 = 医保侧有单已冲正（个账已退回），此后降自费安全；</li>
      *   <li>回执「原上传流水不存在」= 医保侧根本没扣，降自费安全（按 errMsg 识别）；</li>
@@ -137,8 +140,8 @@ public interface InsuranceChannelService {
     }
 
     /**
-     * 实时结算请求（2201/2301 共用）。
-     * tradeNo 由 HIS 侧生成（账单号+时间戳），2301 幂等键。
+     * 实时结算请求（2206/2207 共用）。
+     * tradeNo 由 HIS 侧生成（账单号+时间戳），2207 幂等键。
      */
     @Data
     @NoArgsConstructor
@@ -175,8 +178,8 @@ public interface InsuranceChannelService {
     }
 
     /**
-     * 实时结算返回（2201/2301 共用）。
-     * infcode=0 成功；2301 成功时 receiptNo 有值。
+     * 实时结算返回（2206/2207 共用）。
+     * infcode=0 成功；2207 成功时 receiptNo 有值。
      */
     @Data
     @NoArgsConstructor
@@ -185,7 +188,7 @@ public interface InsuranceChannelService {
         private Integer infcode;
         private String tradeNo;
         /**
-         * 医保结算单号（YBZ+yyyyMMdd+序列），2301 成功时回
+         * 医保结算单号（YBZ+yyyyMMdd+序列），2207 成功时回
          */
         private String receiptNo;
         private String insuranceType;

@@ -432,9 +432,9 @@ public class ChargeFacadeServiceImpl implements ChargeFacadeService {
         log.info("[挂号费] 记账出账完成 registNo={} 账单={} 应缴 ¥{}",
                 command.getRegistNo(), bill.getBillNo(), bill.getPayableAmount().toPlainString());
 
-        // 医保患者（settlementMode=2）：挂号时自动调 2301 正式结算。
+        // 医保患者（settlementMode=2）：挂号时自动调 2207 正式结算。
         // 失败重试 2 次；仍失败则账单降级为自费（settlementMode=1、splits=0），患者先全额付，
-        // 后续医保恢复后操作员在窗口做「医保补结算」（冲正自费账→重走2201+2301→退多收）。
+        // 后续医保恢复后操作员在窗口做「医保补结算」（冲正自费账→重走2206+2207→退多收）。
         // 账单不回滚——号要挂上、患者要走完付款流程，不能让他在窗口干等医保恢复。
         String insuranceWarning = null;
         if (bill.getSettlementMode() != null && bill.getSettlementMode() == 2) {

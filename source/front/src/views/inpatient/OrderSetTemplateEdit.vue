@@ -106,13 +106,6 @@
           </div>
         </div>
       </div>
-
-      <el-alert
-          :closable="false"
-          show-icon
-          title="药品明细必须填全「单次剂量 / 剂量单位 / 给药途径」（与开立医嘱同一份硬规则，缺一项护士执行时只能靠猜）。价格只是参考价：套用时按字典现价重取。共享范围建好后不能改 —— 要换范围请新建一份。"
-          type="info"
-      />
     </el-form>
     <template #footer>
       <el-button :loading="saving" data-testid="orderset-submit" type="primary" @click="submit">保存组套</el-button>

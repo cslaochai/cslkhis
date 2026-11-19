@@ -441,8 +441,7 @@ export function getMessageList(params) {
 }
 
 // 标记消息已读
-export function readMessage(messageId) {
-    return request.post('/system/message/read', null, {params: {messageId}})
+export function readMessage(messageId) {    return request.post('/system/message/read', null, {params: {messageId}})
 }
 
 // ========== ICD-10编码 ==========

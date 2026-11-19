@@ -166,6 +166,7 @@ const SCHEDULE_PLANNER_ABILITY = '门诊排班 维护与提交（限本科室）
 const SCHEDULE_AUDITOR_ABILITY = '排班审批中心：员工排班 + 门诊排班双页签，可审核发布 / 驳回（留痕）；门诊排班全局可见（演示审核人）'
 const SCHEDULE_NURSING_AREA_AUDITOR_ABILITY = '护理排班审核发布（本科室排班须他人编制，不能自审自排）；排班总览'
 const SCHEDULE_NURSING_FILING_ABILITY = '护理排班整周备案与退回（全院，按护理片区备案留痕）；不参与排班与审核'
+const NURSING_DISPATCH_ABILITY = '护理人力调配（全院）：改护士岗位归属（可填生效/失效日期，不改编制）+ 护理排班（病区矩阵）/ 员工排班（门诊科室与全院单元）+ 排班总览'
 
 // 全部账号合并为一张表：每行 = 同一科室 + 同一角色；排班流程账号按「排班员 → 审核人」流程顺序置顶
 const credRows = [
@@ -219,11 +220,19 @@ const credRows = [
     dept: '护理部',
     ability: SCHEDULE_NURSING_FILING_ABILITY
   },
+  // 护理部人力调配岗：跨科室改岗位 + 排班，演示「今天护士 A 去某科做分诊、护士 B 去输液室」
+  {
+    accounts: ['shenqing ( 沈清  )'],
+    role: '护理调配员',
+    dept: '护理部',
+    ability: NURSING_DISPATCH_ABILITY
+  },
   {
     accounts: ['tanyiming ( 谭一鸣 )'],
-    role: '医务科',
+    role: '医务科 / 医务调配员（顶栏切岗位）',
     dept: '医务科',
-    ability: '员工排班（全院，含审核发布）、急诊排班审核发布（2026-10-26 起科主任排班、医务科备案审核）、人力配置标准、排班总览、门诊排班审核、排班字典管理、急诊值班；无临床业务页面'
+    ability: '医务科岗：员工排班（全院，含审核发布）、急诊排班审核发布、人力配置标准、排班总览、门诊排班审核、排班字典管理、急诊值班。'
+        + '切「医务调配员」岗：改医师岗位归属（可填生效/失效日期，不改编制）+ 跨科室排门诊号源/急诊值班 + 排班总览，只排不自批'
   },
 
   // 三个治疗科室（推荐账号）
@@ -334,13 +343,13 @@ const credRows = [
     accounts: ['gaoheyu ( 高和玉  )'],
     role: '行政人员',
     dept: '总务科',
-    ability: '只有工作台与消息待办，无任何业务页面（用于岗位/权限实验）'
+    ability: '只有工作台与统一待办，无任何业务页面（用于岗位/权限实验）'
   },
   {
     accounts: ['longjiaming ( 龙佳明  )'],
     role: '行政人员',
     dept: '保卫科',
-    ability: '只有工作台与消息待办，无任何业务页面（用于岗位/权限实验）'
+    ability: '只有工作台与统一待办，无任何业务页面（用于岗位/权限实验）'
   },
   {
     accounts: ['kefulina ( 李娜  )'],

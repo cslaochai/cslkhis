@@ -27,6 +27,14 @@ public class DutyRosterUpsertDTO {
     private Long postId;
 
     /**
+     * 值班类型ID（医疗/护理/行政/院领导带班）。
+     *
+     * <p>传了点位就以点位的类型为准（点位是「位」的属性），本字段用于「按线找位」与老口径；
+     * 排到归口科室之外的线会被服务层拒掉。
+     */
+    private Long dutyTypeId;
+
+    /**
      * 值班日期（必填；夜班填开始日）
      */
     @NotNull(message = "值班日期不能为空")

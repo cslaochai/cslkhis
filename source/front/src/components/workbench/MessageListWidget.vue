@@ -9,7 +9,9 @@
         </template>
         <span v-else class="text-slate-400">取数失败</span>
       </p>
-      <a class="shrink-0 text-[15px] text-[#1269B5] hover:underline" @click="router.push('/messages')">
+      <!-- 消息中心已并入统一待办（sql/333–334）：待办卡片落待办视图，未读通知卡片落「全部消息」 -->
+      <a class="shrink-0 text-[15px] text-[#1269B5] hover:underline"
+         @click="router.push(isTodo ? '/todos' : '/todos?scope=ALL')">
         查看全部
       </a>
     </div>

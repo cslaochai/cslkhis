@@ -14,6 +14,28 @@ import { ensurePerm, onPermsChange, permMatched } from './lib/perm';
 const app = createApp(App);
 app.use(createPinia());
 app.use(router);
+
+// 导航失败兜底：必须在 mount 之前注册。
+// 起因：路由组件是 `() => import(...)` 动态导入，开发期改文件触发 HMR、依赖被重新预构建、
+// 发版后旧的 chunk 失效，都会让 import 直接 reject。vue-router 对这类失败只打一行诊断
+// （VUE_ROUTER_R0010 / R0011），不渲染任何东西 —— 现象就是整页白屏，且刷新前一直白着。
+// 策略：10 秒窗口内只自动刷新一次（旧 chunk 换新即可恢复）；再次失败说明不是陈旧缓存，
+// 改为明确提示，绝不无限刷新。
+const CHUNK_RELOAD_KEY = 'router:chunkReloadAt';
+router.onError((err, to) => {
+    console.error('[router] 导航失败', to?.fullPath ?? '', err);
+    const message = String(err?.message || err || '');
+    const chunkFailed = /Failed to fetch dynamically imported module|error loading dynamically imported module|Importing a module script failed|Outdated Optimize Dep/i.test(message);
+    if (!chunkFailed) return;
+    const lastAt = Number(sessionStorage.getItem(CHUNK_RELOAD_KEY) || 0);
+    if (Date.now() - lastAt > 10000) {
+        sessionStorage.setItem(CHUNK_RELOAD_KEY, String(Date.now()));
+        window.location.reload();
+        return;
+    }
+    ElMessage.error('页面资源加载失败，请手动刷新浏览器');
+});
+
 app.use(ElementPlus, { locale: zhCn });
 for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
     app.component(key, component);

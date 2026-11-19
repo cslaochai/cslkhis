@@ -55,6 +55,14 @@ public class EmployeeBriefVO {
     private String title;
 
     /**
+     * 职务码值（字典 hospital_position：1-临床科室主任 2-副主任 … 21-院级领导 24-行政干事）
+     *
+     * <p>值班类型的资质校验要看它，不看职称：制度写的是「科主任担任医疗总值班」，
+     * 主任医师只是职称，不一定带岗位职责。
+     */
+    private String position;
+
+    /**
      * 状态（0-停用 1-启用）
      */
     private Integer status;

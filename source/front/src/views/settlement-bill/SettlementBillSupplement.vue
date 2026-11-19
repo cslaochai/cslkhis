@@ -36,7 +36,7 @@
 <script setup>
 /**
  * 医保补结算弹框（SettlementBillView 操作列入口）：
- * 打开即调 supplementCheck 预检（2201 试算 + 校验），展示拟退差额，确认后执行 supplement。
+ * 打开即调 supplementCheck 预检（2206 试算 + 校验），展示拟退差额，确认后执行 supplement。
  * 校验不过（无降级标记/未付清/停保/医保侧拒绝）只展示原因，不给确认按钮。
  */
 import {computed, ref, watch} from 'vue';

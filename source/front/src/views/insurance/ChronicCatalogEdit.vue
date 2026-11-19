@@ -25,7 +25,10 @@
         </el-col>
         <el-col :span="12">
           <el-form-item label="ICD-10 主码">
-            <el-input v-model="catForm.icdCode" data-testid="catalog-form-icd" placeholder="如 I10"/>
+            <IcdDiagnosisSelect
+                v-model:model-value="catForm.icdCode"
+                data-testid="catalog-form-icd"
+                placeholder="输入诊断名称 / 编码搜索"/>
           </el-form-item>
         </el-col>
         <el-col :span="12">
@@ -58,6 +61,7 @@ import {computed, ref, watch} from 'vue';
 import {ElMessage} from 'element-plus';
 import {DICT_TYPE} from '@/lib/dict-cache';
 import {upsertChronicCatalog} from '@/api/insuranceChronic';
+import IcdDiagnosisSelect from '@/components/his/IcdDiagnosisSelect.vue';
 
 const props = defineProps({
   modelValue: {type: Boolean, default: false},

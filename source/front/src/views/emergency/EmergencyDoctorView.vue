@@ -729,7 +729,7 @@
 <script setup>
 import {computed, onBeforeUnmount, onMounted, reactive, ref} from 'vue';
 import {ElMessage, ElMessageBox} from 'element-plus';
-import {useRouter} from 'vue-router';
+import {useRoute, useRouter} from 'vue-router';
 import {
   Bell,
   Delete,
@@ -789,6 +789,7 @@ import {getStockList} from '@/api/pharmacy';
 import {getChronicActiveByPatient} from '@/api/chronic';
 import {PATIENT_GENDER_OPTIONS} from '@/lib/patientGender';
 import {useCurrentPatientStore} from '@/stores/currentPatient';
+import {msgDeeplinkOf, pickRowByDeeplink} from '@/lib/msgDeeplink';
 
 const router = useRouter();
 
@@ -1053,6 +1054,30 @@ const selectPatient = async (row) => {
         });
   } catch (e) { /* 错误已由全局拦截器提示 */
   }
+};
+
+/* ---------- 待办深链：从统一待办点「前往处理」进来，直接定位到该急诊患者 ----------
+   只跳路径会落到队列首页，用户还得自己翻（超时催办最怕这个）；这里按急诊号/患者号把患者选中。 */
+const route = useRoute();
+const applyMsgDeeplink = async () => {
+  const link = msgDeeplinkOf(route);
+  if (!link) return;
+  const all = [...mineRowsRef.value, ...poolRowsRef.value];
+  const row = pickRowByDeeplink(all, link, (r) => [r.emergencyNo, r.patientNo, r.patientId, r.id, r.registId]);
+  if (!row) {
+    ElMessage.warning(`未按待办定位到患者（急诊号 ${link.bizNo || link.bizId}）：可能已结诊、已转科或不在当前队列里`);
+    return;
+  }
+  // 患者可能在待派单池里：先把左侧 tab 切过去，选中行才看得见
+  if (poolRowsRef.value.includes(row)) {
+    queueTab.value = 'pool';
+    queueList.value = poolRowsRef.value;
+  } else {
+    queueTab.value = 'mine';
+    queueList.value = mineRowsRef.value;
+  }
+  await selectPatient(row);
+  ElMessage.success(`已定位到急诊患者 ${row.patientName || ''}（${row.emergencyNo || link.bizNo}）`);
 };
 
 const resetForms = () => {
@@ -1765,11 +1790,12 @@ const onRxSigned = async (dataUrl) => {
 };
 
 // ---------- 轮询 ----------
-onMounted(() => {
-  reloadQueue();
+onMounted(async () => {
+  await reloadQueue();
   loadWards();
   loadDiagTpls();
   pollTimer = setInterval(reloadQueue, 30000);
+  await applyMsgDeeplink();
 });
 onBeforeUnmount(() => {
   if (pollTimer) clearInterval(pollTimer);

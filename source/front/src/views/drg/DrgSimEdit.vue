@@ -4,11 +4,12 @@
       <el-form-item label="首页主诊断">
         <span>{{ simForm.mainDiagCode || '（缺失）' }} {{ simForm.mainDiagName }}</span>
       </el-form-item>
-      <el-form-item v-if="!simForm.mainDiagCode" label="补录 ICD 编码" required>
-        <el-input v-model="simForm.icdCode" data-testid="drg-icd-input" placeholder="如 J18.9"/>
-      </el-form-item>
-      <el-form-item v-if="!simForm.mainDiagCode" label="补录诊断名称">
-        <el-input v-model="simForm.icdName" placeholder="如 肺炎"/>
+      <el-form-item v-if="!simForm.mainDiagCode" label="补录主诊断" required>
+        <IcdDiagnosisSelect
+            v-model:model-value="simForm.icdCode"
+            v-model:name="simForm.icdName"
+            data-testid="drg-icd-input"
+            placeholder="输入诊断名称 / 编码搜索"/>
       </el-form-item>
       <div v-if="simResult" class="mb-3 p-3 rounded bg-gray-50 text-sm" data-testid="drg-sim-result">
         <p>入组：<b>{{ simResult.drgCode }}</b> {{ simResult.drgName || '' }}
@@ -40,6 +41,7 @@ import {ElMessage} from 'element-plus';
 import {drgSimulate} from '@/api/drg';
 import {dictLabelText} from '@/lib/utils';
 import {profitColor, simTag} from '@/lib/drg';
+import IcdDiagnosisSelect from '@/components/his/IcdDiagnosisSelect.vue';
 
 const props = defineProps({
   modelValue: {type: Boolean, default: false},

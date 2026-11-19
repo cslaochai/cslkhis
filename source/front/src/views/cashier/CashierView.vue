@@ -368,6 +368,8 @@
  *    unpaidAmount 由后端算，前端不再减一遍。
  */
 import {computed, onMounted, ref} from 'vue';
+import {useRoute} from 'vue-router';
+import {msgDeeplinkOf, pickRowByDeeplink} from '@/lib/msgDeeplink';
 import {Coin, Document, Refresh, Search, Wallet} from '@element-plus/icons-vue';
 import {ElMessage} from 'element-plus';
 import {
@@ -435,6 +437,21 @@ function handleReset() {
   handleSearch();
 }
 
+/* ---------- 待办深链：支付结果/欠费类待办跳进来，按单号/患者直接筛出那条待收费就诊 ---------- */
+const route = useRoute();
+const applyMsgDeeplink = async () => {
+  const link = msgDeeplinkOf(route);
+  if (link && link.keyword) {
+    keyword.value = link.keyword;
+    pagination.value.pageNum = 1;
+  }
+  await loadBoard();
+  if (!link) return;
+  const hit = pickRowByDeeplink(boardRows.value, link, (r) => [r.encounterNo, r.patientNo, r.admissionNo, String(r.id)]);
+  ElMessage[hit ? 'success' : 'warning'](hit
+      ? `已定位到待收费就诊 ${hit.patientName || link.keyword}`
+      : `未找到单号 ${link.keyword}：可能已结算或不在当前筛选范围`);
+};
 onMounted(async () => {
   dicts.value = await loadDictDataMap([
     DICT_TYPE.BILL_STATUS,
@@ -444,7 +461,7 @@ onMounted(async () => {
     DICT_TYPE.FEE_STATUS,
     DICT_TYPE.SETTLEMENT_MODE,
   ].join(','));
-  await loadBoard();
+  await applyMsgDeeplink();
 });
 const workbench = ref(false);
 const workLoading = ref(false);

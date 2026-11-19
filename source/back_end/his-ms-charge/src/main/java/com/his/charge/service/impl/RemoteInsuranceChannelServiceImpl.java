@@ -49,9 +49,9 @@ public class RemoteInsuranceChannelServiceImpl implements InsuranceChannelServic
     private static final String MSG_TYPE_PLACEHOLDER = "{msgType}";
 
     /**
-     * 2305 结算信息撤销的医保接口编号（对方交易码，与院内报盘类型码值无关）
+     * 2208 门诊结算撤销的医保接口编号（对方交易码，与院内报盘类型码值无关）
      */
-    private static final String MSG_TYPE_CANCEL = "2305";
+    private static final String MSG_TYPE_CANCEL = "2208";
 
     /**
      * 本端失败约定码：请求未发出或没拿到有效回执，与对方 infcode 体系（0=医保侧接受）区分
@@ -172,8 +172,9 @@ public class RemoteInsuranceChannelServiceImpl implements InsuranceChannelServic
     }
 
     /**
-     * 实时结算（2201/2301 共用）：SettleRequest 交客户端加签加密上送，回执按 SettleData 绑定后转成费用拆分。
-     * 平台连不上/返回非 200 时，返回 infcode=-1 且带 errMsg，由调用方降级为「自费收」。
+     * 实时结算（2206 预结算 / 2207 正式结算共用）：SettleRequest 交客户端加签加密上送，
+     * 回执按 SettleData 绑定后转成费用拆分。平台连不上/返回非 200 时，返回 infcode=-1 且带 errMsg，
+     * 由调用方降级为「自费收」。
      */
     private SettleSplit callSettle(String path, SettleRequest request) {
         InsReply<SettleData> reply;

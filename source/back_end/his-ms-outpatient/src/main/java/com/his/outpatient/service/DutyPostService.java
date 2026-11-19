@@ -14,9 +14,9 @@ import java.util.List;
 public interface DutyPostService {
 
     /**
-     * 点位下拉：默认只列启用的；责任范围/单元传了则只列该范围内的。
+     * 点位下拉：默认只列启用的；责任范围/单元/值班类型传了则只列该范围内的。
      */
-    List<DutyPostSelectListVO> selectListVO(Integer dutyScope, Integer orgType, Long orgId);
+    List<DutyPostSelectListVO> selectListVO(Integer dutyScope, Integer orgType, Long orgId, Long dutyTypeId);
 
     /**
      * 点位分页：按责任范围、单元类型与点位状态筛选，数据范围按岗位科室收口。

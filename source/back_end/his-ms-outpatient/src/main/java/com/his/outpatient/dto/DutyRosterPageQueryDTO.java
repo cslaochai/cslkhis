@@ -47,6 +47,11 @@ public class DutyRosterPageQueryDTO extends PageParam {
     private Long postId;
 
     /**
+     * 值班类型ID（医疗总值班/护理总值班/行政总值班/院领导带班，空＝全部）
+     */
+    private Long dutyTypeId;
+
+    /**
      * 责任范围（1-全院行政 2-急诊 3-感染 4-总务 5-信息 6-临床科室）
      */
     private Integer dutyScope;

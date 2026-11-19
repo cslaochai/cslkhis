@@ -44,6 +44,12 @@ public class BizDutyPost extends BaseEntity {
     private Long orgId;
 
     /**
+     * 值班类型ID（院级点位挂类型 = 医疗/护理/行政/院领导带班；科室值班点位为空）
+     */
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long dutyTypeId;
+
+    /**
      * 班内角色（1-主班 2-副班）
      */
     private Integer roleType;

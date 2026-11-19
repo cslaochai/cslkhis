@@ -140,15 +140,8 @@
     </dependencies>
 
     <build>
-        <!-- 产物名固定 his-backend，与根 artifactId 一致。
-             改它等于改运维脚本、容器 ENTRYPOINT 与发布包名，属发布口径变更，非必要不动。 -->
         <finalName>his-backend</finalName>
         <plugins>
-            <!-- Spring Boot 打包器：把依赖、启动器、Loader 塞进同一个 jar（repackage），不 repackage 出来的就是"不能 java -jar"的普通 jar。
-                 - mainClass 显式写死，不靠自动探测：聚合构建下自动探测可能扫到别的模块的 main；
-                 - executions 显式绑 repackage：省掉会退化成依赖 spring-boot-starter-parent 的默认执行，
-                   parent 一换版本或本模块另加 plugin 配置，repackage 就静默消失，产物变成"有依赖、没有 Main-Class"的不可执行 jar；
-                 - lombok 已由根 pom 的 pluginManagement 统一排除，fat jar 里不会多带一份注解处理器。 -->
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
@@ -166,9 +159,4 @@
             </plugin>
         </plugins>
     </build>
-
-    <!-- 刻意不在此声明的依赖，避免后人"补全"：
-         his-ca-sdk      —— CA 国密 SDK（SM2 验签 + 开放接口客户端）由 his-ms-platform 传递引入，证书/签名只在该域被调用，启动层不直接引用；
-         his-web-fault   —— 故障演练沙箱是独立进程/独立端口，永不进入业务包；
-         lombok、spring-boot-starter-test、spring-security-test —— 根 pom 已对全部子模块统一声明，子 pom 再写一遍就是重复。 -->
 </project>

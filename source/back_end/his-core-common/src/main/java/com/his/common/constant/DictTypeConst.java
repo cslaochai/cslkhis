@@ -163,6 +163,13 @@ public interface DictTypeConst {
     public static final String INCISION_LEVEL = "his_incision_level";
 
     /**
+     * 职务（1-临床科室主任 2-临床科室副主任 … 21-院级领导 22-职能部门主任）
+     *
+     * <p>值班类型拿它做资质校验：医疗总值班要求正/副主任，护理总值班要求护士长。
+     */
+    public static final String HOSPITAL_POSITION = "hospital_position";
+
+    /**
      * 目标性监测类型
      */
     public static final String INFECTION_MONITOR_TYPE = "his_infection_monitor_type";

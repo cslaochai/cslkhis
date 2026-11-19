@@ -106,19 +106,22 @@ public class InsuranceProperties {
         private String personQuery = "/insure/person/query";
 
         /**
-         * 预结算（2201）路径
+         * 门诊预结算（国标 2206：门急诊结算-门诊预结算）路径
          */
-        private String preSettle = "/gateway/2201";
+        private String preSettle = "/gateway/2206";
 
         /**
-         * 正式结算（2301）路径
+         * 门诊正式结算（国标 2207：门急诊结算-门诊结算）路径
          */
-        private String formalSettle = "/gateway/2301";
+        private String formalSettle = "/gateway/2207";
 
         /**
-         * 实时结算冲正（2305）路径
+         * 门诊结算撤销（国标 2208：门急诊结算-门诊结算撤销）路径。
+         *
+         * <p>仅用于实时结算不确定态冲正。注意与报盘撤销区分：报盘的「结算信息上传/撤销」
+         * 走 {@link #send} 的 2304/2305 报文类型，不经过本路径。
          */
-        private String cancel = "/gateway/2305";
+        private String cancel = "/gateway/2208";
     }
 
     @Data

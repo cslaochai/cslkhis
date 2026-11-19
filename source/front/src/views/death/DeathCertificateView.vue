@@ -424,14 +424,14 @@
             <el-table-column label="顺序" width="70">
               <template #default="{ row }">（{{ row.slot.toUpperCase() }}）</template>
             </el-table-column>
-            <el-table-column label="导致死亡的疾病或情况">
+            <el-table-column label="导致死亡的疾病或情况（ICD-10）" min-width="240">
               <template #default="{ row }">
-                <el-input v-model="row.icdName" data-testid="cf-chain-name" placeholder="疾病名称"/>
-              </template>
-            </el-table-column>
-            <el-table-column label="ICD-10 编码" width="160">
-              <template #default="{ row }">
-                <el-input v-model="row.icdCode" data-testid="cf-chain-code" placeholder="如 I21.0"/>
+                <IcdDiagnosisSelect
+                    v-model:model-value="row.icdCode"
+                    v-model:name="row.icdName"
+                    data-testid="cf-chain-name"
+                    size="small"
+                    placeholder="选择死因疾病"/>
               </template>
             </el-table-column>
             <el-table-column label="发病至死亡间隔" width="170">
@@ -450,14 +450,13 @@
             <el-button :icon="Plus" data-testid="cf-add-other" size="small" @click="addOtherCause">加一行</el-button>
           </div>
           <el-table v-if="cf.other.length" :data="cf.other" border data-testid="cf-other-table" size="small">
-            <el-table-column label="疾病名称">
+            <el-table-column label="疾病名称（ICD-10）" min-width="240">
               <template #default="{ row }">
-                <el-input v-model="row.icdName"/>
-              </template>
-            </el-table-column>
-            <el-table-column label="ICD-10" width="160">
-              <template #default="{ row }">
-                <el-input v-model="row.icdCode"/>
+                <IcdDiagnosisSelect
+                    v-model:model-value="row.icdCode"
+                    v-model:name="row.icdName"
+                    size="small"
+                    placeholder="选择疾病"/>
               </template>
             </el-table-column>
             <el-table-column label="间隔" width="160">
@@ -675,6 +674,7 @@ import {dictLabelText} from '@/lib/utils'
 import {patientGenderText} from '@/lib/patientGender'
 import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination'
 import {getDepartmentSelectList} from '@/api/system'
+import IcdDiagnosisSelect from '@/components/his/IcdDiagnosisSelect.vue'
 import {
   certAudit,
   certIssue,

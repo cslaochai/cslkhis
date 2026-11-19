@@ -11,7 +11,9 @@ const routes = [
         component: () => import('@/components/his/DashboardLayout.vue'),
         children: [
             {path: '', name: 'Workbench', component: () => import('@/views/dashboard/WorkbenchView.vue')},
-            {path: 'messages', name: 'Messages', component: () => import('@/views/messages/MessagesView.vue')},
+            // 老链接兜底：102 侧栏已隐藏（sql/333），消息列表并入统一待办（sql/334 全角色可见）。
+            // 这里只做重定向，页面不再单独维护，避免两套消息列表实现漂移。
+            {path: 'messages', name: 'Messages', redirect: {path: '/todos', query: {scope: 'ALL'}}},
             {
                 // 统一待办：消息待办 + 流程待办聚合成一张列表（菜单 sys_menu 29654，门户目录 100）
                 path: 'todos',
@@ -720,9 +722,15 @@ const routes = [
             },
             {
                 path: 'drgsim',
-                name: 'DrgSim',
-                component: () => import('@/views/drg/DrgSimView.vue'),
-                meta: {title: 'DRG-DIP 分组模拟'}
+                name: 'GroupSim',
+                component: () => import('@/views/drg/GroupSimView.vue'),
+                meta: {title: '分组模拟'}
+            },
+            {
+                path: 'medpaysettle',
+                name: 'MedpaySettle',
+                component: () => import('@/views/drg/MedpaySettleView.vue'),
+                meta: {title: '医保付费结算'}
             },
             {
                 path: 'statreport',
@@ -741,6 +749,12 @@ const routes = [
                 name: 'DutyLog',
                 component: () => import('@/views/duty/DutyLogView.vue'),
                 meta: {title: '总值班日志（交班本）'}
+            },
+            {
+                path: 'duty-type',
+                name: 'DutyType',
+                component: () => import('@/views/duty/DutyTypeView.vue'),
+                meta: {title: '值班类型'}
             },
             {
                 path: 'duty-post',
@@ -916,7 +930,8 @@ const routes = [
             },
             {
                 // 菜单由 sys_menu 29652 分发（目录 29651 工作流，仅授系统管理员 role_id=1）
-                // 流程待办不单开页面：并入门户→消息待办（sys_menu 102）的同页签
+                // 流程待办不单开页面：并入门户→统一待办（sys_menu 29654）的聚合列表；
+                // 消息待办页（102）已并入统一待办：列表做成「全部消息」页签、侧栏隐藏（sql/331–333）
                 path: 'workflow/definition',
                 name: 'WorkflowDefinition',
                 component: () => import('@/views/workflow/FlowDefinitionView.vue'),

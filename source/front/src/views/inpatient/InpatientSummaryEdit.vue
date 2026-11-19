@@ -55,14 +55,13 @@
                 </el-select>
               </template>
             </el-table-column>
-            <el-table-column label="ICD-10" width="130">
+            <el-table-column label="诊断（ICD-10）" min-width="220">
               <template #default="{ row }">
-                <el-input v-model="row.icdCode" placeholder="J18.9" size="small"/>
-              </template>
-            </el-table-column>
-            <el-table-column label="诊断名称" width="150">
-              <template #default="{ row }">
-                <el-input v-model="row.icdName" placeholder="肺炎" size="small"/>
+                <IcdDiagnosisSelect
+                    v-model:model-value="row.icdCode"
+                    v-model:name="row.icdName"
+                    size="small"
+                    placeholder="选择诊断"/>
               </template>
             </el-table-column>
             <el-table-column label="入院病情" width="130">
@@ -251,6 +250,7 @@ import {computed, reactive, ref, watch} from 'vue';
 import {Plus, Delete} from '@element-plus/icons-vue';
 import {ElMessage} from 'element-plus';
 import {getInpatientDetail, saveInpatientSummary} from '@/api/inpatient';
+import IcdDiagnosisSelect from '@/components/his/IcdDiagnosisSelect.vue';
 import {
   admitConditionMap,
   admitWayMap,

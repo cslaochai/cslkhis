@@ -83,10 +83,16 @@ public class SysMessageServiceImpl extends ServiceImpl<SysMessageMapper, SysMess
     @Override
     public PageResult<SysMessageVO> queryMessagePage(MessagePageQueryDTO queryDTO) {
         LambdaQueryWrapper<SysMessage> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(SysMessage::getReceiverId, currentReceiverId())
-                .eq(SysMessage::getSendStatus, 1)
+        // 「我发起」按发送人（create_by_id）取自己发出的消息；其余页签按接收人取发给自己的
+        if (Boolean.TRUE.equals(queryDTO.getMine())) {
+            wrapper.eq(SysMessage::getCreateById, currentReceiverId());
+        } else {
+            wrapper.eq(SysMessage::getReceiverId, currentReceiverId());
+        }
+        wrapper.eq(SysMessage::getSendStatus, 1)
                 .eq(queryDTO.getReadStatus() != null, SysMessage::getReadStatus, queryDTO.getReadStatus())
                 .eq(queryDTO.getHandleStatus() != null, SysMessage::getHandleStatus, queryDTO.getHandleStatus())
+                .isNull(Boolean.TRUE.equals(queryDTO.getNotifyOnly()), SysMessage::getHandleStatus)
                 .eq(TextUtil.hasText(queryDTO.getBizType()), SysMessage::getBizType, queryDTO.getBizType())
                 .and(TextUtil.hasText(queryDTO.getKeyword()), w -> w
                         .like(SysMessage::getTitle, queryDTO.getKeyword())

@@ -96,10 +96,10 @@
 
     <!-- 右侧：消息 + 姓名 + 角色 + 科室 + 时钟 + 设置 -->
     <div class="flex items-center gap-4">
-      <!-- 消息 -->
+      <!-- 消息：点击进入统一待办（列表/处置闭环都在 /todos 页，顶栏不再开抽屉） -->
       <el-badge :hidden="unreadCount === 0" :value="unreadCount" class="cursor-pointer">
         <button class="rounded-lg p-2 text-white/70 transition-colors hover:bg-white/10 hover:text-white"
-                @click="handleOpenMessages">
+                title="统一待办" @click="handleOpenMessages">
           <Bell class="h-5 w-5"/>
         </button>
       </el-badge>
@@ -336,69 +336,6 @@
       :patient="selectedPatient"
       :patient-id="selectedPatientId"
   />
-
-  <!-- 消息抽屉：多场景工作台入口（类型目录/紧急度/处理全部走 lib/messageCatalog 口径） -->
-  <el-drawer
-      v-model="messageDrawerVisible"
-      direction="rtl"
-      size="400px"
-      title="消息通知"
-  >
-    <template #header>
-      <div class="flex items-center justify-between">
-        <span>消息通知</span>
-        <span class="flex items-center gap-2 text-xs">
-          <span v-if="pendingCount > 0" class="rounded bg-amber-100 px-1.5 py-0.5 text-amber-700">{{ pendingCount }} 条待处理</span>
-          <span v-if="unreadCount > 0" class="text-red-500">{{ unreadCount }} 条未读</span>
-        </span>
-      </div>
-    </template>
-    <div v-loading="messageLoading">
-      <div v-if="messageList.length === 0" class="py-10 text-center text-slate-400">
-        暂无消息
-      </div>
-      <div v-else class="space-y-3">
-        <div
-            v-for="msg in messageList"
-            :key="msg.messageId"
-            :class="msg.readStatus === 0
-              ? (messageSeverityRank(msg.bizType) === 0 ? 'border-red-300 bg-red-50' : 'bg-blue-50')
-              : ''"
-            class="cursor-pointer rounded-lg border p-3 transition-colors hover:bg-slate-50"
-            @click="handleOpenMessage(msg)"
-        >
-          <div class="mb-1 flex items-center gap-2">
-            <!-- 类型 chip：目录驱动，未知码值渲染「未知(n)」 -->
-            <span :class="['rounded px-1.5 py-0.5 text-[11px] font-medium', messageTagClass(msg.bizType)]">
-              {{ messageLabel(msg.bizType) }}
-            </span>
-            <span class="min-w-0 flex-1 truncate font-medium text-slate-800">{{ msg.title || '系统通知' }}</span>
-            <!-- 待办型处置回执：看过≠办完（handle_status 口径见 sql/70） -->
-            <span v-if="messageHandleStatusMeta(msg.handleStatus)"
-                  :class="['rounded px-1.5 py-0.5 text-[11px] font-medium', messageHandleStatusMeta(msg.handleStatus).tagClass]">
-              {{ messageHandleStatusMeta(msg.handleStatus).label }}
-            </span>
-            <el-tag v-if="msg.readStatus === 0" size="small" type="danger">未读</el-tag>
-          </div>
-          <p class="text-sm text-slate-600">{{ msg.content }}</p>
-          <div v-if="messagePayloadChips(msg.payload).length" class="mt-1 flex flex-wrap gap-1">
-            <span v-for="chip in messagePayloadChips(msg.payload)" :key="chip.label"
-                  class="rounded bg-white/80 px-1.5 py-0.5 text-[11px] text-slate-600">
-              {{ chip.label }}：{{ chip.text }}
-            </span>
-          </div>
-          <p class="mt-1 text-xs text-slate-400">{{ msg.sendTime }}</p>
-        </div>
-      </div>
-    </div>
-  </el-drawer>
-
-  <!-- 消息处理弹窗：与消息中心页共用（报告详情 / 危急值确认接收→处置闭环） -->
-  <MessageProcessDialog
-      v-model="processVisible"
-      :message="processTarget"
-      @processed="handleMessageProcessed"
-  />
 </template>
 
 <script lang="js" setup>
@@ -425,12 +362,10 @@ import {
 } from '@element-plus/icons-vue'
 import {
   changePassword,
-  getMessageList,
   getPostList,
   getSelfProfile,
   getUnreadCount,
   getUserInfo,
-  readMessage,
   switchPost
 } from '@/api/system'
 import {openMessageStream} from '@/api/messageStream'
@@ -442,19 +377,11 @@ import {loadWorkbenchConfig} from '@/lib/workbench-config'
 import {sidebarCollapsed, toggleSidebar} from '@/lib/sidebarState'
 import {setPermList} from '@/lib/perm'
 import {clearSessionCaches} from '@/lib/session-cache'
-import {hasAnyPermission, loadPermissions} from '@/lib/permission'
-// 站内信类型/紧急度/权限口径单点在 messageCatalog（消息工作台）
+import {loadPermissions} from '@/lib/permission'
+// 站内信类型目录单点在 messageCatalog（消息工作台）；toast 标题取类型文案
 import {
-  messageActionOwner,
-  messageActionPermissions,
-  messageHandleStatusMeta,
   messageLabel,
-  messagePayloadChips,
-  messageSeverityRank,
-  messageTagClass,
 } from '@/lib/messageCatalog'
-// 消息处理弹窗：与消息中心页共用同一份实现（报告详情 + 危急值闭环），不得在此重写
-import MessageProcessDialog from '@/components/his/MessageProcessDialog.vue'
 import {resolveLandingPath, resolveWorkspacePath} from '@/lib/role-workspace'
 import {isInMyTodayQueue} from '@/lib/todayQueue'
 import {patientGenderSymbol} from '@/lib/patientGender'
@@ -537,16 +464,8 @@ const passwordForm = reactive({
   confirmPassword: '',
 })
 
-// 通知相关
+// 通知未读数（铃铛徽标）；列表与处置闭环统一在 /todos 统一待办页
 const unreadCount = ref(0)
-const messageList = ref([])
-const messageLoading = ref(false)
-const messageDrawerVisible = ref(false)
-// 待处理数：抽屉头部的待办徽标（handle_status=0，sql/70 口径；通知型为 NULL 不计入）
-const pendingCount = computed(() => messageList.value.filter(m => m.handleStatus === 0).length)
-// 处理弹窗（共用 MessageProcessDialog）：危急值可在抽屉里直接完成确认接收/处置闭环
-const processVisible = ref(false)
-const processTarget = ref(null)
 
 // 实时时钟
 const currentTime = ref('')
@@ -867,7 +786,7 @@ const roleNameOf = (code) => {
 onMounted(() => {
   loadUserInfo()
   loadUnreadCount()
-  // 消息「处理」入口按当前角色权限锁（hasAnyPermission），首屏就位避免按钮翻转闪烁
+  // 按钮权限集首屏就位（v-perm / hasPerm 用），避免按钮翻转闪烁
   loadPermissions()
   loadBreadcrumbMenus()
   updateClock()
@@ -898,8 +817,6 @@ const connectMessageStream = () => {
         type: data.severity === 'urgent' ? 'error' : data.severity === 'warning' ? 'warning' : 'info',
         duration: data.severity === 'urgent' ? 0 : 5000,
       })
-      // 抽屉开着时同步刷新列表，条目即时出现
-      if (messageDrawerVisible.value) loadMessageList()
     },
     onFallback: (reason) => {
       console.warn('消息 SSE 断开，退回轮询：', reason)
@@ -921,56 +838,9 @@ const loadUnreadCount = async () => {
   }
 }
 
-const loadMessageList = async () => {
-  messageLoading.value = true
-  try {
-    const res = await getMessageList({pageNum: 1, pageSize: 20})
-    // urgent（危急值）置顶展示：工作台排序在目录口径上做，不动服务端时间序
-    const records = res.data.records || []
-    records.sort((a, b) =>
-        messageSeverityRank(a.bizType) - messageSeverityRank(b.bizType))
-    messageList.value = records
-  } catch (error) {
-    console.error('加载消息列表失败', error)
-  } finally {
-    messageLoading.value = false
-  }
-}
-
+// 铃铛 = 进统一待办（列表/已读/处置闭环都在该页，顶栏不再另开消息抽屉）
 const handleOpenMessages = () => {
-  messageDrawerVisible.value = true
-  loadMessageList()
-}
-
-/**
- * 点消息条目 = 打开处理弹窗（顺带标已读）。
- * 此前点击只标已读，危急值等待办型消息「看过」就等于「办完」了——已读 ≠ 处理完毕。
- * 「处理」按当前角色权限锁（口径与消息中心页一致，见 lib/messageCatalog）；
- * 危急值在弹窗内完成确认接收 → 处置措施闭环，回调后刷新未读数与列表。
- */
-const canProcessMessage = (msg) => hasAnyPermission(messageActionPermissions(msg?.bizType))
-
-const handleOpenMessage = async (message) => {
-  if (!canProcessMessage(message)) {
-    ElMessage.warning(`该通知属于${messageActionOwner(message.bizType)}岗位，当前角色无法处理，请切换岗位后再处理`)
-    return
-  }
-  if (message.readStatus === 0) {
-    try {
-      await readMessage(message.messageId)
-      message.readStatus = 1
-      unreadCount.value = Math.max(0, unreadCount.value - 1)
-    } catch (error) {
-      console.error('标记已读失败', error)
-    }
-  }
-  processTarget.value = message
-  processVisible.value = true
-}
-
-const handleMessageProcessed = () => {
-  loadUnreadCount()
-  loadMessageList()
+  router.push('/todos')
 }
 
 const loadUserInfo = async () => {

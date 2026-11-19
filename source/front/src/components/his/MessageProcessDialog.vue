@@ -63,6 +63,59 @@
         </div>
       </template>
 
+      <!-- 值班协调（转诊催办）：不提供「确认接收」——转诊确认限定开单/转入科室，总值班只做协调。
+           这里把单据讲全（转诊号/方向/转入医院/已等待），动作交给「前往转诊管理」 -->
+      <template v-else-if="isDutyCoord">
+        <div class="space-y-3 text-sm">
+          <div class="flex flex-wrap items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3">
+            <span class="font-semibold text-amber-700">{{ payloadObj.referralNo || '转诊单' }}</span>
+            <el-tag v-if="payloadObj.direction" size="small" type="warning">{{ payloadObj.direction }}</el-tag>
+            <el-tag v-if="payloadObj.waitedHours" size="small" type="danger">
+              已等待 {{ payloadObj.waitedHours }} 小时
+            </el-tag>
+          </div>
+          <div class="grid grid-cols-2 gap-2">
+            <p><strong>转入医院/科室：</strong>{{ payloadObj.toHospital || '院内' }}</p>
+            <p><strong>诊断：</strong>{{ payloadObj.diagnosis || '-' }}</p>
+            <p class="col-span-2"><strong>联系电话：</strong>{{ payloadObj.contactPhone || '-' }}</p>
+          </div>
+        </div>
+        <div class="mt-3 space-y-2 border-t pt-3">
+          <p class="text-xs text-slate-500">
+            转诊单的「确认接收 / 退回」限定开单科室或转入科室人员操作；总值班的职责是联系转入方推进并留痕。
+          </p>
+          <el-button type="primary" @click="goTarget">前往{{ gotoTarget?.label || '转诊管理' }}</el-button>
+        </div>
+      </template>
+
+      <!-- 急诊候诊超时：弹框内直接接诊（厂商做法是「就地办完」，不是再跳一次页面）。
+           数据全部来自 payload，不额外查库；接诊调 /emergency/updateStatus(status=2) -->
+      <template v-else-if="isEmgWait">
+        <div class="space-y-3 text-sm">
+          <div class="flex flex-wrap items-center gap-2 rounded-lg border border-red-200 bg-red-50 p-3">
+            <span class="font-semibold text-red-700">已候诊 {{ payloadObj.waitMinutes || 0 }} 分钟</span>
+            <el-tag size="small" type="danger">{{ payloadObj.triageLevelText || '未定级' }}</el-tag>
+            <el-tag size="small" type="info">应接诊时限 {{ payloadObj.targetSeeMinutes || '-' }} 分钟</el-tag>
+          </div>
+          <div class="grid grid-cols-2 gap-2">
+            <p><strong>患者：</strong>{{ payloadObj.patientName || '-' }}</p>
+            <p><strong>急诊号：</strong>{{ payloadObj.emergencyNo || '-' }}</p>
+            <p><strong>就诊科室：</strong>{{ payloadObj.deptName || '-' }}</p>
+            <p><strong>超出时限：</strong>{{ overdueMinutes }}</p>
+          </div>
+        </div>
+        <div class="mt-3 space-y-2 border-t pt-3">
+          <el-button v-if="message.handleStatus === 0" v-perm="'opd:emergencyDoctor:edit'" :loading="emgAccepting"
+                     type="primary" @click="acceptEmergency">
+            接诊该患者
+          </el-button>
+          <div class="flex items-center gap-3">
+            <el-button link type="primary" @click="goTarget">前往{{ gotoTarget?.label || '急诊工作站' }}</el-button>
+            <span class="text-xs text-slate-400">接诊后患者离开候诊队列，本待办自动闭环；他人已接诊时后端会拒绝。</span>
+          </div>
+        </div>
+      </template>
+
       <!-- 听班呼叫：呼叫单详情 + 到岗应答闭环 -->
       <template v-else-if="isDutyCall && dutyCallDetail">
         <div class="space-y-3 text-sm">
@@ -100,7 +153,7 @@
           </el-button>
         </div>
         <div v-else-if="dutyCallDetail.status === 0" class="border-t pt-3 text-sm text-gray-500">
-          当前登录人不是本次被叫值班人，无法应答到岗。请切换到被叫值班人的账号，或在「听班呼叫」页处理。
+          本次呼叫的被叫值班人不是当前登录人，到岗应答须由本人完成（到岗是有签字效力的确认，不能代办）。
         </div>
       </template>
 
@@ -109,9 +162,17 @@
         <div v-html="htmlContent"></div>
       </template>
 
-      <!-- 兜底：未接通处理链路的类型，展示消息正文 -->
+      <!-- 兜底：未接通消息内闭环的类型，展示消息正文 + 落地页面入口。
+           待办型（急诊接诊/分诊复评/值班日志签收/发药…）必须给「前往…处理」，
+           只显示一段正文等于让用户看完就算办完了。 -->
       <template v-else-if="!loading && message">
         <p class="whitespace-pre-wrap text-sm text-slate-600">{{ message.content }}</p>
+        <div v-if="gotoTarget" class="mt-3 border-t pt-3">
+          <el-button data-testid="msg-goto-target" type="primary" @click="goTarget">
+            前往{{ gotoTarget.label }}{{ gotoVerb }}
+          </el-button>
+          <p class="mt-1.5 text-xs text-slate-400">这类消息在业务页面闭环，收件箱只做提醒。</p>
+        </div>
       </template>
     </div>
     <template #footer>
@@ -135,7 +196,8 @@ import {
   receiveCriticalValue
 } from '@/api/medicaltech';
 import {dutyCallArrive, getDutyCallDetail} from '@/api/dutyCall';
-import {messageLabel} from '@/lib/messageCatalog';
+import {updateEmergencyStatus} from '@/api/emergency';
+import {messageCatalogOf, messageGotoQuery, messageGotoTarget, messageLabel} from '@/lib/messageCatalog';
 
 const props = defineProps({
   modelValue: {type: Boolean, required: true},
@@ -157,6 +219,54 @@ const router = useRouter();
 const goConsult = () => {
   visible.value = false;
   router.push({name: 'Consultation'});
+};
+// 急诊候诊超时：就地接诊（biz_id = 急诊记录 id，见 EmergencyServiceImpl#escalateOne 发送处）
+const isEmgWait = computed(() => bizType.value === 'emg-wait');
+// 值班协调（转诊催办）：转诊确认/取消限定开单科室或转入科室人员（ReferralServiceImpl#assertReferralAccessible），
+// 总值班是协调人，不给他一键流转按钮，只把单据信息讲全 + 送到转诊管理页
+const isDutyCoord = computed(() => bizType.value === 'duty-coord');
+const payloadObj = computed(() => {
+  try {
+    return typeof props.message?.payload === 'string' ? JSON.parse(props.message.payload) : (props.message?.payload || {});
+  } catch (e) {
+    return {};
+  }
+});
+const emgAccepting = ref(false);
+const overdueMinutes = computed(() => {
+  const wait = Number(payloadObj.value.waitMinutes || 0);
+  const target = Number(payloadObj.value.targetSeeMinutes || 0);
+  return wait > 0 && target > 0 && wait > target ? `${wait - target} 分钟` : '—';
+});
+const acceptEmergency = async () => {
+  if (!props.message?.bizId) {
+    ElMessage.warning('这条待办缺少急诊记录 id，无法就地接诊，请前往急诊工作站');
+    return;
+  }
+  emgAccepting.value = true;
+  try {
+    await updateEmergencyStatus(props.message.bizId, 2);
+    ElMessage.success('已接诊，该患者已离开候诊队列');
+    emit('processed');
+    visible.value = false;
+  } catch (e) {
+    // 错误文案由全局拦截器提示（无权限 / 已被他人接诊 各有后端原文）
+    console.error('急诊接诊失败', e);
+  } finally {
+    emgAccepting.value = false;
+  }
+};
+
+/** 无消息内闭环的类型（急诊接诊/分诊复评/值班日志签收…）跳到业务页面办理 */
+const gotoTarget = computed(() => messageGotoTarget(bizType.value));
+/** 待办型说「处理」，通知型说「查看」——通知看完即可，不假装有处置动作 */
+const gotoVerb = computed(() => (messageCatalogOf(bizType.value).kind === 'notify' ? '查看' : '处理'));
+const gotoLocation = computed(() => messageGotoQuery(props.message));
+const goTarget = () => {
+  const location = gotoLocation.value;
+  if (!location) return;
+  visible.value = false;
+  router.push(location);
 };
 const loading = ref(false);
 // inspection / report 走结构化 HTML（与报告详情同口径）；critical 走 Vue 模板（带动作）

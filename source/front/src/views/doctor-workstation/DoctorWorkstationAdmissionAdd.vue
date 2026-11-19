@@ -22,11 +22,11 @@
         <p class="mt-1 text-xs text-slate-400">住哪个科是临床决策；入院处收治时可以调科，调科会被系统标记出来</p>
       </el-form-item>
       <div class="grid grid-cols-2 gap-x-4">
-        <el-form-item label="拟诊编码">
-          <el-input v-model="orderForm.diagnosisCode" placeholder="ICD-10，如 J18.9"/>
-        </el-form-item>
-        <el-form-item label="拟诊名称" required>
-          <el-input v-model="orderForm.diagnosisName" placeholder="如 社区获得性肺炎"/>
+        <el-form-item label="拟诊" required>
+          <IcdDiagnosisSelect
+              v-model:model-value="orderForm.diagnosisCode"
+              v-model:name="orderForm.diagnosisName"
+              placeholder="输入诊断名称 / 编码搜索"/>
         </el-form-item>
       </div>
       <el-form-item label="预计入院时间">
@@ -64,6 +64,7 @@ import {computed, onMounted, reactive, ref, watch} from 'vue';
 import {ElMessage} from 'element-plus';
 import {createAdmissionOrder} from '@/api/admissionOrder';
 import {getDepartmentSelectList} from '@/api/system';
+import IcdDiagnosisSelect from '@/components/his/IcdDiagnosisSelect.vue';
 
 // ------------------------------------------------------------------
 // 开住院证（门诊 → 住院的入口），从 DoctorWorkstationView 拆出：接诊患者、患者详情、

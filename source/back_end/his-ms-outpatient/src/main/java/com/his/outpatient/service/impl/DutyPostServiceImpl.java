@@ -44,12 +44,13 @@ public class DutyPostServiceImpl extends ServiceImpl<BizDutyPostMapper, BizDutyP
     }
 
     @Override
-    public List<DutyPostSelectListVO> selectListVO(Integer dutyScope, Integer orgType, Long orgId) {
+    public List<DutyPostSelectListVO> selectListVO(Integer dutyScope, Integer orgType, Long orgId, Long dutyTypeId) {
         List<BizDutyPost> rows = list(scoped(new LambdaQueryWrapper<BizDutyPost>()
                 .eq(BizDutyPost::getStatus, EnableStatusEnum.ENABLED.getCode())
                 .eq(dutyScope != null, BizDutyPost::getDutyScope, dutyScope)
                 .eq(orgType != null, BizDutyPost::getOrgType, orgType)
                 .eq(orgId != null, BizDutyPost::getOrgId, orgId)
+                .eq(dutyTypeId != null, BizDutyPost::getDutyTypeId, dutyTypeId)
                 .orderByAsc(BizDutyPost::getSortNo).orderByAsc(BizDutyPost::getId)));
         Map<Long, BizShift> shifts = shiftService.mapByIds(idsOf(rows));
         List<DutyPostSelectListVO> vos = new ArrayList<>(rows.size());
@@ -59,6 +60,7 @@ public class DutyPostServiceImpl extends ServiceImpl<BizDutyPostMapper, BizDutyP
             vo.setId(row.getId());
             vo.setPostCode(row.getPostCode());
             vo.setPostName(row.getPostName());
+            vo.setDutyTypeId(row.getDutyTypeId());
             vo.setDutyScope(row.getDutyScope());
             vo.setDutyScopeText(DutyScopeEnum.getLabel(row.getDutyScope()));
             vo.setRoleType(row.getRoleType());
@@ -100,6 +102,7 @@ public class DutyPostServiceImpl extends ServiceImpl<BizDutyPostMapper, BizDutyP
             vo.setId(row.getId());
             vo.setPostCode(row.getPostCode());
             vo.setPostName(row.getPostName());
+            vo.setDutyTypeId(row.getDutyTypeId());
             vo.setDutyScope(row.getDutyScope());
             vo.setDutyScopeText(DutyScopeEnum.getLabel(row.getDutyScope()));
             vo.setOrgType(row.getOrgType());
@@ -137,6 +140,7 @@ public class DutyPostServiceImpl extends ServiceImpl<BizDutyPostMapper, BizDutyP
         post.setDutyScope(dto.getDutyScope());
         post.setOrgType(dto.getOrgType() == null ? OrgUnitTypeEnum.HOSPITAL.getCode() : dto.getOrgType());
         post.setOrgId(dto.getOrgId() == null ? 0L : dto.getOrgId());
+        post.setDutyTypeId(dto.getDutyTypeId());
         post.setRoleType(dto.getRoleType());
         post.setDutyLevel(dto.getDutyLevel());
         post.setAttendMode(dto.getAttendMode());

@@ -47,11 +47,11 @@
             <el-option v-for="e in employees" :key="e.id" :label="e.empName" :value="e.id"/>
           </el-select>
         </el-form-item>
-        <el-form-item label="出院诊断编码">
-          <el-input v-model="dischargeForm.dischargeDiagnosisCode" placeholder="ICD-10"/>
-        </el-form-item>
         <el-form-item label="出院诊断">
-          <el-input v-model="dischargeForm.dischargeDiagnosis" placeholder="如 肺炎（治愈）"/>
+          <IcdDiagnosisSelect
+              v-model:model-value="dischargeForm.dischargeDiagnosisCode"
+              v-model:name="dischargeForm.dischargeDiagnosis"
+              placeholder="输入诊断名称 / 编码搜索"/>
         </el-form-item>
       </div>
       <el-form-item label="出院小结">
@@ -80,6 +80,7 @@ import {dischargeInpatient} from '@/api/inpatient';
 import {getAccountSummary} from '@/api/inpatientSettlement';
 import {dischargeWayMap} from '@/lib/inpatient';
 import {hasPerm} from '@/lib/perm';
+import IcdDiagnosisSelect from '@/components/his/IcdDiagnosisSelect.vue';
 
 const props = defineProps({
   modelValue: {type: Boolean, default: false},

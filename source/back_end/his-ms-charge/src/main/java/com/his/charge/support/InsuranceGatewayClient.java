@@ -287,7 +287,7 @@ public class InsuranceGatewayClient {
     public record CancelInput(String msgType, String tradeNo, String origTradeNo, String cancelReason, String sendTime) {
     }
 
-    /** 2201/2301 实时结算回执：统筹/个账/现金三段拆分的事实来源 */
+    /** 2206/2207 实时结算回执：统筹/个账/现金三段拆分的事实来源 */
     @JsonIgnoreProperties(ignoreUnknown = true)
     public record SettleData(Integer infcode, String tradeNo, String receiptNo, String insuranceType, String name,
                              BigDecimal total, BigDecimal insurancePay, BigDecimal personalAccount,
