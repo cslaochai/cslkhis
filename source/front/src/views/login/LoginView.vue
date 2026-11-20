@@ -116,6 +116,9 @@
                 <button class="copy-btn" title="复制账号" type="button" @click="handleCopyAccount(item)">
                   <CopyDocument class="copy-icon"/>
                 </button>
+                <button class="quick-btn" title="用该账号直接登录（密码 123456）" type="button" @click="handleQuickLogin(item)">
+                  一键登录
+                </button>
               </div>
             </template>
           </el-table-column>
@@ -414,8 +417,10 @@ const credSpanMethod = ({ columnIndex, rowIndex }) => {
 }
 
 // 列表文案是「账号 ( 姓名 )」，登录只需要账号本身 → 复制时取括号前的部分
+const accountOf = (item) => item.split('(')[0].trim()
+
 const handleCopyAccount = async (item) => {
-  const account = item.split('(')[0].trim()
+  const account = accountOf(item)
   const ok = await copyText(account)
   if (ok) {
     ElMessage.success(`已复制账号：${account}`)
@@ -483,11 +488,23 @@ const refreshCaptcha = () => {
   generateCaptcha()
 }
 
+// 一键登录：演示账号密码统一 123456（见弹框标题），验证码本页自动填充
+// 关掉弹框后复用正常登录链路，不给登录逻辑留第二份分支
+const TEST_PASSWORD = '123456'
+const handleQuickLogin = (item) => {
+  loginForm.username = accountOf(item)
+  loginForm.password = TEST_PASSWORD
+  loginForm.captcha = captchaCode
+  credVisible.value = false
+  handleLogin()
+}
+
 onMounted(() => {
   generateCaptcha()
 })
 
 const handleLogin = async () => {
+  if (loading.value) return
   if (!loginForm.username) {
     ElMessage.warning('请输入用户名')
     return
@@ -731,6 +748,26 @@ const handleLogin = async () => {
 .copy-icon {
   width: 14px;
   height: 14px;
+}
+
+/* 一键登录：账号行内的轻量文字按钮，与复制图标同一行 */
+.quick-btn {
+  flex-shrink: 0;
+  padding: 1px 8px;
+  border: 1px solid #BBD5EC;
+  border-radius: 4px;
+  background: #F2F8FD;
+  color: #1269B5;
+  font-size: 12px;
+  line-height: 18px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.quick-btn:hover {
+  border-color: #1269B5;
+  background: #1269B5;
+  color: #fff;
 }
 
 .login-footer {
