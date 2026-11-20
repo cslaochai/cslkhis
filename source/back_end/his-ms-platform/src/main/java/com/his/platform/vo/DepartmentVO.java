@@ -68,6 +68,16 @@ public class DepartmentVO {
     private String deptType;
 
     /**
+     * 节点类型（1-管理片区 2-临床科室 3-医技科室 4-药剂科室 5-行政后勤 6-医疗辅助 7-其他）
+     */
+    private String nodeType;
+
+    /**
+     * 节点类型文案（枚举 DeptNodeTypeEnum 翻译，前端只做展示、不做码值映射）
+     */
+    private String nodeTypeText;
+
+    /**
      * 上级科室ID，顶级科室为0
      */
     @JsonSerialize(using = ToStringSerializer.class)

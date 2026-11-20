@@ -23,23 +23,39 @@
         </el-form-item>
       </div>
       <div class="grid grid-cols-2 gap-4">
+        <el-form-item label="节点类型" prop="nodeType">
+          <el-select v-model="formData.nodeType" :fit-input-width="false" class="w-full"
+                     placeholder="请选择节点类型" @change="handleNodeTypeChange">
+            <el-option v-for="n in nodeTypeOptions" :key="n.value" :label="n.label" :value="n.value"/>
+          </el-select>
+        </el-form-item>
+        <!-- 服务范围与节点类型正交：片区/机构/行政后勤没有门诊/住院/急诊之分，选它就等于让片区再次混进科室 -->
         <el-form-item label="科室类型" prop="deptType">
-          <el-select v-model="formData.deptType" :fit-input-width="false" class="w-full" multiple
-                     placeholder="请选择科室类型">
+          <el-select v-model="formData.deptType" :disabled="!serviceScopeEnabled" :fit-input-width="false"
+                     class="w-full" multiple
+                     :placeholder="serviceScopeEnabled ? '请选择科室类型' : '该节点类型不设服务范围'">
             <el-option v-for="d in deptTypeOptions" :key="d.dictValue"
                        :label="d.dictLabel" :value="Number(d.dictValue)"/>
           </el-select>
         </el-form-item>
+      </div>
+      <div class="grid grid-cols-2 gap-4">
         <el-form-item label="排序号">
           <el-input-number v-model="formData.sortOrder" :min="0" class="w-full"/>
         </el-form-item>
-      </div>
-      <div class="grid grid-cols-2 gap-4">
         <el-form-item label="位置">
           <el-input v-model="formData.location" placeholder="如：门诊楼A座3层"/>
         </el-form-item>
+      </div>
+      <div class="grid grid-cols-2 gap-4">
         <el-form-item label="联系电话">
           <el-input v-model="formData.contactPhone" placeholder="请输入联系电话"/>
+        </el-form-item>
+        <el-form-item label="状态">
+          <el-radio-group v-model="formData.status">
+            <el-radio :value="1">正常</el-radio>
+            <el-radio :value="0">停用</el-radio>
+          </el-radio-group>
         </el-form-item>
       </div>
       <div class="grid grid-cols-2 gap-4">
@@ -51,14 +67,6 @@
                        :label="`${e.empName}（${e.title || '无职称'}）`" :value="e.id"/>
           </el-select>
         </el-form-item>
-        <el-form-item label="状态">
-          <el-radio-group v-model="formData.status">
-            <el-radio :value="1">正常</el-radio>
-            <el-radio :value="0">停用</el-radio>
-          </el-radio-group>
-        </el-form-item>
-      </div>
-      <div class="grid grid-cols-2 gap-4">
         <el-form-item label="门诊审核人">
           <el-select v-model="formData.outpatientAuditorId" :fit-input-width="false" class="w-full" clearable
                      filterable
@@ -67,6 +75,8 @@
                        :label="`${e.empName}（${e.title || '无职称'}）`" :value="e.id"/>
           </el-select>
         </el-form-item>
+      </div>
+      <div class="grid grid-cols-2 gap-4">
         <el-form-item v-if="isNursingAreaNode" label="护理审核人">
           <el-select v-model="formData.nursingAuditorId" :fit-input-width="false" class="w-full" clearable
                      filterable
@@ -81,8 +91,6 @@
             本科室是末级科室，不单独配置审核人，由所属护理片区统一指定审核人。
           </p>
         </el-form-item>
-      </div>
-      <div class="grid grid-cols-2 gap-4">
         <el-form-item label="排班审核人">
           <el-select v-model="formData.scheduleAuditorId" :fit-input-width="false" class="w-full" clearable
                      filterable
@@ -109,6 +117,7 @@ import {computed, reactive, ref, watch} from 'vue';
 import {ElMessage} from 'element-plus';
 import {createDepartment, getDepartmentDetail, getEmployeeList, updateDepartment} from '@/api/system';
 import {deptTypeToArray} from '@/lib/deptType';
+import {DEPT_NODE_TYPE_OPTIONS, hasServiceScope} from '@/lib/deptNodeType';
 
 // row 为空 = 新增，有值 = 修改（后端是同一个科室主档的 create/update，两侧字段与校验必须同一份）
 const props = defineProps({
@@ -134,6 +143,7 @@ const formData = reactive({
   id: null,
   deptCode: '',
   deptName: '',
+  nodeType: '2', // 0-医疗机构 1-管理片区 2-临床科室 3-医技 4-药剂 5-行政后勤 6-医疗辅助 7-其他
   deptType: [], // 多选，提交时 join(',')
   parentId: 0,
   sortOrder: 0,
@@ -146,9 +156,19 @@ const formData = reactive({
   deptDesc: '',
   status: 1,
 });
-const rules = {
+// 该节点类型是否要填服务范围：片区/机构/行政后勤 不填（后端同样会拒绝给片区挂服务类型）
+const nodeTypeOptions = DEPT_NODE_TYPE_OPTIONS;
+const serviceScopeEnabled = computed(() => hasServiceScope(formData.nodeType));
+const rules = computed(() => ({
   deptName: [{required: true, message: '请输入科室名称', trigger: 'blur'}],
-  deptType: [{required: true, message: '请选择科室类型', trigger: 'change'}],
+  nodeType: [{required: true, message: '请选择节点类型', trigger: 'change'}],
+  // 必填只在业务节点上要求：切换节点类型会清空数组，rules 跟着节点类型走
+  deptType: serviceScopeEnabled.value
+      ? [{required: true, message: '请选择科室类型', trigger: 'change'}]
+      : [],
+}));
+const handleNodeTypeChange = () => {
+  if (!serviceScopeEnabled.value) formData.deptType = [];
 };
 
 const employeeList = ref([]);
@@ -170,8 +190,9 @@ const areaDeptIds = computed(() => {
   walk(props.deptTree);
   return ids;
 });
-/** 当前编辑的是不是护理片区/大科节点：只有它才配护理排班审核人（新增科室还没有下级，按末级处理） */
-const isNursingAreaNode = computed(() => !!formData.id && areaDeptIds.value.has(String(formData.id)));
+/** 当前编辑的是不是护理片区/大科节点：只有它才配护理排班审核人（新增片区按节点类型直接判定） */
+const isNursingAreaNode = computed(() => formData.nodeType === '1'
+    || (!!formData.id && areaDeptIds.value.has(String(formData.id))));
 const loadEmployeeList = async () => {
   try {
     const res = await getEmployeeList({});
@@ -185,6 +206,7 @@ const resetForm = () => {
   formData.id = null;
   formData.deptCode = '';
   formData.deptName = '';
+  formData.nodeType = '2';
   formData.deptType = [];
   formData.parentId = 0;
   formData.sortOrder = 0;
@@ -208,7 +230,12 @@ watch(visible, async (open) => {
   try {
     const res = await getDepartmentDetail(props.row.id);
     if (res.code === 200) {
-      Object.assign(formData, {...res.data, deptType: deptTypeToArray(res.data.deptType)});
+      Object.assign(formData, {
+        ...res.data,
+        // 存量行没有节点类型时按临床科室回显，保存后即被回填（不默认成片区，避免历史行被误判）
+        nodeType: res.data.nodeType == null || res.data.nodeType === '' ? '2' : String(res.data.nodeType),
+        deptType: deptTypeToArray(res.data.deptType),
+      });
     }
   } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
     
@@ -227,8 +254,11 @@ const handleSubmit = async () => {
   }
   submitLoading.value = true;
   try {
-    // 提交前把数组转成逗号分隔字符串
-    const payload = {...formData, deptType: formData.deptType.join(',')};
+    // 提交前把数组转成逗号分隔字符串；非业务节点（片区/机构/行政）一律不带服务范围
+    const payload = {
+      ...formData,
+      deptType: serviceScopeEnabled.value ? formData.deptType.join(',') : '',
+    };
     const res = isEdit.value ? await updateDepartment(payload) : await createDepartment(payload);
     if (res.code === 200) {
       ElMessage.success(isEdit.value ? '修改成功' : '新增成功');

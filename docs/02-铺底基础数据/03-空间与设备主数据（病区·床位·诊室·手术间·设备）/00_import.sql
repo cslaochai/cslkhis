@@ -8,3 +8,4 @@ SOURCE ./sys_clinic_room.sql;
 SOURCE ./sys_equipment.sql;
 SOURCE ./sys_operation_room.sql;
 SOURCE ./sys_ward.sql;
+SOURCE ./sys_ward_dept.sql;

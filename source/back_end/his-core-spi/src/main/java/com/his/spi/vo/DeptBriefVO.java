@@ -40,6 +40,12 @@ public class DeptBriefVO {
     private String deptType;
 
     /**
+     * 节点类型（0-医疗机构 1-管理片区 2-临床科室 3-医技科室 4-药剂科室 5-行政后勤 6-医疗辅助 7-其他）
+     * <p>排班单元、开诊科室等「必须是真人上班的地方」按它过滤，片区与行政后勤不能入选。
+     */
+    private String nodeType;
+
+    /**
      * 状态（0-停用 1-启用）
      */
     private Integer status;

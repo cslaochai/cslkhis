@@ -1,6 +1,6 @@
 -- 领域：03-空间与设备主数据（病区·床位·诊室·手术间·设备）
--- 库：hn_biz_his    表数：8
--- 说明：DDL 快照（dev 库 SHOW CREATE TABLE 于 2026-10-25 导出，无 DROP / 无数据）。建表语句彼此独立，不含外键约束。
+-- 库：hn_biz_his    表数：9
+-- 说明：DDL 快照（dev 库 SHOW CREATE TABLE 于 2026-11-20 导出，无 DROP / 无数据）。建表语句彼此独立，不含外键约束。
 -- 口径：姓名/名称快照列与操作人列（create_by·update_by·*_by·*_name·name）不留 DEFAULT，漏填直接报错；其余 NOT NULL 列保留库上的 DEFAULT。
 
 -- ----------------------------
@@ -198,3 +198,24 @@ CREATE TABLE `sys_ward` (
   UNIQUE KEY `uk_ward_code` (`ward_code`),
   KEY `idx_dept_id` (`dept_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='病区';
+
+-- ----------------------------
+-- sys_ward_dept  病区-科室多对多（病区收治范围）。可跨科收治，床位可分专科优先床与机动床
+-- ----------------------------
+CREATE TABLE `sys_ward_dept` (
+  `id` bigint NOT NULL COMMENT '主键ID',
+  `ward_id` bigint NOT NULL COMMENT '病区ID（sys_ward.ward_id）',
+  `dept_id` bigint NOT NULL COMMENT '科室ID（sys_department.id）',
+  `is_primary` tinyint NOT NULL DEFAULT '0' COMMENT '是否本位科室（1-是 0-否）。每个病区有且仅有一条为 1，且必须与 sys_ward.dept_id 一致',
+  `bed_quota` int COMMENT '该科室在本病区的专科优先床数（NULL=不限额，剩余为机动床）',
+  `sort_order` int NOT NULL DEFAULT '0' COMMENT '排序号（越小越靠前，影响病区下科室展示顺序）',
+  `create_by` varchar(64) NOT NULL COMMENT '创建人',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `update_by` varchar(64) NOT NULL COMMENT '更新人',
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  `create_by_id` bigint NOT NULL COMMENT '创建人ID',
+  `update_by_id` bigint NOT NULL COMMENT '更新人ID',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_ward_dept` (`ward_id`,`dept_id`) COMMENT '同一病区同一科室只允许一条',
+  KEY `idx_dept_id` (`dept_id`) COMMENT '按科室反查可收治的病区'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='病区-科室多对多（病区收治范围）。可跨科收治，床位可分专科优先床与机动床';

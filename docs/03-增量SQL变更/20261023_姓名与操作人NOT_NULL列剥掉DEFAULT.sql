@@ -1,11 +1,11 @@
 -- ============================================================
--- 姓名/操作人类 NOT NULL 列剥掉 DEFAULT（1507 列）
+-- 姓名/操作人类 NOT NULL 列剥掉 DEFAULT（1525 列）
 -- 口径：这些列一旦带 DEFAULT，漏填就被静默洗成空串/0，「谁做的、叫什么」再也查不回来；
 --       其余 NOT NULL 列的 DEFAULT 是刻意保留的，不在本文件范围。
 -- 匹配规则：列名 = name 或以 _name / _by 结尾，或属于 create_by/update_by/create_by_id/update_by_id。
 -- 基线 docs/01-初始化DDL 已按剥完的形状落文件；本文件用于让 dev 库追上同一形状，未执行。
 -- 执行前必修：SignConfigMapper.insertValue 往 sys_config 插配置时省略了 create_by/update_by/create_by_id/update_by_id 四列，剥掉默认后这条 INSERT 直接报 1364（TSA 签名配置自举失败）。
--- 生成：2026-10-25（workspace/_reorg_docs_baseline.py ddl）
+-- 生成：2026-11-20（workspace/_reorg_docs_baseline.py ddl）
 -- ============================================================
 
 ALTER TABLE `biz_tech_auth_override` MODIFY COLUMN `employee_name` varchar(50) NOT NULL COMMENT '越权操作者姓名（快照）';
@@ -28,6 +28,10 @@ ALTER TABLE `sys_department` MODIFY COLUMN `create_by` varchar(64) NOT NULL COMM
 ALTER TABLE `sys_department` MODIFY COLUMN `update_by` varchar(64) NOT NULL COMMENT '更新人';
 ALTER TABLE `sys_department` MODIFY COLUMN `create_by_id` bigint NOT NULL COMMENT '创建人ID';
 ALTER TABLE `sys_department` MODIFY COLUMN `update_by_id` bigint NOT NULL COMMENT '更新人ID';
+ALTER TABLE `sys_dept_subject_map` MODIFY COLUMN `create_by` varchar(64) NOT NULL COMMENT '创建人';
+ALTER TABLE `sys_dept_subject_map` MODIFY COLUMN `update_by` varchar(64) NOT NULL COMMENT '更新人';
+ALTER TABLE `sys_dept_subject_map` MODIFY COLUMN `create_by_id` bigint NOT NULL COMMENT '创建人ID';
+ALTER TABLE `sys_dept_subject_map` MODIFY COLUMN `update_by_id` bigint NOT NULL COMMENT '更新人ID';
 ALTER TABLE `sys_dict_data` MODIFY COLUMN `create_by` varchar(64) NOT NULL COMMENT '创建人';
 ALTER TABLE `sys_dict_data` MODIFY COLUMN `update_by` varchar(64) NOT NULL COMMENT '更新人';
 ALTER TABLE `sys_dict_data` MODIFY COLUMN `create_by_id` bigint NOT NULL COMMENT '创建人ID';
@@ -60,6 +64,14 @@ ALTER TABLE `sys_field_change_log` MODIFY COLUMN `create_by` varchar(64) NOT NUL
 ALTER TABLE `sys_field_change_log` MODIFY COLUMN `update_by` varchar(64) NOT NULL COMMENT '更新人';
 ALTER TABLE `sys_field_change_log` MODIFY COLUMN `create_by_id` bigint NOT NULL COMMENT '创建人ID';
 ALTER TABLE `sys_field_change_log` MODIFY COLUMN `update_by_id` bigint NOT NULL COMMENT '更新人ID';
+ALTER TABLE `sys_med_group` MODIFY COLUMN `create_by` varchar(64) NOT NULL COMMENT '创建人';
+ALTER TABLE `sys_med_group` MODIFY COLUMN `update_by` varchar(64) NOT NULL COMMENT '更新人';
+ALTER TABLE `sys_med_group` MODIFY COLUMN `create_by_id` bigint NOT NULL COMMENT '创建人ID';
+ALTER TABLE `sys_med_group` MODIFY COLUMN `update_by_id` bigint NOT NULL COMMENT '更新人ID';
+ALTER TABLE `sys_med_subject` MODIFY COLUMN `create_by` varchar(64) NOT NULL COMMENT '创建人';
+ALTER TABLE `sys_med_subject` MODIFY COLUMN `update_by` varchar(64) NOT NULL COMMENT '更新人';
+ALTER TABLE `sys_med_subject` MODIFY COLUMN `create_by_id` bigint NOT NULL COMMENT '创建人ID';
+ALTER TABLE `sys_med_subject` MODIFY COLUMN `update_by_id` bigint NOT NULL COMMENT '更新人ID';
 ALTER TABLE `sys_menu` MODIFY COLUMN `menu_name` varchar(100) NOT NULL COMMENT '菜单名称';
 ALTER TABLE `sys_menu` MODIFY COLUMN `create_by` varchar(64) NOT NULL COMMENT '创建人';
 ALTER TABLE `sys_menu` MODIFY COLUMN `update_by` varchar(64) NOT NULL COMMENT '更新人';
@@ -134,6 +146,10 @@ ALTER TABLE `sys_ward` MODIFY COLUMN `create_by` varchar(64) NOT NULL COMMENT '�
 ALTER TABLE `sys_ward` MODIFY COLUMN `update_by` varchar(64) NOT NULL COMMENT '更新人';
 ALTER TABLE `sys_ward` MODIFY COLUMN `create_by_id` bigint NOT NULL COMMENT '创建人ID';
 ALTER TABLE `sys_ward` MODIFY COLUMN `update_by_id` bigint NOT NULL COMMENT '更新人ID';
+ALTER TABLE `sys_ward_dept` MODIFY COLUMN `create_by` varchar(64) NOT NULL COMMENT '创建人';
+ALTER TABLE `sys_ward_dept` MODIFY COLUMN `update_by` varchar(64) NOT NULL COMMENT '更新人';
+ALTER TABLE `sys_ward_dept` MODIFY COLUMN `create_by_id` bigint NOT NULL COMMENT '创建人ID';
+ALTER TABLE `sys_ward_dept` MODIFY COLUMN `update_by_id` bigint NOT NULL COMMENT '更新人ID';
 ALTER TABLE `biz_dip_aux` MODIFY COLUMN `create_by` varchar(64) NOT NULL COMMENT '创建人';
 ALTER TABLE `biz_dip_aux` MODIFY COLUMN `update_by` varchar(64) NOT NULL COMMENT '更新人';
 ALTER TABLE `biz_dip_disease` MODIFY COLUMN `disease_name` varchar(200) NOT NULL COMMENT '病种名称';
@@ -155,6 +171,10 @@ ALTER TABLE `biz_drg_mdc` MODIFY COLUMN `create_by` varchar(64) NOT NULL COMMENT
 ALTER TABLE `biz_drg_mdc` MODIFY COLUMN `update_by` varchar(64) NOT NULL COMMENT '更新人';
 ALTER TABLE `biz_drg_mdc` MODIFY COLUMN `create_by_id` bigint NOT NULL COMMENT '创建人ID';
 ALTER TABLE `biz_drg_mdc` MODIFY COLUMN `update_by_id` bigint NOT NULL COMMENT '更新人ID';
+ALTER TABLE `biz_drg_scheme` MODIFY COLUMN `create_by` varchar(64) NOT NULL COMMENT '创建人';
+ALTER TABLE `biz_drg_scheme` MODIFY COLUMN `update_by` varchar(64) NOT NULL COMMENT '更新人';
+ALTER TABLE `biz_drg_scheme` MODIFY COLUMN `create_by_id` bigint NOT NULL COMMENT '创建人ID';
+ALTER TABLE `biz_drg_scheme` MODIFY COLUMN `update_by_id` bigint NOT NULL COMMENT '更新人ID';
 ALTER TABLE `biz_drg_set` MODIFY COLUMN `create_by` varchar(64) NOT NULL COMMENT '创建人';
 ALTER TABLE `biz_drg_set` MODIFY COLUMN `update_by` varchar(64) NOT NULL COMMENT '更新人';
 ALTER TABLE `biz_drg_set` MODIFY COLUMN `create_by_id` bigint NOT NULL COMMENT '创建人ID';
@@ -178,11 +198,6 @@ ALTER TABLE `sys_consumable` MODIFY COLUMN `create_by` varchar(64) COLLATE utf8m
 ALTER TABLE `sys_consumable` MODIFY COLUMN `update_by` varchar(64) COLLATE utf8mb4_general_ci NOT NULL COMMENT '更新人';
 ALTER TABLE `sys_consumable` MODIFY COLUMN `create_by_id` bigint NOT NULL COMMENT '创建人ID';
 ALTER TABLE `sys_consumable` MODIFY COLUMN `update_by_id` bigint NOT NULL COMMENT '更新人ID';
-ALTER TABLE `sys_diagnosis` MODIFY COLUMN `diagnosis_name` varchar(200) NOT NULL COMMENT '诊断名称';
-ALTER TABLE `sys_diagnosis` MODIFY COLUMN `create_by` varchar(64) NOT NULL COMMENT '创建人';
-ALTER TABLE `sys_diagnosis` MODIFY COLUMN `update_by` varchar(64) NOT NULL COMMENT '更新人';
-ALTER TABLE `sys_diagnosis` MODIFY COLUMN `create_by_id` bigint NOT NULL COMMENT '创建人ID';
-ALTER TABLE `sys_diagnosis` MODIFY COLUMN `update_by_id` bigint NOT NULL COMMENT '更新人ID';
 ALTER TABLE `sys_drug` MODIFY COLUMN `drug_name` varchar(200) NOT NULL COMMENT '药品名称';
 ALTER TABLE `sys_drug` MODIFY COLUMN `create_by` varchar(64) NOT NULL COMMENT '创建人';
 ALTER TABLE `sys_drug` MODIFY COLUMN `update_by` varchar(64) NOT NULL COMMENT '更新人';
@@ -1226,6 +1241,14 @@ ALTER TABLE `biz_stat_dept` MODIFY COLUMN `create_by` varchar(64) NOT NULL COMME
 ALTER TABLE `biz_stat_dept` MODIFY COLUMN `update_by` varchar(64) NOT NULL COMMENT '更新人';
 ALTER TABLE `biz_stat_dept` MODIFY COLUMN `create_by_id` bigint NOT NULL COMMENT '创建人ID';
 ALTER TABLE `biz_stat_dept` MODIFY COLUMN `update_by_id` bigint NOT NULL COMMENT '更新人ID';
+ALTER TABLE `sys_charge_policy` MODIFY COLUMN `create_by` varchar(64) NOT NULL COMMENT '创建人';
+ALTER TABLE `sys_charge_policy` MODIFY COLUMN `update_by` varchar(64) NOT NULL COMMENT '更新人';
+ALTER TABLE `sys_charge_policy` MODIFY COLUMN `create_by_id` bigint NOT NULL COMMENT '创建人ID';
+ALTER TABLE `sys_charge_policy` MODIFY COLUMN `update_by_id` bigint NOT NULL COMMENT '更新人ID';
+ALTER TABLE `sys_charge_policy_price` MODIFY COLUMN `create_by` varchar(64) NOT NULL COMMENT '创建人';
+ALTER TABLE `sys_charge_policy_price` MODIFY COLUMN `update_by` varchar(64) NOT NULL COMMENT '更新人';
+ALTER TABLE `sys_charge_policy_price` MODIFY COLUMN `create_by_id` bigint NOT NULL COMMENT '创建人ID';
+ALTER TABLE `sys_charge_policy_price` MODIFY COLUMN `update_by_id` bigint NOT NULL COMMENT '更新人ID';
 ALTER TABLE `biz_adverse_event` MODIFY COLUMN `create_by` varchar(64) NOT NULL COMMENT '创建人';
 ALTER TABLE `biz_adverse_event` MODIFY COLUMN `update_by` varchar(64) NOT NULL COMMENT '更新人';
 ALTER TABLE `biz_adverse_event` MODIFY COLUMN `create_by_id` bigint NOT NULL COMMENT '创建人ID';

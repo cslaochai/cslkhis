@@ -33,6 +33,15 @@ public class DepartmentSelectDTO {
     private String deptType;
 
     /**
+     * 节点类型过滤（单值）。
+     * <p>排班单元、开诊科室、收治科室这类「必须落到真人上班的地方」的下拉要传
+     * {@code 2,3,4,6,7}（见 {@code DeptNodeTypeEnum#isBusinessDept}）把管理片区与行政后勤挡在外面；
+     * 岗位配置这类需要选「片区」的下拉不传，靠出参的 nodeType 自行标注。
+     */
+    @Schema(description = "节点类型：1-管理片区 2-临床科室 3-医技科室 4-药剂科室 5-行政后勤 6-医疗辅助 7-其他")
+    private String nodeType;
+
+    /**
      * 科室名称，模糊匹配（下拉搜索用）
      */
     @Schema(description = "科室名称，模糊匹配")

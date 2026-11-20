@@ -204,17 +204,31 @@ const credRows = [
     dept: '心血管内科',
     ability: '分诊工作站：队列/呼叫/重呼/过号/复诊优先/分诊卡体征与分级/患者签到，默认诊区=心内科（限本科室）'
   },
+  // 动态岗演示对象：仅在心内科病区在册，无排班权限；改岗位归属/有效期验证名册与排班边界
+  {
+    accounts: ['shiyu ( 时雨 )'],
+    role: '护士',
+    dept: '心血管内科',
+    ability: NURSE_ABILITY + '；动态岗演示：转科前后在册名册与排班边界（本身不能排班）'
+  },
   {
     accounts: ['caoyumei ( 曹玉梅  )', 'qiuhaotian ( 邱昊天  )'],
     role: '区护士长',
     dept: '心血管内科',
     ability: HEAD_NURSE_ABILITY
   },
+  // 动态岗对照组：神经内科是心内科的接收科室，两边名册互斥（转科生效日当天换边）
+  {
+    accounts: ['xuheyu ( 徐和玉 )'],
+    role: '区护士长',
+    dept: '神经内科',
+    ability: '病区护理排班编制/改格/删除/整周提交（神经内科病区，限本科室）；无审核权（审核在内科系统科护士长）'
+  },
   // 护理三级链第二档：科护士长，审核发布片区内病区的整周排班
   {
     accounts: ['yangshuhua ( 杨淑华 )'],
     role: '科护士长',
-    dept: '心血管内科',
+    dept: '内科系统',
     ability: SCHEDULE_NURSING_AREA_AUDITOR_ABILITY
   },
   {

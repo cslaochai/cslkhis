@@ -16,12 +16,14 @@ import java.util.List;
 public interface MiniDirectoryMapper {
 
     /**
-     * 开放中的科室（挂号可选；主键出参字符串化由 VO 的 ToStringSerializer 负责）
+     * 开放中的科室（挂号可选；主键出参字符串化由 VO 的 ToStringSerializer 负责）。
+     * <p>{@code node_type} 收口：管理片区/行政后勤不是挂号科室。未回填的历史行放行，避免升级瞬间目录变空。
      */
     @Select("""
             SELECT id, dept_name, dept_type, dept_desc
             FROM sys_department
             WHERE del_flag = 0 AND is_open = 1 AND status = 1
+              AND (node_type IS NULL OR node_type IN ('2','7'))
             ORDER BY sort_order ASC, id ASC
             """)
     List<MiniDeptSelectListVO> selectOpenDepartments();

@@ -1,33 +1,36 @@
 # 02-铺底基础数据（新库初始化用）
 
 - 一个表一个文件，按 `../01-初始化DDL` 的领域分子目录；目录内 `00_import.sql` 汇总，根目录 `00_import_all.sql` 串全部领域。
-- 共 91 张表。生成：`python workspace/_reorg_docs_baseline.py seed`（2026-10-25 自 dev 库按主键序导出，单语句 500 行）
+- 共 99 张表。2026-11-20 自 dev 库按主键序导出（单语句 500 行）。
 - 前置：先跑 `../01-初始化DDL/*.sql` 建表，再 `cd` 到本目录执行 `mysql --default-character-set=utf8mb4 库名 < 00_import_all.sql`。
-- **不含运行数据**：`biz_clinic_source`（排班）、`biz_clinic_source_slot`（号源）、`biz_schedule`（排班实例）——新环境由排班发布功能生成，不铺底。
+- **不含运行数据**：排班/号源（`biz_clinic_source`、`biz_clinic_source_slot`、`biz_schedule`）、值班呼叫（`biz_duty_call`、`biz_duty_call_log`）、工作流实例与待办（`biz_flow_instance`、`biz_flow_task`、`biz_flow_his_task`）——新环境由对应业务功能生成，不铺底。
 - `biz_clinic_source_slot_template` 是主数据模板：dev 库当前 0 行，按原铺底保留，不以库清空。
 - DRG 大批量目录（`biz_drg_set` 等 26 万行）仍在 `../03-增量SQL变更/239-DRG2.0-3.0整体数据铺底.sql`，不并进来。
 
 | 领域目录 | 表 | 铺底行数 |
 |---|---|---|
-| 01-系统基础（组织·用户·岗位·权限·参数·字典） | sys_config | 34 |
-| 01-系统基础（组织·用户·岗位·权限·参数·字典） | sys_department | 96 |
-| 01-系统基础（组织·用户·岗位·权限·参数·字典） | sys_dict_data | 1867 |
+| 01-系统基础（组织·用户·岗位·权限·参数·字典） | sys_config | 36 |
+| 01-系统基础（组织·用户·岗位·权限·参数·字典） | sys_department | 95 |
+| 01-系统基础（组织·用户·岗位·权限·参数·字典） | sys_dept_subject_map | 57 |
+| 01-系统基础（组织·用户·岗位·权限·参数·字典） | sys_dict_data | 1868 |
 | 01-系统基础（组织·用户·岗位·权限·参数·字典） | sys_dict_type | 408 |
-| 01-系统基础（组织·用户·岗位·权限·参数·字典） | sys_employee | 535 |
-| 01-系统基础（组织·用户·岗位·权限·参数·字典） | sys_employee_post | 530 |
+| 01-系统基础（组织·用户·岗位·权限·参数·字典） | sys_employee | 534 |
+| 01-系统基础（组织·用户·岗位·权限·参数·字典） | sys_employee_post | 547 |
 | 01-系统基础（组织·用户·岗位·权限·参数·字典） | sys_employee_qualification | 571 |
-| 01-系统基础（组织·用户·岗位·权限·参数·字典） | sys_employee_tech_auth | 126 |
-| 01-系统基础（组织·用户·岗位·权限·参数·字典） | sys_menu | 525 |
-| 01-系统基础（组织·用户·岗位·权限·参数·字典） | sys_role | 30 |
-| 01-系统基础（组织·用户·岗位·权限·参数·字典） | sys_role_menu | 1438 |
-| 01-系统基础（组织·用户·岗位·权限·参数·字典） | sys_sign_cert | 16 |
-| 01-系统基础（组织·用户·岗位·权限·参数·字典） | sys_user | 504 |
+| 01-系统基础（组织·用户·岗位·权限·参数·字典） | sys_employee_tech_auth | 115 |
+| 01-系统基础（组织·用户·岗位·权限·参数·字典） | sys_med_subject | 64 |
+| 01-系统基础（组织·用户·岗位·权限·参数·字典） | sys_menu | 566 |
+| 01-系统基础（组织·用户·岗位·权限·参数·字典） | sys_role | 36 |
+| 01-系统基础（组织·用户·岗位·权限·参数·字典） | sys_role_menu | 1332 |
+| 01-系统基础（组织·用户·岗位·权限·参数·字典） | sys_sign_cert | 1 |
+| 01-系统基础（组织·用户·岗位·权限·参数·字典） | sys_user | 506 |
 | 03-空间与设备主数据（病区·床位·诊室·手术间·设备） | biz_infusion_seat | 23 |
-| 03-空间与设备主数据（病区·床位·诊室·手术间·设备） | sys_bed | 1070 |
+| 03-空间与设备主数据（病区·床位·诊室·手术间·设备） | sys_bed | 1050 |
 | 03-空间与设备主数据（病区·床位·诊室·手术间·设备） | sys_clinic_room | 120 |
 | 03-空间与设备主数据（病区·床位·诊室·手术间·设备） | sys_equipment | 90 |
 | 03-空间与设备主数据（病区·床位·诊室·手术间·设备） | sys_operation_room | 6 |
-| 03-空间与设备主数据（病区·床位·诊室·手术间·设备） | sys_ward | 49 |
+| 03-空间与设备主数据（病区·床位·诊室·手术间·设备） | sys_ward | 39 |
+| 03-空间与设备主数据（病区·床位·诊室·手术间·设备） | sys_ward_dept | 39 |
 | 04-临床字典与项目目录（药品·耗材·诊疗项目·诊断编码） | biz_dip_aux | 4 |
 | 04-临床字典与项目目录（药品·耗材·诊疗项目·诊断编码） | biz_dip_disease | 13 |
 | 04-临床字典与项目目录（药品·耗材·诊疗项目·诊断编码） | biz_shift | 21 |
@@ -44,7 +47,7 @@
 | 04-临床字典与项目目录（药品·耗材·诊疗项目·诊断编码） | sys_inspection_item | 105 |
 | 04-临床字典与项目目录（药品·耗材·诊疗项目·诊断编码） | sys_laboratory_item | 110 |
 | 04-临床字典与项目目录（药品·耗材·诊疗项目·诊断编码） | sys_laboratory_item_detail | 156 |
-| 04-临床字典与项目目录（药品·耗材·诊疗项目·诊断编码） | sys_price_change_history | 12 |
+| 04-临床字典与项目目录（药品·耗材·诊疗项目·诊断编码） | sys_price_change_history | 13 |
 | 04-临床字典与项目目录（药品·耗材·诊疗项目·诊断编码） | sys_single_disease | 16 |
 | 04-临床字典与项目目录（药品·耗材·诊疗项目·诊断编码） | sys_supplier | 29 |
 | 04-临床字典与项目目录（药品·耗材·诊疗项目·诊断编码） | sys_treatment_item | 103 |
@@ -78,18 +81,21 @@
 | 13-检查影像与报告（PACS·预约·心电·病理·内镜） | sys_imaging_plain_item | 31 |
 | 14-手术麻醉与日间手术 | biz_day_surgery_item | 19 |
 | 15-输血与血库 | biz_blood_inventory | 16 |
-| 17-药房药库（采购·库存·发药·调拨·盘点·静配） | biz_drug_package | 6 |
-| 17-药房药库（采购·库存·发药·调拨·盘点·静配） | biz_drug_package_detail | 17 |
+| 16-急诊与全院总值班 | biz_duty_type | 4 |
+| 17-药房药库（采购·库存·发药·调拨·盘点·静配） | biz_drug_package | 9 |
+| 17-药房药库（采购·库存·发药·调拨·盘点·静配） | biz_drug_package_detail | 26 |
 | 17-药房药库（采购·库存·发药·调拨·盘点·静配） | biz_drug_stock | 415 |
 | 18-耗材与消毒供应（CSSD） | biz_consumable_stock | 24 |
 | 19-收费四层（记账·结算·支付·票据） | biz_arrears_policy | 1 |
 | 19-收费四层（记账·结算·支付·票据） | biz_fund_account | 10 |
+| 19-收费四层（记账·结算·支付·票据） | sys_charge_policy | 2 |
+| 19-收费四层（记账·结算·支付·票据） | sys_charge_policy_price | 7 |
 | 21-专项质控与专科管理（路径·抗菌药物·VTE·营养·体检·透析·监护） | biz_pathway | 19 |
 | 21-专项质控与专科管理（路径·抗菌药物·VTE·营养·体检·透析·监护） | biz_pathway_step | 156 |
 | 22-互联网医院·随访·满意度·消息与工作台 | biz_survey_item | 8 |
 | 22-互联网医院·随访·满意度·消息与工作台 | biz_survey_template | 5 |
-| 22-互联网医院·随访·满意度·消息与工作台 | sys_ai_prompt_template | 30 |
-| 22-互联网医院·随访·满意度·消息与工作台 | sys_ai_qa_column | 8367 |
+| 22-互联网医院·随访·满意度·消息与工作台 | sys_ai_prompt_template | 35 |
+| 22-互联网医院·随访·满意度·消息与工作台 | sys_ai_qa_column | 8364 |
 | 22-互联网医院·随访·满意度·消息与工作台 | sys_ai_qa_relation | 360 |
 | 22-互联网医院·随访·满意度·消息与工作台 | sys_ai_qa_schema | 328 |
 | 22-互联网医院·随访·满意度·消息与工作台 | sys_ai_qa_semantic | 17 |
@@ -99,3 +105,6 @@
 | 22-互联网医院·随访·满意度·消息与工作台 | sys_workbench_layout | 8 |
 | 22-互联网医院·随访·满意度·消息与工作台 | sys_workbench_role | 134 |
 | 22-互联网医院·随访·满意度·消息与工作台 | sys_workbench_widget | 38 |
+| 24-工作流（流程定义·实例·待办） | sys_flow_definition | 2 |
+| 24-工作流（流程定义·实例·待办） | sys_flow_node | 10 |
+| 24-工作流（流程定义·实例·待办） | sys_flow_skip | 10 |

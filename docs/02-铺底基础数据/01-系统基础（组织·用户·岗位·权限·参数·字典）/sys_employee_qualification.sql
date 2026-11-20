@@ -1,4 +1,4 @@
--- sys_employee_qualification  铺底数据：571 行（按主键序 自 dev 库 2026-10-23 导出）
+-- sys_employee_qualification  铺底数据：571 行（按主键序 自 dev 库 2026-11-20 导出）
 SET NAMES utf8mb4;
 SET FOREIGN_KEY_CHECKS = 0;
 START TRANSACTION;

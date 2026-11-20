@@ -1,6 +1,6 @@
 -- 领域：19-收费四层（记账·结算·支付·票据）
--- 库：hn_biz_his    表数：20
--- 说明：DDL 快照（dev 库 SHOW CREATE TABLE 于 2026-10-25 导出，无 DROP / 无数据）。建表语句彼此独立，不含外键约束。
+-- 库：hn_biz_his    表数：22
+-- 说明：DDL 快照（dev 库 SHOW CREATE TABLE 于 2026-11-20 导出，无 DROP / 无数据）。建表语句彼此独立，不含外键约束。
 -- 口径：姓名/名称快照列与操作人列（create_by·update_by·*_by·*_name·name）不留 DEFAULT，漏填直接报错；其余 NOT NULL 列保留库上的 DEFAULT。
 
 -- ----------------------------
@@ -740,3 +740,51 @@ CREATE TABLE `biz_stat_dept` (
   PRIMARY KEY (`stat_id`),
   UNIQUE KEY `uk_stat_date_dept` (`stat_date`,`dept_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='科室统计汇总';
+
+-- ----------------------------
+-- sys_charge_policy  收费政策价定义（诊查费等政策类项目）
+-- ----------------------------
+CREATE TABLE `sys_charge_policy` (
+  `id` bigint NOT NULL COMMENT '主键ID',
+  `policy_code` varchar(32) NOT NULL COMMENT '政策编码（OPD_CONSULT-门诊诊查费 EMG_CONSULT-急诊诊查费）',
+  `policy_name` varchar(64) NOT NULL COMMENT '政策项目名称（物价目录名）',
+  `item_code` varchar(32) NOT NULL COMMENT '院内费用行项目编码（biz_fee_record.item_code，如 ZCF/JZCF）',
+  `item_name` varchar(64) NOT NULL COMMENT '院内费用行项目名称',
+  `unit` varchar(16) NOT NULL DEFAULT '次' COMMENT '计价单位',
+  `catalog_type` tinyint COMMENT '支付分类（FeeCatalogTypeEnum：3-丙类，湘医保发〔2025〕58号诊查类全自费）',
+  `yb_note` varchar(64) COMMENT '国家医保编码说明（档位子码见价目行 yb_code）',
+  `status` tinyint NOT NULL DEFAULT '1' COMMENT '状态：0-停用 1-启用（停用后运行时按缺行降级）',
+  `remark` varchar(255) COMMENT '备注',
+  `create_by` varchar(64) NOT NULL COMMENT '创建人',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `update_by` varchar(64) NOT NULL COMMENT '更新人',
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  `create_by_id` bigint NOT NULL COMMENT '创建人ID',
+  `update_by_id` bigint NOT NULL COMMENT '更新人ID',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_policy_code` (`policy_code`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='收费政策价定义（诊查费等政策类项目）';
+
+-- ----------------------------
+-- sys_charge_policy_price  收费政策价目（政策×档位的价格行）
+-- ----------------------------
+CREATE TABLE `sys_charge_policy_price` (
+  `id` bigint NOT NULL COMMENT '主键ID',
+  `policy_code` varchar(32) NOT NULL COMMENT '政策编码（sys_charge_policy.policy_code）',
+  `tier_code` tinyint NOT NULL COMMENT '档位码（对齐 ClinicDiagnosisTierEnum：1-普通 2-副主任 3-主任 4-知名专家）',
+  `tier_label` varchar(32) NOT NULL COMMENT '档位名称',
+  `yb_code` varchar(32) COMMENT '国家医保编码（门诊档位子码 011102020010000~003 / 急诊 110200003）',
+  `amount` decimal(10,2) NOT NULL COMMENT '全额（元）',
+  `surcharge` decimal(10,2) COMMENT '加收额（元）：门诊副主任及以上拆「主项目+加收」两行用，无加收为 NULL',
+  `sort_order` int NOT NULL DEFAULT '0' COMMENT '排序号',
+  `status` tinyint NOT NULL DEFAULT '1' COMMENT '状态：0-停用 1-启用（停用后该档按缺行降级）',
+  `remark` varchar(255) COMMENT '备注',
+  `create_by` varchar(64) NOT NULL COMMENT '创建人',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `update_by` varchar(64) NOT NULL COMMENT '更新人',
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  `create_by_id` bigint NOT NULL COMMENT '创建人ID',
+  `update_by_id` bigint NOT NULL COMMENT '更新人ID',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_policy_tier` (`policy_code`,`tier_code`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='收费政策价目（政策×档位的价格行）';

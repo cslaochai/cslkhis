@@ -14,7 +14,7 @@
  */
 import { getDepartmentSelectList } from '@/api/system'
 
-/** 缓存：key = `${scope}|${deptType ?? ''}|${leafOnly ? 1 : 0}` → Promise<List> */
+/** 缓存：key = `${scope}|${deptType ?? ''}|${nodeType ?? ''}|${leafOnly ? 1 : 0}` → Promise<List> */
 const cache = new Map()
 
 /**
@@ -22,13 +22,16 @@ const cache = new Map()
  *
  * <p>{@code leafOnly} 只在「被邀请/被选择的科室」这类场景用：会诊、转科选的是具体接诊科室，
  * 选到「内科系统」这种父节点等于把单子发给一个没人值守的壳。
+ * <p>{@code nodeType} 传 {@code BUSINESS_NODE_TYPES.join(',')}（见 lib/deptNodeType）可把管理片区与
+ * 行政后勤挡在候选外 —— 排班单元、开诊科室、收治科室这类「必须是真人上班的地方」一律要传。
  */
-export function loadDeptOptions({ scope = 'CURRENT', deptType = null, leafOnly = false } = {}) {
-  const key = `${scope}|${deptType ?? ''}|${leafOnly ? 1 : 0}`
+export function loadDeptOptions({ scope = 'CURRENT', deptType = null, nodeType = null, leafOnly = false } = {}) {
+  const key = `${scope}|${deptType ?? ''}|${nodeType ?? ''}|${leafOnly ? 1 : 0}`
   if (!cache.has(key)) {
     const p = getDepartmentSelectList({
       scope,
       ...(deptType != null ? { deptType } : {}),
+      ...(nodeType != null ? { nodeType } : {}),
       ...(leafOnly ? {leafOnly: true} : {}),
     })
       .then((res) => res?.data || [])

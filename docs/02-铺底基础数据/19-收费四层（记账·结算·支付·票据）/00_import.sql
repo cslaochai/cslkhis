@@ -4,3 +4,5 @@ SET NAMES utf8mb4;
 
 SOURCE ./biz_arrears_policy.sql;
 SOURCE ./biz_fund_account.sql;
+SOURCE ./sys_charge_policy.sql;
+SOURCE ./sys_charge_policy_price.sql;

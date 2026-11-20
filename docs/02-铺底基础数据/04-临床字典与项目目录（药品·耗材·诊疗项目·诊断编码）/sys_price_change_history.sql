@@ -1,9 +1,10 @@
--- sys_price_change_history  铺底数据：12 行（按主键序 自 dev 库 2026-10-23 导出）
+-- sys_price_change_history  铺底数据：13 行（按主键序 自 dev 库 2026-11-20 导出）
 SET NAMES utf8mb4;
 SET FOREIGN_KEY_CHECKS = 0;
 START TRANSACTION;
 INSERT INTO `sys_price_change_history` (`id`, `item_type`, `item_id`, `item_code`, `item_name`, `old_price`, `new_price`, `change_reason`, `operator_id`, `operator_name`, `change_time`, `create_by`, `create_time`, `update_by`, `update_time`, `create_by_id`, `update_by_id`)
 VALUES
+(2115341214596222978, 'POLICY', 9140000000000000007, 'EMG_CONSULT/3', '急诊诊查费·主任医师档', '33.00', '40.00', '政策价探针 P2 调价验证', 1, '超级管理员', '2026-10-28 15:13:41', '超级管理员', '2026-10-28 15:13:41', '超级管理员', '2026-10-28 15:13:41', 1, 1),
 (2360000000000002001, 'TREATMENT', 400000, 'TR001', '肌肉注射', '5.40', '6.00', '2026年度医疗服务价格调整', 1, 'admin', '2026-04-01 09:00:00', 'admin', '2026-05-08 00:00:00', 'admin', '2026-05-08 00:00:00', 1, 1),
 (2360000000000002002, 'TREATMENT', 400001, 'TR002', '皮下注射', '5.40', '6.00', '2026年度医疗服务价格调整', 1, 'admin', '2026-04-01 09:00:00', 'admin', '2026-05-08 00:00:00', 'admin', '2026-05-08 00:00:00', 1, 1),
 (2360000000000002003, 'LABORATORY', 1, 'LB001', '血常规', '21.25', '25.00', '检验试剂集采降价传导', 1, 'admin', '2026-04-15 14:00:00', 'admin', '2026-05-08 00:00:00', 'admin', '2026-05-08 00:00:00', 1, 1),

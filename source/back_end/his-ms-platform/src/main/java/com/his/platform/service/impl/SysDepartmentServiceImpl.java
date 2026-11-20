@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
+import com.his.common.enums.DeptNodeTypeEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.TextUtil;
 import com.his.platform.dto.DepartmentQueryDTO;
@@ -64,6 +65,7 @@ public class SysDepartmentServiceImpl extends ServiceImpl<SysDepartmentMapper, S
                 // 唯一二级键：排序字段大量并列，缺主键兜底时列表顺序在不同请求间会漂
                 .orderByAsc(SysDepartment::getId);
         applyDeptTypeFilter(wrapper, selectDTO.getDeptType());
+        applyNodeTypeFilter(wrapper, selectDTO.getNodeType());
 
         if (!isAllScope(selectDTO.getScope())) {
             Set<Long> allowed = deptScopeService.allowedDeptIds();
@@ -108,6 +110,22 @@ public class SysDepartmentServiceImpl extends ServiceImpl<SysDepartmentMapper, S
     }
 
     /**
+     * 节点类型过滤：单值列，但允许传逗号分隔的多个值（如排班单元要 {@code "2,3,4,6,7"}）。
+     * 与 dept_type 不同，这里不需要 FIND_IN_SET —— node_type 一个节点只有一个角色。
+     */
+    private void applyNodeTypeFilter(LambdaQueryWrapper<SysDepartment> wrapper, String nodeType) {
+        if (!TextUtil.hasText(nodeType)) {
+            return;
+        }
+        List<String> types = Arrays.stream(nodeType.split(","))
+                .map(String::trim).filter(TextUtil::hasText).distinct().collect(Collectors.toList());
+        if (types.isEmpty()) {
+            return;
+        }
+        wrapper.in(SysDepartment::getNodeType, types);
+    }
+
+    /**
      * 只留末级科室：本级不能是任何其他科室的上级。
      * <p>父节点判断必须看全量科室（不受本次过滤条件影响），否则筛了类型后
      * 「有下级但下级没命中类型」的节点会被误当成末级。
@@ -128,6 +146,10 @@ public class SysDepartmentServiceImpl extends ServiceImpl<SysDepartmentMapper, S
 
     @Override
     public String upsert(DepartmentUpsertDTO upsertDTO) {
+        // 片区只是组织归集与审核权落点，不是服务科室：给它挂门诊/住院类型，它就会再次混进开诊与排班下拉
+        if (DeptNodeTypeEnum.isArea(upsertDTO.getNodeType()) && TextUtil.hasText(upsertDTO.getDeptType())) {
+            throw new BusinessException("管理片区不是服务科室，科室类型必须为空");
+        }
         SysDepartment dept = new SysDepartment();
         BeanUtils.copyProperties(upsertDTO, dept);
         if (dept.getId() == null) {
@@ -172,6 +194,7 @@ public class SysDepartmentServiceImpl extends ServiceImpl<SysDepartmentMapper, S
         wrapper.like(TextUtil.hasText(queryDTO.getDeptName()), SysDepartment::getDeptName, queryDTO.getDeptName())
                 .apply(TextUtil.hasText(queryDTO.getDeptType()),
                         "FIND_IN_SET({0}, dept_type) > 0", queryDTO.getDeptType())
+                .eq(TextUtil.hasText(queryDTO.getNodeType()), SysDepartment::getNodeType, queryDTO.getNodeType())
                 .orderByAsc(SysDepartment::getSortOrder);
         return wrapper;
     }
@@ -190,6 +213,7 @@ public class SysDepartmentServiceImpl extends ServiceImpl<SysDepartmentMapper, S
         DepartmentSelectListVO vo = new DepartmentSelectListVO();
         BeanUtils.copyProperties(dept, vo);
         vo.setParentDeptName(parentNameMap.get(dept.getParentId()));
+        vo.setNodeTypeText(DeptNodeTypeEnum.getLabel(dept.getNodeType()));
         return vo;
     }
 
@@ -214,6 +238,7 @@ public class SysDepartmentServiceImpl extends ServiceImpl<SysDepartmentMapper, S
         }
         DepartmentVO vo = new DepartmentVO();
         BeanUtils.copyProperties(dept, vo);
+        vo.setNodeTypeText(DeptNodeTypeEnum.getLabel(dept.getNodeType()));
         // 三个人员字段（负责人/门诊审核人/护理审核人）批量一次查名，避免 N+1
         Set<Long> empIds = new HashSet<>();
         if (dept.getDeptLeaderId() != null) empIds.add(dept.getDeptLeaderId());

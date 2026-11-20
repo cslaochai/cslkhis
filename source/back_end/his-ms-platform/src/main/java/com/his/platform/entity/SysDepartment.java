@@ -43,6 +43,12 @@ public class SysDepartment extends BaseEntity {
     private String deptType;
 
     /**
+     * 节点类型（1-管理片区 2-临床科室 3-医技科室 4-药剂科室 5-行政后勤 6-医疗辅助 7-其他）
+     * <p>与 deptType（服务范围）正交：片区只做组织归集与审核权落点，不能当排班单元或收治科室。
+     */
+    private String nodeType;
+
+    /**
      * 父科室ID
      */
     @JsonSerialize(using = ToStringSerializer.class)

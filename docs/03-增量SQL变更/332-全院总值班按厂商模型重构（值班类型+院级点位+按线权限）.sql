@@ -33,7 +33,7 @@ CREATE TABLE IF NOT EXISTS `biz_duty_type` (
   `create_time`        datetime     DEFAULT NULL COMMENT '创建时间',
   `update_by`          varchar(64)  DEFAULT NULL COMMENT '更新人',
   `update_time`        datetime     DEFAULT NULL COMMENT '更新时间',
-  `del_flag`           tinyint      DEFAULT NULL COMMENT '删除标志（0-正常 1-删除）',
+  `del_flag`           tinyint      NOT NULL DEFAULT 0 COMMENT '删除标志（0-正常 1-已删除）',
   `create_by_id`       bigint       DEFAULT NULL COMMENT '创建人ID',
   `update_by_id`       bigint       DEFAULT NULL COMMENT '更新人ID',
   PRIMARY KEY (`id`),

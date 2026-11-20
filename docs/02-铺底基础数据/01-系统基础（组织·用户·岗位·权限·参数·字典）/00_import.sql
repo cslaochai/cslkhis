@@ -4,12 +4,14 @@ SET NAMES utf8mb4;
 
 SOURCE ./sys_config.sql;
 SOURCE ./sys_department.sql;
+SOURCE ./sys_dept_subject_map.sql;
 SOURCE ./sys_dict_data.sql;
 SOURCE ./sys_dict_type.sql;
 SOURCE ./sys_employee.sql;
 SOURCE ./sys_employee_post.sql;
 SOURCE ./sys_employee_qualification.sql;
 SOURCE ./sys_employee_tech_auth.sql;
+SOURCE ./sys_med_subject.sql;
 SOURCE ./sys_menu.sql;
 SOURCE ./sys_role.sql;
 SOURCE ./sys_role_menu.sql;

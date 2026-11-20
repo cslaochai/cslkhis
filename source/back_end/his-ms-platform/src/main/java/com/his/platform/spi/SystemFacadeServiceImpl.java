@@ -444,6 +444,7 @@ public class SystemFacadeServiceImpl implements SystemFacadeService {
         vo.setParentId(department.getParentId());
         vo.setDeptName(department.getDeptName());
         vo.setDeptType(department.getDeptType());
+        vo.setNodeType(department.getNodeType());
         vo.setStatus(department.getStatus());
         vo.setOutpatientAuditorId(department.getOutpatientAuditorId());
         vo.setNursingAuditorId(department.getNursingAuditorId());

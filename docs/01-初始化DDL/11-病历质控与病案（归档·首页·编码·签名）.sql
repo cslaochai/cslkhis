@@ -1,6 +1,6 @@
 -- 领域：11-病历质控与病案（归档·首页·编码·签名）
 -- 库：hn_biz_his    表数：16
--- 说明：DDL 快照（dev 库 SHOW CREATE TABLE 于 2026-10-25 导出，无 DROP / 无数据）。建表语句彼此独立，不含外键约束。
+-- 说明：DDL 快照（dev 库 SHOW CREATE TABLE 于 2026-11-20 导出，无 DROP / 无数据）。建表语句彼此独立，不含外键约束。
 -- 口径：姓名/名称快照列与操作人列（create_by·update_by·*_by·*_name·name）不留 DEFAULT，漏填直接报错；其余 NOT NULL 列保留库上的 DEFAULT。
 
 -- ----------------------------
@@ -448,13 +448,6 @@ CREATE TABLE `biz_medical_record_archive` (
   `archive_status` tinyint NOT NULL DEFAULT '1' COMMENT '归档状态（1-待归档 2-已归档 3-已封存）',
   `archive_time` datetime COMMENT '归档时间',
   `seal_time` datetime COMMENT '封存时间',
-  `paper_verify_status` tinyint NOT NULL DEFAULT '0' COMMENT '纸质签名核验状态（0-未核验 1-已核验）',
-  `paper_cert_no` varchar(64) DEFAULT NULL COMMENT '纸质签名件编号（纸质病历号/档案号）',
-  `paper_verify_by_id` bigint DEFAULT NULL COMMENT '纸质签名核验人ID',
-  `paper_verify_by_name` varchar(50) DEFAULT NULL COMMENT '纸质签名核验人姓名',
-  `paper_verify_time` datetime DEFAULT NULL COMMENT '纸质签名核验时间',
-  `paper_verify_remark` varchar(500) DEFAULT NULL COMMENT '纸质签名核验说明',
-  `sign_method` tinyint NOT NULL DEFAULT '0' COMMENT '归档签名方式（0-未确定 1-电子签名 2-纸质签名核验）',
   `create_by` varchar(64) NOT NULL COMMENT '创建人',
   `create_time` datetime NOT NULL DEFAULT (now()) COMMENT '创建时间',
   `update_by` varchar(64) NOT NULL COMMENT '更新人',
@@ -503,9 +496,9 @@ CREATE TABLE `biz_quality_control` (
   KEY `idx_record_id` (`record_id`),
   KEY `idx_patient_id` (`patient_id`),
   KEY `idx_qc_type` (`qc_type`),
-  KEY `idx_trigger_source` (`trigger_source`,`qc_time`),
   KEY `idx_qc_status` (`qc_status`),
-  KEY `idx_record_source` (`record_source`,`qc_time`)
+  KEY `idx_record_source` (`record_source`,`qc_time`),
+  KEY `idx_trigger_source` (`trigger_source`,`qc_time`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='质控检查记录';
 
 -- ----------------------------

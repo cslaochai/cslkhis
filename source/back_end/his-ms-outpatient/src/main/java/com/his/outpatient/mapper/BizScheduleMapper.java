@@ -104,7 +104,9 @@ public interface BizScheduleMapper extends BaseMapper<BizSchedule> {
     NurseScheduleVO.Ward selectUnit(@Param("unitType") Integer unitType, @Param("unitId") Long unitId);
 
     /**
-     * 门诊科室候选：只列「有护理编制」的启用科室
+     * 门诊科室候选：只列「有护理编制」的启用科室。
+     * <p>{@code node_type} 收口（1-管理片区 5-行政后勤 不进候选）：片区挂着护士长不代表那里有护理单元，
+     * 把它们列进来，护士长就能在「内科系统」这个虚拟单元上排班。
      */
     @Select("""
             <script>
@@ -115,6 +117,7 @@ public interface BizScheduleMapper extends BaseMapper<BizSchedule> {
              AND e.dept_id = t.id) AS nurseCount
               FROM sys_department t
              WHERE t.del_flag = 0 AND t.status = 1
+               AND (t.node_type IS NULL OR t.node_type IN ('2','3','4','6','7'))
                AND NOT EXISTS (SELECT 1 FROM sys_ward w WHERE w.status = 1 AND w.dept_id = t.id)
             <if test="deptIds != null">
               AND t.id IN <foreach collection="deptIds" item="d" open="(" separator="," close=")">#{d}</foreach>

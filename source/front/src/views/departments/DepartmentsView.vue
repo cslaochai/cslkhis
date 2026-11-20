@@ -12,6 +12,12 @@
                 @keyup.enter="handleSearch"
             />
           </el-form-item>
+          <el-form-item label="节点类型">
+            <el-select v-model="searchForm.nodeType" clearable placeholder="请选择节点类型">
+              <el-option v-for="n in DEPT_NODE_TYPE_OPTIONS" :key="n.value" :label="n.label"
+                         :value="n.value"/>
+            </el-select>
+          </el-form-item>
           <el-form-item label="科室类型">
             <el-select v-model="searchForm.deptType" clearable placeholder="请选择科室类型">
               <el-option v-for="d in deptTypeOptions" :key="d.dictValue" :label="d.dictLabel"
@@ -35,6 +41,13 @@
                 stripe>
         <el-table-column label="科室编码" prop="deptCode" width="120"/>
         <el-table-column label="科室名称" prop="deptName" width="150"/>
+        <el-table-column label="节点类型" prop="nodeType" width="110">
+          <template #default="{ row }">
+            <el-tag :type="row.nodeType === '1' ? 'warning' : 'info'" effect="light" size="small">
+              {{ row.nodeTypeText || '未维护' }}
+            </el-tag>
+          </template>
+        </el-table-column>
         <el-table-column label="科室类型" prop="deptType" width="120">
           <template #default="{ row }">
             {{ deptTypeLabel(deptTypeOptions, row.deptType) }}
@@ -112,6 +125,7 @@ import {ElMessage, ElMessageBox} from 'element-plus';
 import {Delete, Edit, Plus, Refresh, Search, View} from '@element-plus/icons-vue';
 import {deleteDepartment, getDepartmentList, getDepartmentTree, getDictDataMapList} from '@/api/system';
 import {deptTypeLabel} from '@/lib/deptType';
+import {DEPT_NODE_TYPE_OPTIONS} from '@/lib/deptNodeType';
 import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination';
 import {useTableMaxHeight} from '@/lib/useTableMaxHeight';
 import DepartmentsDetail from './DepartmentsDetail.vue';
@@ -120,6 +134,7 @@ import DepartmentsEdit from './DepartmentsEdit.vue';
 const loading = ref(false);
 const searchForm = reactive({
   deptName: '',
+  nodeType: null, // 节点类型：单值，透传后端 node_type
   deptType: null, // 搜索仍用单选，传单个值给后端
 });
 const tableData = ref([]);
@@ -204,6 +219,7 @@ const handleSearch = () => {
 };
 const handleReset = () => {
   searchForm.deptName = '';
+  searchForm.nodeType = null;
   searchForm.deptType = null;
   pagination.value.pageNum = 1;
   loadData();

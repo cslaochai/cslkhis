@@ -1967,6 +1967,11 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, Biz
         }
         if (all || OrgUnitTypeEnum.DEPT.getCode() == orgType) {
             for (DeptBriefVO dept : systemFacadeService.listEnabledDepartments()) {
+                // 管理片区（内科系统等）与行政后勤不是真人上班的地方：选成排班单元后，整周排班挂在虚拟节点上、
+                // 提交审核也找不到归属科室。node_type 未回填的历史行按「可排班」放行，避免升级瞬间下拉变空。
+                if (TextUtil.hasText(dept.getNodeType()) && !DeptNodeTypeEnum.isBusinessDept(dept.getNodeType())) {
+                    continue;
+                }
                 if (erExclude != null && erExclude.contains(dept.getId())) {
                     continue;
                 }

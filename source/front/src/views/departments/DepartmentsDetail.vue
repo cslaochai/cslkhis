@@ -15,30 +15,38 @@
         </el-form-item>
       </div>
       <div class="grid grid-cols-2 gap-4">
-        <el-form-item label="科室类型">
-          <el-input :value="deptTypeLabel(deptTypeOptions, detail.deptType)"/>
+        <el-form-item label="节点类型">
+          <el-input :value="detail.nodeTypeText || '未维护'"/>
         </el-form-item>
+        <el-form-item label="科室类型">
+          <el-input :value="deptTypeLabel(deptTypeOptions, detail.deptType) || '（该节点不设服务范围）'"/>
+        </el-form-item>
+      </div>
+      <div class="grid grid-cols-2 gap-4">
         <el-form-item label="排序号">
           <el-input-number v-model="detail.sortOrder" :min="0" class="w-full"/>
         </el-form-item>
-      </div>
-      <div class="grid grid-cols-2 gap-4">
         <el-form-item label="位置">
           <el-input v-model="detail.location"/>
         </el-form-item>
+      </div>
+      <div class="grid grid-cols-2 gap-4">
         <el-form-item label="联系电话">
           <el-input v-model="detail.contactPhone"/>
         </el-form-item>
-      </div>
-      <div class="grid grid-cols-2 gap-4">
         <el-form-item label="科室负责人">
           <el-input :value="detail.deptLeaderName || '-'"/>
         </el-form-item>
+      </div>
+      <div class="grid grid-cols-2 gap-4">
         <el-form-item label="状态">
           <el-radio-group v-model="detail.status">
             <el-radio :value="1">正常</el-radio>
             <el-radio :value="0">停用</el-radio>
           </el-radio-group>
+        </el-form-item>
+        <el-form-item label="科室编码">
+          <el-input :value="detail.deptCode"/>
         </el-form-item>
       </div>
       <el-form-item label="科室简介">
@@ -75,6 +83,8 @@ const detail = reactive({
   id: null,
   deptCode: '',
   deptName: '',
+  nodeType: '',
+  nodeTypeText: '',
   deptType: '',
   parentId: 0,
   sortOrder: 0,

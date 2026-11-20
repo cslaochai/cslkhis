@@ -1,4 +1,4 @@
--- sys_dict_data  铺底数据：1867 行（按主键序 自 dev 库 2026-10-25 导出）
+-- sys_dict_data  铺底数据：1868 行（按主键序 自 dev 库 2026-11-20 导出）
 SET NAMES utf8mb4;
 SET FOREIGN_KEY_CHECKS = 0;
 START TRANSACTION;
@@ -1091,6 +1091,7 @@ VALUES
 (891000000000001211, 'his_perf_status', '草稿', '1', 1, NULL, NULL, 0, 1, 'admin', '2026-05-08 00:00:00', 'admin', '2026-05-08 00:00:00', 0, NULL, 2, 1, 1),
 (891000000000001212, 'his_perf_status', '已核算', '2', 2, NULL, NULL, 0, 1, 'admin', '2026-05-08 00:00:00', 'admin', '2026-05-08 00:00:00', 0, NULL, 2, 1, 1),
 (891000000000001213, 'his_perf_status', '已发布', '3', 3, NULL, NULL, 0, 1, 'admin', '2026-05-08 00:00:00', 'admin', '2026-05-08 00:00:00', 0, NULL, 2, 1, 1),
+(891000000000001214, 'his_drg_sim_status', '歧义组', '3', 3, NULL, 'warning', 0, 1, 'admin', '2026-01-01 00:00:00', 'admin', '2026-01-01 00:00:00', 0, '命中官方 ?QY 其他手术歧义组：结果为合法歧义码，不计权重与盈亏', 2, 1, 1),
 (891000000000001301, 'his_revisit_source', '当日回诊', '1', 1, NULL, NULL, 0, 1, 'admin', '2026-05-08 00:00:00', 'admin', '2026-05-08 00:00:00', 0, NULL, 1, 1, 1),
 (891000000000001302, 'his_revisit_source', '医嘱复诊预约', '2', 2, NULL, NULL, 0, 1, 'admin', '2026-05-08 00:00:00', 'admin', '2026-05-08 00:00:00', 0, NULL, 1, 1, 1),
 (891000000000001303, 'his_revisit_source', '患者自助复诊', '3', 3, NULL, NULL, 0, 1, 'admin', '2026-05-08 00:00:00', 'admin', '2026-05-08 00:00:00', 0, NULL, 1, 1, 1),
@@ -1506,10 +1507,10 @@ VALUES
 (892000000000001082, 'his_dialysis_machine_status', '维修', '2', 2, NULL, NULL, 0, 1, 'admin', '2026-05-08 00:00:00', 'admin', '2026-05-08 00:00:00', 0, NULL, 1, 1, 1),
 (892000000000001083, 'his_dialysis_machine_status', '停用', '3', 3, NULL, NULL, 0, 1, 'admin', '2026-05-08 00:00:00', 'admin', '2026-05-08 00:00:00', 0, NULL, 1, 1, 1),
 (892000000000001091, 'his_icu_stay_status', '在科', '1', 1, NULL, NULL, 0, 1, 'admin', '2026-05-08 00:00:00', 'admin', '2026-05-08 00:00:00', 0, NULL, 1, 1, 1),
-(892000000000001092, 'his_icu_stay_status', '已出科', '2', 2, NULL, NULL, 0, 1, 'admin', '2026-05-08 00:00:00', 'admin', '2026-05-08 00:00:00', 0, NULL, 1, 1, 1),
-(892000000000001101, 'his_icu_care_level', '特级监护', '1', 1, NULL, NULL, 0, 1, 'admin', '2026-05-08 00:00:00', 'admin', '2026-05-08 00:00:00', 0, NULL, 1, 1, 1);
+(892000000000001092, 'his_icu_stay_status', '已出科', '2', 2, NULL, NULL, 0, 1, 'admin', '2026-05-08 00:00:00', 'admin', '2026-05-08 00:00:00', 0, NULL, 1, 1, 1);
 INSERT INTO `sys_dict_data` (`id`, `dict_type`, `dict_label`, `dict_value`, `dict_sort`, `dict_class`, `list_class`, `is_default`, `status`, `create_by`, `create_time`, `update_by`, `update_time`, `del_flag`, `remark`, `dict_source`, `create_by_id`, `update_by_id`)
 VALUES
+(892000000000001101, 'his_icu_care_level', '特级监护', '1', 1, NULL, NULL, 0, 1, 'admin', '2026-05-08 00:00:00', 'admin', '2026-05-08 00:00:00', 0, NULL, 1, 1, 1),
 (892000000000001102, 'his_icu_care_level', 'I级监护', '2', 2, NULL, NULL, 0, 1, 'admin', '2026-05-08 00:00:00', 'admin', '2026-05-08 00:00:00', 0, NULL, 1, 1, 1),
 (892000000000001103, 'his_icu_care_level', 'II级监护', '3', 3, NULL, NULL, 0, 1, 'admin', '2026-05-08 00:00:00', 'admin', '2026-05-08 00:00:00', 0, NULL, 1, 1, 1),
 (892000000000001111, 'his_icu_out_dest', '转普通病房', '1', 1, NULL, NULL, 0, 1, 'admin', '2026-05-08 00:00:00', 'admin', '2026-05-08 00:00:00', 0, NULL, 1, 1, 1),

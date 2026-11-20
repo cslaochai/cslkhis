@@ -103,6 +103,7 @@
 <script lang="js" setup>
 import {computed} from 'vue'
 import {Delete, Plus} from '@element-plus/icons-vue'
+import {deptNodeTypeSuffix} from '@/lib/deptNodeType'
 
 const props = defineProps({
   modelValue: {type: Array, default: () => []},
@@ -121,12 +122,14 @@ const patch = (index, changes) => {
   emit('update:modelValue', rows.value.map((row, i) => (i === index ? {...row, ...changes} : row)))
 }
 
-// 科室树摊平成带父级前缀的选项：表格单元里放二级下拉（树选）点不开也看不清层级
+// 科室树摊平成带父级前缀的选项：表格单元里放二级下拉（树选）点不开也看不清层级。
+// 管理片区必须显式标注 —— 科护士长的岗位本来就挂在片区上，不能简单屏蔽，但也不能让它看着像科室。
 const deptOptions = computed(() => {
   const out = []
   const walk = (list, prefix) => {
     (list || []).forEach((dept) => {
-      const label = prefix ? `${prefix} / ${dept.deptName}` : dept.deptName
+      const name = `${dept.deptName}${deptNodeTypeSuffix(dept.nodeType)}`
+      const label = prefix ? `${prefix} / ${name}` : name
       out.push({id: String(dept.id), label})
       if (dept.children && dept.children.length > 0) walk(dept.children, label)
     })

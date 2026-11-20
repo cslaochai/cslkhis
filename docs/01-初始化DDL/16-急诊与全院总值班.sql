@@ -1,7 +1,76 @@
 -- 领域：16-急诊与全院总值班
--- 库：hn_biz_his    表数：7
--- 说明：DDL 快照（dev 库 SHOW CREATE TABLE 于 2026-10-25 导出，无 DROP / 无数据）。建表语句彼此独立，不含外键约束。
+-- 库：hn_biz_his    表数：10
+-- 说明：DDL 快照（dev 库 SHOW CREATE TABLE 于 2026-11-20 导出，无 DROP / 无数据）。建表语句彼此独立，不含外键约束。
 -- 口径：姓名/名称快照列与操作人列（create_by·update_by·*_by·*_name·name）不留 DEFAULT，漏填直接报错；其余 NOT NULL 列保留库上的 DEFAULT。
+
+-- ----------------------------
+-- biz_duty_call  临床值班听班呼叫单
+-- ----------------------------
+CREATE TABLE `biz_duty_call` (
+  `id` bigint NOT NULL COMMENT '主键',
+  `call_no` varchar(32) NOT NULL COMMENT '呼叫单号',
+  `duty_date` date NOT NULL COMMENT '值班日期',
+  `shift_type` tinyint NOT NULL DEFAULT '1' COMMENT '班次（1-白班 2-夜班 00-次日08）',
+  `dept_id` bigint NOT NULL COMMENT '呼叫发起科室ID',
+  `dept_name` varchar(100) COMMENT '呼叫发起科室名称（快照）',
+  `target_level` tinyint NOT NULL COMMENT '被叫层级（2-二线 3-三线）',
+  `target_post_id` bigint NOT NULL COMMENT '被叫值班点位ID',
+  `target_post_name` varchar(100) COMMENT '被叫值班点位名称（快照）',
+  `target_emp_id` bigint COMMENT '被叫值班人',
+  `target_emp_name` varchar(50) COMMENT '被叫值班人姓名（快照）',
+  `target_phone` varchar(32) COMMENT '被叫值班联系电话',
+  `call_reason` varchar(500) NOT NULL COMMENT '呼叫事由',
+  `patient_name` varchar(50) COMMENT '患者姓名',
+  `patient_location` varchar(100) COMMENT '患者所在位置（病区/床号）',
+  `call_time` datetime NOT NULL COMMENT '呼叫时间',
+  `arrive_time` datetime COMMENT '到岗时间',
+  `status` tinyint NOT NULL DEFAULT '0' COMMENT '状态（0-待到岗 1-已到岗 2-已超时升级 3-已取消）',
+  `escalate_status` tinyint NOT NULL DEFAULT '0' COMMENT '升级状态（0-未升级 1-已升级）',
+  `escalate_time` datetime COMMENT '升级时间',
+  `escalate_from_level` tinyint COMMENT '升级前的层级（2-二线 3-三线）',
+  `cancel_reason` varchar(200) COMMENT '取消事由',
+  `create_by` varchar(64) NOT NULL COMMENT '创建人',
+  `create_time` datetime NOT NULL DEFAULT (now()) COMMENT '创建时间',
+  `update_by` varchar(64) NOT NULL COMMENT '更新人',
+  `update_time` datetime NOT NULL DEFAULT (now()) COMMENT '更新时间',
+  `del_flag` tinyint NOT NULL DEFAULT '0' COMMENT '删除标志（0-正常 1-删除）',
+  `remark` varchar(500) COMMENT '备注',
+  `create_by_id` bigint NOT NULL COMMENT '创建人ID',
+  `update_by_id` bigint NOT NULL COMMENT '更新人ID',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_duty_call_no` (`call_no`),
+  KEY `idx_duty_call_date` (`duty_date`),
+  KEY `idx_duty_call_target` (`target_emp_id`),
+  KEY `idx_duty_call_dept` (`dept_id`),
+  KEY `idx_duty_call_status` (`status`,`escalate_status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='临床值班听班呼叫单';
+
+-- ----------------------------
+-- biz_duty_call_log  听班呼叫流水
+-- ----------------------------
+CREATE TABLE `biz_duty_call_log` (
+  `id` bigint NOT NULL COMMENT '主键',
+  `call_id` bigint NOT NULL COMMENT '呼叫单ID',
+  `call_no` varchar(32) NOT NULL COMMENT '呼叫单号',
+  `action_type` tinyint NOT NULL COMMENT '动作（1-呼叫 2-到岗 3-超时升级 4-取消 5-通知失败）',
+  `action_time` datetime NOT NULL COMMENT '动作时间',
+  `from_status` tinyint COMMENT '动作前状态',
+  `to_status` tinyint COMMENT '动作后状态',
+  `operator_id` bigint COMMENT '操作人ID（系统触发为空）',
+  `operator_name` varchar(50) COMMENT '操作人姓名（系统触发为空）',
+  `action_note` varchar(500) COMMENT '动作说明',
+  `create_by` varchar(64) NOT NULL COMMENT '创建人',
+  `create_time` datetime NOT NULL DEFAULT (now()) COMMENT '创建时间',
+  `update_by` varchar(64) NOT NULL COMMENT '更新人',
+  `update_time` datetime NOT NULL DEFAULT (now()) COMMENT '更新时间',
+  `del_flag` tinyint NOT NULL DEFAULT '0' COMMENT '删除标志（0-正常 1-删除）',
+  `remark` varchar(500) COMMENT '备注',
+  `create_by_id` bigint NOT NULL COMMENT '创建人ID',
+  `update_by_id` bigint NOT NULL COMMENT '更新人ID',
+  PRIMARY KEY (`id`),
+  KEY `idx_call_log_call` (`call_id`),
+  KEY `idx_call_log_time` (`action_time`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='听班呼叫流水';
 
 -- ----------------------------
 -- biz_duty_log  总值班值班日志
@@ -63,6 +132,7 @@ CREATE TABLE `biz_duty_post` (
   `remark` varchar(500) COMMENT '备注',
   `create_by_id` bigint NOT NULL COMMENT '创建人ID',
   `update_by_id` bigint NOT NULL COMMENT '更新人ID',
+  `duty_type_id` bigint COMMENT '值班类型ID（院级点位挂类型，科室点位为空）',
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_duty_post_code` (`post_code`),
   KEY `idx_duty_post_org` (`org_type`,`org_id`,`status`)
@@ -100,12 +170,39 @@ CREATE TABLE `biz_duty_roster` (
   `staff_schedule_id` bigint COMMENT '员工排班ID',
   `create_by_id` bigint NOT NULL COMMENT '创建人ID',
   `update_by_id` bigint NOT NULL COMMENT '更新人ID',
+  `duty_type_id` bigint COMMENT '值班类型ID（院级值守行冗余一列，列表按线筛）',
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_duty_post_date` (`post_id`,`duty_date`),
   KEY `idx_duty_date` (`duty_date`),
   KEY `idx_duty_emp` (`employee_id`),
   KEY `idx_duty_sub` (`substitute_emp_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='全院总值班排班';
+
+-- ----------------------------
+-- biz_duty_type  值班类型（值班线）
+-- ----------------------------
+CREATE TABLE `biz_duty_type` (
+  `id` bigint NOT NULL COMMENT '主键',
+  `type_code` varchar(32) NOT NULL COMMENT '类型编码',
+  `type_name` varchar(64) NOT NULL COMMENT '类型名称（医疗总值班/护理总值班/行政总值班/院领导带班…）',
+  `manage_dept_id` bigint NOT NULL COMMENT '归口科室ID（这一条值班线由哪个部门排班）',
+  `manage_dept_name` varchar(100) COMMENT '归口科室名称（快照）',
+  `required_staff_type` tinyint COMMENT '应到岗位类别（1-医生 2-护理 3-医技 4-药学 5-收费 6-行政其他，空-不限）',
+  `required_positions` varchar(200) COMMENT '允许的职务码值（字典 hospital_position，逗号分隔，空-不限）',
+  `leader_layer` tinyint COMMENT '是否需要院领导带班层（1-是 0-否）',
+  `sort_no` int COMMENT '排序号',
+  `status` tinyint COMMENT '状态（1-启用 0-停用）',
+  `remark` varchar(200) COMMENT '备注',
+  `create_by` varchar(64) COMMENT '创建人',
+  `create_time` datetime COMMENT '创建时间',
+  `update_by` varchar(64) COMMENT '更新人',
+  `update_time` datetime COMMENT '更新时间',
+  `del_flag` tinyint NOT NULL DEFAULT '0' COMMENT '删除标志（0-正常 1-已删除）',
+  `create_by_id` bigint COMMENT '创建人ID',
+  `update_by_id` bigint COMMENT '更新人ID',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_duty_type_code` (`type_code`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='值班类型（值班线）';
 
 -- ----------------------------
 -- biz_emergency  急诊记录
