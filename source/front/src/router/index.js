@@ -268,6 +268,19 @@ const routes = [
                 component: () => import('@/views/pharmacy-window/NarcoticRegisterView.vue')
             },
             {
+                path: 'dispense-queue',
+                name: 'DispenseQueue',
+                component: () => import('@/views/pharmacy-window/DispenseQueueView.vue'),
+                meta: {title: '取药队列'}
+            },
+            {
+                path: 'dispense-screen',
+                name: 'DispenseScreen',
+                component: () => import('@/views/pharmacy-window/DispenseScreenView.vue'),
+                // 叫号屏是设备页，不靠菜单分发（装屏时直接开 URL），故不参与菜单收敛
+                meta: {title: '取药叫号屏', standalone: true}
+            },
+            {
                 path: 'purchase-order',
                 name: 'PurchaseOrder',
                 component: () => import('@/views/pharmacy/PurchaseOrderView.vue')

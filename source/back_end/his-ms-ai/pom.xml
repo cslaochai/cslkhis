@@ -100,6 +100,17 @@
                     <groupId>com.alibaba.cloud.ai</groupId>
                     <artifactId>spring-ai-alibaba-starter-document-parser-yaml</artifactId>
                 </exclusion>
+                <!-- Nacos 配置中心：HIS 不接 Nacos，core 只是把它作为可选的 prompt 来源带进来。
+                     留着会让 NacosConfigAutoConfiguration 在无配置的情况下也注册 nacosAnnotationProcessor(BPP)
+                     及其依赖 nacosConfigManager，启动期刷 BeanPostProcessorChecker WARN，还多带一串 nacos-client。 -->
+                <exclusion>
+                    <groupId>com.alibaba.cloud</groupId>
+                    <artifactId>spring-alibaba-nacos-config</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>com.alibaba.nacos</groupId>
+                    <artifactId>nacos-client-mse-extension</artifactId>
+                </exclusion>
             </exclusions>
         </dependency>
     </dependencies>

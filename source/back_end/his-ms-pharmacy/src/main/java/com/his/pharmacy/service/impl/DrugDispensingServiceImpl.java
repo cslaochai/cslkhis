@@ -13,6 +13,7 @@ import com.his.common.entity.CurrentUser;
 import com.his.common.utils.UserUtils;
 import com.his.pharmacy.entity.BizDrugDispensing;
 import com.his.pharmacy.mapper.BizDrugDispensingMapper;
+import com.his.pharmacy.service.DispenseQueueService;
 import com.his.pharmacy.service.DrugDispensingService;
 import com.his.pharmacy.service.NarcoticControlService;
 import com.his.pharmacy.service.TcmDecoctService;
@@ -42,6 +43,7 @@ public class DrugDispensingServiceImpl extends ServiceImpl<BizDrugDispensingMapp
     private final NarcoticControlService narcoticControlService;
     private final TcmDecoctService tcmDecoctService;
     private final PharmacyService pharmacyService;
+    private final DispenseQueueService dispenseQueueService;
 
     @Override
     public PageResult<BizDrugDispensingVO> selectDispensingPage(Long patientId, String patientName, String prescriptionNo,
@@ -73,6 +75,8 @@ public class DrugDispensingServiceImpl extends ServiceImpl<BizDrugDispensingMapp
         // ③ 写专册（必须在扣减之后 —— 批号要从 FEFO 流水里回查）
         narcoticControlService.registerOnDispense(dispensing, checkerId, checkerName, overLimitReason);
         syncPrescriptionDispensed(dispensing.getPrescriptionId(), pharmacistId, pharmacistName);
+        // ④ 取药队列回写：单行发药未发完只刷新进度，整单发完才置「已发药」
+        dispenseQueueService.syncOnDispensed(dispensing.getPrescriptionId());
         return true;
     }
 
@@ -106,6 +110,8 @@ public class DrugDispensingServiceImpl extends ServiceImpl<BizDrugDispensingMapp
         }
         // 整单发完，必然全部发出
         markPrescriptionDispensed(prescriptionId, pharmacistId, pharmacistName);
+        // 取药队列回写：整单发完 → 队列置「已发药」并记完成时间
+        dispenseQueueService.syncOnDispensed(prescriptionId);
         return true;
     }
 
