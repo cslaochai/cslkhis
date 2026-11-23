@@ -343,7 +343,7 @@ const employeeList = ref([]);
 const loadDepartments = async () => {
   try {
     // 不传 scope → 默认按当前人过滤
-    const res = await getDepartmentSelectList({deptType: 1});
+    const res = await getDepartmentSelectList({deptType: 1, nodeType: '2,7'});
     departments.value = res.data || [];
   } catch (error) {
     console.error('加载科室失败:', error);

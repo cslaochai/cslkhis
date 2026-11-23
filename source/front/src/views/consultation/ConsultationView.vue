@@ -281,7 +281,7 @@ const loadDepts = async () => {
   try {
     // 会诊科室候选 = 全院可被邀请的科室：临床/医技/其他专科的末级科室（营养科属医技类型，必须包含）。
     // 参数全部由前端传入，后端 selectList 是唯一出口（scope=ALL 不受本人岗位限制）。
-    depts.value = await loadDeptOptions({scope: 'ALL', deptType: '1,2,4', leafOnly: true});
+    depts.value = await loadDeptOptions({scope: 'ALL', deptType: '1,2,4', nodeType: '2,3,7', leafOnly: true});
   } catch (error) {
     console.error('加载科室失败:', error);
   }

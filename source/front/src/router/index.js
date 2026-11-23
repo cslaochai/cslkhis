@@ -818,14 +818,6 @@ const routes = [
             {path: 'system/role', name: 'SystemRole', component: () => import('@/views/system/role/RoleView.vue')},
             {path: 'system/menu', name: 'SystemMenu', component: () => import('@/views/system/menu/MenuView.vue')},
             {
-                // 菜单由 sys_menu 29911 分发，只授系统管理员（role_id=1）；
-                // 路由静态注册是既有口径，菜单只决定可见/可进的收敛（见 router/guard.js）
-                path: 'fault-lab',
-                name: 'FaultLab',
-                component: () => import('@/views/fault-lab/FaultLabView.vue'),
-                meta: {title: '故障演练'}
-            },
-            {
                 path: 'system/dept',
                 name: 'SystemDept',
                 component: () => import('@/views/system/dept/DeptView.vue'),

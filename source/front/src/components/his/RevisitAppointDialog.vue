@@ -264,7 +264,7 @@ onMounted(async () => {
   try {
     // deptType=1 门诊科室：复诊号挂的是门诊排班，住院科室没有号源可选
     // 不传 scope → 后端按当前人收口：医生只看到自己被授权的科室
-    const res = await getDepartmentSelectList({deptType: 1});
+    const res = await getDepartmentSelectList({deptType: 1, nodeType: '2,7'});
     deptOptions.value = res.data || [];
   } catch (e) {
     console.error('加载科室列表失败:', e);

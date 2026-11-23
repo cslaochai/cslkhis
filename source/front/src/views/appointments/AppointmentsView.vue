@@ -1020,7 +1020,8 @@ const loadDepartments = async () => {
   try {
     // 不传 scope → 默认按当前人过滤：挂号员只看到被授权的挂号科室。
     // 门诊部 / 管理员这类不限权用户天然拿到全部科室，不需要在这里做角色判断。
-    const res = await getDepartmentSelectList({deptType: 1});
+    // nodeType=2,7：临床科室 + 体检类「其他」节点；片区/医技/药剂/行政后勤不是挂号科室，靠它挡死。
+    const res = await getDepartmentSelectList({deptType: 1, nodeType: '2,7'});
     departments.value = res.data || [];
   } catch (error) {
     console.error('加载科室列表失败:', error);

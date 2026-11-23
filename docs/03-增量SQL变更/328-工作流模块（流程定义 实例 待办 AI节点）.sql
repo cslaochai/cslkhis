@@ -138,13 +138,13 @@ CREATE TABLE IF NOT EXISTS biz_flow_his_task (
 -- ============================================================================
 -- 背景（2026-11-14 补）：第一版只建了 menu_type=3 的隐藏按钮，侧边栏没有入口；
 --   第二版补了目录/页面，但工作流排在「患者中心」前面、待办又单开一页 —— 按用户口径收敛为：
---     · 目录「工作流」放到「故障演练」之前（sort 155，系统管理 150 / 故障演练 160）
+--     · 目录「工作流」排在「系统管理」之后（sort 155，系统管理 150）
 --     · 只保留「流程定义」一个页面
 --     · 「我的待办」不单开页，并入门户→消息待办（sys_menu 102 / /messages）的同页签，
 --       按钮码 29642 改挂 102，页签只对持有 workflow:task:handle 的岗位出现
 --   sys_menu 可见性 = sys_role_menu 是否授本角色（/system/menu/userMenus 按当前角色过滤），
 --   router/guard.js 又按「是不是 menu_type=2 的 path」收敛，所以目录 + 页面两行都必须有。
--- id 段 29651/29652（目录/页面）、29641/29642（按钮），与 327 的 29910/29911 不冲突。
+-- id 段 29651/29652（目录/页面）、29641/29642（按钮）。
 -- ⚠ 29642 的 parent 是门户的 102（sql/100 建的「消息待办」页），不是本文件的菜单；
 --   若某环境没有 102，这一步会留孤儿按钮（权限码仍生效，只是挂不到页面下）。
 -- ⚠ 执行后清角色权限缓存（新增了 workflow:definition:config / workflow:task:handle）：
@@ -154,7 +154,7 @@ CREATE TABLE IF NOT EXISTS biz_flow_his_task (
 --   DELETE FROM sys_menu WHERE id IN (29641, 29642, 29651, 29652);
 -- ============================================================================
 
--- 7.1 顶级目录「工作流」（排在「故障演练」前面）
+-- 7.1 顶级目录「工作流」（排在「系统管理」之后）
 INSERT INTO sys_menu (id, parent_id, menu_name, sort_order, menu_type, path, component, menu_key, icon,
                       permission, is_frame, is_cache, is_visible, status, create_by, create_time, del_flag, remark)
 SELECT 29651, 0, '工作流', 155, 1, '/workflow-group', NULL, 'workflow', 'Share',
@@ -449,7 +449,7 @@ SELECT definition_id, COUNT(*) AS node_count FROM sys_flow_node GROUP BY definit
 SELECT definition_id, COUNT(*) AS skip_count FROM sys_flow_skip GROUP BY definition_id;
 SELECT template_code, template_name, is_active FROM sys_ai_prompt_template WHERE template_code LIKE 'flow-%';
 
--- 菜单期望：4 行（1 目录 + 1 页面 + 2 按钮），目录 sort=155 排在故障演练(160)之前，
+-- 菜单期望：4 行（1 目录 + 1 页面 + 2 按钮），目录 sort=155 排在系统管理(150)之后，
 -- 29642 的 parent 应为门户的 102（消息待办页）
 SELECT id, parent_id, menu_name, menu_type, sort_order, path, menu_key, permission, is_visible
 FROM sys_menu

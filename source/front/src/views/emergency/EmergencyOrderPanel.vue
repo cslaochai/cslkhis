@@ -307,7 +307,7 @@ const deptCandidates = ref([]);
 // 会诊/转住院弹框的科室候选：全院末级科室（不按当前岗位收口，否则急诊医生只能请到急诊科）
 const loadDeptCandidates = async () => {
   try {
-    deptCandidates.value = await loadDeptOptions({scope: 'ALL', deptType: '1,2,4', leafOnly: true});
+    deptCandidates.value = await loadDeptOptions({scope: 'ALL', deptType: '1,2,4', nodeType: '2,3,7', leafOnly: true});
   } catch (error) {
     console.error('加载科室候选失败:', error);
     deptCandidates.value = [];

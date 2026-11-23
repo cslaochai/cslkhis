@@ -148,7 +148,7 @@ public class SysDepartmentServiceImpl extends ServiceImpl<SysDepartmentMapper, S
     public String upsert(DepartmentUpsertDTO upsertDTO) {
         // 片区只是组织归集与审核权落点，不是服务科室：给它挂门诊/住院类型，它就会再次混进开诊与排班下拉
         if (DeptNodeTypeEnum.isArea(upsertDTO.getNodeType()) && TextUtil.hasText(upsertDTO.getDeptType())) {
-            throw new BusinessException("管理片区不是服务科室，科室类型必须为空");
+            throw new BusinessException(400, "管理片区不是服务科室，科室类型必须为空");
         }
         SysDepartment dept = new SysDepartment();
         BeanUtils.copyProperties(upsertDTO, dept);

@@ -176,7 +176,7 @@ const onOpen = async () => {
   submitting.value = false
   if (departments.value.length === 0) {
     try {
-      const res = await getDepartmentSelectList({deptType: 1})
+      const res = await getDepartmentSelectList({deptType: 1, nodeType: '2,7'})
       departments.value = res.data || []
     } catch (e) {
       console.error('加载科室失败:', e)

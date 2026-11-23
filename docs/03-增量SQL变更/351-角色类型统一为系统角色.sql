@@ -1,0 +1,49 @@
+-- 351 角色类型统一为「系统角色」（纠正 350 的反向改动）
+-- 日期：2026-11-20
+-- 背景：350 把 40 个业务角色改成了 2-自定义，与预期相反。
+-- 实际要求：院内全部角色都是系统角色（内置、受保护、不显示删除入口）。
+-- 做法：41 个角色统一 role_type=1。
+
+UPDATE sys_role SET role_type = 1;
+
+-- 回滚（350 之后的状态）
+-- UPDATE sys_role SET role_type=2 WHERE id=2; -- 医生
+-- UPDATE sys_role SET role_type=2 WHERE id=3; -- 护士
+-- UPDATE sys_role SET role_type=2 WHERE id=4; -- 收费员
+-- UPDATE sys_role SET role_type=2 WHERE id=5; -- 药剂师
+-- UPDATE sys_role SET role_type=2 WHERE id=6; -- 医技人员
+-- UPDATE sys_role SET role_type=2 WHERE id=7; -- 前台导诊
+-- UPDATE sys_role SET role_type=2 WHERE id=8; -- 急诊医生
+-- UPDATE sys_role SET role_type=2 WHERE id=9; -- 分诊护士
+-- UPDATE sys_role SET role_type=2 WHERE id=10; -- 护士长
+-- UPDATE sys_role SET role_type=2 WHERE id=11; -- 检验技师
+-- UPDATE sys_role SET role_type=2 WHERE id=12; -- 检查技师
+-- UPDATE sys_role SET role_type=2 WHERE id=13; -- 临床药师
+-- UPDATE sys_role SET role_type=2 WHERE id=14; -- 病案编码员
+-- UPDATE sys_role SET role_type=2 WHERE id=15; -- 病案质控员
+-- UPDATE sys_role SET role_type=2 WHERE id=16; -- 医保结算员
+-- UPDATE sys_role SET role_type=2 WHERE id=17; -- 审计统计员
+-- UPDATE sys_role SET role_type=2 WHERE id=18; -- 院领导
+-- UPDATE sys_role SET role_type=2 WHERE id=19; -- 患者
+-- UPDATE sys_role SET role_type=2 WHERE id=20; -- 放射诊断医师
+-- UPDATE sys_role SET role_type=2 WHERE id=21; -- 营养师
+-- UPDATE sys_role SET role_type=2 WHERE id=22; -- 公卫医师
+-- UPDATE sys_role SET role_type=2 WHERE id=23; -- 行政人员
+-- UPDATE sys_role SET role_type=2 WHERE id=24; -- 客服专员
+-- UPDATE sys_role SET role_type=2 WHERE id=25; -- 门诊办
+-- UPDATE sys_role SET role_type=2 WHERE id=26; -- 医务科
+-- UPDATE sys_role SET role_type=2 WHERE id=27; -- 科主任
+-- UPDATE sys_role SET role_type=2 WHERE id=28; -- 科室排班员
+-- UPDATE sys_role SET role_type=2 WHERE id=29; -- 护理部主任
+-- UPDATE sys_role SET role_type=2 WHERE id=30; -- 科护士长
+-- UPDATE sys_role SET role_type=2 WHERE id=31; -- 麻醉医师
+-- UPDATE sys_role SET role_type=2 WHERE id=32; -- 手术室护士
+-- UPDATE sys_role SET role_type=2 WHERE id=33; -- 信息科管理员
+-- UPDATE sys_role SET role_type=2 WHERE id=34; -- 护理调配员
+-- UPDATE sys_role SET role_type=2 WHERE id=35; -- 医务调配员
+-- UPDATE sys_role SET role_type=2 WHERE id=36; -- 院办值班管理员
+-- UPDATE sys_role SET role_type=2 WHERE id=37; -- 药库管理员
+-- UPDATE sys_role SET role_type=2 WHERE id=38; -- 物资库管员
+-- UPDATE sys_role SET role_type=2 WHERE id=39; -- 设备与供应室管理员
+-- UPDATE sys_role SET role_type=2 WHERE id=40; -- 物价员
+-- UPDATE sys_role SET role_type=2 WHERE id=41; -- 统计上报员

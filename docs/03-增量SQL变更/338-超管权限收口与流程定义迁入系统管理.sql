@@ -1,16 +1,16 @@
 -- ============================================================
--- 338 超管（role_id=1 / 10012 系统管理员）业务菜单只读收口 + 流程定义/演练控制台迁入系统管理
+-- 338 超管（role_id=1 / 10012 系统管理员）业务菜单只读收口 + 流程定义迁入系统管理
 -- 日期：2026-11-17
 -- 目的（最终口径）：
 --   ① 超级管理员对业务域菜单【可见但只读】：业务目录、页面照常出现在侧栏、可进入浏览查询，
 --      但收回全部业务写操作按钮（新增/修改/删除/审核/提交/作废等）；
 --   ② 系统管理域目录、页面、写按钮全部保留，超管可正常增删改；
---   ③ 工作流「流程定义」、故障演练「演练控制台」两个页面迁入系统管理；其原顶级空壳停用。
+--   ③ 工作流「流程定义」页面迁入系统管理；其原顶级空壳停用。
 -- 鉴权模型（已核对后端 Controller 实证）：
 --   · 页面菜单(menu_type=2)自带查询码（xxx:list / xxx:view），列表/详情/统计接口挂该码；
 --   · 按钮菜单(menu_type=3)是写操作码（xxx:add / :edit / :delete / :audit …），v-perm 显隐 + 后端 @PreAuthorize 兜底；
 --   · 因此保留目录+页面授权即「可浏览」，收回按钮授权即「不能操作」，后端 Java 代码无需改动。
--- 白名单按钮（17 个，role_id=1 唯一保留的写操作码，均在系统管理/流程定义/演练控制台子树）：
+-- 白名单按钮（17 个，role_id=1 唯一保留的写操作码，均在系统管理/流程定义子树）：
 --   用户 2148 add / 2149 edit / 2150 delete；角色 2151 add / 2152 delete；
 --   菜单 2153 add / 2154 delete；字典 2155 add / 2156 edit / 2157 delete；
 --   参数 2158 add；日志 2510 export / 29624 签名记录；部门 2933 add / 2934 delete；
@@ -20,7 +20,7 @@
 --   · 临床医嘱字典/组套族（2383/2384/2385/2386/2387/2388/2389/2390）按定稿归住院临床
 --     配置域，目录/页面/按钮均不授超管，菜单物理迁移属后续归位批次；
 --   · 业务目录/页面授权以改库前备份 555 条为基准恢复（目录 34 + 页面 176），不在本脚本内逐行展开；
---   · 29651 工作流、29910 故障演练两个原顶级迁空后停用（status=0 / is_visible=0），不物理删除。
+--   · 29651 工作流原顶级迁空后停用（status=0 / is_visible=0），不物理删除。
 -- 避坑：
 --   · sys_role_menu 唯一键 uk_role_menu(role_id, menu_id)，补授用 NOT EXISTS 判重；
 --   · 按钮收口 DELETE 带 role_id=1 守卫 + 白名单 NOT IN，绝不波及其他角色；
@@ -38,16 +38,9 @@ UPDATE sys_menu
 SET parent_id = 1100, sort_order = 47, update_time = NOW()
 WHERE id = 29652 AND parent_id = 29651;
 
--- A2 演练控制台(29911)：故障演练(29910) → 系统管理(1100)，紧随流程定义
-UPDATE sys_menu
-SET parent_id = 1100, sort_order = 48, update_time = NOW()
-WHERE id = 29911 AND parent_id = 29910;
-
--- A3 两个迁空的原顶级停用（先回查确认无子节点，期望 0；MySQL 1093：UPDATE 同表不能在 WHERE 子查询再查同表）：
+-- A3 原顶级停用（先回查确认无子节点，期望 0；MySQL 1093：UPDATE 同表不能在 WHERE 子查询再查同表）：
 -- SELECT COUNT(*) FROM sys_menu WHERE parent_id=29651 AND del_flag=0;  -- 期望 0
--- SELECT COUNT(*) FROM sys_menu WHERE parent_id=29910 AND del_flag=0;  -- 期望 0
 UPDATE sys_menu SET status = 0, is_visible = 0, update_time = NOW() WHERE id = 29651;
-UPDATE sys_menu SET status = 0, is_visible = 0, update_time = NOW() WHERE id = 29910;
 
 -- B 按钮收口：role_id=1 仅保留 17 个白名单按钮，其余业务写按钮全部收回
 --   （目录 type=1 / 页面 type=2 不在本步删除，业务菜单保持可见只读）
@@ -79,7 +72,7 @@ WHERE NOT EXISTS (SELECT 1 FROM sys_role_menu x WHERE x.role_id = 1 AND x.menu_i
 -- SELECT m.menu_type, COUNT(*) c FROM sys_role_menu rm
 -- JOIN sys_menu m ON m.id = rm.menu_id WHERE rm.role_id = 1 GROUP BY m.menu_type;
 
--- D2 保留按钮清单（期望 17，全部落在系统管理/流程定义/演练控制台子树）
+-- D2 保留按钮清单（期望 17，全部落在系统管理/流程定义子树）
 -- SELECT rm.menu_id, m.menu_name, m.permission FROM sys_role_menu rm
 -- JOIN sys_menu m ON m.id = rm.menu_id WHERE rm.role_id = 1 AND m.menu_type = 3 ORDER BY rm.menu_id;
 
@@ -92,7 +85,7 @@ WHERE NOT EXISTS (SELECT 1 FROM sys_role_menu x WHERE x.role_id = 1 AND x.menu_i
 
 -- D4 迁入菜单与停用顶级状态
 -- SELECT id, menu_name, parent_id, sort_order, status, is_visible FROM sys_menu
--- WHERE id IN (29652,29641,29911,29651,29910);
+-- WHERE id IN (29652,29641,29651);
 
 -- ============================================================
 -- 回滚段
@@ -101,7 +94,5 @@ WHERE NOT EXISTS (SELECT 1 FROM sys_role_menu x WHERE x.role_id = 1 AND x.menu_i
 --      （先 DELETE role_id=1 全部，再按备份逐行 INSERT 回原 id，目录/页面/按钮全量复原）。
 --   2) 菜单退回原父级、恢复显示：
 -- UPDATE sys_menu SET parent_id = 29651, sort_order = 1, update_time = NOW() WHERE id = 29652;
--- UPDATE sys_menu SET parent_id = 29910, sort_order = 1, update_time = NOW() WHERE id = 29911;
 -- UPDATE sys_menu SET status = 1, is_visible = 1, update_time = NOW() WHERE id = 29651;
--- UPDATE sys_menu SET status = 1, is_visible = 1, update_time = NOW() WHERE id = 29910;
 -- ============================================================
