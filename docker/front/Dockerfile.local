@@ -1,0 +1,6 @@
+# 离线环境替代方案（2026-10-18）：
+# 基础镜像 nginx:1.27-alpine 无法从 docker.io 拉取（虚拟机无公网），
+# 复用本地已有的 his-front:local（基于 nginx:1.27-alpine）作为运行时层，
+# 仅替换静态产物 /usr/share/nginx/html/，nginx.conf 与启动命令继承。
+FROM his-front:local
+COPY dist/ /usr/share/nginx/html/
