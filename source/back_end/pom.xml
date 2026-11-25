@@ -63,6 +63,11 @@
         <!-- Lombok：编译期注解处理器。版本必须放在 properties 里，
              因为各业务模块的 maven-compiler-plugin <annotationProcessorPaths> 要引用 ${lombok.version}（子模块无法从 dependencyManagement 取版本）。 -->
         <lombok.version>1.18.32</lombok.version>
+        <!-- 物联网：MQTT 客户端（设备侧协议，HIS 只订阅） -->
+        <paho-mqtt.version>1.2.5</paho-mqtt.version>
+        <!-- 物联网：TDengine JDBC，走 6041 REST（TAOS-RS），Windows/Linux 都不需要本地 taos 客户端。
+             与 3.3.x 服务端配套；驱动自身带 jackson/httpclient/guava 传递依赖，别只丢一个 jar。 -->
+        <taos-jdbc.version>3.6.3</taos-jdbc.version>
     </properties>
 
     <!-- 构建集合：列在这里的模块才参与 mvn install。漏一个 = 它既不被构建也不被安装，
@@ -84,6 +89,8 @@
         <module>his-ms-ai</module>
         <module>his-ms-workflow</module>
         <module>his-ms-app</module>
+        <!-- 物联网域：MQTT 设备遥测接入 + 时序库查询（可开关，默认只查不收） -->
+        <module>his-ms-iot</module>
         <!-- 启动层：唯一可执行模块（repackage 出 fat jar，产物名 his-backend），放在最后便于阅读 -->
         <module>his-web</module>
     </modules>
@@ -170,6 +177,11 @@
                 <artifactId>his-ms-app</artifactId>
                 <version>${project.version}</version>
             </dependency>
+            <dependency>
+                <groupId>com.his</groupId>
+                <artifactId>his-ms-iot</artifactId>
+                <version>${project.version}</version>
+            </dependency>
 
             <!-- ===== 第三方 ===== -->
             <!-- ORM：Spring Boot 3 必须用 spring-boot3-starter（Jakarta 命名空间），不是 mybatis-plus-boot-starter -->
@@ -177,6 +189,18 @@
                 <groupId>com.baomidou</groupId>
                 <artifactId>mybatis-plus-spring-boot3-starter</artifactId>
                 <version>${mybatis-plus.version}</version>
+            </dependency>
+            <!-- 物联网 MQTT 客户端：订阅设备遥测（his-ms-iot） -->
+            <dependency>
+                <groupId>org.eclipse.paho</groupId>
+                <artifactId>org.eclipse.paho.client.mqttv3</artifactId>
+                <version>${paho-mqtt.version}</version>
+            </dependency>
+            <!-- 物联网时序库 JDBC（REST 协议，his-ms-iot） -->
+            <dependency>
+                <groupId>com.taosdata.jdbc</groupId>
+                <artifactId>taos-jdbcdriver</artifactId>
+                <version>${taos-jdbc.version}</version>
             </dependency>
             <!-- API 文档：jakarta 版 starter，his-core-common 引用它（全模块共享文档配置） -->
             <dependency>

@@ -112,6 +112,12 @@
             <groupId>com.his</groupId>
             <artifactId>his-ms-app</artifactId>
         </dependency>
+        <!-- 物联网域：MQTT 设备遥测订阅（默认关闭）+ TDengine 最新值/历史查询接口。
+             不引它时 HIS 启动照常，只是 /iot/telemetry/* 全部 404、也没有设备数据。 -->
+        <dependency>
+            <groupId>com.his</groupId>
+            <artifactId>his-ms-iot</artifactId>
+        </dependency>
 
         <!-- ===== 运维观测 =====
              actuator：健康检查与就绪探针（/actuator/health），容器与发包脚本的存活判据；

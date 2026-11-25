@@ -28,6 +28,16 @@ his:
       milvus:
         uri: ${HIS_MILVUS_URL:}
         token: ${HIS_MILVUS_TOKEN:}
+  # 物联网：生产全部走环境变量。不注入 tsdb 地址/账号时，查询接口直接报「时序库不可用」，
+  # 但 HIS 自身照常启动——设备接入是增强能力，不能成为启动前提。
+  iot:
+    ingest-enabled: ${HIS_IOT_INGEST_ENABLED:false}
+    mqtt:
+      broker: ${HIS_IOT_MQTT_BROKER:}
+    tsdb:
+      url: ${HIS_IOT_TSDB_URL:}
+      user: ${HIS_IOT_TSDB_USER:}
+      password: ${HIS_IOT_TSDB_PASSWORD:}
   # 电子签名证书：CA 在线申请（csssl 对外 RA API）
   # 环境相关的值在本文件声明；迭代次数、有效期、超时、接口路径等固定契约在 config/domain/his-platform.yml
   sign:

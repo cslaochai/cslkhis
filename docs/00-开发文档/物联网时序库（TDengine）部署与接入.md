@@ -203,6 +203,7 @@ IDEA 装完只等于一个 SQL 窗口：结果能出表格，但 `DatabaseMetaDa
 |---|---|---|
 | 浏览库表结构、临时跑 SQL | DBeaver（自定义驱动，同 §8 的 jar） | 免注册；表树同样受 metadata 限制，但结果网格、导出、列过滤可用 |
 | ~~官方 Web 控制台 taosExplorer~~ | **已关闭，不要再用** | 6060 端口进的是「TDengine 管理系统」，必须手机号 + 短信验证码注册，且要求 explorer 能出外网；院内网环境不适用。已在 compose 设 `TAOS_DISABLE_EXPLORER: "1"` 并删掉 6060 端口映射 |
-| 看遥测曲线、做设备大屏 | **Grafana + TDengine 数据源插件** | 需另起容器（132 上 3000 端口），用只读账号连 6041 |
+| 看遥测曲线、做设备大屏 | **Grafana + TDengine 数据源插件** | 已落地在 132 既有实例 `http://192.168.88.132:3001`（3000 被 Gitea 占用），用只读 `his_reader` 连 6041，详见《物联网可视化看板（Grafana）》 |
 | 核对表结构、导出 DDL | 容器内 `taos` CLI | `docker exec -it his-tsdb-tdengine taos -s "DESCRIBE iot_raw.st_infusion"` |
+
 
