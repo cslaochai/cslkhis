@@ -95,8 +95,8 @@
     <el-dialog
         v-model="credVisible"
         title="测试账号凭据（密码统一为 123456）"
-        width="920px"
-        top="6vh"
+        width="min(1000px, 92vw)"
+        top="5vh"
     >
       <div class="cred-body">
         <el-input
@@ -106,10 +106,20 @@
             placeholder="按角色 / 科室 / 姓名 / 账号 / 能做什么筛选（模糊匹配）"
             prefix-icon="Search"
         />
-        <el-table :data="sortedCredRows" border max-height="62vh" size="small" :span-method="credSpanMethod">
+        <p class="cred-hint">
+          共 {{ credAccountCount }} 个账号；上方是演示链路账号，下方按角色/科室列出全院账号。列表在表格内滚动，账号行可复制或一键登录
+        </p>
+        <el-table
+            class="cred-table"
+            :data="sortedCredRows"
+            border
+            max-height="60vh"
+            size="small"
+            :span-method="credSpanMethod"
+        >
           <el-table-column label="角色" min-width="150" prop="role"/>
           <el-table-column label="科室" min-width="110" prop="dept"/>
-          <el-table-column label="账号（姓名）" min-width="220">
+          <el-table-column label="账号（姓名）" min-width="250">
             <template #default="{row}">
               <div v-for="item in row.accounts" :key="item" class="cred-account">
                 <span class="cred-account-text">{{ item }}</span>
@@ -135,6 +145,7 @@ import {useRouter} from 'vue-router'
 import {ElMessage} from 'element-plus'
 import {CircleCheck, CopyDocument, Lock, User} from '@element-plus/icons-vue'
 import {login} from '@/api/system'
+import {credAccounts} from './credAccounts'
 import {encryptPassword} from '@/lib/password'
 import {copyText} from '@/lib/clipboard'
 import {useCurrentPatientStore} from '@/stores/currentPatient'
@@ -170,6 +181,49 @@ const SCHEDULE_AUDITOR_ABILITY = '排班审批中心：员工排班 + 门诊排�
 const SCHEDULE_NURSING_AREA_AUDITOR_ABILITY = '护理排班审核发布（本科室排班须他人编制，不能自审自排）；排班总览'
 const SCHEDULE_NURSING_FILING_ABILITY = '护理排班整周备案与退回（全院，按护理片区备案留痕）；不参与排班与审核'
 const NURSING_DISPATCH_ABILITY = '护理人力调配（全院）：改护士岗位归属（可填生效/失效日期，不改编制）+ 护理排班（病区矩阵）/ 员工排班（门诊科室与全院单元）+ 排班总览'
+
+// 其余角色的「能做什么」：按角色菜单实际授权归并成一段，供批量账号行直接引用
+const ROLE_ABILITY = {
+  '系统管理员': '全部业务页面 + 系统管理（用户/角色/菜单/字典/参数/日志审计）',
+  '医生': DOCTOR_ABILITY,
+  '护士': NURSE_ABILITY,
+  '护士长': HEAD_NURSE_ABILITY,
+  '收费员': '窗口收费、退费申请、发票管理、财务日结、费用记账、结算账单与支付流水查询、住院结算（自费与医保同一入口）',
+  '药剂师': PHARM_ABILITY,
+  '医技人员': MEDTECH_ABILITY,
+  '前台导诊': '挂号预约（全院科室）、收费结算窗口、患者管理与患者标签',
+  '急诊医生': ER_ABILITY,
+  '分诊护士': '分诊工作站（队列/呼叫/过号/复诊优先/分诊卡体征与分级）+ 急诊护士工作站（急诊登记、四级分级 MEWS 辅助）',
+  '检验技师': '检验工作站、标本管理、检验项目字典、输血管理、危急值处置（限本科室）',
+  '检查技师': '检查工作站、检查预约中心、检查设备与号源、检查项目字典、标本管理、危急值处置（限本科室）',
+  '临床药师': '处方审核/点评、I 类切口预防用药点评、处方公示、抗菌药物分级目录与使用监测、合理用药知识库、麻精药品专册、取药队列（限本科室）',
+  '病案编码员': '病历查阅、病案管理、患者主索引、健康档案与 360、病案科室对应（不做临床书写）',
+  '病案质控员': '病历质控、专项质控、病历查阅、门诊日志、病案管理（限本科室）',
+  '医保结算员': '医保结算清单、慢特病医保备案、目录对照、政策配置、合规审核台账、扣款飞检、支付渠道对账、资金账户、欠费管控、医保住院结算与 2304/2305 报盘（限本科室）',
+  '审计统计员': 'BI 驾驶舱、运营统计报表、病案统计上报、绩效与成本核算、分组模拟、DIP 分组模拟、AI 运营问数、支付渠道对账、资金账户',
+  '院领导': '报表与驾驶舱、护理质控、排班总览、营养指标、患者 360（管理视角，只读为主）',
+  '放射诊断医师': '放射报告书写与审核（检查工作站）、危急值处置、检查项目字典（限本科室）',
+  '营养师': '营养风险筛查、膳食医嘱执行、订餐配送、营养会诊、营养指标监测（全院）',
+  '公卫医师': '院感监测、公卫上报、慢病建档与长处方认定、门诊日志、我的未报、随访回访（限本科室）',
+  '行政人员': '工作台、排班总览、值班点位与值班类型配置、工单受理、满意度评价、总值班日志（无临床业务页面）',
+  '客服专员': '患者常见问题维护、工单受理、满意度评价、线上问诊、体检管理',
+  '门诊办': '门诊排班审核、排班总览、双向转诊、满意度评价、诊室管理、体检管理与体检套餐',
+  '医务科': '员工排班与急诊排班审核、人力配置标准、全院总值班、病历质控、专项质控、危急值、医疗安全、技术授权、科室管理、签名证书/验签、会诊、死亡证明、公卫上报、抗菌药物处方权',
+  '科主任': '本科室急诊/员工排班（提交后由医务科审核发布）、住院医生站、病历质控、专项质控、危急值、会诊、死亡证明',
+  '科室排班员': SCHEDULE_PLANNER_ABILITY,
+  '护理部主任': '护理排班整周备案与退回（全院）、排班总览、全院总值班、护理质控与医疗安全、设备共享调配',
+  '科护士长': SCHEDULE_NURSING_AREA_AUDITOR_ABILITY,
+  '麻醉医师': '麻醉访视与术前评估、麻醉记录（生命体征时间轴）、PACU 复苏、术后随访、三方核查签名（登录后切「麻醉医师」岗）',
+  '手术室护士': '器械清点（术前 → 关体前 → 关体后三轮）、三方核查签名、手术间与排台查看（登录后切「手术室护士」岗）',
+  '信息科管理员': '签名证书台账与办理（生成密钥对 / CA 在线申请 / 证书回填）、病案科室对应、用户/角色/菜单/字典/参数/日志审计',
+  '护理调配员': NURSING_DISPATCH_ABILITY,
+  '医务调配员': '医师岗位归属调整（可填生效/失效日期，不改编制）+ 跨科室排门诊号源/急诊值班 + 排班总览，只排不自批',
+  '院办值班管理员': '全院总值班、值班点位与值班类型配置、总值班日志（交班本）',
+  '未配置岗位': '尚未配置岗位（登录后只有工作台与统一待办）',
+}
+
+// 账号文案是「账号 ( 姓名 )」，登录只需要账号本身 → 复制与一键登录都取括号前的部分
+const accountOf = (item) => item.split('(')[0].trim()
 
 // 全部账号合并为一张表：每行 = 同一科室 + 同一角色；排班流程账号按「排班员 → 审核人」流程顺序置顶
 const credRows = [
@@ -376,62 +430,105 @@ const credRows = [
   },
 ]
 
+// 库里的全部员工账号（credAccounts 由 dev 库导出）→ 按「角色 + 科室」归成行，
+// 已在上面手工清单里出现的账号跳过（手工行带演示说明，不再重复列一遍）
+const generatedCredRows = (() => {
+  const listed = new Set()
+  credRows.forEach((row) => row.accounts.forEach((item) => listed.add(accountOf(item))))
+
+  const groups = new Map()
+  credAccounts.forEach(([user, name, role, dept, otherPosts]) => {
+    if (listed.has(user)) {
+      return
+    }
+    const key = `${role}|${dept}`
+    let group = groups.get(key)
+    if (!group) {
+      group = {role, dept, accounts: [], switchPosts: []}
+      groups.set(key, group)
+    }
+    group.accounts.push(`${user} ( ${name} )`)
+    if (otherPosts) {
+      otherPosts.split('、').forEach((post) => {
+        if (!group.switchPosts.includes(post)) {
+          group.switchPosts.push(post)
+        }
+      })
+    }
+  })
+
+  return [...groups.values()].map((group) => {
+    // 已有同「角色 + 科室」的手工行：账号并进去，保留手工那段演示说明
+    const manual = credRows.find((row) => row.role === group.role && row.dept === group.dept)
+    if (manual) {
+      manual.accounts.push(...group.accounts)
+      return null
+    }
+    const ability = (ROLE_ABILITY[group.role] || `${group.role}：按角色菜单授权（限本科室）`)
+        + (group.switchPosts.length
+            ? `；顶栏可切岗位：${group.switchPosts.map((post) => post.replace('｜', '（') + '）').join('、')}`
+            : '')
+    // bulk：库里批量导出的账号行——每行自带角色/科室/说明，不做纵向合并（几百行合起来会滚出一片空白格）
+    return {accounts: group.accounts, role: group.role, dept: group.dept, ability, bulk: true}
+  }).filter(Boolean)
+})()
+
+// 手工清单（演示链路说明）+ 库里其余账号，合成弹框的全量表
+const allCredRows = [...credRows, ...generatedCredRows]
+// 账号数去重后计数：同一人挂多个岗位会在手工行里出现两次（演示「顶栏切岗位」），不能重复计
+const credAccountCount = new Set(allCredRows.flatMap((row) => row.accounts.map(accountOf))).size
+
 // 凭据关键词筛选（纯前端）：角色 / 科室 / 账号列（含姓名与登录名）/ 能做什么 模糊匹配，不查后端
 const credKeyword = ref('')
 const filteredCredRows = computed(() => {
   const kw = credKeyword.value.trim().toLowerCase()
   if (!kw) {
-    return credRows
+    return allCredRows
   }
-  return credRows.filter((row) => {
+  // 空格分词、逐词命中（「心内科 护士长」这类组合也能筛）：每个词都出现在同一行即算命中
+  const tokens = kw.split(/\s+/).filter(Boolean)
+  return allCredRows.filter((row) => {
     const hay = [row.role, row.dept, row.ability, ...row.accounts].join(' ').toLowerCase()
-    return hay.includes(kw)
+    return tokens.every((token) => hay.includes(token))
   })
 })
 
-// 按「角色 → 科室」两级分组展示：中文序排序把同角色同科室的行排到相邻，再用 span-method 合并单元格
+// 手工清单（演示链路）按原顺序置顶；库里的批量账号行按「角色 → 科室」中文序跟在后面
 const sortedCredRows = computed(() => {
-  const list = filteredCredRows.value.slice()
-  list.sort((a, b) =>
+  const manual = filteredCredRows.value.filter((row) => !row.bulk)
+  const bulk = filteredCredRows.value.filter((row) => row.bulk).slice()
+  bulk.sort((a, b) =>
       a.role.localeCompare(b.role, 'zh-Hans-CN') || a.dept.localeCompare(b.dept, 'zh-Hans-CN'))
-  return list
+  return [...manual, ...bulk]
 })
 
-// 预算好每行角色列 / 科室列的跨行数：同组首行 rowspan=组内行数，后续行 rowspan=0（被合并）
+// 跨行合并：一个角色一格（同角色下的多个科室都收在这一格下面），科室一格（可能挂多个账号）；
+// 「能做什么」不合并——每个科室行重复一遍，滚到角色块中间也一直能看出这一岗能干什么
 const credSpans = computed(() => {
   const list = sortedCredRows.value
-  const roleSpan = []
-  const deptSpan = []
-  for (let i = 0; i < list.length; i++) {
-    if (i > 0 && list[i].role === list[i - 1].role) {
-      roleSpan.push(0)
-    } else {
-      let n = 1
-      while (i + n < list.length && list[i + n].role === list[i].role) n++
-      roleSpan.push(n)
+  // 只在同一段里合并（手工演示行 / 批量账号行各管各的），否则两段说明会串成一个格子
+  const sameRole = (i, j) => !!list[i].bulk === !!list[j].bulk && list[i].role === list[j].role
+  const sameRoleDept = (i, j) => sameRole(i, j) && list[i].dept === list[j].dept
+  // 同组首行给出组内行数，后续行给 0（交给上一行的 rowspan 覆盖）
+  const spanAt = (i, same) => {
+    if (i > 0 && same(i, i - 1)) {
+      return 0
     }
-    const inSameRole = i > 0 && list[i].role === list[i - 1].role
-    if (inSameRole && list[i].dept === list[i - 1].dept) {
-      deptSpan.push(0)
-    } else {
-      let n = 1
-      while (i + n < list.length && list[i + n].role === list[i].role && list[i + n].dept === list[i].dept) n++
-      deptSpan.push(n)
-    }
+    let n = 1
+    while (i + n < list.length && same(i + n, i)) n++
+    return n
   }
-  return [roleSpan, deptSpan]
+  // 列序：0 角色 / 1 科室 / 2 账号（一格里列多行，不跨行）/ 3 能做什么（每行都写）
+  return [list.map((row, i) => spanAt(i, sameRole)), list.map((row, i) => spanAt(i, sameRoleDept)), null, null]
 })
 
-const credSpanMethod = ({ columnIndex, rowIndex }) => {
+const credSpanMethod = ({columnIndex, rowIndex}) => {
   const spans = credSpans.value[columnIndex]
   if (!spans || spans[rowIndex] === undefined) {
-    return { rowspan: 1, colspan: 1 }
+    return {rowspan: 1, colspan: 1}
   }
-  return { rowspan: spans[rowIndex], colspan: 1 }
+  return {rowspan: spans[rowIndex], colspan: 1}
 }
-
-// 列表文案是「账号 ( 姓名 )」，登录只需要账号本身 → 复制时取括号前的部分
-const accountOf = (item) => item.split('(')[0].trim()
 
 const handleCopyAccount = async (item) => {
   const account = accountOf(item)
@@ -724,6 +821,48 @@ const handleLogin = async () => {
 /* 滚动条收进表格体内（el-table max-height + 固定表头），外层不再整体滚动 */
 .cred-filter {
   margin-bottom: 10px;
+}
+
+.cred-hint {
+  margin: 0 0 8px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: #7D93A8;
+}
+
+/* 账号多到需要滚：竖向滚动条常显。
+   EP 的 el-table 表体原生滚动条被 `scrollbar-width: none` 关掉，自带的细条又是 inline `display:none`
+   （只在悬停/滚动那一瞬间闪现，Windows 上等于没有），490 个账号滚起来看不到滚动条，
+   用户会以为列表到底了或页面卡住——这里把自带细条常显出来并上主题色 */
+.cred-table :deep(.el-scrollbar__bar.is-vertical) {
+  display: block !important;
+  width: 8px;
+  right: 2px;
+}
+
+.cred-table :deep(.el-scrollbar__bar.is-vertical .el-scrollbar__thumb) {
+  border-radius: 4px;
+  background: #BBD5EC;
+  opacity: 1;
+}
+
+/* 滚动条是浮在表格右缘的：最后一列文字让出 14px，别被压住 */
+.cred-table :deep(.el-table__body td:last-child .cell) {
+  padding-right: 14px;
+}
+
+/* 合并格里的角色/科室/说明靠上对齐：角色块很高（医生跨几十个科室），垂直居中会让名字掉到块中间，
+   滚到块里才突然出现，看着像空白列（也没法用 sticky 钉在顶部） */
+.cred-table :deep(.el-table__body td:nth-child(1)),
+.cred-table :deep(.el-table__body td:nth-child(2)),
+.cred-table :deep(.el-table__body td:nth-child(4)) {
+  vertical-align: top;
+}
+
+/* 一个角色块可能有几十个科室那么高：角色名在块内滚动时停在表体顶部，滚到中间不会只剩空白 */
+.cred-table :deep(.el-table__body td:nth-child(1) .cell) {
+  position: sticky;
+  top: 8px;
 }
 
 .cred-account {

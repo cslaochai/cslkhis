@@ -110,34 +110,6 @@
           </el-select>
         </el-form-item>
       </div>
-      <!-- 签名笔迹：员工档案预维护，结诊处方签名与检查检验报告审核时直接引用（不每次手写） -->
-      <el-form-item label-width="0">
-        <div class="w-full">
-          <div class="mb-2 flex items-center gap-1.5">
-            <span class="h-3.5 w-1 rounded bg-blue-500"></span>
-            <span class="text-sm font-semibold text-slate-700">签名笔迹</span>
-            <span class="text-xs text-gray-400">结诊处方与检查检验报告审核时引用，无需每次手写</span>
-          </div>
-          <div v-if="formData.id" class="mb-1 flex items-center gap-3">
-            <span class="text-xs text-slate-500">
-              {{ signImageSaved ? '已维护签名笔迹，可直接在板上重签更新' : '尚未维护签名笔迹' }}
-            </span>
-            <el-button v-if="signImageSaved" link type="primary" @click="clearSignImage">清除笔迹</el-button>
-          </div>
-          <SignaturePad ref="signPadRef" :width="440" :height="150"/>
-        </div>
-      </el-form-item>
-      <div class="grid">
-        <el-form-item label-width="0">
-          <div class="w-full">
-            <div class="mb-2 flex items-center gap-1.5">
-              <span class="h-3.5 w-1 rounded bg-blue-500"></span>
-              <span class="text-sm font-semibold text-slate-700">岗位</span>
-            </div>
-            <EmployeePostTable v-model="postRows" :dept-list="deptList" :role-list="roleList"/>
-          </div>
-        </el-form-item>
-      </div>
       <!-- 资格证书：内嵌表格行内编辑。已保存的行点删除即单条删；新增与改过的行在点「确定」时一次批量提交（不逐条调接口） -->
       <el-form-item label-width="0">
         <div class="w-full">
@@ -242,21 +214,16 @@
 </template>
 
 <script lang="js" setup>
-import {computed, nextTick, reactive, ref, watch} from 'vue'
+import {computed, reactive, ref, watch} from 'vue'
 import {ElMessage, ElMessageBox} from 'element-plus'
 import {Plus} from '@element-plus/icons-vue'
-import EmployeePostTable from '@/components/his/EmployeePostTable.vue'
-import SignaturePad from '@/components/his/SignaturePad.vue'
-import {checkPosts, postsFromApi, postsToPayload} from '@/lib/employeePost'
 import {getDictLabelByValue} from '@/lib/employeeDict'
 import {
   createEmployee,
   deleteEmployeeQualification,
-  getDepartmentTree,
   getEmployeeDetail,
   getEmployeeQualificationList,
   getMedGroupSelectList,
-  getRoleList,
   getWardSelectList,
   updateEmployee,
   upsertEmployeeQualificationBatch
@@ -283,9 +250,7 @@ const visible = computed({
 
 const dialogTitle = computed(() => (props.row ? '编辑员工' : '新增员工'))
 
-// 只有本表单用的参照数据（科室树、角色名册、证书两张字典）随表单在弹框打开时拉一次
-const deptList = ref([])
-const roleList = ref([])
+// 只有本表单用的参照数据（病区、医疗组、证书两张字典）随表单在弹框打开时拉一次
 // 病区（护理人员填）与医疗组（医生填）：与科室是两个正交维度，护士挂病区、医生挂科室+医疗组
 const wardOptions = ref([])
 const groupOptions = ref([])
@@ -297,11 +262,7 @@ const loadRefs = async () => {
   if (refLoaded) return
   refLoaded = true
   try {
-    const [deptRes, roleRes, wardRes, groupRes] = await Promise.all([
-      getDepartmentTree(), getRoleList({}), getWardSelectList(), getMedGroupSelectList()
-    ])
-    if (deptRes.code === 200) deptList.value = deptRes.data || []
-    if (roleRes.code === 200) roleList.value = roleRes.data || []
+    const [wardRes, groupRes] = await Promise.all([getWardSelectList(), getMedGroupSelectList()])
     // 下拉失败不阻断员工表单：病区/医疗组是可选归属，取不到就是空列表
     if (wardRes && wardRes.code === 200) wardOptions.value = wardRes.data || []
     if (groupRes && groupRes.code === 200) groupOptions.value = groupRes.data || []
@@ -318,9 +279,6 @@ const loadRefs = async () => {
 const certRows = ref([])
 // 加载时的原始快照：提交时与行内容比对，只把真正改过的行发给后端
 const certSnapshot = ref([])
-
-// 岗位（角色 × 科室）表单行：一行 = 这个人在该科室以该角色执业
-const postRows = ref([])
 
 const submitLoading = ref(false)
 const formRef = ref(null)
@@ -339,7 +297,6 @@ const formData = reactive({
   status: 1,
   wardId: null,
   groupId: null,
-  signImage: '',
 })
 
 const rules = {
@@ -380,19 +337,7 @@ const resetForm = () => {
   formData.status = 1
   formData.wardId = null
   formData.groupId = null
-  formData.signImage = ''
-  postRows.value = []
   certRows.value = []
-}
-
-// 签名笔迹画板：编辑回显时预填已维护笔迹；提交时取画板当前内容
-const signPadRef = ref(null)
-const signImageSaved = ref(false)
-
-const clearSignImage = () => {
-  signPadRef.value?.clear()
-  formData.signImage = ''
-  signImageSaved.value = false
 }
 
 watch(visible, async (open) => {
@@ -400,10 +345,6 @@ watch(visible, async (open) => {
   resetForm()
   await loadRefs()
   if (!props.row) {
-    // 新增：无历史签名。弹框关闭默认不销毁内容（destroy-on-close=false），
-    // canvas 像素会残留上一位员工签名，必须显式清空（结构性已加 destroy-on-close，这里再兜底）
-    await nextTick()
-    signPadRef.value?.clear()
     return
   }
   try {
@@ -427,21 +368,10 @@ watch(visible, async (open) => {
       formData.status = data.status ?? 1
       formData.wardId = data.wardId || null
       formData.groupId = data.groupId || null
-      // 签名笔迹回显：有则预填到画板（可重签更新）；清空画板后保存 = 清除笔迹
-      formData.signImage = data.signImage || ''
-      signImageSaved.value = !!data.signImage
-      postRows.value = postsFromApi(data.posts)
       loadCertRows(data.id)
     }
   } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
 
-  }
-  // 每次打开先清空白板再按需预填：弹框关闭不销毁画板，不清空会残留上一位员工签名
-  // 并随保存写库（串签名）。放最后保证无论详情是否取到都先清板
-  await nextTick()
-  signPadRef.value?.clear()
-  if (formData.signImage) {
-    signPadRef.value?.setImage(formData.signImage)
   }
 })
 
@@ -451,13 +381,6 @@ const handleSubmit = async () => {
   try {
     await formRef.value.validate()
   } catch {
-    return
-  }
-
-  // 岗位必须成对（角色 + 科室）且不能重复；后端同样会拒，前端先拦一次少一趟往返
-  const postError = checkPosts(postRows.value, {roleNameOf, deptNameOf})
-  if (postError) {
-    ElMessage.warning(postError)
     return
   }
 
@@ -472,14 +395,8 @@ const handleSubmit = async () => {
 
   submitLoading.value = true
   try {
-    // 组装提交数据（角色与科室不再分开传，只有岗位这一份口径）
-    // 签名笔迹取画板当前内容：非空 = 维护/更新笔迹；空 = 清除（新增时为空提交）
-    const signData = signPadRef.value?.confirm() || ''
-    const submitData = {
-      ...formData,
-      signImage: signData,
-      posts: postsToPayload(postRows.value),
-    }
+    // 岗位与签名笔迹分别走独立弹框保存；本表单只提交档案基本信息与证书
+    const submitData = {...formData}
 
     let res
     if (formData.id) {
@@ -598,23 +515,5 @@ const handleDeleteCert = async (row) => {
   } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
     
   }
-}
-
-// 岗位校验的报错要写成名字（科室是树，需递归；deptId 两侧类型不一律字符串比较）
-const findDeptName = (list, id) => {
-  for (const dept of list || []) {
-    if (String(dept.id) === String(id)) return dept.deptName
-    if (dept.children && dept.children.length > 0) {
-      const hit = findDeptName(dept.children, id)
-      if (hit) return hit
-    }
-  }
-  return null
-}
-
-const deptNameOf = (deptId) => findDeptName(deptList.value, deptId) || `科室(${deptId})`
-const roleNameOf = (roleCode) => {
-  const hit = roleList.value.find(r => r.roleCode === roleCode)
-  return hit ? hit.roleName : roleCode
 }
 </script>

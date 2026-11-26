@@ -21,6 +21,11 @@ public class EmployeeQueryDTO extends PageParam {
     private String empName;
 
     /**
+     * 员工编号（工号），模糊匹配
+     */
+    private String empCode;
+
+    /**
      * 主科室ID，关联科室表
      */
     private Long deptId;
@@ -29,6 +34,45 @@ public class EmployeeQueryDTO extends PageParam {
      * 员工类型：1-医生 2-护士 3-收费员 4-药剂师 5-管理员 6-其他
      */
     private Integer empType;
+
+    /**
+     * 状态：0-停用 1-启用
+     */
+    private Integer status;
+
+    /**
+     * 职称字典码值，精确匹配
+     */
+    private String title;
+
+    /**
+     * 职位字典码值，精确匹配
+     */
+    private String position;
+
+    /**
+     * 学历字典码值，精确匹配
+     */
+    private String education;
+
+    /**
+     * 手机号码，模糊匹配
+     */
+    private String phone;
+
+    /**
+     * 入职日期区间起（含当日）
+     */
+    @DateTimeFormat(pattern = "yyyy-MM-dd")
+    @JsonFormat(pattern = "yyyy-MM-dd")
+    private LocalDate hireDateStart;
+
+    /**
+     * 入职日期区间止（含当日）
+     */
+    @DateTimeFormat(pattern = "yyyy-MM-dd")
+    @JsonFormat(pattern = "yyyy-MM-dd")
+    private LocalDate hireDateEnd;
 
     /**
      * 岗位类别（1医生 2护理 3医技 4药学 5收费 6行政其他

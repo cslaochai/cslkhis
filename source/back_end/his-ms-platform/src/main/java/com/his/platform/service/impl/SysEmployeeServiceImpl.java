@@ -10,6 +10,7 @@ import com.his.common.util.SensitiveMaskUtil;
 import com.his.common.util.TextUtil;
 import com.his.common.utils.UserUtils;
 import com.his.platform.constant.SignConst;
+import com.his.platform.dto.EmployeePostDTO;
 import com.his.platform.dto.EmployeeQueryDTO;
 import com.his.platform.dto.EmployeeUpsertDTO;
 import com.his.platform.entity.SysDepartment;
@@ -26,6 +27,7 @@ import com.his.platform.service.RedisSequenceService;
 import com.his.platform.service.SignCertService;
 import com.his.platform.service.SysEmployeeService;
 import com.his.platform.service.UserIdentityCache;
+import com.his.platform.support.EmployeeDispatchScope;
 import com.his.platform.vo.EmployeePostVO;
 import com.his.platform.vo.EmployeeVO;
 import com.his.spi.dto.SignCertKeygenDTO;
@@ -58,8 +60,17 @@ public class SysEmployeeServiceImpl extends ServiceImpl<SysEmployeeMapper, SysEm
     public PageResult<EmployeeVO> listPage(EmployeeQueryDTO queryDTO) {
         LambdaQueryWrapper<SysEmployee> wrapper = new LambdaQueryWrapper<>();
         wrapper.like(TextUtil.hasText(queryDTO.getEmpName()), SysEmployee::getEmpName, queryDTO.getEmpName())
-                .eq(queryDTO.getEmpType() != null, SysEmployee::getEmpType, queryDTO.getEmpType());
+                .like(TextUtil.hasText(queryDTO.getEmpCode()), SysEmployee::getEmpCode, queryDTO.getEmpCode())
+                .eq(queryDTO.getEmpType() != null, SysEmployee::getEmpType, queryDTO.getEmpType())
+                .eq(queryDTO.getStatus() != null, SysEmployee::getStatus, queryDTO.getStatus())
+                .eq(TextUtil.hasText(queryDTO.getTitle()), SysEmployee::getTitle, queryDTO.getTitle())
+                .eq(TextUtil.hasText(queryDTO.getPosition()), SysEmployee::getPosition, queryDTO.getPosition())
+                .eq(TextUtil.hasText(queryDTO.getEducation()), SysEmployee::getEducation, queryDTO.getEducation())
+                .like(TextUtil.hasText(queryDTO.getPhone()), SysEmployee::getPhone, queryDTO.getPhone())
+                .ge(queryDTO.getHireDateStart() != null, SysEmployee::getHireDate, queryDTO.getHireDateStart())
+                .le(queryDTO.getHireDateEnd() != null, SysEmployee::getHireDate, queryDTO.getHireDateEnd());
         applyDeptScope(wrapper, queryDTO);
+        applyDispatchScope(wrapper);
         applyStaffTypeFilter(wrapper, queryDTO);
         applyRoleFilter(wrapper, queryDTO);
         wrapper.orderByAsc(SysEmployee::getEmpCode);
@@ -256,6 +267,32 @@ public class SysEmployeeServiceImpl extends ServiceImpl<SysEmployeeMapper, SysEm
         employeePostService.replacePosts(id, List.of());
     }
 
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void savePosts(Long employeeId, List<EmployeePostDTO> posts) {
+        SysEmployee emp = sysEmployeeMapper.selectById(employeeId);
+        if (emp == null) {
+            throw new BusinessException("员工不存在");
+        }
+        // 只整体替换岗位；档案上的病区/医疗组等字段不在本入口更新（独立弹框不带这些字段，
+        // 走 employeeUpsert 的 posts != null 分支会把它们洗成空）
+        employeePostService.replacePosts(employeeId, posts);
+        userIdentityCache.invalidateByEmployeeId(employeeId);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void saveSignImage(Long employeeId, String signImage) {
+        SysEmployee emp = sysEmployeeMapper.selectById(employeeId);
+        if (emp == null) {
+            throw new BusinessException("员工不存在");
+        }
+        sysEmployeeMapper.update(null, new LambdaUpdateWrapper<SysEmployee>()
+                .eq(SysEmployee::getId, employeeId)
+                .set(SysEmployee::getSignImage, signImage));
+        userIdentityCache.invalidateByEmployeeId(employeeId);
+    }
+
     /**
      * 员工数据权限收口（listPage / selectList 下拉共用）。
      *
@@ -285,6 +322,27 @@ public class SysEmployeeServiceImpl extends ServiceImpl<SysEmployeeMapper, SysEm
         wrapper.and(w -> w.in(SysEmployee::getDeptId, allowed)
                 .or().exists("SELECT 1 FROM sys_employee_post p WHERE p.employee_id = sys_employee.id "
                         + "AND p.dept_id IN (" + deptIds + ")"));
+    }
+
+    /**
+     * 调配员可见类别收口（仅名册分页）：护理调配员只见护理岗，医务调配员见医生/医技/药学。
+     *
+     * <p>口径与 {@link #applyStaffTypeFilter} 同一张岗位表、同一套岗位有效期；按当前生效角色判定，
+     * 不是调配员角色不注入条件。角色自身 staff_type 是行政其他，不能反推主管类别，映射见
+     * {@link EmployeeDispatchScope}。
+     */
+    private void applyDispatchScope(LambdaQueryWrapper<SysEmployee> wrapper) {
+        var current = UserUtils.getCurrentUser();
+        Set<Integer> staffTypes = EmployeeDispatchScope.managedStaffTypes(
+                current == null ? null : current.getCurrentRole());
+        if (staffTypes == null) {
+            return;
+        }
+        String csv = staffTypes.stream().map(String::valueOf).collect(Collectors.joining(","));
+        wrapper.exists("SELECT 1 FROM sys_employee_post p INNER JOIN sys_role r ON r.id = p.role_id "
+                + "WHERE p.employee_id = sys_employee.id AND r.staff_type IN (" + csv + ")"
+                + " AND (p.effective_date IS NULL OR p.effective_date <= CURDATE())"
+                + " AND (p.expire_date IS NULL OR p.expire_date >= CURDATE())");
     }
 
     /**

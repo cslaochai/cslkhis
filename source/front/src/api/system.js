@@ -130,6 +130,16 @@ export function deleteEmployee(id) {
     return request.delete('/system/employee/deleteById', {params: {id}})
 }
 
+// 岗位调配：只整体替换某员工的岗位，不更新档案其他字段
+export function saveEmployeePosts(data) {
+    return request.post('/system/employee/postsUpsert', data)
+}
+
+// 签名笔迹：只更新某员工的手写签名图样，不更新档案其他字段
+export function saveEmployeeSign(data) {
+    return request.post('/system/employee/signUpsert', data)
+}
+
 // ========== 员工资格证书 ==========
 
 // 查询某员工的资格证书列表

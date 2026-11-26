@@ -2,12 +2,12 @@
   <div>
     <el-tabs v-model="activeTab">
       <!-- ==================== 一、科室 → 科目 对应 ==================== -->
-      <el-tab-pane label="科室 → 诊疗科目" name="map">
+      <el-tab-pane label="科室 → 上报科室代码" name="map">
         <el-card ref="queryCardRef" class="query-card mb-3" shadow="never">
           <div class="flex items-start justify-between gap-4">
             <div class="min-w-0 flex-1">
               <el-form :model="query" inline @submit.prevent>
-                <el-form-item label="科室（源）">
+                <el-form-item label="科室（院内）">
                   <el-tree-select
                       v-model="query.deptId"
                       :data="visibleDeptTree"
@@ -18,8 +18,8 @@
                       default-expand-all
                       filterable
                       node-key="id"
-                      placeholder="选择科室，查看它对应的诊疗科目"
-                      style="width: 260px"
+                      placeholder="选择科室，查看它的上报科室代码"
+                      style="width: 280px"
                       @change="handleDeptChange"
                   >
                     <template #default="{ data }">
@@ -42,7 +42,9 @@
                 </el-form-item>
               </el-form>
               <div class="text-[12px] leading-5 text-slate-500">
-                映射方向：院内科室（源）→ 国家卫健委标准诊疗科目（目标）。一个科室可对应多个科目，病案首页/卫统上报只取「主科目」。
+                上报口径：医保结算清单的入院/出院/诊断科别、卫统与全国医院数据上报的「科室代码」，按
+                《医疗卫生机构业务科室分类与代码》(CT08.00.002) 填，形如 <span class="font-mono">A03.01</span>；
+                病案首页本身只有入院/转科/出院科别，不填这个码。一个科室可对应多个代码，上报取「主科目」。
               </div>
             </div>
             <div class="flex shrink-0 items-start gap-3">
@@ -68,7 +70,7 @@
               data-testid="dept-map-table"
               stripe
           >
-            <el-table-column label="科室（源）" width="210">
+            <el-table-column label="科室（院内）" width="210">
               <template #default>
                 <div class="flex items-center gap-1">
                   <span class="truncate">{{ currentDept.deptName }}</span>
@@ -76,9 +78,9 @@
                 </div>
               </template>
             </el-table-column>
-            <el-table-column label="诊疗科目（目标）" min-width="260">
+            <el-table-column label="上报科室代码（CT08.00.002）" min-width="280">
               <template #default="{ row }">
-                <span class="mr-2 font-mono text-slate-500">{{ row.subjectCode }}</span>
+                <span class="mr-2 font-mono text-slate-500">{{ reportCode(row.subjectCode) }}</span>
                 <span :data-testid="`subj-name-${row.subjectCode}`">{{ row.subjectName }}</span>
               </template>
             </el-table-column>
@@ -124,7 +126,7 @@
                 <span class="font-medium">{{ currentDept.deptName }}</span>
                 <span class="text-slate-400">→</span>
                 <span v-if="currentPrimary" class="text-slate-600">
-                  主科目 {{ currentPrimary.subjectCode }} {{ currentPrimary.subjectName }}
+                  主科目 {{ reportCode(currentPrimary.subjectCode) }} {{ currentPrimary.subjectName }}
                 </span>
                 <span v-else class="text-red-500">未设主科目</span>
               </template>
@@ -135,11 +137,12 @@
       </el-tab-pane>
 
       <!-- ==================== 二、诊疗科目名录 ==================== -->
-      <el-tab-pane label="诊疗科目名录" name="subject">
+      <el-tab-pane label="上报科室代码表" name="subject">
         <el-card class="query-card mb-3" shadow="never">
           <div class="flex items-start justify-between gap-4">
-            <div class="max-w-3xl pt-1.5 text-[13px] leading-6 text-slate-600">
-              代码与名称取自国家卫健委《医疗机构诊疗科目名录》；二级科目请按本院《医疗机构执业许可证》副本范围裁剪。
+            <div class="max-w-4xl pt-1.5 text-[13px] leading-6 text-slate-600">
+              临床类代码取自《医疗卫生机构业务科室分类与代码》(CT08.00.002)，页面按 <span class="font-mono">A + 科目码</span>
+              展示（如 03.01 → A03.01）。医技、行政后勤类代码待补全量码表；二级科目请按本院《医疗机构执业许可证》副本范围裁剪。
             </div>
             <div class="flex shrink-0 items-start">
               <el-button
@@ -165,8 +168,13 @@
               default-expand-all
               row-key="subjectCode"
           >
-            <el-table-column label="科目代码" prop="subjectCode" width="120"/>
-            <el-table-column label="科目名称" min-width="200" prop="subjectName"/>
+            <el-table-column label="上报科室代码" width="150">
+              <template #default="{ row }">
+                <span class="font-mono">{{ reportCode(row.subjectCode) }}</span>
+                <span class="ml-1 text-[11px] text-slate-400">{{ row.subjectCode }}</span>
+              </template>
+            </el-table-column>
+            <el-table-column label="名称" min-width="200" prop="subjectName"/>
             <el-table-column label="层级" width="90">
               <template #default="{ row }">
                 <el-tag :type="row.subjectLevel === 1 ? 'primary' : 'info'" size="small">
@@ -270,6 +278,9 @@ const unmappedDepts = ref([])
 const unmappedIds = computed(() => new Set(unmappedDepts.value.map(d => String(d.deptId))))
 
 const currentPrimary = computed(() => deptSubjects.value.find(s => s.isPrimary === 1) || null)
+
+// 库里存的是诊疗科目码（03.01），上报按 CT08.00.002 用 A 前缀（A03.01）；只有展示层加，写库不改
+const reportCode = (code) => (code ? `A${code}` : '')
 
 // 分组目录节点本身不参与上报，选中没有意义；在树里置灰，只让选叶子科室
 const treeProps = {

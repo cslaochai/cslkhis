@@ -133,6 +133,12 @@ const routes = [
                 component: () => import('@/views/iot/AssetTrackingView.vue'),
                 meta: {title: '资产定位与维保'}
             },
+            {
+                path: 'iot-events',
+                name: 'IotEvents',
+                component: () => import('@/views/iot/IotEventView.vue'),
+                meta: {title: '告警中心'}
+            },
             {path: 'nurse', name: 'Nurse', component: () => import('@/views/nurse/NurseView.vue')},
             {
                 path: 'nurse-schedule',
@@ -910,7 +916,7 @@ const routes = [
                 path: 'system/medSubject',
                 name: 'SystemMedSubject',
                 component: () => import('@/views/system/medSubject/MedSubjectView.vue'),
-                meta: {title: '诊疗科目映射'}
+                meta: {title: '上报科室代码对照'}
             },
             {path: 'system/dict', name: 'SystemDict', component: () => import('@/views/system/dict/DictView.vue')},
             {

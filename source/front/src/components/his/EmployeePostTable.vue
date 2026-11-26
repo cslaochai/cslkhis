@@ -46,15 +46,21 @@
       <el-table-column width="150">
         <template #header>生效日期</template>
         <template #default="{ row }">
-          <el-date-picker
-              :disabled="disabled"
-              :model-value="row.effectiveDate || ''"
-              class="!w-full"
-              placeholder="保存即生效"
-              type="date"
-              value-format="YYYY-MM-DD"
-              @update:model-value="(v) => patch(row.__index, {effectiveDate: v || ''})"
-          />
+          <div class="flex flex-col items-start gap-1">
+            <el-date-picker
+                :disabled="disabled"
+                :model-value="row.effectiveDate || ''"
+                class="!w-full"
+                placeholder="保存即生效"
+                type="date"
+                value-format="YYYY-MM-DD"
+                @update:model-value="(v) => patch(row.__index, {effectiveDate: v || ''})"
+            />
+            <!-- 未到生效日的岗位还没上岗：与已失效同属派生展示态，不落列 -->
+            <el-tag v-if="row.effectiveDate && row.effectiveDate > today" effect="light" size="small" type="warning">
+              待生效
+            </el-tag>
+          </div>
         </template>
       </el-table-column>
       <el-table-column width="150">
@@ -101,9 +107,12 @@
 </template>
 
 <script lang="js" setup>
-import {computed} from 'vue'
+import {computed, ref} from 'vue'
 import {Delete, Plus} from '@element-plus/icons-vue'
 import {deptNodeTypeSuffix} from '@/lib/deptNodeType'
+
+// 今天（YYYY-MM-DD）：用于在表格上预览岗位是否尚未生效；保存重载后以后端派生状态为准
+const today = new Date().toLocaleDateString('sv-SE')
 
 const props = defineProps({
   modelValue: {type: Array, default: () => []},

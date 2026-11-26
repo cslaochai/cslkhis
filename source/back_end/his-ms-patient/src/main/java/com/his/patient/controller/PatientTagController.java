@@ -22,15 +22,18 @@ import java.util.List;
 @RestController
 @RequestMapping("/system/patientTag")
 @RequiredArgsConstructor
-@PreAuthorize("hasAnyAuthority('opd:doctorWorkstation:list', 'patient:list', 'patient:tag:list')")
 public class PatientTagController {
 
     private final PatientTagService patientTagService;
+
+    /** 标签定义查询可见的业务岗位（纯取数，不写定义） */
+    private static final String TAG_VIEW = "hasAnyAuthority('opd:doctorWorkstation:list', 'patient:list', 'patient:tag:list')";
 
     /**
      * 标签定义分页查询：按标签名模糊收口。
      * 用于患者标签管理页列表，以及患者档案页查询卡的标签筛选下拉取候选。
      */
+    @PreAuthorize(TAG_VIEW)
     @Operation(summary = "查询患者标签列表")
     @PostMapping("/listPage")
     public Result<PageResult<SysPatientTagVO>> listPage(@Valid @RequestBody SysPatientTagQueryDTO queryDTO) {
@@ -41,6 +44,7 @@ public class PatientTagController {
      * 标签定义全量列表（不分页，一次拿完）。
      * 用于医生工作站「患者标签」维护弹框展示全部可选标签。
      */
+    @PreAuthorize(TAG_VIEW)
     @Operation(summary = "查询患者标签列表")
     @PostMapping("/list")
     public Result<List<SysPatientTagVO>> list(@Valid @RequestBody SysPatientTagQueryDTO queryDTO) {
@@ -51,6 +55,7 @@ public class PatientTagController {
      * 单个标签定义详情。
      * 供按标签身份回显名称、颜色、排序等属性的取数场景。
      */
+    @PreAuthorize(TAG_VIEW)
     @Operation(summary = "获取患者标签详情")
     @GetMapping("/getById")
     public Result<SysPatientTagVO> getInfo(@RequestParam Long tagId) {

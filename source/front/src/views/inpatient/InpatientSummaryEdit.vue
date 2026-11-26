@@ -8,6 +8,15 @@
         </el-tag>
         <span class="text-slate-500">住院天数：{{ summaryMeta.days }} 天</span>
         <span class="text-slate-500">离院方式：{{ textOf(dischargeWayMap, summaryMeta.dischargeWay) }}</span>
+        <span class="text-slate-500">
+          上报科室代码：
+          <template v-if="summaryMeta.subjectCode">
+            <span class="font-medium text-slate-700">A{{ summaryMeta.subjectCode }}</span>
+            <span class="ml-1">{{ summaryMeta.subjectName }}</span>
+            <span class="ml-1 text-slate-400">（医保清单/卫统口径，非首页字段；按出院科室 {{ summaryMeta.deptName || '—' }} 折算）</span>
+          </template>
+          <span v-else class="text-rose-600">未配（出院科室 {{ summaryMeta.deptName || '—' }} 没设主科目）</span>
+        </span>
         <span v-if="summaryMeta.readmit31d === 1" class="font-medium text-rose-600">31 日内再入院</span>
         <span class="ml-auto text-slate-400">归档后本页只读</span>
       </div>
@@ -303,7 +312,11 @@ const summaryMeta = reactive({
   status: 0,
   days: 0,
   dischargeWay: null,
-  readmit31d: null
+  readmit31d: null,
+  // 上报口径：出院科室 → 诊疗科目，由后端按主数据折算，界面只读
+  deptName: '',
+  subjectCode: '',
+  subjectName: ''
 });
 
 watch(visible, async (open) => {
@@ -343,6 +356,9 @@ watch(visible, async (open) => {
       days: d.admission?.inpatientDays ?? 0,
       dischargeWay: s.dischargeWay ?? null,
       readmit31d: s.readmit31d ?? null,
+      deptName: s.deptName || d.admission?.deptName || '',
+      subjectCode: s.subjectCode || '',
+      subjectName: s.subjectName || '',
     });
     // 诊断条数的主诊断约束由后端把关，但主要诊断必须排第一条，前端保存前顺手排一下
     normalizeOrder();

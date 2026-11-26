@@ -130,7 +130,7 @@ public interface SignCertFacadeService {
     IPage<SignCertVO> listCertPage(SignCertPageQueryDTO query);
 
     /**
-     * 按员工取当前有效证书：员工管理「签名设置」弹框只读展示用；无有效证书返回 null。
+     * 按员工取当前有效证书：员工管理「数字证书」弹框只读展示用；无有效证书返回 null。
      */
     SignCertVO getActiveCertByEmp(Long empId);
 

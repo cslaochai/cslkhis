@@ -23,7 +23,6 @@ import java.util.List;
 @RestController
 @RequestMapping("/patient/tag")
 @RequiredArgsConstructor
-@PreAuthorize("hasAnyAuthority('opd:doctorWorkstation:list', 'patient:list')")
 public class PatientTagRelationController {
 
     private final BizPatientTagRelationService bizPatientTagRelationService;
@@ -32,6 +31,7 @@ public class PatientTagRelationController {
      * 回读一名患者当前挂着的标签。
      * 用于医生工作站「患者标签管理」弹窗的当前标签区，以及患者档案列表逐行补标签列。
      */
+    @PreAuthorize("hasAnyAuthority('opd:doctorWorkstation:list', 'patient:list')")
     @Operation(summary = "查询患者的标签列表")
     @GetMapping("/getByPatientId")
     public Result<List<SysPatientTagVO>> getByPatientId(@Valid PatientTagQueryDTO queryDTO) {

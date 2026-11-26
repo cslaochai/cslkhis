@@ -119,7 +119,7 @@
             </el-button>
             <el-button v-perm="'patient:edit'" link size="small" type="primary" @click.stop="openEdit(row)">编辑
             </el-button>
-            <el-button link size="small" type="danger" @click.stop="handleDelete(row)">删除</el-button>
+            <el-button v-perm="'patient:edit'" link size="small" type="danger" @click.stop="handleDelete(row)">删除</el-button>
           </template>
         </el-table-column>
       </el-table>

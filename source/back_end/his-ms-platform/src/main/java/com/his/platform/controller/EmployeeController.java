@@ -2,7 +2,9 @@ package com.his.platform.controller;
 
 import com.his.common.base.PageResult;
 import com.his.common.base.Result;
+import com.his.platform.dto.EmployeePostUpsertDTO;
 import com.his.platform.dto.EmployeeQueryDTO;
+import com.his.platform.dto.EmployeeSignUpsertDTO;
 import com.his.platform.dto.EmployeeUpsertDTO;
 import com.his.platform.service.SysEmployeeService;
 import com.his.platform.vo.EmployeeVO;
@@ -88,5 +90,29 @@ public class EmployeeController {
     public Result<Void> remove(@RequestParam Long id) {
         sysEmployeeService.delete(id);
         return Result.success("删除成功", null);
+    }
+
+    /**
+     * 岗位调配：只整体替换某员工的岗位（角色 × 科室），不更新档案其他字段。
+     * 用于「员工管理 → 岗位调配」独立弹框保存。
+     */
+    @Operation(summary = "保存员工岗位调配")
+    @PreAuthorize("hasAuthority('org:employee:add')")
+    @PostMapping("/postsUpsert")
+    public Result<Void> postsUpsert(@RequestBody @Valid EmployeePostUpsertDTO upsertDTO) {
+        sysEmployeeService.savePosts(upsertDTO.getId(), upsertDTO.getPosts());
+        return Result.success("岗位保存成功", null);
+    }
+
+    /**
+     * 签名笔迹：只更新某员工的手写签名图样，不更新档案其他字段。
+     * 用于「员工管理 → 签名笔迹」独立弹框保存。
+     */
+    @Operation(summary = "保存员工签名笔迹")
+    @PreAuthorize("hasAuthority('org:employee:add')")
+    @PostMapping("/signUpsert")
+    public Result<Void> signUpsert(@RequestBody @Valid EmployeeSignUpsertDTO upsertDTO) {
+        sysEmployeeService.saveSignImage(upsertDTO.getId(), upsertDTO.getSignImage());
+        return Result.success("签名保存成功", null);
     }
 }

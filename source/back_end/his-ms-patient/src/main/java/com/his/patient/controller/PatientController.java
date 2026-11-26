@@ -18,21 +18,29 @@ import org.springframework.web.bind.annotation.*;
 
 /**
  * 患者主档控制器：建档、检索与身份核对的接口入口，主档是就诊身份的事实来源。
+ *
+ * <p>鉴权按方法拆分：候选检索/身份核对对登录岗开放；明文回显与主档写操作只给主档维护权。
  */
 @Tag(name = "患者管理")
 @RestController
-@PreAuthorize("hasAnyAuthority('opd:appointments:list', 'opd:doctorWorkstation:list', 'patient:list', 'opd:triage:list', 'opd:emergency:list', 'opd:emergencyDoctor:list', 'patient:empi:list', 'patient:profile:list', 'ipd:inpatient:list')")
 @RequestMapping("/patient")
 @RequiredArgsConstructor
 public class PatientController {
+
+    /** 详情概览可见的业务岗位（纯展示，出参已脱敏） */
+    private static final String DETAIL_VIEW = "hasAnyAuthority('opd:appointments:list', 'opd:doctorWorkstation:list', 'patient:list', 'opd:triage:list', 'opd:emergency:list', 'opd:emergencyDoctor:list', 'patient:empi:list', 'patient:profile:list', 'ipd:inpatient:list')";
+
+    /** 主档维护权：新增/修改回显与写操作 */
+    private static final String MAINTAIN = "hasAnyAuthority('patient:add', 'patient:edit')";
 
     private final BizPatientService bizPatientService;
 
     /**
      * 按姓名、患者号、手机号或身份证号分页检索患者主档，并带出标签与今日就诊信息。
-     * 用于患者管理页的查询卡，以及各业务页选患者组件的候选列表。
+     * 用于患者管理页的查询卡，以及各业务页选患者组件的候选列表；列表出参已脱敏。
      */
     @Operation(summary = "分页查询患者列表")
+    @PreAuthorize("isAuthenticated()")
     @PostMapping("/listPage")
     public Result<PageResult<PatientVO>> listPage(@Valid @RequestBody PatientPageQueryDTO queryDTO) {
         return Result.success(bizPatientService.queryPatientPage(queryDTO));
@@ -43,6 +51,7 @@ public class PatientController {
      * 用于患者修改弹框与各业务页建档表单的回显，禁止当展示接口用。
      */
     @Operation(summary = "根据ID查询患者")
+    @PreAuthorize(MAINTAIN)
     @GetMapping("/getById")
     public Result<PatientVO> getById(@RequestParam Long patientId) {
         return Result.success(bizPatientService.getPatientVOById(patientId));
@@ -50,9 +59,10 @@ public class PatientController {
 
     /**
      * 按患者 id 取主档连同六组健康档案（过敏史、既往疾病史、手术外伤史、家族史、用药史、联系人）与标签。
-     * 用于患者详情弹框与住院医嘱工作区的患者概览；临床各组按岗位可见性裁剪。
+     * 用于患者详情弹框与住院医嘱工作区的患者概览；临床各组按岗位可见性裁剪，出参已脱敏。
      */
     @Operation(summary = "获取患者完整信息")
+    @PreAuthorize(DETAIL_VIEW)
     @GetMapping("/getDetailById")
     public Result<PatientDetailVO> getDetailById(@RequestParam Long patientId) {
         return Result.success(bizPatientService.getPatientDetail(patientId));
@@ -63,6 +73,7 @@ public class PatientController {
      * 供只持有患者号（扫码或手工录入窗口的就诊卡号）时核对患者身份的取数场景。
      */
     @Operation(summary = "根据患者号查询")
+    @PreAuthorize("isAuthenticated()")
     @GetMapping("/getByNo")
     public Result<PatientVO> getByPatientNo(@RequestParam String patientNo) {
         return Result.success(bizPatientService.getPatientVOByNo(patientNo));
@@ -73,6 +84,7 @@ public class PatientController {
      * 用于患者管理页的新增/修改弹框保存，以及预约登记页的现场建档。
      */
     @Operation(summary = "新增或修改患者")
+    @PreAuthorize(MAINTAIN)
     @PostMapping("/patientUpsert")
     public Result<PatientVO> patientUpsert(@Valid @RequestBody PatientUpsertDTO patientUpsertDTO) {
         return Result.success(bizPatientService.upsertPatient(patientUpsertDTO));
@@ -83,6 +95,7 @@ public class PatientController {
      * 用于患者管理页行操作「删除」的二次确认之后。
      */
     @Operation(summary = "删除患者")
+    @PreAuthorize("hasAuthority('patient:edit')")
     @DeleteMapping("/deleteById")
     public Result<Void> remove(@RequestParam Long patientId) {
         bizPatientService.removePatient(patientId);

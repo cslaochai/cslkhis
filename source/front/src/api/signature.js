@@ -109,7 +109,7 @@ export function revokeSignCert(certId, reason) {
     return request.post('/emr/signCert/revoke', {certId, reason})
 }
 
-// 按员工查签名证书（员工管理「签名设置」只读弹框用；无证书返回空）
+// 按员工查签名证书（员工管理「数字证书」只读弹框用；无证书返回空）
 export function getSignCertByEmp(empId) {
     return request.get('/emr/signCert/getByEmp', {params: {empId}})
 }

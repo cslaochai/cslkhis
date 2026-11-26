@@ -1,6 +1,7 @@
 package com.his.platform.service;
 
 import com.his.common.base.PageResult;
+import com.his.platform.dto.EmployeePostDTO;
 import com.his.platform.dto.EmployeeQueryDTO;
 import com.his.platform.dto.EmployeeUpsertDTO;
 import com.his.platform.vo.EmployeeVO;
@@ -46,4 +47,20 @@ public interface SysEmployeeService {
      * 用于「员工管理」页操作列的删除动作。
      */
     void delete(Long id);
+
+    /**
+     * 独立保存某员工的岗位（岗位调配弹框专用）：只整体替换岗位，不碰档案其他字段。
+     *
+     * @param employeeId 员工ID
+     * @param posts      岗位列表；空集合 = 显式清空
+     */
+    void savePosts(Long employeeId, List<EmployeePostDTO> posts);
+
+    /**
+     * 独立维护某员工的签名笔迹（签名笔迹弹框专用）：只更新 sign_image，不碰其他字段。
+     *
+     * @param employeeId 员工ID
+     * @param signImage base64 PNG；空串 = 清除笔迹
+     */
+    void saveSignImage(Long employeeId, String signImage);
 }

@@ -1342,6 +1342,9 @@ public class QueueServiceImpl extends ServiceImpl<QueueMapper, Queue> implements
     @Override
     public PageResult<OpdLogListVO> listPage(OpdLogPageQueryDTO queryDTO) {
         dayEndSettleTrigger.ensureSettledUpToYesterday();
+        if (!applyOpdLogDeptScope(queryDTO)) {
+            return new PageResult<>();
+        }
         Page<OpdLogListVO> page = new Page<>(queryDTO.getPageNum(), queryDTO.getPageSize());
         IPage<OpdLogListVO> result = clincOpdLogMapper.selectOpdLogPage(page, queryDTO);
         List<OpdLogListVO> records = result.getRecords();
@@ -1353,11 +1356,51 @@ public class QueueServiceImpl extends ServiceImpl<QueueMapper, Queue> implements
 
     @Override
     public OpdLogStatsVO opdLogStats(OpdLogPageQueryDTO queryDTO) {
+        if (!applyOpdLogDeptScope(queryDTO)) {
+            return new OpdLogStatsVO();
+        }
         OpdLogStatsVO stats = clincOpdLogMapper.selectOpdLogStats(queryDTO);
         if (stats == null) {
             return new OpdLogStatsVO();
         }
         return stats;
+    }
+
+    /**
+     * 就诊总览（门诊日志）科室数据权限收口，口径对齐 {@code AppointServiceImpl.applyDeptScope}：
+     * <ul>
+     *   <li>显式 deptId 先过 {@link DeptScopeService#resolveDeptId(Long)}，越权直接抛业务异常；</li>
+     *   <li>全院角色（data_scope=1）不追加科室条件；</li>
+     *   <li>受限角色：前端所选科室与授权科室集合取交集，空交集即无可见数据。</li>
+     * </ul>
+     * 收敛结果回写 DTO.deptIds 供 XML 的 IN 条件复用。
+     *
+     * @return false = 当前岗位无可见科室，调用方直接返回空页/空统计
+     */
+    private boolean applyOpdLogDeptScope(OpdLogPageQueryDTO queryDTO) {
+        deptScopeService.resolveDeptId(queryDTO.getDeptId());
+        if (!deptScopeService.isScoped()) {
+            return true;
+        }
+        Set<Long> allowed = deptScopeService.allowedDeptIds();
+        List<Long> requested = new ArrayList<>();
+        if (queryDTO.getDeptId() != null) {
+            requested.add(queryDTO.getDeptId());
+        }
+        if (queryDTO.getDeptIds() != null && !queryDTO.getDeptIds().isEmpty()) {
+            requested.addAll(queryDTO.getDeptIds());
+        }
+        if (requested.isEmpty()) {
+            queryDTO.setDeptIds(List.copyOf(allowed));
+            return true;
+        }
+        List<Long> intersection = requested.stream().distinct().filter(allowed::contains).toList();
+        if (intersection.isEmpty()) {
+            return false;
+        }
+        queryDTO.setDeptIds(intersection);
+        queryDTO.setDeptId(null);
+        return true;
     }
 
     /**

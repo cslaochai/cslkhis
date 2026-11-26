@@ -223,7 +223,7 @@ public class SignatureController {
     }
 
     /**
-     * 按员工取当前有效证书：员工管理「签名设置」弹框用（只读，人事侧也可看）。
+     * 按员工取当前有效证书：员工管理「数字证书」弹框用（只读，人事侧也可看）。
      */
     @Operation(summary = "按员工取当前有效签名证书（只读）")
     @PreAuthorize("hasAnyAuthority('sign:cert:list', 'org:employee:list')")

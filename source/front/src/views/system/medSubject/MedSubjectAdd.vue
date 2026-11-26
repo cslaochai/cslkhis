@@ -1,5 +1,5 @@
 <template>
-  <el-dialog v-model="visible" title="新增科室 → 诊疗科目映射" width="640px">
+  <el-dialog v-model="visible" title="新增科室 → 上报科室代码" width="640px">
     <el-form ref="formRef" :model="form" :rules="rules" label-width="160px">
       <el-form-item label="① 院内科室（源）" prop="deptId">
         <el-tree-select
@@ -17,29 +17,29 @@
             @change="handleDeptChange"
         />
       </el-form-item>
-      <el-form-item label="② 诊疗科目（目标）" prop="subjectCode">
+      <el-form-item label="② 上报科室代码" prop="subjectCode">
         <el-select
             v-model="form.subjectCode"
             data-testid="dept-subject-select"
             filterable
-            placeholder="选择国家卫健委标准科目"
+            placeholder="选择 CT08.00.002 科室代码"
             style="width: 100%"
         >
           <el-option-group
               v-for="group in groups"
               :key="group.code"
-              :label="`${group.code} ${group.name}`"
+              :label="`${reportCode(group.code)} ${group.name}`"
           >
             <el-option
                 v-for="s in group.children"
                 :key="s.subjectCode"
-                :label="`${s.subjectCode} ${s.subjectName}`"
+                :label="`${reportCode(s.subjectCode)} ${s.subjectName}`"
                 :value="s.subjectCode"
             />
             <el-option
                 v-if="!group.children.length"
                 :key="group.code"
-                :label="`${group.code} ${group.name}（一级科目）`"
+                :label="`${reportCode(group.code)} ${group.name}（一级科目）`"
                 :value="group.code"
             />
           </el-option-group>
@@ -55,11 +55,11 @@
         <span v-else class="mr-1 text-slate-400">未选科室</span>
         <span class="mx-1 text-slate-400">→</span>
         <el-tag v-if="selectedSubject" effect="plain" size="default" type="success">
-          {{ selectedSubject.code }} {{ selectedSubject.name }}
+          {{ reportCode(selectedSubject.code) }} {{ selectedSubject.name }}
         </el-tag>
-        <span v-else class="text-slate-400">未选科目</span>
+        <span v-else class="text-slate-400">未选代码</span>
         <div class="mt-1.5 text-[12px] text-slate-500">
-          左边是院内科室（映射的发起方），右边是国家标准诊疗科目（上报时填的科别）。
+          左边是院内科室，右边是上报口径的科室代码（CT08.00.002，A 前缀）；医保结算清单和卫统上报取这个码。
         </div>
       </div>
 
@@ -126,6 +126,8 @@ const findDept = (nodes, id) => {
 }
 
 const selectedDept = computed(() => findDept(props.deptTree, form.deptId) || null)
+// 上报口径 CT08.00.002 用 A 前缀，库里存的是不带前缀的科目码
+const reportCode = (code) => (code ? `A${code}` : '')
 const selectedSubject = computed(() => {
   for (const g of props.groups) {
     if (g.code === form.subjectCode) return {code: g.code, name: g.name}

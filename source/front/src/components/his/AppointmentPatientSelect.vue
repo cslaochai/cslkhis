@@ -92,7 +92,7 @@
 
 <script lang="js" setup>
 import {computed, ref, watch} from 'vue'
-import {getPatientDetail, getPatientList} from '@/api/patient'
+import {getPatientList} from '@/api/patient'
 import {patientAgeText, patientAvatarTone, patientGenderSymbol} from '@/lib/patientGender'
 import {feeShortLabel} from '@/lib/payType'
 
@@ -117,21 +117,11 @@ const keyword = ref('')
 
 /**
  * 外部直接赋值时的回显（与 PatientSelect 同一口径）：
- * 下拉的选项来自搜索结果，调用方只给了 ID 时（看板预填、上游页面回填），
- * 选项里没有这条记录，el-select 就只能显示一串雪花 ID。
- * 这里按 ID 反查一次并塞进选项集，保证显示的是姓名而不是 ID。
+ * 下拉选项来自搜索结果；只给 ID 且选项集未命中时，不再按 ID 反查明文主档接口
+ * （该接口只开放给主档维护岗），无选项时退化显示 ID。
  */
-const syncLabel = async (id) => {
+const syncLabel = (id) => {
   if (!id) return
-  if (results.value.some(p => String(p.id) === String(id))) return
-  try {
-    const res = await getPatientDetail(id)
-    if (res?.code === 200 && res.data?.id) {
-      results.value = [res.data, ...results.value]
-    }
-  } catch (e) {
-    console.error('按ID回显患者失败:', e)
-  }
 }
 
 // 双向同步
