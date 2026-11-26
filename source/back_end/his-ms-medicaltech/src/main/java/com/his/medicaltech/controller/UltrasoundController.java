@@ -66,7 +66,7 @@ public class UltrasoundController {
         return Result.success("超声检查 " + vo.getRecordNo() + " 已保存", vo);
     }
 
-    @PreAuthorize("hasAuthority('medtech:ultrasound:edit')")
+    @PreAuthorize("hasAuthority('medtech:ultrasound:exec')")
     /**
      * 登记患者到场，检查单进入待检环节。
      * 用于超声管理页对已登记患者执行签到。
@@ -78,7 +78,7 @@ public class UltrasoundController {
         return Result.success("已签到", ultrasoundService.getDetail(dto.getRecordId()));
     }
 
-    @PreAuthorize("hasAuthority('medtech:ultrasound:edit')")
+    @PreAuthorize("hasAuthority('medtech:ultrasound:exec')")
     /**
      * 登记检查执行情况并推进单据状态。
      * 用于超声检查执行弹框由检查医师完成操作后提交。
@@ -90,7 +90,7 @@ public class UltrasoundController {
         return Result.success("检查已执行", ultrasoundService.getDetail(dto.getRecordId()));
     }
 
-    @PreAuthorize("hasAuthority('medtech:ultrasound:add')")
+    @PreAuthorize("hasAuthority('medtech:ultrasound:exec')")
     /**
      * 整单覆盖保存结构化测量值，异常标志由服务端判定。
      * 用于超声管理页检查中录入测量数据后的保存。
@@ -102,7 +102,7 @@ public class UltrasoundController {
         return Result.success("已保存 " + n + " 条测量值", ultrasoundService.getDetail(dto.getRecordId()));
     }
 
-    @PreAuthorize("hasAuthority('medtech:ultrasound:edit')")
+    @PreAuthorize("hasAuthority('medtech:ultrasound:write')")
     /**
      * 填写超声所见与提示意见出具报告。
      * 用于超声报告编辑弹框提交报告内容。
@@ -114,7 +114,7 @@ public class UltrasoundController {
         return Result.success("报告已出具", ultrasoundService.getDetail(dto.getRecordId()));
     }
 
-    @PreAuthorize("hasAuthority('medtech:ultrasound:edit')")
+    @PreAuthorize("hasAuthority('medtech:ultrasound:audit')")
     /**
      * 对已出具的报告审核签字，审核人不得为报告人本人。
      * 用于超声管理页对已报告单据执行审核。
@@ -126,7 +126,7 @@ public class UltrasoundController {
         return Result.success("审核通过", ultrasoundService.getDetail(dto.getRecordId()));
     }
 
-    @PreAuthorize("hasAuthority('medtech:ultrasound:edit')")
+    @PreAuthorize("hasAuthority('medtech:ultrasound:publish')")
     /**
      * 发布已审核的超声报告，报告链路收口。
      * 用于超声管理页对审核通过的报告执行发布。

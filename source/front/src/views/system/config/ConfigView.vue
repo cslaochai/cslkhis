@@ -1,6 +1,20 @@
 <template>
   <div class="p-6">
     <el-card v-loading="loading" shadow="never">
+      <!-- 变更原因：参数是全院判定口径，保存时必须能回答"谁为什么改"（写日志审计→字段变更）。
+           放页头而不是每个页签各一份：5 套参数是同一次运维工作的不同面，一次填写对应一次保存 -->
+      <div class="mb-3 flex items-center gap-2">
+        <span class="shrink-0 text-sm text-[#606266]">本次变更原因</span>
+        <el-input
+            v-model="changeReason"
+            clearable
+            data-testid="config-change-reason"
+            maxlength="200"
+            placeholder="如：2026 年医保政策调整，按医务处通知修改留观上限"
+            style="width: 460px"
+        />
+        <span class="text-xs text-[#909399]">保存时必填，登记到「日志审计 → 字段变更」</span>
+      </div>
       <el-tabs v-model="activeTab">
         <!-- ==================== 医院基础信息 ==================== -->
         <el-tab-pane label="医院基础信息" name="hospital">
@@ -201,6 +215,22 @@ const loading = ref(false)
 const saving = ref(false)
 const activeTab = ref('hospital')
 
+/**
+ * 本次变更原因：随每次保存一起提交，后端写进 sys_field_change_log.remark。
+ * 页面必填、后端不挂 @NotBlank —— 脚本/内部调用改参数没有原因不该直接 400。
+ */
+const changeReason = ref('')
+
+const requireReason = () => {
+  if (!changeReason.value.trim()) {
+    ElMessage.warning('请先填写本次变更原因（审计登记必填）')
+    return false
+  }
+  return true
+}
+
+const withReason = (payload) => ({...payload, reason: changeReason.value.trim()})
+
 // ---------------- 医院基础信息 ----------------
 const hospitalFormRef = ref()
 const hospitalConfig = ref({hospitalName: '', hospitalAddress: '', hospitalPhone: '', hospitalEmail: ''})
@@ -210,12 +240,14 @@ const hospitalRules = {
   hospitalPhone: [{required: true, message: '请输入联系电话', trigger: 'blur'}],
 }
 const handleSaveHospital = async () => {
+  if (!requireReason()) return
   await hospitalFormRef.value.validate()
   saving.value = true
   try {
-    const res = await saveHospitalConfig(hospitalConfig.value)
+    const res = await saveHospitalConfig(withReason(hospitalConfig.value))
     if (res.code === 200) {
       ElMessage.success('医院基础信息保存成功')
+      changeReason.value = ''
     }
   } finally {
     saving.value = false
@@ -242,12 +274,14 @@ const emergencyRules = {
   observationMaxHours: [{required: true, message: '请输入留观最大时长', trigger: 'blur'}],
 }
 const handleSaveEmergency = async () => {
+  if (!requireReason()) return
   await emergencyFormRef.value.validate()
   saving.value = true
   try {
-    const res = await saveEmergencyConfig(emergencyConfig.value)
+    const res = await saveEmergencyConfig(withReason(emergencyConfig.value))
     if (res.code === 200) {
       ElMessage.success('急诊参数保存成功')
+      changeReason.value = ''
     }
   } finally {
     saving.value = false
@@ -261,12 +295,14 @@ const labRules = {
   criticalValueDeadlineMinutes: [{required: true, message: '请输入危急值处理时限', trigger: 'blur'}],
 }
 const handleSaveLab = async () => {
+  if (!requireReason()) return
   await labFormRef.value.validate()
   saving.value = true
   try {
-    const res = await saveLabCriticalConfig(labConfig.value)
+    const res = await saveLabCriticalConfig(withReason(labConfig.value))
     if (res.code === 200) {
       ElMessage.success('检验危急值参数保存成功')
+      changeReason.value = ''
     }
   } finally {
     saving.value = false
@@ -290,12 +326,14 @@ const inpatientRules = {
   admissionOrderValidDays: [{required: true, message: '请输入住院证有效期', trigger: 'blur'}],
 }
 const handleSaveInpatient = async () => {
+  if (!requireReason()) return
   await inpatientFormRef.value.validate()
   saving.value = true
   try {
-    const res = await saveInpatientConfig(inpatientConfig.value)
+    const res = await saveInpatientConfig(withReason(inpatientConfig.value))
     if (res.code === 200) {
       ElMessage.success('住院 / 床位参数保存成功')
+      changeReason.value = ''
     }
   } finally {
     saving.value = false
@@ -311,12 +349,14 @@ const signRules = {
   pinTtlMinutes: [{required: true, message: '请输入签名PIN免输入时长', trigger: 'blur'}],
 }
 const handleSaveSign = async () => {
+  if (!requireReason()) return
   await signFormRef.value.validate()
   saving.value = true
   try {
-    const res = await saveSignConfig(signConfig.value)
+    const res = await saveSignConfig(withReason(signConfig.value))
     if (res.code === 200) {
       ElMessage.success('电子签名参数保存成功')
+      changeReason.value = ''
     }
   } finally {
     saving.value = false

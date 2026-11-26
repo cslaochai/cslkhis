@@ -107,7 +107,7 @@
             prefix-icon="Search"
         />
         <p class="cred-hint">
-          共 {{ credAccountCount }} 个账号；上方是演示链路账号，下方按角色/科室列出全院账号。列表在表格内滚动，账号行可复制或一键登录
+          共 {{ credAccountCount }} 个启用员工账号，按「角色 → 科室」归组；停用账号与小程序患者自助账号不在内。列表在表格内滚动，账号行可复制或一键登录
         </p>
         <el-table
             class="cred-table"
@@ -122,7 +122,7 @@
           <el-table-column label="账号（姓名）" min-width="250">
             <template #default="{row}">
               <div v-for="item in row.accounts" :key="item" class="cred-account">
-                <span class="cred-account-text">{{ item }}</span>
+                <span class="cred-account-text">{{ formatAccount(item) }}</span>
                 <button class="copy-btn" title="复制账号" type="button" @click="handleCopyAccount(item)">
                   <CopyDocument class="copy-icon"/>
                 </button>
@@ -197,7 +197,8 @@ const ROLE_ABILITY = {
   '检验技师': '检验工作站、标本管理、检验项目字典、输血管理、危急值处置（限本科室）',
   '检查技师': '检查工作站、检查预约中心、检查设备与号源、检查项目字典、标本管理、危急值处置（限本科室）',
   '临床药师': '处方审核/点评、I 类切口预防用药点评、处方公示、抗菌药物分级目录与使用监测、合理用药知识库、麻精药品专册、取药队列（限本科室）',
-  '病案编码员': '病历查阅、病案管理、患者主索引、健康档案与 360、病案科室对应（不做临床书写）',
+  '病案编码员': '病历查阅、病案管理、患者主索引、健康档案与 360、上报科室代码对照（维护，不做临床书写）',
+  '统计上报员': '病案统计上报、上报科室代码对照（只读）',
   '病案质控员': '病历质控、专项质控、病历查阅、门诊日志、病案管理（限本科室）',
   '医保结算员': '医保结算清单、慢特病医保备案、目录对照、政策配置、合规审核台账、扣款飞检、支付渠道对账、资金账户、欠费管控、医保住院结算与 2304/2305 报盘（限本科室）',
   '审计统计员': 'BI 驾驶舱、运营统计报表、病案统计上报、绩效与成本核算、分组模拟、DIP 分组模拟、AI 运营问数、支付渠道对账、资金账户',
@@ -215,7 +216,7 @@ const ROLE_ABILITY = {
   '科护士长': SCHEDULE_NURSING_AREA_AUDITOR_ABILITY,
   '麻醉医师': '麻醉访视与术前评估、麻醉记录（生命体征时间轴）、PACU 复苏、术后随访、三方核查签名（登录后切「麻醉医师」岗）',
   '手术室护士': '器械清点（术前 → 关体前 → 关体后三轮）、三方核查签名、手术间与排台查看（登录后切「手术室护士」岗）',
-  '信息科管理员': '签名证书台账与办理（生成密钥对 / CA 在线申请 / 证书回填）、病案科室对应、用户/角色/菜单/字典/参数/日志审计',
+  '信息科管理员': '签名证书台账与办理（生成密钥对 / CA 在线申请 / 证书回填）、用户/角色/菜单/字典/参数/日志审计',
   '护理调配员': NURSING_DISPATCH_ABILITY,
   '医务调配员': '医师岗位归属调整（可填生效/失效日期，不改编制）+ 跨科室排门诊号源/急诊值班 + 排班总览，只排不自批',
   '院办值班管理员': '全院总值班、值班点位与值班类型配置、总值班日志（交班本）',
@@ -400,9 +401,9 @@ const credRows = [
   },
   {
     accounts: ['kangyao ( 康瑶  )'],
-    role: '病案编码员',
+    role: '病案编码员 / 统计上报员',
     dept: '病案室',
-    ability: '门诊病历查阅、患者主索引合并、健康档案与360（不做临床书写）'
+    ability: '病案编码员：病历查阅、病案管理、患者主索引、健康档案与 360、上报科室代码对照（维护）；切「统计上报员」= 病案统计上报 + 上报科室代码对照（只读）'
   },
   {
     accounts: ['hanyuwei ( 韩雨薇  )'],
@@ -429,6 +430,16 @@ const credRows = [
     ability: '患者常见问题维护、工单受理'
   },
 ]
+
+// 账号统一显示成「登录名 ( 姓名 )」：手工清单里有几个多敲了空格（`xuyan ( 许妍  )`），
+// 库里导出的又统一是单个空格，两段并在一张表里能看出参差，这里一次性抹平
+const formatAccount = (item) => {
+  const matched = String(item).match(/^([^(（]+)[(（](.*)[)）]$/)
+  if (!matched) {
+    return String(item).trim()
+  }
+  return `${matched[1].trim()} ( ${matched[2].replace(/[\s　]+/g, '')} )`
+}
 
 // 库里的全部员工账号（credAccounts 由 dev 库导出）→ 按「角色 + 科室」归成行，
 // 已在上面手工清单里出现的账号跳过（手工行带演示说明，不再重复列一遍）
@@ -493,21 +504,41 @@ const filteredCredRows = computed(() => {
   })
 })
 
-// 手工清单（演示链路）按原顺序置顶；库里的批量账号行按「角色 → 科室」中文序跟在后面
+// 排序的唯一目标是「同一角色必须挨在一起」：手工演示行所在角色按原文顺序置顶，
+// 其余角色按中文序；同一角色内手工科室在前、其余科室中文序；同科室手工行在前。
+// 之前手工段与批量段分开排（手工全部置顶、批量另排），同一个角色只要有手工行就会在下方再出现一块
+// （前台导诊、门诊办、护士都撞上过），角色列也就合并不了。
+const manualRoleRank = new Map()
+const manualDeptRank = new Map()
+credRows.forEach((row, i) => {
+  if (!manualRoleRank.has(row.role)) {
+    manualRoleRank.set(row.role, manualRoleRank.size)
+  }
+  if (!manualDeptRank.has(`${row.role}|${row.dept}`)) {
+    manualDeptRank.set(`${row.role}|${row.dept}`, i)
+  }
+})
+const roleSortKey = (row) => (manualRoleRank.has(row.role) ? [manualRoleRank.get(row.role), ''] : [manualRoleRank.size, row.role])
+const deptSortRank = (row) => (manualDeptRank.has(`${row.role}|${row.dept}`) ? manualDeptRank.get(`${row.role}|${row.dept}`) : Infinity)
+
 const sortedCredRows = computed(() => {
-  const manual = filteredCredRows.value.filter((row) => !row.bulk)
-  const bulk = filteredCredRows.value.filter((row) => row.bulk).slice()
-  bulk.sort((a, b) =>
-      a.role.localeCompare(b.role, 'zh-Hans-CN') || a.dept.localeCompare(b.dept, 'zh-Hans-CN'))
-  return [...manual, ...bulk]
+  const [roleRank, roleName] = [0, 1]
+  return filteredCredRows.value.slice().sort((a, b) => {
+    const ka = roleSortKey(a)
+    const kb = roleSortKey(b)
+    return (ka[roleRank] - kb[roleRank])
+        || String(ka[roleName]).localeCompare(String(kb[roleName]), 'zh-Hans-CN')
+        || (deptSortRank(a) - deptSortRank(b))
+        || a.dept.localeCompare(b.dept, 'zh-Hans-CN')
+        || (a.bulk ? 1 : 0) - (b.bulk ? 1 : 0)
+  })
 })
 
 // 跨行合并：一个角色一格（同角色下的多个科室都收在这一格下面），科室一格（可能挂多个账号）；
 // 「能做什么」不合并——每个科室行重复一遍，滚到角色块中间也一直能看出这一岗能干什么
 const credSpans = computed(() => {
   const list = sortedCredRows.value
-  // 只在同一段里合并（手工演示行 / 批量账号行各管各的），否则两段说明会串成一个格子
-  const sameRole = (i, j) => !!list[i].bulk === !!list[j].bulk && list[i].role === list[j].role
+  const sameRole = (i, j) => list[i].role === list[j].role
   const sameRoleDept = (i, j) => sameRole(i, j) && list[i].dept === list[j].dept
   // 同组首行给出组内行数，后续行给 0（交给上一行的 rowspan 覆盖）
   const spanAt = (i, same) => {

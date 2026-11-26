@@ -3,137 +3,130 @@
     <el-tabs v-model="activeTab">
       <!-- ==================== 一、科室 → 科目 对应 ==================== -->
       <el-tab-pane label="科室 → 上报科室代码" name="map">
-        <el-card ref="queryCardRef" class="query-card mb-3" shadow="never">
-          <div class="flex items-start justify-between gap-4">
-            <div class="min-w-0 flex-1">
-              <el-form :model="query" inline @submit.prevent>
-                <el-form-item label="科室（院内）">
-                  <el-tree-select
-                      v-model="query.deptId"
-                      :data="visibleDeptTree"
-                      :props="treeProps"
-                      check-strictly
-                      clearable
-                      data-testid="dept-select"
-                      default-expand-all
-                      filterable
-                      node-key="id"
-                      placeholder="选择科室，查看它的上报科室代码"
-                      style="width: 280px"
-                      @change="handleDeptChange"
-                  >
-                    <template #default="{ data }">
-                      <span class="flex w-full items-center gap-1 pr-2">
-                        <span class="truncate">{{ data.deptName }}</span>
-                        <span v-if="unmappedIds.has(String(data.id))" class="unmapped-dot"
-                              title="未配诊疗科目"/>
-                      </span>
-                    </template>
-                  </el-tree-select>
-                </el-form-item>
-                <el-form-item>
-                  <el-checkbox v-model="query.onlyUnmapped" @change="handleOnlyUnmappedChange">
-                    只看未配（{{ unmappedDepts.length }}）
-                  </el-checkbox>
-                </el-form-item>
-                <el-form-item>
-                  <el-button :icon="Search" type="primary" @click="handleQuery">查询</el-button>
-                  <el-button :icon="Refresh" @click="handleReset">重置</el-button>
-                </el-form-item>
-              </el-form>
-              <div class="text-[12px] leading-5 text-slate-500">
-                上报口径：医保结算清单的入院/出院/诊断科别、卫统与全国医院数据上报的「科室代码」，按
-                《医疗卫生机构业务科室分类与代码》(CT08.00.002) 填，形如 <span class="font-mono">A03.01</span>；
-                病案首页本身只有入院/转科/出院科别，不填这个码。一个科室可对应多个代码，上报取「主科目」。
+        <div class="dept-subject-layout">
+          <div class="dept-tree-panel">
+            <div class="mb-3 flex items-center justify-between">
+              <span class="font-medium">科室列表</span>
+              <div class="flex items-center">
+                <el-button :icon="Expand" bg size="small" text @click="handleExpandAll">展开</el-button>
+                <el-button :icon="Fold" bg size="small" text @click="handleCollapseAll">收缩</el-button>
+                <el-button :icon="Refresh" bg size="small" text @click="handleRefresh">刷新</el-button>
               </div>
             </div>
-            <div class="flex shrink-0 items-start gap-3">
+
+            <div class="mb-3">
+              <el-input
+                  v-model="deptKeyword"
+                  :prefix-icon="Search"
+                  clearable
+                  placeholder="搜索科室名称 / 科室编码"
+                  size="small"
+              />
+            </div>
+
+            <div class="dept-tree-scroll">
+              <el-tree
+                  ref="deptTreeRef"
+                  :data="deptTree"
+                  :expand-on-click-node="false"
+                  :filter-node-method="filterDeptNode"
+                  :indent="10"
+                  :props="treeProps"
+                  data-testid="dept-tree"
+                  default-expand-all
+                  highlight-current
+                  node-key="id"
+                  @node-click="handleTreeClick"
+              >
+                <template #default="{ data }">
+                  <span class="flex w-full items-center gap-1 pr-2">
+                    <span class="truncate">{{ data.deptName }}</span>
+                    <span v-if="unmappedIds.has(String(data.id))" class="unmapped-dot"
+                          title="未配上报科室代码"/>
+                  </span>
+                </template>
+              </el-tree>
+            </div>
+          </div>
+
+          <div class="dept-list-panel">
+            <div class="dept-list-head">
+              <div class="flex min-w-0 items-center gap-2">
+                <span class="font-medium">{{ currentDept ? currentDept.deptName : '上报科室代码' }}</span>
+                <el-tag v-if="currentDept?.deptCode" size="small" type="info">{{ currentDept.deptCode }}</el-tag>
+                <template v-if="deptSubjects.length">
+                  <span class="text-[12px] text-slate-500">
+                    主科目：<span class="font-medium text-slate-700">{{ currentPrimary ? reportCode(currentPrimary.subjectCode) + ' ' + currentPrimary.subjectName : '未设置' }}</span>
+                  </span>
+                  <span class="text-[12px] text-slate-400">共 {{ deptSubjects.length }} 条</span>
+                </template>
+              </div>
               <el-button
                   v-perm="'org:medSubject:add'"
                   :icon="Plus"
                   data-testid="dept-add-subject"
+                  size="small"
                   type="primary"
                   @click="openAddDialog"
               >
                 新增映射
               </el-button>
             </div>
-          </div>
-        </el-card>
-
-        <el-card class="table-card" shadow="never">
-          <el-table
-              v-if="currentDept"
-              v-loading="mapLoading"
-              :data="deptSubjects"
-              :max-height="tableMaxHeight"
-              data-testid="dept-map-table"
-              stripe
-          >
-            <el-table-column label="科室（院内）" width="210">
-              <template #default>
-                <div class="flex items-center gap-1">
-                  <span class="truncate">{{ currentDept.deptName }}</span>
-                  <el-tag v-if="currentDept.deptCode" size="small" type="info">{{ currentDept.deptCode }}</el-tag>
-                </div>
-              </template>
-            </el-table-column>
-            <el-table-column label="上报科室代码（CT08.00.002）" min-width="280">
-              <template #default="{ row }">
-                <span class="mr-2 font-mono text-slate-500">{{ reportCode(row.subjectCode) }}</span>
-                <span :data-testid="`subj-name-${row.subjectCode}`">{{ row.subjectName }}</span>
-              </template>
-            </el-table-column>
-            <el-table-column label="上级科目" min-width="140">
-              <template #default="{ row }">
-                <span class="text-slate-600">{{ row.parentName || '—' }}</span>
-              </template>
-            </el-table-column>
-            <el-table-column label="主科目" width="100">
-              <template #default="{ row }">
-                <el-tag v-if="row.isPrimary === 1" size="small" type="success">主科目</el-tag>
-                <span v-else class="text-slate-400">—</span>
-              </template>
-            </el-table-column>
-            <el-table-column fixed="right" label="操作" width="180">
-              <template #default="{ row }">
-                <el-button
-                    v-if="row.isPrimary !== 1"
-                    v-perm="'org:medSubject:add'"
-                    link
-                    type="primary"
-                    @click="handleSetPrimary(row)"
-                >
-                  设为主科目
-                </el-button>
-                <el-button
-                    v-perm="'org:medSubject:add'"
-                    link
-                    type="danger"
-                    @click="handleRemoveSubject(row)"
-                >
-                  移除
-                </el-button>
-              </template>
-            </el-table-column>
-          </el-table>
-          <div v-else class="px-6 py-16">
-            <el-empty description="选择科室查看它的对应关系，或直接点「新增映射」挑科室和科目"/>
-          </div>
-          <div ref="footerRef" class="list-footer flex items-center justify-between gap-4">
-            <div class="flex flex-wrap items-center gap-2 text-[13px] text-slate-600">
-              <template v-if="currentDept">
-                <span class="font-medium">{{ currentDept.deptName }}</span>
-                <span class="text-slate-400">→</span>
-                <span v-if="currentPrimary" class="text-slate-600">
-                  主科目 {{ reportCode(currentPrimary.subjectCode) }} {{ currentPrimary.subjectName }}
-                </span>
-                <span v-else class="text-red-500">未设主科目</span>
-              </template>
+            <div class="dept-table-body">
+              <el-table
+                  v-loading="mapLoading"
+                  :data="deptSubjects"
+                  :empty-text="currentDept ? '暂无数据' : '请选择左侧科室'"
+                  data-testid="dept-map-table"
+                  height="100%"
+                  stripe
+              >
+                <el-table-column label="上报科室代码（CT08.00.002）" min-width="250">
+                  <template #default="{ row }">
+                    <span class="font-mono">{{ reportCode(row.subjectCode) }}</span>
+                  </template>
+                </el-table-column>
+                <el-table-column label="科目名称" min-width="240">
+                  <template #default="{ row }">
+                    <span :data-testid="`subj-name-${row.subjectCode}`">{{ row.subjectName }}</span>
+                  </template>
+                </el-table-column>
+                <el-table-column label="上级科目" min-width="150">
+                  <template #default="{ row }">
+                    <span class="text-slate-600">{{ row.parentName || '—' }}</span>
+                  </template>
+                </el-table-column>
+                <el-table-column label="主科目" width="100">
+                  <template #default="{ row }">
+                    <el-tag v-if="row.isPrimary === 1" size="small" type="success">主科目</el-tag>
+                    <span v-else class="text-slate-400">—</span>
+                  </template>
+                </el-table-column>
+                <el-table-column fixed="right" label="操作" width="180">
+                  <template #default="{ row }">
+                    <el-button
+                        v-if="row.isPrimary !== 1"
+                        v-perm="'org:medSubject:add'"
+                        link
+                        type="primary"
+                        @click="handleSetPrimary(row)"
+                    >
+                      设为主科目
+                    </el-button>
+                    <el-button
+                        v-perm="'org:medSubject:add'"
+                        link
+                        type="danger"
+                        @click="handleRemoveSubject(row)"
+                    >
+                      移除
+                    </el-button>
+                  </template>
+                </el-table-column>
+              </el-table>
             </div>
-            <span class="shrink-0 text-[12px] text-slate-500">共 {{ deptSubjects.length }} 条</span>
           </div>
-        </el-card>
+        </div>
       </el-tab-pane>
 
       <!-- ==================== 二、诊疗科目名录 ==================== -->
@@ -246,9 +239,9 @@
 </template>
 
 <script lang="js" setup>
-import {computed, onMounted, reactive, ref } from 'vue'
+import {computed, nextTick, onMounted, ref, watch} from 'vue'
 import {ElMessage, ElMessageBox} from 'element-plus'
-import {Plus, Refresh, Search} from '@element-plus/icons-vue'
+import {Plus, Search, Expand, Fold, Refresh} from '@element-plus/icons-vue'
 import {
   deleteMedSubject,
   getDepartmentTree,
@@ -257,11 +250,8 @@ import {
   getUnmappedDepts,
   saveDeptSubjectMap,
 } from '@/api/system'
-import {useTableMaxHeight} from '@/lib/useTableMaxHeight'
 import MedSubjectAdd from '@/views/system/medSubject/MedSubjectAdd.vue'
 import SubjectEdit from '@/views/system/medSubject/SubjectEdit.vue'
-
-const {queryCardRef, footerRef, tableMaxHeight} = useTableMaxHeight()
 
 const activeTab = ref('map')
 
@@ -270,8 +260,8 @@ const deptTree = ref([])
 const currentDept = ref(null)
 const deptSubjects = ref([])
 const mapLoading = ref(false)
-
-const query = reactive({deptId: '', onlyUnmapped: false})
+const deptTreeRef = ref(null)
+const deptKeyword = ref('')
 
 // 未配科目的临床科室（后端已排除“内科系统”这类有下级的分组目录节点）
 const unmappedDepts = ref([])
@@ -289,16 +279,46 @@ const treeProps = {
   disabled: (data) => (data.children || []).length > 0,
 }
 
-const visibleDeptTree = computed(() => {
-  if (!query.onlyUnmapped) return deptTree.value
-  const filter = (nodes) => (nodes || []).map(n => {
-    const children = filter(n.children)
-    const selfHit = unmappedIds.value.has(String(n.id))
-    if (!selfHit && !children.length) return null
-    return {...n, children}
-  }).filter(Boolean)
-  return filter(deptTree.value)
-})
+// 左侧树筛选：名称或科室编码命中；只过滤显示，不改树结构
+const filterDeptNode = (value, data) => {
+  const kw = String(value || '').trim()
+  if (!kw) return true
+  return String(data.deptName || '').includes(kw) || String(data.deptCode || '').includes(kw)
+}
+
+watch(deptKeyword, (v) => deptTreeRef.value?.filter(v))
+
+// 展开 / 收缩 / 刷新：与「菜单管理」左树同一套交互
+const getAllDeptKeys = (nodes) => {
+  const keys = []
+  const walk = (list) => (list || []).forEach(n => {
+    keys.push(n.id)
+    walk(n.children)
+  })
+  walk(nodes)
+  return keys
+}
+
+const setAllExpanded = (expanded) => {
+  getAllDeptKeys(deptTree.value).forEach(key => {
+    const node = deptTreeRef.value?.getNode(key)
+    if (node) node.expanded = expanded
+  })
+}
+
+const handleExpandAll = () => setAllExpanded(true)
+const handleCollapseAll = () => setAllExpanded(false)
+
+const handleRefresh = async () => {
+  deptKeyword.value = ''
+  await Promise.all([loadDeptTree(), loadUnmapped()])
+  await nextTick()
+  deptTreeRef.value?.filter('')
+  if (currentDept.value) {
+    await loadDeptMap(currentDept.value.id ?? currentDept.value.deptId)
+    deptTreeRef.value?.setCurrentKey(currentDept.value.id ?? currentDept.value.deptId)
+  }
+}
 
 // ---------------- 科目 ----------------
 const subjectTree = ref([])
@@ -374,8 +394,15 @@ const findDeptNode = (nodes, id) => {
 const selectDept = async (id) => {
   const node = findDeptNode(deptTree.value, id)
   if (!node) return
-  query.deptId = node.id
   await handleDeptChange(node.id)
+  await nextTick()
+  deptTreeRef.value?.setCurrentKey(node.id)
+}
+
+// 分组目录节点（内科系统、外科系统…）本身不参与上报，点了也不出数据
+const handleTreeClick = async (data) => {
+  if ((data.children || []).length) return
+  await handleDeptChange(data.id)
 }
 
 const handleDeptChange = async (id) => {
@@ -401,32 +428,6 @@ const loadDeptMap = async (deptId) => {
   } catch (error) /* 错误已由全局拦截器统一提示，无需在此重复弹窗 */ {
   } finally {
     mapLoading.value = false
-  }
-}
-
-const handleOnlyUnmappedChange = async (checked) => {
-  if (!checked) return
-  const first = unmappedDepts.value[0]?.deptId
-  if (first) await selectDept(String(first))
-  else if (currentDept.value && !unmappedIds.value.has(String(currentDept.value.id))) {
-    query.deptId = ''
-    currentDept.value = null
-    deptSubjects.value = []
-  }
-}
-
-const handleQuery = async () => {
-  await Promise.all([loadUnmapped(), currentDept.value ? loadDeptMap(currentDept.value.id) : Promise.resolve()])
-}
-
-const handleReset = async () => {
-  query.onlyUnmapped = false
-  const first = unmappedDepts.value[0]?.deptId || firstLeafDeptId(deptTree.value)
-  if (first) await selectDept(String(first))
-  else {
-    query.deptId = ''
-    currentDept.value = null
-    deptSubjects.value = []
   }
 }
 
@@ -529,12 +530,63 @@ const handleDeleteSubject = async (row) => {
 </script>
 
 <style scoped>
+/* 与「系统管理 → 菜单管理」同风格：左侧固定宽树面板 + 右侧列表面板，纯边框白底，不用 el-card */
+.dept-subject-layout {
+  display: flex;
+  gap: 16px;
+  height: calc(100vh - 200px);
+  min-height: 560px;
+}
+
+.dept-tree-panel {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  width: 384px;
+  padding: 16px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.dept-tree-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+
+.dept-list-panel {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.dept-list-head {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.dept-table-body {
+  flex: 1;
+  min-height: 0;
+}
+
 .unmapped-dot {
   display: inline-block;
+  flex-shrink: 0;
   width: 6px;
   height: 6px;
   border-radius: 50%;
   background-color: #ef4444;
-  flex-shrink: 0;
 }
 </style>

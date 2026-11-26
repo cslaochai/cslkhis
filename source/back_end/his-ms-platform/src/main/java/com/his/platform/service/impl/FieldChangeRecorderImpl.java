@@ -136,9 +136,17 @@ public class FieldChangeRecorderImpl implements FieldChangeRecorder {
     @Override
     public String record(String bizType, Object bizId, String bizNo, String bizName,
                          Object oldObj, Object newObj, List<FieldSpec> specs) {
+        return record(bizType, bizId, bizNo, bizName, oldObj, newObj, specs, null);
+    }
+
+    @Override
+    public String record(String bizType, Object bizId, String bizNo, String bizName,
+                         Object oldObj, Object newObj, List<FieldSpec> specs, String reason) {
         if (!TextUtil.hasText(bizType) || bizId == null || specs == null || specs.isEmpty()) {
             return null;
         }
+        // 原因整批共用：空串归一成 null，避免库里出现"有原因=空白"的行
+        String remark = TextUtil.trimToNull(reason);
         try {
             boolean insert = oldObj == null;
             List<SysFieldChangeLog> rows = new ArrayList<>();
@@ -151,7 +159,7 @@ public class FieldChangeRecorderImpl implements FieldChangeRecorder {
                     continue;
                 }
                 rows.add(build(bizType, bizId, bizNo, bizName, spec, oldText, newText,
-                        insert ? TYPE_INSERT : TYPE_UPDATE, null));
+                        insert ? TYPE_INSERT : TYPE_UPDATE, remark));
                 if (rows.size() >= MAX_ROWS) {
                     break;
                 }

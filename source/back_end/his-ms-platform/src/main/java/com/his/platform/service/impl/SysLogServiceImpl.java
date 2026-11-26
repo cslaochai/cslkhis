@@ -105,6 +105,10 @@ public class SysLogServiceImpl implements SysLogService {
             case "EMPLOYEE" -> "员工档案";
             case "MEDICAL_RECORD" -> "门诊病历";
             case "INPATIENT_RECORD" -> "住院文书";
+            // 系统管理域三类配置变更（2026-11-26 接入）：参数改动影响全院判定口径，
+            // 字典改动影响所有页面的下拉与码值翻译，两者都必须能按对象类型单独筛。
+            case "SYS_CONFIG" -> "系统参数";
+            case "SYS_DICT" -> "数据字典";
             default -> v;
         };
     }

@@ -61,4 +61,9 @@ public class SysDictDataUpsertDTO {
      */
     @AllowedValues(values = {"0", "1"}, message = "状态取值不合法")
     private Integer status;
+
+    /**
+     * 变更原因（审计登记用，不落 sys_dict_data；只写 sys_field_change_log.remark）
+     */
+    private String reason;
 }

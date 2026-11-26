@@ -18,4 +18,7 @@ public class LabCriticalConfigUpsertDTO {
      * 危急值无人接收时的兜底接收人（用户名或员工ID），可留空表示不兜底
      */
     private String criticalValueFallbackReceiver;
+
+    /** 变更原因（审计登记用，不落 sys_config；只写 sys_field_change_log.remark） */
+    private String reason;
 }

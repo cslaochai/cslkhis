@@ -20,7 +20,7 @@
       </el-form-item>
     </el-form>
     <template #footer>
-      <el-button v-perm="'medtech:endoscopy:edit'" :loading="actLoading" type="primary" @click="saveExecute">保存
+      <el-button v-perm="'medtech:endoscopy:exec'" :loading="actLoading" type="primary" @click="saveExecute">保存
       </el-button>
       <el-button @click="visible = false">取消</el-button>
     </template>

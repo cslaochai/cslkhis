@@ -34,15 +34,18 @@ public interface BizPatientService extends IService<BizPatient> {
                                              List<Long> tagPatientIds);
 
     /**
-     * 分页查询患者列表（标签过滤 + 今日就诊置顶）
+     * 分页查询患者列表（标签过滤 + 今日就诊置顶 + 档案视图科室收口）
      *
      * @param scope 就诊范围权重（今日就诊 / 我的今日就诊）；为空则按建档时间倒序。
      *              排序必须在**分页之前**生效，否则今日患者会被其他档案挤出第一页，
      *              前端再排也来不及。
+     * @param scopeDeptIds 档案视图受限岗位被授权的科室集合；为空 / null 表示不收口
+     *              （全院角色或工作站候选检索），按最近就诊科室 IN 收口。
      */
     PageResult<BizPatient> selectPatientPage(String patientName, String phone, String patientNo,
                                              String medicalInsuranceType, String keyword, int pageNum, int pageSize,
-                                             List<Long> tagPatientIds, PatientSearchScopeDTO scope);
+                                             List<Long> tagPatientIds, PatientSearchScopeDTO scope,
+                                             List<Long> scopeDeptIds);
 
     /**
      * 根据患者号查询患者

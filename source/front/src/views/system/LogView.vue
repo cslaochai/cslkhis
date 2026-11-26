@@ -299,6 +299,10 @@
                 <el-tag :type="changeTypeTagType(row.changeType)" size="small">{{ row.changeTypeText }}</el-tag>
               </template>
             </el-table-column>
+            <!-- 变更原因：参数/字典/用户三类配置保存时登记的"为什么改"，等保访谈与错配置回溯的第一句话 -->
+            <el-table-column label="变更原因" min-width="180" prop="remark" show-overflow-tooltip>
+              <template #default="{ row }">{{ row.remark || '—' }}</template>
+            </el-table-column>
             <el-table-column label="操作人" prop="operatorName" width="100"/>
             <el-table-column label="科室" prop="deptName" width="110"/>
             <el-table-column fixed="right" label="操作" width="90">

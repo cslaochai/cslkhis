@@ -123,7 +123,7 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
             SysUser created = selectByUserName(upsertDTO.getUserName());
             if (created != null) {
                 fieldChangeRecorder.record(USER, created.getId(), created.getUserName(),
-                        created.getRealName(), null, created, USER_FIELDS);
+                        created.getRealName(), null, created, USER_FIELDS, upsertDTO.getReason());
             }
             return;
         }
@@ -151,7 +151,7 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
         SysUser after = this.getById(upsertDTO.getId());
         if (after != null) {
             fieldChangeRecorder.record(USER, after.getId(), after.getUserName(),
-                    after.getRealName(), existingUser, after, USER_FIELDS);
+                    after.getRealName(), existingUser, after, USER_FIELDS, upsertDTO.getReason());
         }
     }
 

@@ -109,19 +109,25 @@ public interface BizDrugStockMapper extends BaseMapper<BizDrugStock> {
                         @Param("stockRoom") Integer stockRoom);
 
     /**
-     * FEFO 取可扣减批次（有效期近的先扣），行锁防并发超扣
+     * FEFO 取可扣减批次（有效期近的先扣），行锁防并发超扣。
+     *
+     * <p>必须排掉过期批次：FEFO 按效期升序，过期批次正好排在最前，不加这个条件就会
+     * 「过期药优先发给患者」——2026-11-26 仿真实测，过期批次 10 → 8。
      */
     @Select("SELECT * FROM biz_drug_stock " +
             "WHERE drug_id = #{drugId} AND stock_room = #{stockRoom} AND del_flag = 0 AND quantity > 0 " +
+            "AND (expiry_date IS NULL OR expiry_date >= CURDATE()) " +
             "ORDER BY expiry_date ASC, id ASC FOR UPDATE")
     List<BizDrugStock> selectFefoBatchesForUpdate(@Param("drugId") Long drugId,
                                                   @Param("stockRoom") Integer stockRoom);
 
     /**
-     * 该药品某库位全部批次（不过滤数量），FEFO 顺序 + 行锁：开方锁库/撤方解锁用
+     * 该药品某库位全部批次（不过滤数量），FEFO 顺序 + 行锁：开方锁库/撤方解锁用。
+     * 同样排掉过期批次：过期货不该被开方锁住占着可用量。
      */
     @Select("SELECT * FROM biz_drug_stock " +
             "WHERE drug_id = #{drugId} AND stock_room = #{stockRoom} AND del_flag = 0 " +
+            "AND (expiry_date IS NULL OR expiry_date >= CURDATE()) " +
             "ORDER BY expiry_date ASC, id ASC FOR UPDATE")
     List<BizDrugStock> selectBatchesByDrugForUpdate(@Param("drugId") Long drugId,
                                                     @Param("stockRoom") Integer stockRoom);

@@ -63,6 +63,36 @@ public final class SensitiveMaskUtil {
     }
 
     /**
+     * 姓名：留姓（首字），其余打星。单字名全遮。例：张三 → 张*；欧阳修 → 欧**。
+     */
+    public static String maskName(String v) {
+        String s = TextUtil.trimToEmpty(v);
+        if (s.isEmpty()) {
+            return null;
+        }
+        int len = s.length();
+        if (len == 1) {
+            return "*";
+        }
+        return s.substring(0, 1) + repeat('*', len - 1);
+    }
+
+    /**
+     * 住址：留前 6 个字（省/市/区县/小区片区），后面全星；不足 6 字全留。
+     */
+    public static String maskAddress(String v) {
+        String s = TextUtil.trimToEmpty(v);
+        if (s.isEmpty()) {
+            return null;
+        }
+        int len = s.length();
+        if (len <= 6) {
+            return s;
+        }
+        return s.substring(0, 6) + repeat('*', len - 6);
+    }
+
+    /**
      * 中间打码：保留前 head 位 + 后 tail 位，中间补 {@code *}。
      *
      * <p>长度不足 head+tail 时退化为只留首尾各一位，避免出现「全露出」或「负数星号」。

@@ -108,4 +108,13 @@ public class SysUserUpsertDTO {
      * 专家号价格，单位：元
      */
     private BigDecimal expertPrice;
+
+    /**
+     * 变更原因（审计登记用，不落 sys_user）。
+     *
+     * <p>账号是权限的载体：新开一个能登录的账号、把停用的人重新启用，都要能回答"谁申请的、为什么"。
+     * 只写进 sys_field_change_log.remark，故这里不挂 @NotBlank —— 脚本/内部调用没有原因不应 400，
+     * 必填由界面表单把关。
+     */
+    private String reason;
 }

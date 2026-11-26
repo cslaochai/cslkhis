@@ -38,4 +38,7 @@ public class EmergencyConfigUpsertDTO {
     @NotNull(message = "留观最大时长不能为空")
     @Min(value = 0, message = "留观最大时长不能为负数")
     private Integer observationMaxHours;
+
+    /** 变更原因（审计登记用，不落 sys_config；只写 sys_field_change_log.remark） */
+    private String reason;
 }

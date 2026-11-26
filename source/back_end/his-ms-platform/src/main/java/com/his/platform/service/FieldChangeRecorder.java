@@ -40,6 +40,19 @@ public interface FieldChangeRecorder {
                   Object oldObj, Object newObj, List<FieldSpec> specs);
 
     /**
+     * 同上，额外登记本次变更的原因（落 {@code remark}）。
+     *
+     * <p>原因挂在<b>整批变更</b>上而不是某个字段上：配置改错时第一句要问"谁为什么改"，
+     * 这句话在这本账里必须能查到。调用方没原因就传 null（脚本/内部调用不强制），
+     * 不写空串占位 —— 空串与"没有原因"在审计里是两件事。
+     *
+     * <p>列宽 VARCHAR(500)，超长由 record impl 截断，入参侧不做 @Size 校验
+     * （粘贴长说明不该变成 400）。
+     */
+    String record(String bizType, Object bizId, String bizNo, String bizName,
+                  Object oldObj, Object newObj, List<FieldSpec> specs, String reason);
+
+    /**
      * 记一条非字段级的操作留痕（创建 / 提交 / 归档 / 作废这类"对对象做了什么"）。
      *
      * <p>与 {@code SysAuditLogService} 的分工：那本账记"谁对哪个对象做了什么"，

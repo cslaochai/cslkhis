@@ -70,7 +70,7 @@ public class EndoscopyController {
      * 患者到检签到：状态从已登记推进到已签到。
      * 用于工作站列表行的「签到」动作，是内镜检查开始前的排队确认环节。
      */
-    @PreAuthorize("hasAuthority('medtech:endoscopy:edit')")
+    @PreAuthorize("hasAuthority('medtech:endoscopy:exec')")
     @Operation(summary = "签到")
     @PostMapping("/checkIn")
     public Result<EndoscopyVO.DetailVO> checkIn(@Valid @RequestBody EndoscopyDTO.IdOnly dto) {
@@ -82,7 +82,7 @@ public class EndoscopyController {
      * 回写检查执行结果：内镜医师、镜下所见，肠镜带 Boston 肠道准备评分、胃镜带幽门螺杆菌结果，
      * 两者按内镜类型互斥。用于签到后的「执行」弹框保存，检查中可再次保存补全所见。
      */
-    @PreAuthorize("hasAuthority('medtech:endoscopy:edit')")
+    @PreAuthorize("hasAuthority('medtech:endoscopy:exec')")
     @Operation(summary = "执行检查（医师/所见/活检信息）")
     @PostMapping("/execute")
     public Result<EndoscopyVO.DetailVO> execute(@Valid @RequestBody EndoscopyDTO.Execute dto) {
@@ -94,7 +94,7 @@ public class EndoscopyController {
      * 活检标本送病理：生成病理单并回填病理号，同一检查重复送检由服务端拒绝。
      * 用于工作站检查中行的「送病理」，是内镜与病理两个亚专业之间的联动点。
      */
-    @PreAuthorize("hasAuthority('medtech:endoscopy:edit')")
+    @PreAuthorize("hasAuthority('medtech:endoscopy:exec')")
     @Operation(summary = "活检送病理（生成病理单并回填病理号，重复送检拒绝）")
     @PostMapping("/sendBiopsy")
     public Result<EndoscopyVO.DetailVO> sendBiopsy(@Valid @RequestBody EndoscopyDTO.BiopsySend dto) {
@@ -106,7 +106,7 @@ public class EndoscopyController {
      * 出具内镜报告：镜下诊断与报告正文落库，状态从检查中推进到已出报告。
      * 用于工作站「报告」弹框提交。
      */
-    @PreAuthorize("hasAuthority('medtech:endoscopy:edit')")
+    @PreAuthorize("hasAuthority('medtech:endoscopy:write')")
     @Operation(summary = "出具报告")
     @PostMapping("/report")
     public Result<EndoscopyVO.DetailVO> report(@Valid @RequestBody EndoscopyDTO.Report dto) {
@@ -118,7 +118,7 @@ public class EndoscopyController {
      * 审核内镜报告：审核人与报告人不得为同一人，由服务端硬校验。
      * 用于工作站待审核行的「审核」，是发布前的质控环节。
      */
-    @PreAuthorize("hasAuthority('medtech:endoscopy:edit')")
+    @PreAuthorize("hasAuthority('medtech:endoscopy:audit')")
     @Operation(summary = "审核（审核人不得是报告人本人）")
     @PostMapping("/audit")
     public Result<EndoscopyVO.DetailVO> audit(@Valid @RequestBody EndoscopyDTO.Audit dto) {
@@ -130,7 +130,7 @@ public class EndoscopyController {
      * 发布内镜报告：仅已审核的报告可发布，发布后申请方才能查看结论。
      * 用于工作站已审核行的「发布」。
      */
-    @PreAuthorize("hasAuthority('medtech:endoscopy:edit')")
+    @PreAuthorize("hasAuthority('medtech:endoscopy:publish')")
     @Operation(summary = "发布报告")
     @PostMapping("/publish")
     public Result<EndoscopyVO.DetailVO> publish(@Valid @RequestBody EndoscopyDTO.Publish dto) {

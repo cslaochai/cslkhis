@@ -8,7 +8,6 @@ import lombok.Data;
  */
 @Data
 public class HospitalInfoUpsertDTO {
-
     /** 手术医院 */
     @NotBlank(message = "医院名称不能为空")
     private String hospitalName;
@@ -20,4 +19,7 @@ public class HospitalInfoUpsertDTO {
     private String hospitalPhone;
 
     private String hospitalEmail;
+
+    /** 变更原因（审计登记用，不落 sys_config；只写 sys_field_change_log.remark） */
+    private String reason;
 }

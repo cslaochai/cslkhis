@@ -8,6 +8,7 @@
         {{ batchMeta.bizName || batchMeta.bizNo || batchMeta.bizId }}
       </el-descriptions-item>
       <el-descriptions-item label="批次号">{{ batchMeta.batchNo }}</el-descriptions-item>
+      <el-descriptions-item :span="2" label="变更原因">{{ batchMeta.remark || '—（未登记原因）' }}</el-descriptions-item>
     </el-descriptions>
     <el-table :data="batchRows" border class="batch-table" data-testid="field-batch-table" size="small" stripe>
       <el-table-column label="字段" prop="fieldLabel" width="140"/>

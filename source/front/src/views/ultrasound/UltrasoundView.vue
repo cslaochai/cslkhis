@@ -79,22 +79,22 @@
         <el-table-column fixed="right" label="操作" width="330">
           <template #default="{ row }">
             <el-button link type="primary" @click="openDetail(row)">详情</el-button>
-            <el-button v-if="Number(row.status) === 1" v-perm="'medtech:ultrasound:edit'" link type="warning"
+            <el-button v-if="Number(row.status) === 1" v-perm="'medtech:ultrasound:exec'" link type="warning"
                        @click="checkIn(row)">签到
             </el-button>
-            <el-button v-if="[2, 3].includes(Number(row.status))" v-perm="'medtech:ultrasound:edit'" link type="primary"
+            <el-button v-if="[2, 3].includes(Number(row.status))" v-perm="'medtech:ultrasound:exec'" link type="primary"
                        @click="openExecute(row)">执行
             </el-button>
-            <el-button v-if="[3].includes(Number(row.status))" v-perm="'medtech:ultrasound:edit'" link type="primary"
+            <el-button v-if="[3].includes(Number(row.status))" v-perm="'medtech:ultrasound:exec'" link type="primary"
                        @click="openMeasures(row)">测量值
             </el-button>
-            <el-button v-if="Number(row.status) === 3" v-perm="'medtech:ultrasound:edit'" link type="primary"
+            <el-button v-if="Number(row.status) === 3" v-perm="'medtech:ultrasound:write'" link type="primary"
                        @click="openReport(row)">出报告
             </el-button>
-            <el-button v-if="Number(row.status) === 4" v-perm="'medtech:ultrasound:edit'" link type="warning"
+            <el-button v-if="Number(row.status) === 4" v-perm="'medtech:ultrasound:audit'" link type="warning"
                        @click="doAudit(row)">审核
             </el-button>
-            <el-button v-if="Number(row.status) === 5" v-perm="'medtech:ultrasound:edit'" link type="success"
+            <el-button v-if="Number(row.status) === 5" v-perm="'medtech:ultrasound:publish'" link type="success"
                        @click="doPublish(row)">发布
             </el-button>
             <el-button v-if="![6, 7].includes(Number(row.status))" v-perm="'medtech:ultrasound:delete'" link
@@ -150,7 +150,7 @@
       <el-button v-perm="'medtech:ultrasound:add'" :icon="Plus" class="mt-2" size="small" @click="addMeasure">加测量项
       </el-button>
       <template #footer>
-        <el-button v-perm="['medtech:ultrasound:add', 'medtech:ultrasound:edit']" :loading="actLoading" type="primary"
+        <el-button v-perm="'medtech:ultrasound:exec'" :loading="actLoading" type="primary"
                    @click="saveMeasures">保存（整单覆盖）
         </el-button>
         <el-button @click="measureVisible = false">取消</el-button>

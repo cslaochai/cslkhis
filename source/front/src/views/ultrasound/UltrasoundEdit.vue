@@ -21,7 +21,7 @@
       </el-form-item>
     </el-form>
     <template #footer>
-      <el-button v-perm="['medtech:ultrasound:add', 'medtech:ultrasound:edit']" :loading="editLoading" type="primary"
+      <el-button v-perm="'medtech:ultrasound:add'" :loading="editLoading" type="primary"
                  @click="saveRecord">保存
       </el-button>
       <el-button @click="visible = false">取消</el-button>

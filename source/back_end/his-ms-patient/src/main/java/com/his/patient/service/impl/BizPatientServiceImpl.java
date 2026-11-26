@@ -36,6 +36,7 @@ import com.his.common.entity.CurrentUser;
 import com.his.common.enums.MaskEnum;
 import com.his.common.support.FieldSpec;
 import com.his.common.utils.UserUtils;
+import com.his.spi.service.DeptScopeService;
 import com.his.spi.service.DictCacheService;
 import com.his.spi.service.FieldChangeFacadeService;
 import com.his.spi.service.PasswordCipherFacadeService;
@@ -134,6 +135,10 @@ public class BizPatientServiceImpl extends ServiceImpl<BizPatientMapper, BizPati
      */
     private final RegistFacadeService registFacadeService;
     /**
+     * 科室数据范围端口（档案视图按授权科室收口；全院角色 / 候选检索不收口）
+     */
+    private final DeptScopeService deptScopeService;
+    /**
      * 「要不要看今日就诊」的判定（按当前登录角色的岗位性质）。
      *
      * <p>身份由它自己从 SecurityContext 取，调用方不传任何参数 ——
@@ -197,7 +202,7 @@ public class BizPatientServiceImpl extends ServiceImpl<BizPatientMapper, BizPati
     @Override
     public PageResult<BizPatient> selectPatientPage(String patientName, String phone, String patientNo,
                                                     String medicalInsuranceType, String keyword, int pageNum, int pageSize) {
-        return selectPatientPage(patientName, phone, patientNo, medicalInsuranceType, keyword, pageNum, pageSize, null, null);
+        return selectPatientPage(patientName, phone, patientNo, medicalInsuranceType, keyword, pageNum, pageSize, null, null, null);
     }
 
     @Override
@@ -205,19 +210,24 @@ public class BizPatientServiceImpl extends ServiceImpl<BizPatientMapper, BizPati
                                                     String medicalInsuranceType, String keyword, int pageNum, int pageSize,
                                                     List<Long> tagPatientIds) {
         return selectPatientPage(patientName, phone, patientNo, medicalInsuranceType, keyword, pageNum, pageSize,
-                tagPatientIds, null);
+                tagPatientIds, null, null);
     }
 
     @Override
     public PageResult<BizPatient> selectPatientPage(String patientName, String phone, String patientNo,
                                                     String medicalInsuranceType, String keyword, int pageNum, int pageSize,
-                                                    List<Long> tagPatientIds, PatientSearchScopeDTO scope) {
+                                                    List<Long> tagPatientIds, PatientSearchScopeDTO scope,
+                                                    List<Long> scopeDeptIds) {
         LambdaQueryWrapper<BizPatient> wrapper = new LambdaQueryWrapper<>();
         wrapper.like(TextUtil.hasText(patientName), BizPatient::getPatientName, patientName)
                 .like(TextUtil.hasText(phone), BizPatient::getPhone, phone)
                 .like(TextUtil.hasText(patientNo), BizPatient::getPatientNo, patientNo)
                 .eq(TextUtil.hasText(medicalInsuranceType), BizPatient::getMedicalInsuranceType, medicalInsuranceType)
                 .in(tagPatientIds != null && !tagPatientIds.isEmpty(), BizPatient::getId, tagPatientIds);
+        // 档案视图受限岗位：只看最近就诊科室落在授权科室集合内的患者。
+        // 候选检索（工作站选患者）与全院角色不传集合，跨科检索身份，不收口。
+        wrapper.in(scopeDeptIds != null && !scopeDeptIds.isEmpty(),
+                BizPatient::getLastVisitDept, scopeDeptIds);
         // 综合关键字：姓名 / 患者号 / 手机号 / 身份证号四者 OR，必须整体括号包裹，
         // 否则会把前面精确条件的 AND 关系吃掉（OR 优先级低于 AND）
         if (TextUtil.hasText(keyword)) {
@@ -393,12 +403,13 @@ public class BizPatientServiceImpl extends ServiceImpl<BizPatientMapper, BizPati
                 ? loadTodayVisits()
                 : Collections.emptyMap();
         PatientSearchScopeDTO scope = buildSearchScope(todayVisits);
+        List<Long> scopeDeptIds = resolveArchiveScopeDeptIds();
 
         PageResult<BizPatient> pageResult = selectPatientPage(
                 queryDTO.getPatientName(), queryDTO.getPhone(), queryDTO.getPatientNo(),
                 queryDTO.getMedicalInsuranceType(), queryDTO.getKeyword(),
                 queryDTO.getPageNum(), queryDTO.getPageSize(), tagPatientIds,
-                scope);
+                scope, scopeDeptIds);
 
         PageResult<PatientVO> voPageResult = new PageResult<>();
         voPageResult.setTotal(pageResult.getTotal());
@@ -596,6 +607,12 @@ public class BizPatientServiceImpl extends ServiceImpl<BizPatientMapper, BizPati
             vo.setPhone(null);
             vo.setIdCardMasked(SensitiveMaskUtil.maskIdCard(vo.getIdCard()));
             vo.setIdCard(null);
+            vo.setContactNameMasked(SensitiveMaskUtil.maskName(vo.getContactName()));
+            vo.setContactName(null);
+            vo.setContactPhoneMasked(maskPhone(vo.getContactPhone()));
+            vo.setContactPhone(null);
+            vo.setAddressMasked(SensitiveMaskUtil.maskAddress(vo.getAddress()));
+            vo.setAddress(null);
         }
     }
 
@@ -640,6 +657,30 @@ public class BizPatientServiceImpl extends ServiceImpl<BizPatientMapper, BizPati
         vo.setCardNo(null);
         vo.setMedicalInsuranceNoMasked(SensitiveMaskUtil.maskCardNo(vo.getMedicalInsuranceNo()));
         vo.setMedicalInsuranceNo(null);
+    }
+
+    /**
+     * 档案管理视图权限码：持任一即视为「翻患者档案」，受限岗位按授权科室收口；
+     * 其余登录岗走工作站候选检索（跨科按关键字核对身份，不收口）。
+     */
+    private static final Set<String> ARCHIVE_VIEW_PERMS = Set.of(
+            "patient:list", "patient:profile:list", "patient:empi:list", "patient:tag:list");
+
+    /**
+     * 解析档案视图的科室收口集合。
+     *
+     * @return null = 不收口（非档案视图 / 全院角色）；非空 = 受限岗位授权科室集合，SQL 按最近就诊科室 IN
+     */
+    private List<Long> resolveArchiveScopeDeptIds() {
+        CurrentUser user = UserUtils.getCurrentUser();
+        if (user == null || user.getPermissions() == null) {
+            return null;
+        }
+        boolean archiveView = user.getPermissions().stream().anyMatch(ARCHIVE_VIEW_PERMS::contains);
+        if (!archiveView || !deptScopeService.isScoped()) {
+            return null;
+        }
+        return List.copyOf(deptScopeService.allowedDeptIds());
     }
 
     /**

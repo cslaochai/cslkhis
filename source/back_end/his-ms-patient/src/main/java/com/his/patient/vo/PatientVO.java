@@ -64,21 +64,33 @@ public class PatientVO {
      */
     private String phoneMasked;
     /**
-     * 紧急联系人姓名
+     * 紧急联系人姓名。列表接口不回明文（见 contactNameMasked），编辑弹窗走 getById 取全量
      */
     private String contactName;
     /**
-     * 紧急联系人电话
+     * 紧急联系人姓名脱敏值（列表展示用）：留姓，其余打星
+     */
+    private String contactNameMasked;
+    /**
+     * 紧急联系人电话。列表接口不回明文（见 contactPhoneMasked）
      */
     private String contactPhone;
+    /**
+     * 紧急联系人电话脱敏值（列表展示用）：口径同 phoneMasked
+     */
+    private String contactPhoneMasked;
     /**
      * 联系人关系（父母、配偶、子女等）
      */
     private String contactRelation;
     /**
-     * 家庭住址
+     * 家庭住址。列表接口不回明文（见 addressMasked）
      */
     private String address;
+    /**
+     * 家庭住址脱敏值（列表展示用）：留前 6 字，其余打星
+     */
+    private String addressMasked;
     /**
      * 民族
      */

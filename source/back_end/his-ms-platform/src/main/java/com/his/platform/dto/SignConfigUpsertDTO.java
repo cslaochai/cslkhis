@@ -28,4 +28,7 @@ public class SignConfigUpsertDTO {
     @Min(value = 0, message = "签名PIN免输入时长不能小于 0（0 表示每次签名都要输入）")
     @Max(value = 1440, message = "签名PIN免输入时长不能超过 1440 分钟")
     private Integer pinTtlMinutes;
+
+    /** 变更原因（审计登记用，不落 sys_config；只写 sys_field_change_log.remark） */
+    private String reason;
 }

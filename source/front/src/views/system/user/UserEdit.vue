@@ -54,6 +54,20 @@
           </el-form-item>
         </div>
 
+        <!-- 变更原因：只写日志审计（sys_field_change_log.remark），不落 sys_user。
+             账号是权限的载体 —— 新开一个能登录的账号、把停用的人重新启用，都属审计要点名的安全事件 -->
+        <el-form-item v-if="!viewOnly" label="变更原因" prop="reason">
+          <el-input
+              v-model="formData.reason"
+              :rows="2"
+              data-testid="user-change-reason"
+              maxlength="200"
+              placeholder="如：新入职开通账号（人事科申请单 HR-2026-011）/ 离职停用 / 科室调整转岗"
+              show-word-limit
+              type="textarea"
+          />
+        </el-form-item>
+
         <template v-if="isInternal">
           <h4 class="mb-3 mt-5 flex items-center gap-1.5 text-sm font-semibold text-slate-700">
             <span class="h-3.5 w-1 rounded bg-blue-500"></span>员工信息
@@ -232,6 +246,7 @@ const formData = reactive({
   birthDate: '',
   idCard: '',
   position: '',
+  reason: '',  // 变更原因（审计登记，不落 user 表）
 })
 
 // 岗位（角色 × 科室）：一行 = 这个人在该科室以该角色执业。
@@ -248,6 +263,9 @@ const rules = {
   ],
   realName: [
     {required: true, message: '请输入姓名', trigger: 'blur'},
+  ],
+  reason: [
+    {required: true, message: '请填写变更原因（审计登记必填）', trigger: 'blur'},
   ],
 }
 
@@ -293,6 +311,7 @@ const resetForm = () => {
   formData.birthDate = ''
   formData.idCard = ''
   formData.position = ''
+  formData.reason = ''
 
   postRows.value = []
 }

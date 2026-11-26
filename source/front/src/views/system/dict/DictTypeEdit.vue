@@ -17,6 +17,11 @@
       <el-form-item label="备注">
         <el-input v-model="formData.remark" placeholder="请输入备注" type="textarea"/>
       </el-form-item>
+      <!-- 变更原因：只写日志审计（remark），不落 sys_dict_type。类型停用会让这套字典整列空白 -->
+      <el-form-item label="变更原因" prop="reason">
+        <el-input v-model="formData.reason" data-testid="dict-type-change-reason" maxlength="200"
+                  placeholder="如：新增科室自建字典 / 字典名称口径调整" show-word-limit type="textarea" :rows="2"/>
+      </el-form-item>
     </el-form>
     <template #footer>
       <el-button v-perm="['system:dict:add','system:dict:edit']" :loading="submitLoading" type="primary"
@@ -53,10 +58,12 @@ const formData = reactive({
   dictSource: 2,  // 1-系统级 2-自定义
   status: 1,
   remark: '',
+  reason: '',
 })
 const rules = {
   dictName: [{required: true, message: '请输入字典名称', trigger: 'blur'}],
   dictType: [{required: true, message: '请输入字典类型', trigger: 'blur'}],
+  reason: [{required: true, message: '请填写变更原因（审计登记必填）', trigger: 'blur'}],
 }
 
 const resetForm = () => {
@@ -66,6 +73,7 @@ const resetForm = () => {
   formData.dictSource = 2
   formData.status = 1
   formData.remark = ''
+  formData.reason = ''
 }
 
 watch(visible, (open) => {

@@ -17,6 +17,11 @@
           <el-radio :value="0">禁用</el-radio>
         </el-radio-group>
       </el-form-item>
+      <!-- 变更原因：只写日志审计（remark），不落 sys_dict_data。字典值是码值本体，改它会把历史单据翻译错位 -->
+      <el-form-item label="变更原因" prop="reason">
+        <el-input v-model="formData.reason" data-testid="dict-data-change-reason" maxlength="200"
+                  placeholder="如：医保政策调整新增险种类别 / 旧码值停用" show-word-limit type="textarea" :rows="2"/>
+      </el-form-item>
     </el-form>
     <template #footer>
       <el-button v-perm="['system:dict:add','system:dict:edit']" :loading="submitLoading" type="primary"
@@ -56,10 +61,12 @@ const formData = reactive({
   dictSort: 0,
   dictSource: 2,  // 1-系统级 2-自定义
   status: 1,
+  reason: '',
 })
 const rules = {
   dictLabel: [{required: true, message: '请输入字典标签', trigger: 'blur'}],
   dictValue: [{required: true, message: '请输入字典值', trigger: 'blur'}],
+  reason: [{required: true, message: '请填写变更原因（审计登记必填）', trigger: 'blur'}],
 }
 
 const resetForm = () => {
@@ -70,6 +77,7 @@ const resetForm = () => {
   formData.dictSort = 0
   formData.dictSource = 2
   formData.status = 1
+  formData.reason = ''
 }
 
 watch(visible, (open) => {

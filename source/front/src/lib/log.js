@@ -44,6 +44,8 @@ export const FIELD_CHANGE_BIZ_TYPE = [
   { value: 'EMPLOYEE', label: '员工档案' },
   { value: 'MEDICAL_RECORD', label: '门诊病历' },
   { value: 'INPATIENT_RECORD', label: '住院文书' },
+  { value: 'SYS_CONFIG', label: '系统参数' },
+  { value: 'SYS_DICT', label: '数据字典' },
 ]
 
 // 变更类型：INSERT-建档（只有新值）UPDATE-修改（新旧都有）ACTION-操作留痕（无字段级值）
