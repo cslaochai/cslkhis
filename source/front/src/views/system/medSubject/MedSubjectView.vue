@@ -2,48 +2,52 @@
   <div>
     <el-tabs v-model="activeTab">
       <!-- ==================== 一、科室 → 科目 对应 ==================== -->
-      <el-tab-pane label="科室科目对应" name="map">
+      <el-tab-pane label="科室 → 诊疗科目" name="map">
         <el-card ref="queryCardRef" class="query-card mb-3" shadow="never">
           <div class="flex items-start justify-between gap-4">
-            <el-form :model="query" inline @submit.prevent>
-              <el-form-item label="科室">
-                <el-tree-select
-                    v-model="query.deptId"
-                    :data="visibleDeptTree"
-                    :props="treeProps"
-                    check-strictly
-                    clearable
-                    data-testid="dept-select"
-                    default-expand-all
-                    filterable
-                    node-key="id"
-                    placeholder="请选择科室"
-                    style="width: 240px"
-                    @change="handleDeptChange"
-                >
-                  <template #default="{ data }">
-                    <span class="flex w-full items-center gap-1 pr-2">
-                      <span class="truncate">{{ data.deptName }}</span>
-                      <span v-if="unmappedIds.has(String(data.id))" class="unmapped-dot"
-                            title="未配诊疗科目"/>
-                    </span>
-                  </template>
-                </el-tree-select>
-              </el-form-item>
-              <el-form-item>
-                <el-checkbox v-model="query.onlyUnmapped" @change="handleOnlyUnmappedChange">
-                  只看未配（{{ unmappedDepts.length }}）
-                </el-checkbox>
-              </el-form-item>
-              <el-form-item>
-                <el-button :icon="Search" type="primary" @click="handleQuery">查询</el-button>
-                <el-button :icon="Refresh" @click="handleReset">重置</el-button>
-              </el-form-item>
-            </el-form>
+            <div class="min-w-0 flex-1">
+              <el-form :model="query" inline @submit.prevent>
+                <el-form-item label="科室（源）">
+                  <el-tree-select
+                      v-model="query.deptId"
+                      :data="visibleDeptTree"
+                      :props="treeProps"
+                      check-strictly
+                      clearable
+                      data-testid="dept-select"
+                      default-expand-all
+                      filterable
+                      node-key="id"
+                      placeholder="选择科室，查看它对应的诊疗科目"
+                      style="width: 260px"
+                      @change="handleDeptChange"
+                  >
+                    <template #default="{ data }">
+                      <span class="flex w-full items-center gap-1 pr-2">
+                        <span class="truncate">{{ data.deptName }}</span>
+                        <span v-if="unmappedIds.has(String(data.id))" class="unmapped-dot"
+                              title="未配诊疗科目"/>
+                      </span>
+                    </template>
+                  </el-tree-select>
+                </el-form-item>
+                <el-form-item>
+                  <el-checkbox v-model="query.onlyUnmapped" @change="handleOnlyUnmappedChange">
+                    只看未配（{{ unmappedDepts.length }}）
+                  </el-checkbox>
+                </el-form-item>
+                <el-form-item>
+                  <el-button :icon="Search" type="primary" @click="handleQuery">查询</el-button>
+                  <el-button :icon="Refresh" @click="handleReset">重置</el-button>
+                </el-form-item>
+              </el-form>
+              <div class="text-[12px] leading-5 text-slate-500">
+                映射方向：院内科室（源）→ 国家卫健委标准诊疗科目（目标）。一个科室可对应多个科目，病案首页/卫统上报只取「主科目」。
+              </div>
+            </div>
             <div class="flex shrink-0 items-start gap-3">
               <el-button
                   v-perm="'org:medSubject:add'"
-                  :disabled="!currentDept"
                   :icon="Plus"
                   data-testid="dept-add-subject"
                   type="primary"
@@ -64,13 +68,21 @@
               data-testid="dept-map-table"
               stripe
           >
-            <el-table-column label="科目代码" prop="subjectCode" width="120"/>
-            <el-table-column label="科目名称" min-width="200">
+            <el-table-column label="科室（源）" width="210">
+              <template #default>
+                <div class="flex items-center gap-1">
+                  <span class="truncate">{{ currentDept.deptName }}</span>
+                  <el-tag v-if="currentDept.deptCode" size="small" type="info">{{ currentDept.deptCode }}</el-tag>
+                </div>
+              </template>
+            </el-table-column>
+            <el-table-column label="诊疗科目（目标）" min-width="260">
               <template #default="{ row }">
+                <span class="mr-2 font-mono text-slate-500">{{ row.subjectCode }}</span>
                 <span :data-testid="`subj-name-${row.subjectCode}`">{{ row.subjectName }}</span>
               </template>
             </el-table-column>
-            <el-table-column label="上级科目" min-width="150">
+            <el-table-column label="上级科目" min-width="140">
               <template #default="{ row }">
                 <span class="text-slate-600">{{ row.parentName || '—' }}</span>
               </template>
@@ -104,18 +116,17 @@
             </el-table-column>
           </el-table>
           <div v-else class="px-6 py-16">
-            <el-empty description="请选择科室，查看或维护它的诊疗科目对应"/>
+            <el-empty description="选择科室查看它的对应关系，或直接点「新增映射」挑科室和科目"/>
           </div>
           <div ref="footerRef" class="list-footer flex items-center justify-between gap-4">
             <div class="flex flex-wrap items-center gap-2 text-[13px] text-slate-600">
               <template v-if="currentDept">
                 <span class="font-medium">{{ currentDept.deptName }}</span>
-                <el-tag v-if="currentDept.deptCode" size="small" type="info">{{ currentDept.deptCode }}</el-tag>
-                <span v-if="currentPrimary" class="text-slate-500">
+                <span class="text-slate-400">→</span>
+                <span v-if="currentPrimary" class="text-slate-600">
                   主科目 {{ currentPrimary.subjectCode }} {{ currentPrimary.subjectName }}
                 </span>
                 <span v-else class="text-red-500">未设主科目</span>
-                <span class="text-slate-400">一个科室可有多个科目，上报只取主科目</span>
               </template>
             </div>
             <span class="shrink-0 text-[12px] text-slate-500">共 {{ deptSubjects.length }} 条</span>
@@ -212,9 +223,9 @@
     <MedSubjectAdd
         v-model="addDialog"
         :dept="currentDept"
+        :dept-tree="deptTree"
         :groups="subjectGroups"
-        :subjects="deptSubjects"
-        @saved="handleMapSaved"
+        @saved="handleAddSaved"
     />
 
     <SubjectEdit
@@ -431,11 +442,15 @@ const handleMapSaved = async () => {
   ])
 }
 
-const openAddDialog = () => {
-  if (!currentDept.value) {
-    ElMessage.warning('请先选择科室')
-    return
+// 弹框里可能换了科室：落到新科室再刷新，用户能看到刚存进去的那一行
+const handleAddSaved = async (deptId) => {
+  if (deptId && (!currentDept.value || String(currentDept.value.id ?? currentDept.value.deptId) !== String(deptId))) {
+    await selectDept(String(deptId))
   }
+  await handleMapSaved()
+}
+
+const openAddDialog = () => {
   addDialog.value = true
 }
 
