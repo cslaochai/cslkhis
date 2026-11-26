@@ -86,9 +86,6 @@ public final class DeviceTypeSchema {
         reg("cabinet", "智能药柜", "st_cabinet",
                 d("temp", "temp", "温度", "℃"), d("humidity", "humidity", "湿度", "%"),
                 b("door", "door", "柜门", ""), i("stock_pct", "stockPct", "库存率", "%"));
-        reg("baby", "婴儿防盗", "st_baby",
-                s("area", "area", "所在区域", ""), i("rssi", "rssi", "信号强度", "dBm"),
-                i("battery", "battery", "电量", "%"), b("tamper", "tamper", "拆带告警", ""));
         reg("uv", "紫外线消毒", "st_uv",
                 b("running", "running", "运行中", ""), d("lamp_hours", "lampHours", "灯管累计", "h"),
                 i("filter_pct", "filterPct", "滤网余量", "%"), b("occupied", "occupied", "有人占用", ""));

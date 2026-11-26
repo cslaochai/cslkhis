@@ -66,6 +66,11 @@ public class SysEquipment extends BaseEntity {
     private Integer status;
 
     /**
+     * 是否进入设备共享池（0-否 1-是）。只控制可租借，不影响设备台账维保/计量。
+     */
+    private Integer rentable;
+
+    /**
      * 维保周期(天)
      */
     private Integer maintainCycleDays;

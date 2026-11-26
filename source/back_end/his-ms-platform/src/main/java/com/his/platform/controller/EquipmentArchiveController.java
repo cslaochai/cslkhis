@@ -45,4 +45,12 @@ public class EquipmentArchiveController {
     public Result<EquipmentVO> getDetailById(@RequestParam Long equipmentId) {
         return Result.success(equipmentService.getDetailById(equipmentId));
     }
+
+    @Operation(summary = "维护设备是否进入共享池")
+    @PreAuthorize("hasAuthority('asset:deviceRental:manage')")
+    @PostMapping("/updateRentable")
+    public Result<Void> updateRentable(@Valid @RequestBody com.his.platform.dto.EquipmentRentableDTO dto) {
+        equipmentService.updateRentable(dto);
+        return Result.success();
+    }
 }

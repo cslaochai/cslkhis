@@ -54,6 +54,7 @@ public class EquipmentServiceImpl extends ServiceImpl<SysEquipmentMapper, SysEqu
         LambdaQueryWrapper<SysEquipment> w = new LambdaQueryWrapper<SysEquipment>()
                 .eq(q.getCategory() != null, SysEquipment::getCategory, q.getCategory())
                 .eq(q.getStatus() != null, SysEquipment::getStatus, q.getStatus())
+                .eq(q.getRentable() != null, SysEquipment::getRentable, q.getRentable())
                 .and(TextUtil.hasText(kw), x -> x
                         .like(SysEquipment::getEquipmentCode, kw)
                         .or().like(SysEquipment::getEquipmentName, kw)
@@ -68,8 +69,7 @@ public class EquipmentServiceImpl extends ServiceImpl<SysEquipmentMapper, SysEqu
 
     public EquipmentVO getDetailById(Long equipmentId) {
         SysEquipment e = requireEquipment(equipmentId);
-        EquipmentVO vo = toVo(e, latestMeteringValidMap(List.of(equipmentId)).get(equipmentId));
-        vo.setRecentMaintains(bizEquipmentMaintainMapper.selectList(new LambdaQueryWrapper<BizEquipmentMaintain>()
+        EquipmentVO vo = toVo(e, latestMeteringValidMap(List.of(equipmentId)).get(equipmentId));        vo.setRecentMaintains(bizEquipmentMaintainMapper.selectList(new LambdaQueryWrapper<BizEquipmentMaintain>()
                         .eq(BizEquipmentMaintain::getEquipmentId, equipmentId)
                         .orderByDesc(BizEquipmentMaintain::getMaintainDate)
                         .orderByDesc(BizEquipmentMaintain::getId)
@@ -82,6 +82,14 @@ public class EquipmentServiceImpl extends ServiceImpl<SysEquipmentMapper, SysEqu
                         .last("LIMIT 10"))
                 .stream().map(this::toMeteringVo).toList());
         return vo;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void updateRentable(EquipmentRentableDTO dto) {
+        SysEquipment e = requireEquipment(dto.getId());
+        e.setRentable(dto.getRentable());
+        sysEquipmentMapper.updateById(e);
     }
 
     public IPage<MaintainVO> maintainListPage(MaintainPageQueryDTO q) {
@@ -237,6 +245,7 @@ public class EquipmentServiceImpl extends ServiceImpl<SysEquipmentMapper, SysEqu
         vo.setPurchasePrice(e.getPurchasePrice());
         vo.setStatus(e.getStatus());
         vo.setStatusText(dictCacheService.getDicDataLabel(DictTypeConst.EQUIPMENT_STATUS, e.getStatus()));
+        vo.setRentable(e.getRentable());
         vo.setMaintainCycleDays(e.getMaintainCycleDays());
         vo.setLastMaintainDate(e.getLastMaintainDate());
         if (e.getLastMaintainDate() != null && e.getMaintainCycleDays() != null && e.getMaintainCycleDays() > 0) {

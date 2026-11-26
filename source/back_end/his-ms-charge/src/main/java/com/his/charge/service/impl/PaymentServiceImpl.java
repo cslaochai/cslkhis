@@ -124,11 +124,13 @@ public class PaymentServiceImpl extends ServiceImpl<BizPaymentTxnMapper, BizPaym
             throw new BusinessException("请勿重复提交：该笔收款请求已受理，正在处理中");
         }
         try {
-            return doPay(payDTO);
+            java.util.List<BizPaymentTxnVO> out = doPay(payDTO);
+            // 成功后也要放锁：锁只防「同一请求并发重复提交」，不是「5 分钟内不许再提交」；
+            // 不放锁会让收银员重试同一笔时永远得到「正在处理中」，日志里连真实原因都看不到
+            idempotentGuardService.release("pay", payDTO.getBillId() + ":" + payDTO.getRequestId());
+            return out;
         } catch (Exception e) {
-            if (idemHeld) {
-                idempotentGuardService.release("pay", payDTO.getBillId() + ":" + payDTO.getRequestId());
-            }
+            idempotentGuardService.release("pay", payDTO.getBillId() + ":" + payDTO.getRequestId());
             throw e;
         }
     }

@@ -61,6 +61,10 @@ public class IotProperties {
          */
         private String telemetryTopic = "his/iot/+/+/telemetry";
         /**
+         * 事件主题：his/iot/{设备类型}/{设备编号}/event（告警/操作记录全量落 biz_iot_event）
+         */
+        private String eventTopic = "his/iot/+/+/event";
+        /**
          * QoS。0 = 最多一次，遥测允许丢点换吞吐；需要「至少一次」改 1
          */
         private int qos = 0;

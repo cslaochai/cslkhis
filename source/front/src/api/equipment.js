@@ -32,3 +32,8 @@ export function meteringCreate(data) {
 export function meteringDelete(id) {
   return request.delete('/equipment/metering/deleteById', { params: { id } })
 }
+
+// 维护设备是否进入共享池
+export function updateEquipmentRentable(data) {
+  return request.post('/equipment/equipment/updateRentable', data)
+}

@@ -14,6 +14,20 @@
       <text class="card-title">账号登录</text>
       <text class="card-desc">请使用就诊人手机号账号登录</text>
 
+      <!-- 测试环境预填：账号口令已自动填好（正式发布前删掉本块） -->
+      <view class="test-box" wx:if="{{testAccounts.length}}">
+        <text class="test-box-title">测试账号已自动填充（口令 123456）</text>
+        <view class="test-box-chips">
+          <text
+            class="test-chip {{item.username === username ? 'is-on' : ''}}"
+            wx:for="{{testAccounts}}"
+            wx:key="username"
+            data-index="{{index}}"
+            bindtap="fillAccount"
+          >{{item.label}}</text>
+        </view>
+      </view>
+
       <view class="field">
         <image class="field-icon" src="/images/icons/user.svg" mode="aspectFit"/>
         <input

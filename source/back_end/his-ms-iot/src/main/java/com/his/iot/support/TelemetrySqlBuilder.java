@@ -93,7 +93,10 @@ public final class TelemetrySqlBuilder {
         };
     }
 
-    private static String escape(String s) {
+    /**
+     * TDengine SQL 单引号转义。写入侧与查询侧共用，不要再各写一份
+     */
+    public static String escape(String s) {
         return s == null ? "" : s.replace("'", "''");
     }
 

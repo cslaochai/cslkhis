@@ -166,7 +166,10 @@ public class InsuranceRealTimeSettleServiceImpl implements InsuranceRealTimeSett
      */
     private void insertAccountTxn(BizSettlementBill bill, InsuranceChannelService.SettleSplit split) {
         BizPaymentTxn txn = new BizPaymentTxn();
-        txn.setTxnNo("PT" + redisSequenceService.next("PT"));
+        // 个账流水号必须带日期：Redis 序列是按天重置的，裸 "PT"+序号 今天 PT1、明天还是 PT1，
+        // 撞 uk_txn_no 直接让医保结算 500（实测踩到）
+        txn.setTxnNo("PT" + java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.BASIC_ISO_DATE)
+                + String.format("%06d", redisSequenceService.next("PT")));
         txn.setBillId(bill.getId());
         txn.setBillNo(bill.getBillNo());
         txn.setPatientId(bill.getPatientId());

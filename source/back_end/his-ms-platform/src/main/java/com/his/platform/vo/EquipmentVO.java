@@ -69,6 +69,10 @@ public class EquipmentVO {
      */
     private Integer status;
     /**
+     * 是否进入设备共享池（0-否 1-是）
+     */
+    private Integer rentable;
+    /**
      * 状态文本
      */
     private String statusText;

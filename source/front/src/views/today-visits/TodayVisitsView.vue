@@ -82,7 +82,7 @@
             <span class="font-mono font-bold text-blue-700">{{ row.registNo }}</span>
           </template>
         </el-table-column>
-        <el-table-column fixed="left" label="患者" width="150">
+        <el-table-column fixed="left" label="患者" width="250">
           <template #default="{ row }">
             <div class="flex items-center gap-1.5">
               <span class="font-medium text-slate-800">{{ row.patientName }}</span>
@@ -124,14 +124,14 @@
               }}</span>
           </template>
         </el-table-column>
-        <el-table-column align="center" label="就诊日期" width="104">
+        <el-table-column align="center" label="就诊日期" width="150">
           <template #default="{ row }"><span class="text-slate-600">{{ row.visitDate || '-' }}</span></template>
         </el-table-column>
 
-        <el-table-column label="签到到达" width="132">
+        <el-table-column label="签到到达" width="150">
           <template #default="{ row }"><span class="text-slate-600">{{ fmt(row.arriveTime) }}</span></template>
         </el-table-column>
-        <el-table-column label="开始就诊" width="132">
+        <el-table-column label="开始就诊" width="150">
           <template #default="{ row }"><span class="text-slate-600">{{ fmt(row.startTime) }}</span></template>
         </el-table-column>
         <el-table-column label="结束" width="132">
@@ -140,7 +140,7 @@
         <el-table-column align="center" label="候诊" width="70">
           <template #default="{ row }"><span class="text-slate-600">{{ duration(row.waitMinutes) }}</span></template>
         </el-table-column>
-        <el-table-column align="center" label="就诊时长" width="76">
+        <el-table-column align="center" label="就诊时长" width="100">
           <template #default="{ row }"><span class="text-slate-600">{{ duration(row.visitMinutes) }}</span></template>
         </el-table-column>
         <el-table-column align="center" label="结算" width="90">

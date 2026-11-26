@@ -2,19 +2,43 @@ import { authApi } from '../../utils/api'
 import { saveLogin } from '../../utils/auth'
 import { encryptPassword } from '../../utils/password'
 
+/**
+ * 测试环境账号预填：页面打开即把账号口令填好；多账号时点标签可切换。
+ * 小程序只服务患者端，这里只放患者账号（sys_user.user_type=3，带 patient_id），
+ * 院内员工账号登进来是空壳，不放进来。
+ * ⚠ 正式发布前把数组清空（TEST_ACCOUNTS = []），页面即回到空白手输状态。
+ */
+const TEST_ACCOUNTS = [
+  { label: '陈周敏', username: '13899000001', password: '123456' }
+]
+
 Page({
   data: {
     username: '',
     password: '',
     showPassword: false,
     loading: false,
-    errorMsg: ''
+    errorMsg: '',
+    testAccounts: TEST_ACCOUNTS
   },
 
   onLoad(options) {
+    // 注册成功跳回来时带 username（手机号），以它为优先，不覆盖用户刚注册的账号
     if (options && options.username) {
       this.setData({ username: options.username })
+      return
     }
+    if (TEST_ACCOUNTS.length) {
+      this.fillAccount(0)
+    }
+  },
+
+  /** 点测试账号标签：换账号并同步口令 */
+  fillAccount(indexOrEvent) {
+    const index = typeof indexOrEvent === 'number' ? indexOrEvent : Number(indexOrEvent.currentTarget.dataset.index)
+    const account = TEST_ACCOUNTS[index]
+    if (!account) return
+    this.setData({ username: account.username, password: account.password, errorMsg: '' })
   },
 
   onUsernameInput(e) {

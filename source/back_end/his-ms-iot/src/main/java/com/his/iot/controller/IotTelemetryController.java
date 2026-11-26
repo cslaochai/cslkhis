@@ -1,9 +1,13 @@
 package com.his.iot.controller;
 
 import com.his.common.base.Result;
+import com.his.iot.dto.IotColdChainRecordQueryDTO;
 import com.his.iot.dto.IotHistoryQueryDTO;
 import com.his.iot.dto.IotLatestQueryDTO;
 import com.his.iot.service.IotTelemetryService;
+import com.his.iot.vo.IotColdChainRecordVO;
+import com.his.iot.vo.IotColdChainSummaryVO;
+import com.his.iot.vo.IotDeviceTypeVO;
 import com.his.iot.vo.IotHistoryPointVO;
 import com.his.iot.vo.IotLatestVO;
 import io.swagger.v3.oas.annotations.Operation;
@@ -11,9 +15,11 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -34,6 +40,16 @@ public class IotTelemetryController {
     private final IotTelemetryService iotTelemetryService;
 
     /**
+     * 设备类型下拉（设备总览页类型筛选）。返回 DeviceTypeSchema 注册表的类型码与中文名。
+     */
+    @Operation(summary = "设备类型下拉（selectDeviceTypes）")
+    @PreAuthorize("isAuthenticated()")
+    @GetMapping("/selectDeviceTypes")
+    public Result<List<IotDeviceTypeVO>> selectDeviceTypes() {
+        return Result.success(iotTelemetryService.deviceTypes());
+    }
+
+    /**
      * 设备最新一行遥测（当前状态）。用于设备总览卡片、护士站"这床现在什么情况"。
      */
     @Operation(summary = "设备最新遥测（latestList）")
@@ -51,5 +67,26 @@ public class IotTelemetryController {
     @PostMapping("/historyList")
     public Result<List<IotHistoryPointVO>> historyList(@Valid @RequestBody IotHistoryQueryDTO query) {
         return Result.success(iotTelemetryService.historyList(query));
+    }
+
+    /**
+     * 冷链温湿度记录（5 分钟一轮，含最低/最高），GSP 检查导出用。
+     */
+    @Operation(summary = "冷链温湿度 GSP 记录（coldChainRecords）")
+    @PreAuthorize("isAuthenticated()")
+    @PostMapping("/coldChainRecords")
+    public Result<List<IotColdChainRecordVO>> coldChainRecords(@Valid @RequestBody IotColdChainRecordQueryDTO query) {
+        return Result.success(iotTelemetryService.coldChainRecords(query));
+    }
+
+    /**
+     * 冷链近 N 小时汇总。默认 24 小时，最多 7 天；卡片显示温度区间与归档完整度。
+     */
+    @Operation(summary = "冷链温度汇总（coldChainSummary）")
+    @PreAuthorize("isAuthenticated()")
+    @GetMapping("/coldChainSummary")
+    public Result<List<IotColdChainSummaryVO>> coldChainSummary(
+            @RequestParam(defaultValue = "24") Integer hours) {
+        return Result.success(iotTelemetryService.coldChainSummary(hours));
     }
 }

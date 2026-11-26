@@ -85,6 +85,43 @@
   text-align: center;
 }
 
+/* ---------- 测试账号预填条（仅测试环境，正式发布前随代码一起删） ---------- */
+.test-box {
+  padding: 18rpx 20rpx 20rpx;
+  margin-bottom: 26rpx;
+  background: #f2f8fd;
+  border: 1rpx solid #dbe9f6;
+  border-radius: 16rpx;
+}
+
+.test-box-title {
+  display: block;
+  font-size: 23rpx;
+  color: #6b7f97;
+  margin-bottom: 14rpx;
+}
+
+.test-box-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14rpx;
+}
+
+.test-chip {
+  padding: 8rpx 20rpx;
+  font-size: 24rpx;
+  color: #1269B5;
+  background: #fff;
+  border: 1rpx solid #cfe0f0;
+  border-radius: 999rpx;
+}
+
+.test-chip.is-on {
+  color: #fff;
+  background: #1269B5;
+  border-color: #1269B5;
+}
+
 .field {
   display: flex;
   align-items: center;

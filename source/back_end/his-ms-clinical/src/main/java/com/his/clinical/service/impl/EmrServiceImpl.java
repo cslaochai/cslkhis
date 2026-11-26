@@ -576,7 +576,10 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
         LambdaQueryWrapper<BizPrescription> prescriptionWrapper = new LambdaQueryWrapper<>();
         prescriptionWrapper.eq(BizPrescription::getRecordId, recordId);
         List<BizPrescription> prescriptions = bizPrescriptionMapper.selectList(prescriptionWrapper);
+        List<Long> prescriptionIds = new ArrayList<>(prescriptions.size());
+        List<Long> detailIds = new ArrayList<>();
         for (BizPrescription prescription : prescriptions) {
+            prescriptionIds.add(prescription.getId());
             // 查询处方明细
             LambdaQueryWrapper<BizPrescriptionDetail> detailWrapper = new LambdaQueryWrapper<>();
             detailWrapper.eq(BizPrescriptionDetail::getPrescriptionId, prescription.getId());
@@ -585,13 +588,22 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
             // 删方前解锁：按明细把锁定量退回可用量，只退实际锁着的部分
             for (BizPrescriptionDetail detail : details) {
                 stockFacadeService.unlockStockByDrug(detail.getDrugId(), detail.getQuantity());
+                detailIds.add(detail.getId());
             }
-
-            // 删除处方明细
-            bizPrescriptionDetailMapper.delete(detailWrapper);
         }
-        // 删除处方主表
-        return bizPrescriptionMapper.delete(prescriptionWrapper) >= 0;
+        // 删除必须按主键，不能用 record_id / prescription_id 这类非唯一二级索引当条件：
+        // 两张表都是 @TableLogic，按索引条件删会翻译成 UPDATE ... WHERE record_id = ?，
+        // 这一句在 idx_record_id / idx_prescription_id 上留下的不是行锁而是间隙锁（没有命中行时更明显）。
+        // 「先删后增」的两个并发事务（两个不同病历的自动保存/结诊同时发生）各自持着同一段间隙，
+        // 随后 INSERT 新处方要拿插入意向锁 → 互等，MySQL 挑 INSERT 当牺牲者，
+        // 报的就是 Deadlock found ... INSERT INTO biz_prescription（根因在它前面那条范围删）。
+        if (!detailIds.isEmpty()) {
+            bizPrescriptionDetailMapper.deleteBatchIds(detailIds);
+        }
+        if (!prescriptionIds.isEmpty()) {
+            bizPrescriptionMapper.deleteBatchIds(prescriptionIds);
+        }
+        return true;
     }
 
     // 检查/检验申请单（批次E：开单即落库 + 删除保护 + 结果回显）
@@ -1748,11 +1760,13 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
         final boolean signSkipped = isSubmit && !Boolean.TRUE.equals(signCheck.getSignable());
         ensureInspectionApplies(recordSaveDTO.getRegistId(), appointInfo, patientInfo,
                 recordSaveDTO.getInspectionApplies(), isSubmit && !signSkipped, pin);
-        backfillApplyRecord(recordSaveDTO.getRegistId(), recordId, bizMedicalRecord.getRecordNo());
-
         // 4. 检验申请（同 3）
         ensureLaboratoryApplies(recordSaveDTO.getRegistId(), appointInfo, patientInfo,
                 recordSaveDTO.getLaboratoryApplies(), isSubmit && !signSkipped, pin);
+        // 申请单与病历回挂必须放在两组申请都落库之后：检验单是在检查之后才插入的，
+        // 原先在中间回填，检验单 record_id 恒为 null，结诊按 record_id 记账时就漏掉检验费，
+        // 缴费不推进检验申请 → 医技侧永远查不到检验记录。
+        backfillApplyRecord(recordSaveDTO.getRegistId(), recordId, bizMedicalRecord.getRecordNo());
 
         // 5. 如果是结诊，还需要提交病历并生成收费单
         if (isSubmit) {

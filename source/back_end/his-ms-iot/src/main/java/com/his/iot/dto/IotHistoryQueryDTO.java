@@ -25,7 +25,7 @@ public class IotHistoryQueryDTO implements Serializable {
     @Schema(description = "设备类型", example = "infusion")
     @NotBlank(message = "设备类型不能为空")
     @AllowedValues(values = {"coldchain", "infusion", "asset", "env", "gas", "bed",
-            "dialysis", "cabinet", "baby", "uv", "robot"}, message = "设备类型取值不合法")
+            "dialysis", "cabinet", "uv", "robot"}, message = "设备类型取值不合法")
     private String deviceType;
 
     @Schema(description = "设备编号", example = "PUMP-01")
@@ -46,4 +46,10 @@ public class IotHistoryQueryDTO implements Serializable {
     @Min(value = 1, message = "返回行数至少 1")
     @Max(value = 5000, message = "返回行数最多 5000")
     private Integer limit = 2000;
+
+    @Schema(description = "聚合间隔（分钟），空=原始点。看 24 小时曲线必须传（5 秒一条一天 1.7 万点，原始点会被 limit 截断）",
+            example = "5")
+    @Min(value = 1, message = "聚合间隔至少 1 分钟")
+    @Max(value = 60, message = "聚合间隔最多 60 分钟")
+    private Integer intervalMinutes;
 }

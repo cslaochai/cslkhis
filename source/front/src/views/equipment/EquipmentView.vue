@@ -17,6 +17,12 @@
             <el-option v-for="d in statusDict" :key="d.dictValue" :label="d.dictLabel" :value="Number(d.dictValue)"/>
           </el-select>
         </el-form-item>
+        <el-form-item label="共享池">
+          <el-select v-model="query.rentable" :fit-input-width="false" clearable placeholder="不限" style="width: 100px">
+            <el-option label="是" :value="1"/>
+            <el-option label="否" :value="0"/>
+          </el-select>
+        </el-form-item>
         <el-form-item>
           <el-button :icon="Search" type="primary" @click="query.pageNum = 1; loadList()">查询</el-button>
           <el-button :icon="Refresh" @click="reset">重置</el-button>
@@ -26,30 +32,30 @@
 
     <el-card class="table-card" shadow="never">
       <el-table v-loading="loading" :data="rows" :max-height="tableMaxHeight" data-testid="equipment-table" stripe>
-        <el-table-column label="资产编号" prop="equipmentCode" width="140"/>
-        <el-table-column label="设备名称" min-width="150" prop="equipmentName" show-overflow-tooltip/>
-        <el-table-column label="型号" prop="model" show-overflow-tooltip width="120"/>
-        <el-table-column label="使用科室" prop="deptName" width="110"/>
-        <el-table-column label="类别" prop="category" width="120">
+        <el-table-column label="资产编号" prop="equipmentCode" width="120"/>
+        <el-table-column label="设备名称" min-width="140" prop="equipmentName" show-overflow-tooltip/>
+        <el-table-column label="型号" prop="model" show-overflow-tooltip width="100"/>
+        <el-table-column label="使用科室" prop="deptName" width="90"/>
+        <el-table-column label="类别" prop="category" width="100">
           <template #default="{ row }">{{ categoryText(row.category) }}</template>
         </el-table-column>
-        <el-table-column align="right" label="原值(元)" prop="purchasePrice" width="110">
+        <el-table-column align="right" label="原值(元)" prop="purchasePrice" width="90">
           <template #default="{ row }">{{
               row.purchasePrice != null ? Number(row.purchasePrice).toLocaleString() : '—'
             }}
           </template>
         </el-table-column>
-        <el-table-column label="最近维保" width="110">
+        <el-table-column label="最近维保" width="100">
           <template #default="{ row }">{{ fmtDate(row.lastMaintainDate) }}</template>
         </el-table-column>
-        <el-table-column label="下次维保" width="110">
+        <el-table-column label="下次维保" width="100">
           <template #default="{ row }">
             <span :class="{ 'text-red-500 font-bold': row.nextMaintainDate && row.nextMaintainDate < today }">
               {{ fmtDate(row.nextMaintainDate) }}
             </span>
           </template>
         </el-table-column>
-        <el-table-column label="计量有效期至" width="120">
+        <el-table-column label="计量有效期至" width="110">
           <template #default="{ row }">
             <span v-if="row.meteringValidUntil" :class="{ 'text-red-500 font-bold': meteringExpired(row) }">
               {{ fmtDate(row.meteringValidUntil) }}{{ meteringExpired(row) ? '（过期）' : '' }}
@@ -57,9 +63,18 @@
             <span v-else class="text-gray-400">—</span>
           </template>
         </el-table-column>
-        <el-table-column align="center" label="状态" prop="status" width="90">
+        <el-table-column align="center" label="状态" prop="status" width="80">
           <template #default="{ row }">
             <el-tag :type="statusTag(row.status)">{{ statusText(row.status) }}</el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column align="center" label="共享池" width="80">
+          <template #default="{ row }">
+            <el-button v-perm="'asset:deviceRental:manage'" link size="small"
+                       :type="row.rentable ? 'danger' : 'primary'" @click="toggleRentable(row)">
+              {{ row.rentable ? '移出' : '加入' }}
+            </el-button>
+            <span v-if="row.rentable" class="text-[11px] text-green-600">共享</span>
           </template>
         </el-table-column>
         <el-table-column fixed="right" label="操作" width="200">
@@ -104,9 +119,9 @@
  * - 维保/计量记录录错可删（后端会按剩余记录重算最近维保日期）
  */
 import {onMounted, reactive, ref} from 'vue';
-import {ElMessage} from 'element-plus';
+import {ElMessage, ElMessageBox} from 'element-plus';
 import {Refresh, Search} from '@element-plus/icons-vue';
-import {equipmentListPage} from '@/api/equipment';
+import {equipmentListPage, updateEquipmentRentable} from '@/api/equipment';
 import EquipmentMaintainAdd from './EquipmentMaintainAdd.vue';
 import EquipmentMeteringAdd from './EquipmentMeteringAdd.vue';
 import EquipmentRecordsDetail from './EquipmentRecordsDetail.vue';
@@ -141,7 +156,7 @@ const loading = ref(false);
 const rows = ref([]);
 const total = ref(0);
 const query = reactive({
-  keyword: '', category: null, status: null,
+  keyword: '', category: null, status: null, rentable: null,
   pageNum: 1, pageSize: DEFAULT_PAGE_SIZE,
 });
 // 两卡式列表页：表格只设最大高度，超高内部滚动（口径参照 views/system/user/UserView.vue）
@@ -153,6 +168,7 @@ const loadList = async () => {
       keyword: query.keyword.trim() || undefined,
       category: query.category ?? undefined,
       status: query.status ?? undefined,
+      rentable: query.rentable ?? undefined,
       pageNum: query.pageNum, pageSize: query.pageSize,
     });
     if (res.code === 200) {
@@ -167,10 +183,32 @@ const loadList = async () => {
   }
 };
 const reset = () => {
-  Object.assign(query, {keyword: '', category: null, status: null, pageNum: 1});
+  Object.assign(query, {keyword: '', category: null, status: null, rentable: null, pageNum: 1});
   loadList();
 };
 const statusTag = (v) => ({1: 'success', 2: 'info', 3: 'warning', 4: 'danger'}[v] || 'info');
+
+const toggleRentable = async (row) => {
+  const target = row.rentable ? 0 : 1;
+  try {
+    await ElMessageBox.confirm(
+        target ? `将「${row.equipmentName}」加入设备共享池？` : `将「${row.equipmentName}」移出设备共享池？`,
+        target ? '加入共享池' : '移出共享池',
+        {confirmButtonText: target ? '加入' : '移出', cancelButtonText: '取消',
+          type: target ? 'info' : 'warning'},
+    );
+  } catch (e) {
+    return;
+  }
+  try {
+    await updateEquipmentRentable({id: row.id, rentable: target});
+    ElMessage.success(target ? '已加入共享池' : '已移出共享池');
+    await loadList();
+  } catch (e) {
+    console.error('维护共享池失败', e);
+    ElMessage.error(e?.response?.data?.message || '共享池维护失败');
+  }
+};
 // ---------------- 维保 / 计量登记 ----------------
 const maintainVisible = ref(false);
 const maintainRow = ref(null);

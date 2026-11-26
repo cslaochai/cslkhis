@@ -104,6 +104,21 @@
         </button>
       </el-badge>
 
+      <!-- 提示音开关：只控制「响不响」，不影响消息到达与红点。
+           图标用喇叭（开启=喇叭+声波，静音=喇叭+斜杠），刻意不用铃铛——
+           左边「统一待办」已经是铃铛，两个铃铛挨着会让人以为是两个消息入口 -->
+      <button class="rounded-lg p-2 transition-colors hover:bg-white/10"
+              :class="alertMuted ? 'text-white/40' : 'text-white/70 hover:text-white'"
+              :title="alertMuted ? '提示音已静音，点击开启' : '提示音已开启，点击静音'"
+              @click="toggleAlertMuted">
+        <svg v-if="alertMuted" class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/>
+        </svg>
+        <svg v-else class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
+        </svg>
+      </button>
+
       <!-- 自助打卡胶囊按钮：未签到=绿色，已签到未签退=橙色，已签退=灰色 -->
       <div v-if="attendance.visible"
            class="attendance-pill"
@@ -369,6 +384,8 @@ import {
   switchPost
 } from '@/api/system'
 import {openMessageStream} from '@/api/messageStream'
+// 站内提示音：Web Audio 合成，不引音频文件；开关状态存在 localStorage（见 lib/alertSound）
+import {alertLevelOfSeverity, alertMuted, playAlert, toggleAlertMuted} from '@/lib/alertSound'
 import {getMyToday, myCheckIn, myCheckOut} from '@/api/staffAttendance'
 import {encryptPassword} from '@/lib/password'
 import {loadDictDataMap} from '@/lib/dict-cache'
@@ -811,6 +828,8 @@ const connectMessageStream = () => {
     onMessage: (data) => {
       if (data.type !== 'new-message') return
       unreadCount.value = typeof data.unread === 'number' && data.unread >= 0 ? data.unread : unreadCount.value + 1
+      // 消息到达先出声再弹通知：急会诊(urgent)三连音、重要提醒(warning)双音、普通通知单短音
+      playAlert(alertLevelOfSeverity(data.severity))
       ElNotification({
         title: messageLabel(data.bizType) || '新消息',
         message: data.title || '您有一条新消息',
@@ -831,7 +850,11 @@ const loadUnreadCount = async () => {
   try {
     const res = await getUnreadCount()
     if (res.code === 200) {
-      unreadCount.value = res.data || 0
+      const next = res.data || 0
+      // 降级轮询时也要出声（SSE 断线不能变成哑巴）：只在未读数上涨时响，
+      // 读消息导致的下落不响；SSE 正常时这里只是首屏初始化，不会双响
+      if (messagePollTimer && next > unreadCount.value) playAlert('info')
+      unreadCount.value = next
     }
   } catch (error) {
     console.error('加载未读消息数量失败', error)

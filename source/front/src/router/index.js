@@ -96,6 +96,43 @@ const routes = [
                 component: () => import('@/views/inpatient/OrderSetTemplateView.vue'),
                 meta: {title: '医嘱组套（套餐）维护'}
             },
+            // 物联网：设备平台（cs-platform）数据在 HIS 侧的三个入口
+            {
+                path: 'iot-ward',
+                name: 'IotWard',
+                component: () => import('@/views/iot/WardMonitorView.vue'),
+                meta: {title: '病区患者监护'}
+            },
+            {
+                path: 'iot-devices',
+                name: 'IotDevices',
+                component: () => import('@/views/iot/DeviceMonitorView.vue'),
+                meta: {title: '医疗设备监控'}
+            },
+            {
+                path: 'pharmacy-coldchain',
+                name: 'PharmacyColdChain',
+                component: () => import('@/views/iot/ColdChainView.vue'),
+                meta: {title: '药房冷链监控'}
+            },
+            {
+                path: 'iot-gas',
+                name: 'IotGas',
+                component: () => import('@/views/iot/GasMonitorView.vue'),
+                meta: {title: '医用气体监测'}
+            },
+            {
+                path: 'iot-bed',
+                name: 'IotBed',
+                component: () => import('@/views/iot/BedSafetyView.vue'),
+                meta: {title: '病区床位安全'}
+            },
+            {
+                path: 'iot-assets',
+                name: 'IotAssets',
+                component: () => import('@/views/iot/AssetTrackingView.vue'),
+                meta: {title: '资产定位与维保'}
+            },
             {path: 'nurse', name: 'Nurse', component: () => import('@/views/nurse/NurseView.vue')},
             {
                 path: 'nurse-schedule',
@@ -801,6 +838,12 @@ const routes = [
                 name: 'Equipment',
                 component: () => import('@/views/equipment/EquipmentView.vue'),
                 meta: {title: '设备管理'}
+            },
+            {
+                path: 'device-rental',
+                name: 'DeviceRental',
+                component: () => import('@/views/equipment/DeviceRentalView.vue'),
+                meta: {title: '设备共享调配'}
             },
             {path: 'supplies', name: 'Supplies', component: () => import('@/views/supplies/SuppliesView.vue')},
             {

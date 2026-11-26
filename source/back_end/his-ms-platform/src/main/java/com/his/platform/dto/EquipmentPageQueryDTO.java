@@ -27,4 +27,9 @@ public class EquipmentPageQueryDTO extends PageParam implements Serializable {
      * 状态（1-在用 2-停用 3-维修中 4-报废）
      */
     private Integer status;
+
+    /**
+     * 是否进入共享池（0-否 1-是），空为不限
+     */
+    private Integer rentable;
 }

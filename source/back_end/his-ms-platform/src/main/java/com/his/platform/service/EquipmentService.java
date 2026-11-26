@@ -2,8 +2,7 @@ package com.his.platform.service;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.his.platform.dto.*;
-import com.his.platform.vo.EquipmentVO;
-import com.his.platform.vo.MaintainVO;
+import com.his.platform.vo.EquipmentVO;import com.his.platform.vo.MaintainVO;
 import com.his.platform.vo.MeteringVO;
 
 /**
@@ -58,4 +57,9 @@ public interface EquipmentService {
      * 用于设备详情里计量记录行的删除动作。
      */
     void meteringDelete(Long id);
+
+    /**
+     * 维护设备是否进入共享池。只改 rentable 标志，不改台账状态。
+     */
+    void updateRentable(EquipmentRentableDTO dto);
 }
