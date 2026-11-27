@@ -143,6 +143,7 @@ CREATE TABLE `biz_antibiotic_stats` (
 CREATE TABLE `biz_checkup_record` (
   `id` bigint NOT NULL COMMENT '主键ID',
   `record_no` varchar(32) NOT NULL COMMENT '体检编号',
+  `dept_id` bigint COMMENT '归属科室ID（登记人当前岗位科室；列表按授权科室收口）',
   `patient_id` bigint NOT NULL DEFAULT '0' COMMENT '体检人ID',
   `patient_name` varchar(50) NOT NULL COMMENT '体检人姓名（快照）',
   `gender` tinyint COMMENT '性别（2-女 9-未知）',
@@ -168,6 +169,7 @@ CREATE TABLE `biz_checkup_record` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_record_no` (`record_no`),
   KEY `idx_patient` (`patient_id`),
+  KEY `idx_dept` (`dept_id`),
   KEY `idx_date` (`checkup_date`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='体检登记';
 

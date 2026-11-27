@@ -2,20 +2,20 @@
   <el-drawer v-model="visible" :title="`合规审核 ${detail.auditNo || ''}`" direction="rtl" size="72%">
     <div v-loading="detailLoading" class="detail-wrap">
       <el-descriptions :column="2" border data-testid="ca-detail-head" size="small">
-        <el-descriptions-item label="结算清单号">{{ detail.settlementNo || '—' }}</el-descriptions-item>
+        <el-descriptions-item label="结算清单号">{{ detail.settlementNo || '' }}</el-descriptions-item>
         <el-descriptions-item label="审核类型">{{ typeText(detail.auditType) }}</el-descriptions-item>
         <el-descriptions-item label="风险等级">
           <el-tag :type="riskTagType(detail.riskLevel)" size="small">{{ detail.riskLevelText }}</el-tag>
         </el-descriptions-item>
-        <el-descriptions-item label="风险分">{{ detail.riskScore ?? '—' }}</el-descriptions-item>
+        <el-descriptions-item label="风险分">{{ detail.riskScore ?? '' }}</el-descriptions-item>
         <el-descriptions-item label="DRG 分组">{{ detail.drgCode || '未分组' }}</el-descriptions-item>
-        <el-descriptions-item label="DRG 权重">{{ detail.drgWeight ?? '—' }}</el-descriptions-item>
+        <el-descriptions-item label="DRG 权重">{{ detail.drgWeight ?? '' }}</el-descriptions-item>
         <el-descriptions-item label="实际费用（元）">{{ money(detail.actualCost) }}</el-descriptions-item>
         <el-descriptions-item label="支付标准（元）">{{ money(detail.payStandard) }}</el-descriptions-item>
-        <el-descriptions-item label="费用倍率">{{ detail.costRatio ?? '—' }}</el-descriptions-item>
+        <el-descriptions-item label="费用倍率">{{ detail.costRatio ?? '' }}</el-descriptions-item>
         <el-descriptions-item label="审核时间">{{ fmtTime(detail.auditTime) }}</el-descriptions-item>
-        <el-descriptions-item :span="2" label="审核结论">{{ detail.conclusion || '—' }}</el-descriptions-item>
-        <el-descriptions-item :span="2" label="备注">{{ detail.remark || '—' }}</el-descriptions-item>
+        <el-descriptions-item :span="2" label="审核结论">{{ detail.conclusion || '' }}</el-descriptions-item>
+        <el-descriptions-item :span="2" label="备注">{{ detail.remark || '' }}</el-descriptions-item>
       </el-descriptions>
 
       <h4 class="sec">规则判定明细（{{ detail.hitItemCount ?? items.length }} 条命中，共 {{ items.length }} 条）</h4>
@@ -97,7 +97,7 @@ const visible = computed({
   set: (v) => emit('update:modelValue', v),
 });
 
-const money = (v) => (v === null || v === undefined || v === '' ? '—' : Number(v).toFixed(2))
+const money = (v) => (v === null || v === undefined || v === '' ? '' : Number(v).toFixed(2))
 // 三态：命中红 / 通过绿 / 不适用灰 —— 缺依据的必须一眼看出是灰的
 const itemResultTagType = (v) => ({1: 'danger', 2: 'success', 3: 'info'}[v] || 'info')
 

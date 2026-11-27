@@ -39,7 +39,7 @@
             <span
                 :class="String(a.admissionId) === admissionId ? 'text-[#1269B5]' : 'text-slate-800'"
                 class="truncate text-sm font-medium"
-            >{{ a.patientName || '—' }}</span>
+            >{{ a.patientName || '' }}</span>
           </div>
           <div class="mt-0.5 truncate text-xs text-slate-400">
             {{ a.diagnosis || a.mainDiagnosisName || '未录诊断' }} · {{ fmtDate(a.admitTime) }} 入院
@@ -89,14 +89,14 @@
                 <span class="mx-1 text-slate-300">|</span>
                 {{ patientAgeText(currentAdmission?.age) }}
                 <span class="mx-1 text-slate-300">|</span>
-                住院号 {{ currentAdmission?.admissionNo || '—' }}
+                住院号 {{ currentAdmission?.admissionNo || '' }}
                 <span class="mx-1 text-slate-300">|</span>
-                {{ isNurse ? '病区' : '科室' }} {{ currentAdmission?.wardName || currentAdmission?.deptName || '—' }}
+                {{ isNurse ? '病区' : '科室' }} {{ currentAdmission?.wardName || currentAdmission?.deptName || '' }}
               </span>
             </div>
 
             <div class="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-slate-600">
-              <span>主治医生 <b class="font-medium text-slate-800">{{ currentAdmission?.doctorName || '—' }}</b></span>
+              <span>主治医生 <b class="font-medium text-slate-800">{{ currentAdmission?.doctorName || '' }}</b></span>
               <span class="text-slate-300">·</span>
               <span>
                 入院 {{ fmtTime(currentAdmission?.admitTime) }}
@@ -212,8 +212,8 @@
             <el-table-column label="医嘱号" prop="orderNo" show-overflow-tooltip width="130"/>
             <el-table-column label="患者 / 床位" width="100">
               <template #default="{ row }">
-                <div class="text-sm font-medium text-slate-800">{{ row.patientName || '—' }}</div>
-                <div class="text-xs text-slate-400">{{ row.bedNo || '—' }}</div>
+                <div class="text-sm font-medium text-slate-800">{{ row.patientName || '' }}</div>
+                <div class="text-xs text-slate-400">{{ row.bedNo || '' }}</div>
               </template>
             </el-table-column>
             <el-table-column align="center" label="类型" width="80">
@@ -227,7 +227,7 @@
             <el-table-column label="医嘱内容" min-width="240">
               <template #default="{ row }">
                 <div class="text-sm font-medium text-slate-800">
-                  {{ row.itemName || '—' }}
+                  {{ row.itemName || '' }}
                   <!-- 来源要在表上看得见：套模板开的医嘱事后要能捞出来（哪些方案被反复用、
                        是不是常用那几个），只在开立那一刻提示一下等于没记。 -->
                   <el-tag v-if="row.source === 2" :data-testid="`p1-source-tag-${row.orderNo}`" class="!ml-1" effect="plain" size="small"
@@ -273,9 +273,9 @@
             </el-table-column>
             <el-table-column label="开立 / 校对（双签）" width="190">
               <template #default="{ row }">
-                <div class="text-xs text-slate-600">{{ row.doctorName || '—' }} · {{ fmtTime(row.orderTime) }}</div>
+                <div class="text-xs text-slate-600">{{ row.doctorName || '' }} · {{ fmtTime(row.orderTime) }}</div>
                 <div class="text-xs text-slate-400">校对 {{
-                    row.verifyNurseName || '—'
+                    row.verifyNurseName || ''
                   }}{{ row.verifyTime ? ` · ${fmtTime(row.verifyTime)}` : '' }}
                 </div>
                 <!-- 医嘱是**双签**：医生开立一条、护士校对一条。两个勾必须分开显示 ——
@@ -391,7 +391,7 @@
             </el-table-column>
             <el-table-column label="开立（签名）" width="170">
               <template #default="{ row }">
-                <div class="text-xs text-slate-600">{{ row.doctorName || '—' }} · {{ fmtTime(row.orderTime) }}</div>
+                <div class="text-xs text-slate-600">{{ row.doctorName || '' }} · {{ fmtTime(row.orderTime) }}</div>
                 <!-- 待校对列表特别要看签名：开立名没签上的医嘱在校对前就能发现，
                      不用等到出了纠纷才去翻签名验签页。 -->
                 <el-tag :data-testid="`p5-order-verify-sign-${row.orderNo}`" :type="row.doctorSigned ? 'success' : 'danger'"
@@ -472,8 +472,8 @@
             </el-table-column>
             <el-table-column label="床位 / 患者" width="100">
               <template #default="{ row }">
-                <div class="text-sm font-medium text-slate-800">{{ row.bedNo || '—' }}</div>
-                <div class="text-xs text-slate-400">{{ row.patientName || '—' }}</div>
+                <div class="text-sm font-medium text-slate-800">{{ row.bedNo || '' }}</div>
+                <div class="text-xs text-slate-400">{{ row.patientName || '' }}</div>
               </template>
             </el-table-column>
             <el-table-column label="医嘱内容" min-width="240">
@@ -488,7 +488,7 @@
                 <div class="text-xs text-slate-500">
                   <span v-if="row.dosage">{{ row.dosage }}{{ row.dosageUnit }} {{ row.route }} {{
                       row.frequency
-                    }} × {{ row.quantity }} · </span>开立 {{ row.doctorName || '—' }}
+                    }} × {{ row.quantity }} · </span>开立 {{ row.doctorName || '' }}
                 </div>
               </template>
             </el-table-column>
@@ -557,7 +557,7 @@
                 <div class="text-sm text-slate-800">{{ row.itemName }}</div>
                 <div class="text-xs text-slate-400">
                   {{ row.orderNo }} · {{ row.orderClassText }} · 第 {{ row.execSeq }} 次 ·
-                  医嘱{{ row.orderStatusText || '—' }}
+                  医嘱{{ row.orderStatusText || '' }}
                 </div>
               </template>
             </el-table-column>
@@ -642,7 +642,7 @@
             <el-table-column label="检验号" prop="recordNo" show-overflow-tooltip width="140"/>
             <el-table-column label="项目 / 标本" min-width="200">
               <template #default="{ row }">
-                <div class="text-sm font-medium text-slate-800">{{ row.laboratoryItemName || '—' }}</div>
+                <div class="text-sm font-medium text-slate-800">{{ row.laboratoryItemName || '' }}</div>
                 <div class="text-xs text-slate-400">
                   {{ row.specimenType || '无标本' }}
                   <span v-if="row.specimenNo"> · {{ row.specimenNo }}</span>
@@ -658,8 +658,8 @@
             </el-table-column>
             <el-table-column label="开单" width="120">
               <template #default="{ row }">
-                <div class="text-xs text-slate-600">{{ row.applyDoctorName || '—' }}</div>
-                <div class="text-xs text-slate-400">{{ row.applyDeptName || '—' }}</div>
+                <div class="text-xs text-slate-600">{{ row.applyDoctorName || '' }}</div>
+                <div class="text-xs text-slate-400">{{ row.applyDeptName || '' }}</div>
               </template>
             </el-table-column>
             <el-table-column label="采样 / 报告" width="160">
@@ -670,7 +670,7 @@
             </el-table-column>
             <el-table-column label="结论" min-width="180">
               <template #default="{ row }">
-                <span class="text-sm text-slate-700">{{ row.suggestions || '—' }}</span>
+                <span class="text-sm text-slate-700">{{ row.suggestions || '' }}</span>
               </template>
             </el-table-column>
             <el-table-column fixed="right" label="操作" width="100">
@@ -715,8 +715,8 @@
             <el-table-column label="检查号" prop="recordNo" show-overflow-tooltip width="140"/>
             <el-table-column label="项目 / 部位" min-width="200">
               <template #default="{ row }">
-                <div class="text-sm font-medium text-slate-800">{{ row.inspectionItemName || '—' }}</div>
-                <div class="text-xs text-slate-400">{{ row.bodyPart || '—' }}<span
+                <div class="text-sm font-medium text-slate-800">{{ row.inspectionItemName || '' }}</div>
+                <div class="text-xs text-slate-400">{{ row.bodyPart || '' }}<span
                     v-if="row.inspectionDeptName"> · {{ row.inspectionDeptName }}</span></div>
               </template>
             </el-table-column>
@@ -729,8 +729,8 @@
             </el-table-column>
             <el-table-column label="开单" width="120">
               <template #default="{ row }">
-                <div class="text-xs text-slate-600">{{ row.applyDoctorName || '—' }}</div>
-                <div class="text-xs text-slate-400">{{ row.applyDeptName || '—' }}</div>
+                <div class="text-xs text-slate-600">{{ row.applyDoctorName || '' }}</div>
+                <div class="text-xs text-slate-400">{{ row.applyDeptName || '' }}</div>
               </template>
             </el-table-column>
             <el-table-column label="预约 / 报告" width="160">
@@ -741,7 +741,7 @@
             </el-table-column>
             <el-table-column label="结论摘要" min-width="200">
               <template #default="{ row }">
-                <span class="text-sm text-slate-700">{{ row.resultConclusion || '—' }}</span>
+                <span class="text-sm text-slate-700">{{ row.resultConclusion || '' }}</span>
               </template>
             </el-table-column>
             <el-table-column fixed="right" label="操作" width="100">
@@ -786,11 +786,11 @@
           <template v-if="labDetail">
             <div class="flex flex-wrap items-baseline gap-x-4 gap-y-1 text-sm">
               <span class="text-lg font-semibold text-slate-900">{{
-                  labDetail.record?.laboratoryItemName || '—'
+                  labDetail.record?.laboratoryItemName || ''
                 }}</span>
-              <span class="text-slate-600">{{ labDetail.record?.recordNo || '—' }}</span>
+              <span class="text-slate-600">{{ labDetail.record?.recordNo || '' }}</span>
               <span class="text-slate-500">{{ labStatusText(labDetail.record?.recordStatus) }}</span>
-              <span class="text-slate-500">标本 {{ labDetail.record?.specimenType || '—' }}</span>
+              <span class="text-slate-500">标本 {{ labDetail.record?.specimenType || '' }}</span>
               <span class="text-slate-500">采样 {{ fmtTime(labDetail.record?.sampleTime) }}</span>
               <span class="text-slate-500">报告 {{ fmtTime(labDetail.record?.reportTime) }}</span>
             </div>
@@ -800,7 +800,7 @@
               <el-table-column label="项目" min-width="160" prop="laboratoryItemName"/>
               <el-table-column align="right" label="结果" width="120">
                 <template #default="{ row }">
-                  <span class="font-medium text-slate-900">{{ row.resultValue ?? '—' }}</span>
+                  <span class="font-medium text-slate-900">{{ row.resultValue ?? '' }}</span>
                   <span class="ml-1 text-xs text-slate-400">{{ row.resultUnit || '' }}</span>
                 </template>
               </el-table-column>
@@ -812,13 +812,13 @@
                       :type="row.abnormalFlagText === '正常' || !row.abnormalFlagText ? 'info' : 'danger'"
                       size="small"
                   >
-                    {{ row.abnormalFlagText || '—' }}
+                    {{ row.abnormalFlagText || '' }}
                   </el-tag>
                 </template>
               </el-table-column>
               <el-table-column label="备注 / 判定依据" min-width="160">
                 <template #default="{ row }">
-                  <span class="text-xs text-slate-500">{{ row.judgeNote || row.remark || '—' }}</span>
+                  <span class="text-xs text-slate-500">{{ row.judgeNote || row.remark || '' }}</span>
                 </template>
               </el-table-column>
               <template #empty>
@@ -827,12 +827,12 @@
             </el-table>
 
             <div v-if="labDetail.report" class="mt-3 rounded-md bg-slate-50 p-3 text-sm text-slate-700">
-              <p><span class="text-slate-500">报告号</span> {{ labDetail.report.reportNo || '—' }}</p>
+              <p><span class="text-slate-500">报告号</span> {{ labDetail.report.reportNo || '' }}</p>
               <p v-if="labDetail.report.conclusion"><span class="text-slate-500">结论</span>
                 {{ labDetail.report.conclusion }}</p>
               <p v-if="labDetail.report.suggestions"><span class="text-slate-500">建议</span>
                 {{ labDetail.report.suggestions }}</p>
-              <p class="text-xs text-slate-400">审核 {{ labDetail.report.auditBy || '—' }} ·
+              <p class="text-xs text-slate-400">审核 {{ labDetail.report.auditBy || '' }} ·
                 {{ fmtTime(labDetail.report.auditTime) }}</p>
             </div>
           </template>
@@ -847,10 +847,10 @@
       <el-dialog v-model="insDetailDialog" title="检查报告" top="8vh" width="760px">
         <div v-if="insDetail" class="space-y-3 text-sm">
           <div class="flex flex-wrap items-baseline gap-x-4 gap-y-1">
-            <span class="text-lg font-semibold text-slate-900">{{ insDetail.inspectionItemName || '—' }}</span>
-            <span class="text-slate-600">{{ insDetail.recordNo || '—' }}</span>
+            <span class="text-lg font-semibold text-slate-900">{{ insDetail.inspectionItemName || '' }}</span>
+            <span class="text-slate-600">{{ insDetail.recordNo || '' }}</span>
             <span class="text-slate-500">{{ insStatusText(insDetail.recordStatus) }}</span>
-            <span class="text-slate-500">部位 {{ insDetail.bodyPart || '—' }}</span>
+            <span class="text-slate-500">部位 {{ insDetail.bodyPart || '' }}</span>
             <span class="text-slate-500">执行 {{ fmtTime(insDetail.executeTime) }}</span>
           </div>
           <div v-if="insDetail.clinicalDiagnosis">
@@ -879,7 +879,7 @@
       <el-dialog v-model="infusionDialog" title="输液执行闭环（开始 → 巡视 → 结束）" top="6vh" width="680px">
         <div v-if="infusionExec" class="mb-3 rounded border border-slate-200 bg-slate-50 p-3 text-sm">
           <span class="font-medium text-slate-800">{{ infusionExec.patientName }}</span>
-          <span class="ml-2 text-xs text-slate-500">床 {{ infusionExec.bedNo || '—' }} · {{ infusionExec.itemName }} · 第 {{
+          <span class="ml-2 text-xs text-slate-500">床 {{ infusionExec.bedNo || '' }} · {{ infusionExec.itemName }} · 第 {{
               infusionExec.execSeq
             }} 次</span>
           <el-tag :type="infusionPhase(infusionExec) === 'done' ? 'info' : infusionPhase(infusionExec) === 'running' ? 'success' : 'warning'" class="ml-2"
@@ -902,7 +902,7 @@
             </template>
             <p v-else class="text-xs text-slate-500" data-testid="g14-started-at">
               {{
-                infusionExec?.infusionStartTime ? `已于 ${String(infusionExec.infusionStartTime).replace('T', ' ').slice(0, 16)} 开始（${infusionExec.dripRate ?? '—'} 滴/分）` : '—'
+                infusionExec?.infusionStartTime ? `已于 ${String(infusionExec.infusionStartTime).replace('T', ' ').slice(0, 16)} 开始（${infusionExec.dripRate ?? ''} 滴/分）` : ''
               }}
             </p>
           </div>
@@ -940,7 +940,7 @@
             </template>
             <p v-else class="text-xs text-slate-500" data-testid="g14-finished-at">
               {{
-                infusionExec?.infusionEndTime ? `已于 ${String(infusionExec.infusionEndTime).replace('T', ' ').slice(0, 16)} 结束${infusionExec.adverseFlag === 1 ? '（有不良反应：' + (infusionExec.adverseNote || '—') + '）' : '（无不良反应）'}` : '—'
+                infusionExec?.infusionEndTime ? `已于 ${String(infusionExec.infusionEndTime).replace('T', ' ').slice(0, 16)} 结束${infusionExec.adverseFlag === 1 ? '（有不良反应：' + (infusionExec.adverseNote || '') + '）' : '（无不良反应）'}` : ''
               }}
             </p>
           </div>
@@ -1231,7 +1231,7 @@
           </el-table-column>
           <el-table-column align="center" label="条数" prop="itemCount" width="70"/>
           <el-table-column label="适用场景 / 备注" min-width="180">
-            <template #default="{ row }"><span class="text-xs text-slate-500">{{ row.remark || '—' }}</span></template>
+            <template #default="{ row }"><span class="text-xs text-slate-500">{{ row.remark || '' }}</span></template>
           </el-table-column>
           <el-table-column label="创建时间" width="140">
             <template #default="{ row }"><span class="text-xs">{{ fmtTime(row.createTime) }}</span></template>
@@ -1356,8 +1356,8 @@ const orderStatusMap = [
   {value: 1, label: '待校对'}, {value: 2, label: '已校对'}, {value: 3, label: '执行中'},
   {value: 4, label: '已完成'}, {value: 5, label: '已停止'}, {value: 6, label: '已作废'},
 ];
-const fmtTime = (v) => (v ? String(v).replace('T', ' ').slice(0, 16) : '—');
-const fmtMoney = (v) => (v === null || v === undefined ? '—' : `¥${Number(v).toFixed(2)}`);
+const fmtTime = (v) => (v ? String(v).replace('T', ' ').slice(0, 16) : '');
+const fmtMoney = (v) => (v === null || v === undefined ? '' : `¥${Number(v).toFixed(2)}`);
 const statusTagType = (s) => {
   if (s === 1)
     return 'danger';
@@ -1371,7 +1371,7 @@ const statusTagType = (s) => {
     return 'info';
   return 'info';
 };
-const fmtDate = (v) => (v ? String(v).replace('T', ' ').slice(0, 10) : '—');
+const fmtDate = (v) => (v ? String(v).replace('T', ' ').slice(0, 10) : '');
 /** 当前登录员工的科室：只用于空态提示；真正的过滤在后端按登录态做 */
 const loadMyDept = async () => {
   try {

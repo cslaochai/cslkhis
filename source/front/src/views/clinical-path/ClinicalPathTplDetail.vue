@@ -5,12 +5,12 @@
     <div v-if="tplView" class="space-y-3">
       <div class="flex items-center gap-6 text-sm text-slate-600 flex-wrap">
         <span>编码：<b class="text-slate-800">{{ tplView.pathwayCode }}</b></span>
-        <span>科室：<b class="text-slate-800">{{ tplView.deptName || '—' }}</b></span>
+        <span>科室：<b class="text-slate-800">{{ tplView.deptName || '' }}</b></span>
         <span>总日数：<b class="text-slate-800">{{ tplView.totalDays }}</b></span>
         <span>状态：<el-tag :type="pathwayStatusTag(tplView.status)" size="small">{{
             statusText(tplView.status)
           }}</el-tag></span>
-        <span>适用病种：{{ tplView.diagnosis || '—' }}</span>
+        <span>适用病种：{{ tplView.diagnosis || '' }}</span>
       </div>
       <el-table :data="tplView.steps || []" border max-height="420" size="small">
         <el-table-column align="center" label="路径日" prop="dayNo" width="80"/>

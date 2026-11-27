@@ -14,17 +14,20 @@ public class BiOverviewVO {
     /** 今日挂号人次 */
     private Long todayAppointments;
 
+    /** 今日入院人数（admit_time 当日） */
+    private Long todayAdmissions;
+
     /** 在院人数（未出院的入院记录） */
     private Long inHospitalCount;
 
     /** 今日出院人数 */
     private Long todayDischargeCount;
 
+    /** 今日主手术台次（is_main=1，operation_date 当日） */
+    private Long todayOperations;
+
     /** 今日收入（收费明细净额=收入-退款抵扣） */
     private BigDecimal todayRevenue;
-
-    /** 今日药费收入 */
-    private BigDecimal todayDrugRevenue;
 
     /** 今日药占比（0~1） */
     private BigDecimal drugRatio;
@@ -38,6 +41,32 @@ public class BiOverviewVO {
     /** 占用床位数 */
     private Long bedOccupied;
 
+    /** 空床数（总床-占用-维修，不为负） */
+    private Long emptyBeds;
+
+    /** 待入院排队（待收治住院证，order_status=1） */
+    private Long pendingAdmissionCount;
+
+    // 昨日对照（环比用；存量指标在院人数不挂环比）
+
+    /** 昨日挂号人次 */
+    private Long yesterdayAppointments;
+
+    /** 昨日入院人数 */
+    private Long yesterdayAdmissions;
+
+    /** 昨日出院人数 */
+    private Long yesterdayDischargeCount;
+
+    /** 昨日主手术台次 */
+    private Long yesterdayOperations;
+
+    /** 昨日收入净额 */
+    private BigDecimal yesterdayRevenue;
+
+    /** 昨日药占比（0~1） */
+    private BigDecimal yesterdayDrugRatio;
+
     /** 近 7 日门诊量趋势 */
     private List<TrendPoint> appointmentTrend;
 
@@ -46,6 +75,9 @@ public class BiOverviewVO {
 
     /** 收入 TOP5 科室（近 30 日） */
     private List<DeptRevenue> deptTop;
+
+    /** 近 30 日收入结构（六类归并） */
+    private List<RevenueStructure> revenueStructure;
 
     @Data
     public static class TrendPoint {
@@ -58,6 +90,19 @@ public class BiOverviewVO {
     public static class DeptRevenue {
         /** 科室名称 */
         private String deptName;
+        private BigDecimal amount;
+    }
+
+    /**
+     * 收入结构一类（药品为西药/中成药/中药饮片归并）。
+     */
+    @Data
+    public static class RevenueStructure {
+        /** 类别编码：registration-诊查 drug-药品 exam-检查 lab-检验 treatment-治疗 consumable-耗材 */
+        private String code;
+        /** 类别名称 */
+        private String name;
+        /** 近 30 日收入净额 */
         private BigDecimal amount;
     }
 }

@@ -6,12 +6,12 @@
         <el-descriptions-item label="约谈编号">{{ row.talkNo }}</el-descriptions-item>
         <el-descriptions-item label="约谈类型">{{ TALK_TYPE[row.talkType] }}</el-descriptions-item>
         <el-descriptions-item label="被约谈医师">{{ row.doctorName }}</el-descriptions-item>
-        <el-descriptions-item label="科室">{{ row.deptName || '—' }}</el-descriptions-item>
+        <el-descriptions-item label="科室">{{ row.deptName || '' }}</el-descriptions-item>
         <el-descriptions-item label="约谈时间">{{ row.talkTime }}</el-descriptions-item>
-        <el-descriptions-item label="约谈人">{{ row.talkerName }}（{{ row.talkerOrg || '—' }}）</el-descriptions-item>
-        <el-descriptions-item label="问题摘要" :span="2">{{ row.problemSummary || '—' }}</el-descriptions-item>
-        <el-descriptions-item label="约谈内容" :span="2">{{ row.talkContent || '—' }}</el-descriptions-item>
-        <el-descriptions-item label="整改要求" :span="2">{{ row.rectifyRequire || '—' }}</el-descriptions-item>
+        <el-descriptions-item label="约谈人">{{ row.talkerName }}（{{ row.talkerOrg || '' }}）</el-descriptions-item>
+        <el-descriptions-item label="问题摘要" :span="2">{{ row.problemSummary || '' }}</el-descriptions-item>
+        <el-descriptions-item label="约谈内容" :span="2">{{ row.talkContent || '' }}</el-descriptions-item>
+        <el-descriptions-item label="整改要求" :span="2">{{ row.rectifyRequire || '' }}</el-descriptions-item>
         <el-descriptions-item label="整改状态" :span="2">
           {{ RECTIFY_STATUS[row.rectifyStatus] }}
           <span v-if="row.rectifyRemark">：{{ row.rectifyRemark }}</span>

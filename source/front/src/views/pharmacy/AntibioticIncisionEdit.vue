@@ -2,8 +2,8 @@
   <el-dialog v-model="visible" :title="reviewForm.id ? '重评 I 类切口预防用药' : 'I 类切口预防用药点评'" width="680px">
     <el-form :model="reviewForm" label-width="150px">
       <el-form-item label="手术">
-        <span>{{ reviewMeta.operationName || '—' }}</span>
-        <span class="muted">（{{ reviewMeta.patientName || '—' }} / {{ reviewMeta.deptName || '—' }} / 主刀 {{ reviewMeta.surgeonName || '—' }} / 切皮 {{ reviewMeta.operationTime || '—' }}）</span>
+        <span>{{ reviewMeta.operationName || '' }}</span>
+        <span class="muted">（{{ reviewMeta.patientName || '' }} / {{ reviewMeta.deptName || '' }} / 主刀 {{ reviewMeta.surgeonName || '' }} / 切皮 {{ reviewMeta.operationTime || '' }}）</span>
       </el-form-item>
       <el-form-item label="预防用药">
         <div data-testid="review-drug-select" style="width: 100%">

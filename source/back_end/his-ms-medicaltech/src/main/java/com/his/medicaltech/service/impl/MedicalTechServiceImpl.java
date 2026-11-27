@@ -311,6 +311,12 @@ public class MedicalTechServiceImpl extends ServiceImpl<BizInspectionRecordMappe
             throw new BusinessException("检查记录不存在");
         }
         deptScopeService.assertDeptAccessible(record.getInspectionDeptId());
+        // 报告审核后就是法律文书：重复审核会重新签名、重生成 PDF，把已交付报告的证据链改掉。
+        // 要改结果必须先走报告退回/重发流程，不能靠再点一次审核覆盖。
+        if (InsRecordStatusEnum.REVIEWED.getCode().equals(record.getRecordStatus())
+                || InsRecordStatusEnum.PUBLISHED.getCode().equals(record.getRecordStatus())) {
+            throw new BusinessException("检查报告已审核，不能重复审核；如需修改请先退回报告");
+        }
         // 先签名、后改状态：签名层的准入规则要求记录处于「已出结果」，先把状态写成
         // 「已审核」会让签名层把自己拒掉（"已审核的不能重复签"）。
         SignatureVO sign = signInspectionReport(record, true, pin);

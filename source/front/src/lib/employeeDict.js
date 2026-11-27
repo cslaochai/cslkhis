@@ -8,7 +8,7 @@
 
 /** 按 dictValue 取 dictLabel；空值显示「-」，字典里查不到时原样回显（脏码值看得见） */
 export function getDictLabelByValue(options, value) {
-    if (!value) return '-'
+    if (!value) return ''
     const item = options.find(item => item.dictValue === value)
     return item ? item.dictLabel : value
 }

@@ -186,9 +186,9 @@ const rxStatusMap = {
   6: {label: '已退药', color: 'bg-red-100 text-red-500'},
   7: {label: '审方退回', color: 'bg-orange-100 text-orange-700'},
 };
-const statusText = (v) => rxStatusMap[v]?.label ?? (v == null ? '—' : `未知(${v})`);
+const statusText = (v) => rxStatusMap[v]?.label ?? (v == null ? '' : `未知(${v})`);
 const statusColor = (v) => rxStatusMap[v]?.color ?? 'bg-slate-100 text-slate-500';
-const fmtTime = (v) => (v ? String(v).replace('T', ' ').slice(0, 19) : '—');
+const fmtTime = (v) => (v ? String(v).replace('T', ' ').slice(0, 19) : '');
 const loadData = async () => {
   loading.value = true;
   try {

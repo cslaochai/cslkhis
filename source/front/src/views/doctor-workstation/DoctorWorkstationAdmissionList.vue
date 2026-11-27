@@ -15,19 +15,19 @@
       <el-table-column label="住院证号" prop="orderNo" min-width="150"/>
       <el-table-column label="患者" min-width="130">
         <template #default="{ row }">
-          <div class="text-slate-700">{{ row.patientName || '—' }}</div>
-          <div class="text-xs text-slate-400">{{ row.genderText || '—' }} {{ row.age ?? '—' }}岁</div>
+          <div class="text-slate-700">{{ row.patientName || '' }}</div>
+          <div class="text-xs text-slate-400">{{ row.genderText || '' }} {{ row.age ?? '' }}岁</div>
         </template>
       </el-table-column>
       <el-table-column label="拟收治科室" min-width="110">
-        <template #default="{ row }">{{ row.applyDeptName || '—' }}</template>
+        <template #default="{ row }">{{ row.applyDeptName || '' }}</template>
       </el-table-column>
       <el-table-column label="拟诊" prop="diagnosisName" min-width="130" show-overflow-tooltip>
-        <template #default="{ row }">{{ row.diagnosisName || '—' }}</template>
+        <template #default="{ row }">{{ row.diagnosisName || '' }}</template>
       </el-table-column>
       <el-table-column label="开证时间" prop="orderTime" min-width="150"/>
       <el-table-column label="有效期至" prop="validUntil" min-width="150">
-        <template #default="{ row }">{{ row.validUntil || '—' }}</template>
+        <template #default="{ row }">{{ row.validUntil || '' }}</template>
       </el-table-column>
       <el-table-column label="状态" min-width="110">
         <template #default="{ row }">

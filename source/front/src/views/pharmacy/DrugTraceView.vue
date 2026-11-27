@@ -160,7 +160,7 @@
                     <el-option
                         v-for="b in (collectScan?.batches || [])"
                         :key="b.stockId"
-                        :label="`${b.batchNo}｜效期 ${b.expiryDate || '-'}｜余 ${b.quantity ?? 0}`"
+                        :label="`${b.batchNo}｜效期 ${b.expiryDate || ''}｜余 ${b.quantity ?? 0}`"
                         :value="String(b.stockId)"
                     />
                   </el-select>
@@ -183,11 +183,11 @@
               <div v-if="collectScan" class="scan-result" data-testid="collect-scan-result">
                 <el-descriptions :column="2" border size="small">
                   <el-descriptions-item label="码制">{{ codeTypeText(collectScan.codeType) }}</el-descriptions-item>
-                  <el-descriptions-item label="产品标识">{{ collectScan.drugDi || '-' }}</el-descriptions-item>
-                  <el-descriptions-item label="序列号">{{ collectScan.serialNo || '-' }}</el-descriptions-item>
-                  <el-descriptions-item label="码内批号">{{ collectScan.batchNo || '-' }}</el-descriptions-item>
+                  <el-descriptions-item label="产品标识">{{ collectScan.drugDi || '' }}</el-descriptions-item>
+                  <el-descriptions-item label="序列号">{{ collectScan.serialNo || '' }}</el-descriptions-item>
+                  <el-descriptions-item label="码内批号">{{ collectScan.batchNo || '' }}</el-descriptions-item>
                   <el-descriptions-item label="命中药品">{{ collectScan.drugName || '未命中' }}</el-descriptions-item>
-                  <el-descriptions-item label="批准文号">{{ collectScan.approvalNumber || '-' }}</el-descriptions-item>
+                  <el-descriptions-item label="批准文号">{{ collectScan.approvalNumber || '' }}</el-descriptions-item>
                 </el-descriptions>
                 <el-alert
                     v-if="collectScan.tip"
@@ -246,20 +246,20 @@
 
               <div v-if="dispenseScan" class="scan-result" data-testid="dispense-scan-result">
                 <el-descriptions :column="2" border size="small">
-                  <el-descriptions-item label="发药单">{{ dispenseScan.dispensingNo || '-' }}</el-descriptions-item>
+                  <el-descriptions-item label="发药单">{{ dispenseScan.dispensingNo || '' }}</el-descriptions-item>
                   <el-descriptions-item label="患者">{{
-                      dispenseScan.dispensingPatientName || '-'
+                      dispenseScan.dispensingPatientName || ''
                     }}
                   </el-descriptions-item>
                   <el-descriptions-item label="发药品种">{{
-                      dispenseScan.dispensingDrugName || '-'
+                      dispenseScan.dispensingDrugName || ''
                     }}
                   </el-descriptions-item>
                   <el-descriptions-item label="发药数量">{{
-                      dispenseScan.dispensingQuantity ?? '-'
+                      dispenseScan.dispensingQuantity ?? ''
                     }}
                   </el-descriptions-item>
-                  <el-descriptions-item label="追溯码归属">{{ dispenseScan.drugName || '-' }}</el-descriptions-item>
+                  <el-descriptions-item label="追溯码归属">{{ dispenseScan.drugName || '' }}</el-descriptions-item>
                   <el-descriptions-item label="码状态">
                     {{ dispenseScan.exists ? statusText(dispenseScan.existStatus) : '未采集' }}
                   </el-descriptions-item>

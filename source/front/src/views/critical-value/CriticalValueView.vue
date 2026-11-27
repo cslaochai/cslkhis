@@ -75,7 +75,7 @@
         </el-table-column>
         <el-table-column label="患者" width="150">
           <template #default="{ row }">
-            <div class="text-sm font-medium text-slate-800">{{ row.patientName || '—' }}</div>
+            <div class="text-sm font-medium text-slate-800">{{ row.patientName || '' }}</div>
             <div class="text-slate-400">
               {{ row.genderText || '' }}<span v-if="row.age"> {{ row.age }}岁</span>
             </div>
@@ -88,11 +88,11 @@
                 {{ row.criticalTypeText || (row.criticalType === 2 ? '偏高' : '偏低') }}
               </el-tag>
               <!-- 项目名必须显示：只给「45 g/L ↓」谁也判断不出这是哪一项 -->
-              <span class="text-sm font-medium text-slate-800">{{ row.itemName || '—' }}</span>
+              <span class="text-sm font-medium text-slate-800">{{ row.itemName || '' }}</span>
             </div>
             <div class="mt-0.5 text-sm font-semibold text-red-600">{{ row.resultText || row.resultValue }}</div>
             <div class="text-slate-400">
-              阈值 {{ row.thresholdText || '—' }}
+              阈值 {{ row.thresholdText || '' }}
               <span v-if="row.referenceRange"> · 参考 {{ row.referenceRange }}</span>
             </div>
           </template>
@@ -275,7 +275,7 @@ const statCards = computed(() => [
     icon: Clock
   },
 ]);
-const fmtTime = (v) => (v ? String(v).replace('T', ' ').slice(0, 16) : '—');
+const fmtTime = (v) => (v ? String(v).replace('T', ' ').slice(0, 16) : '');
 const loadStats = async () => {
   try {
     const res = await getCriticalValueStats();

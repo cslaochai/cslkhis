@@ -502,7 +502,7 @@ public class EmployeeTechAuthServiceImpl extends ServiceImpl<SysEmployeeTechAuth
 
     private String authTypeText(Integer type) {
         if (type == null) {
-            return "—";
+            return "";
         }
         return dictCacheService.getDicDataLabel(DictTypeConst.TECH_AUTH_TYPE, type);
     }

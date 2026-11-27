@@ -4,19 +4,12 @@
     <div class="bg-white rounded-lg shadow-sm px-4 py-3 mb-4 flex flex-wrap items-center gap-x-6 gap-y-3">
       <div class="flex items-center gap-2">
         <span class="text-[13px] text-gray-500">科室</span>
-        <el-select v-model="deptId" :fit-input-width="false" style="width: 200px" filterable @change="onDeptChange">
-          <el-option v-for="d in depts" :key="d.id" :label="d.deptName" :value="d.id"/>
-        </el-select>
+        <DeptTreeSelect v-model="deptId" mode="TREE" placeholder="请选择科室" @change="onDeptChange"/>
         <span class="text-[13px] text-gray-500 ml-2">病区</span>
         <el-select v-model="wardId" :fit-input-width="false" style="width: 180px">
           <el-option label="全部病区" value="ALL"/>
           <el-option v-for="w in wardOptions" :key="w.wardId" :label="w.wardName" :value="w.wardId"/>
         </el-select>
-      </div>
-
-      <div class="text-[20px] font-semibold text-[#1269B5]">
-        {{ currentDeptName }}<template v-if="currentWardName"> · {{ currentWardName }}</template>
-        <span class="text-[14px] font-normal text-gray-500 ml-1">护士站患者监护</span>
       </div>
 
       <div class="flex items-center gap-6 ml-auto">
@@ -48,13 +41,18 @@
 
       <div class="flex items-center gap-2 text-[12px] text-gray-400">
         <span class="inline-block w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-        自动刷新 10s · {{ lastRefresh || '-' }}
-        <el-switch v-model="alertMuted" size="small" active-text="告警声音"/>
-        <!-- 浏览器要求页面有过用户交互才允许出声：没解锁时把原因显式写出来，避免「以为坏了」 -->
-        <span v-if="!alertMuted && !alertAudioReady" class="text-orange-500" title="浏览器要求页面有过点击/按键才允许出声">
-          点击页面任意处开启声音
+        自动刷新 10s · {{ lastRefresh || '' }}
+        <!-- 静音开关只在顶栏（Header）一处，本页不再重复；这里只提示浏览器的解锁状态 -->
+        <span v-if="!alertAudioReady" class="text-orange-500" title="浏览器要求页面先被点击过才能出声，点页面任意处即可">
+          声音未解锁（点页面任意处）
         </span>
-        <el-switch v-model="showEmpty" active-text="显示空床" size="small"/><el-button size="small" text @click="loadBeds()">刷新</el-button>
+        <span v-if="alertMuted" class="text-gray-400">提示音已静音（顶栏可开）</span>
+        <span class="text-gray-400">当前 {{ alarmCount }} 条告警</span>
+        <span v-if="lastBeepText" class="text-gray-400">上次发声 {{ lastBeepText }}</span>
+        <span v-if="recentAlarmText" class="text-orange-600 max-w-[300px] truncate" :title="recentAlarmText">
+          最近告警 {{ recentAlarmText }}
+        </span>
+        <el-button size="small" type="primary" plain :icon="Refresh" :loading="loading" @click="loadBeds()">刷新</el-button>
       </div>
     </div>
 
@@ -87,8 +85,8 @@
               <span class="text-[13px] text-gray-500">{{ genderText(bed.gender) }} · {{ bed.age ? bed.age + '岁' : '年龄未录' }}</span>
             </div>
             <div class="mt-1 text-[13px] text-gray-500 flex items-center gap-3">
-              <span>住院 <b class="text-gray-700">{{ bed.admitDays ?? '-' }}</b> 天</span>
-              <span class="truncate">医生 {{ bed.doctorName || '-' }}</span>
+              <span>住院 <b class="text-gray-700">{{ bed.admitDays ?? '' }}</b> 天</span>
+              <span class="truncate">医生 {{ bed.doctorName || '' }}</span>
             </div>
             <div class="mt-1 text-[12px] text-orange-600 truncate" v-if="bed.allergyHistory">
               过敏：{{ bed.allergyHistory }}
@@ -155,14 +153,14 @@
                   <div class="text-[11px] text-gray-400">心率</div>
                   <div class="text-[18px] font-bold leading-6"
                        :class="bedSensorOf(bed).hrBad ? 'text-red-600' : 'text-gray-800'">
-                    {{ bedSensorOf(bed).inBed && bedSensorOf(bed).hr ? bedSensorOf(bed).hr : '—' }}<span class="text-[10px] text-gray-400 ml-0.5">bpm</span>
+                    {{ bedSensorOf(bed).inBed && bedSensorOf(bed).hr ? bedSensorOf(bed).hr : '' }}<span class="text-[10px] text-gray-400 ml-0.5">bpm</span>
                   </div>
                 </div>
                 <div>
                   <div class="text-[11px] text-gray-400">呼吸</div>
                   <div class="text-[18px] font-bold leading-6"
                        :class="bedSensorOf(bed).rrBad ? 'text-red-600' : 'text-gray-800'">
-                    {{ bedSensorOf(bed).inBed && bedSensorOf(bed).rr ? bedSensorOf(bed).rr : '—' }}<span class="text-[10px] text-gray-400 ml-0.5">次/分</span>
+                    {{ bedSensorOf(bed).inBed && bedSensorOf(bed).rr ? bedSensorOf(bed).rr : '' }}<span class="text-[10px] text-gray-400 ml-0.5">次/分</span>
                   </div>
                 </div>
                 <div>
@@ -219,20 +217,21 @@
  * 管理员（data_scope=1）拿全院科室，护士拿自己被授权的科室，选哪个科室就看哪个科室的床。
  */
 import {computed, onMounted, onUnmounted, ref} from 'vue';
+import {Refresh} from '@element-plus/icons-vue';
 import {ElMessage} from 'element-plus';
 import {getBedMap} from '@/api/inpatient';
-import {iotActiveBinds, iotDeviceSelectList, iotLatestList} from '@/api/iot';
+import {iotActiveBinds, iotDeviceSelectList, iotEventListPage, iotLatestList} from '@/api/iot';
 // 设备告警实时流：设备事件（阻塞/余量/断电）落库即推一帧；断线退回本页 10 秒轮询
 import {openIotAlarmStream} from '@/api/iotAlarmStream';
 // 提示音：与顶栏站内消息共用同一套静音开关与音色（浏览器解锁策略也在那个模块处理）
-import {alertAudioReady, alertMuted, playAlert} from '@/lib/alertSound';
-import {loadDeptOptions} from '@/lib/deptOptions';
+import {ALARM_REPEAT_MS, alertAudioReady, alertMuted, lastAlertAt, playAlert} from '@/lib/alertSound';
+import {loadDeptTreeOptions, flattenDeptTree} from '@/lib/deptOptions';
+import DeptTreeSelect from '@/components/his/DeptTreeSelect.vue';
 import DeviceHistoryDialog from './DeviceHistoryDialog.vue';
 
 const depts = ref([]);
 const deptId = ref(null);
 const wardId = ref('ALL');
-const showEmpty = ref(false);
 const beds = ref([]);
 const devices = ref([]);
 const activeBinds = ref([]);
@@ -245,15 +244,52 @@ const trendVisible = ref(false);
 const trendDevice = ref(null);
 
 // ========== 告警提示音：SSE 秒达 + 10 秒轮询兜底，按「告警键」去重 ==========
-// 为什么按设备/床位去重而不按事件：一台泵阻塞会连续上报多条事件、体征越界会连续多轮轮询命中，
-// 但护士该听到的是「3 床这台泵/这个人开始异常」，不是每 10 秒叫一次。
-// 所以：进入告警响一次 → 持续不响 → 恢复后再次异常才重新响。
+// 为什么按设备/床位去重而不按事件：一台泵阻塞会连续上报多条事件、体征越界会连续多轮轮询命中。
+// 口径：新出现的告警立刻响 → 持续未解除按级别重响（严重 15 秒 / 警告 60 秒，见 ALARM_REPEAT_MS）→ 解除后停。
+// 不做「每轮都响」，否则 10 秒一轮会把护士站变成噪音源；轮询兜底的实际间隔会有约一个轮询周期的粒度误差。
 let closeAlarmStream = null;
-let alarmSeen = new Set();          // 上一轮处于告警的键（pump:设备号 / bed:设备号:vital）
+const lastAlarmBeep = new Map();    // 告警键 → {at, level}（pump:设备号 / bed:设备号:vital）
 let alarmPrimed = false;            // 首轮静默：接班/刷新页面不该把历史告警集体叫一遍
 const buzzedEvents = new Set();     // 已发声的事件ID（SSE 重连补发、QoS1 重复帧去重）
 
+// ========== 科室告警流水（事件级） ==========
+// 床位卡只认「泵阻塞 / 体征越界」，但告警中心里还有冷链超温、离床超时、资产离区、机器人低电等二级以上事件。
+// 护士站既然挂了声音，口径应是「本科室有报警就响」，不能只响能画到卡片上的那两类。
+// 数据来自 /iot/event/listPage（deptId + minLevel=2 + 近 15 分钟 + 未处理），按事件 ID 去重。
+const recentAlarm = ref(null);
+const seenEventIds = new Set();
+// 设备档案科室（deviceNo → deptName）：事件表的 dept_id 只由「在用绑定」折算，
+// 没绑到患者的泵（如设备在病区、但还没挂到床）dept_id 为空，靠它把告警折回本科室。
+const deviceDept = ref(new Map());
+
 const currentDeptName = computed(() => depts.value.find(d => String(d.id) === String(deptId.value))?.deptName || '未选择科室');
+
+// 选中业务父科室时按子树聚合：告警归属判定覆盖「自身 + 全部后代」科室，不再只认精确科室
+const descendantScope = computed(() => {
+  const root = String(deptId.value ?? '');
+  const childrenByParent = new Map();
+  for (const d of depts.value) {
+    const pid = String(d.parentId ?? '');
+    if (!childrenByParent.has(pid)) childrenByParent.set(pid, []);
+    childrenByParent.get(pid).push(d);
+  }
+  const ids = new Set([root]);
+  const names = new Set();
+  const queue = [root];
+  while (queue.length) {
+    const pid = queue.shift();
+    for (const child of childrenByParent.get(pid) || []) {
+      const cid = String(child.id);
+      if (ids.has(cid)) continue;
+      ids.add(cid);
+      names.add(child.deptName);
+      queue.push(cid);
+    }
+  }
+  const rootNode = depts.value.find(d => String(d.id) === root);
+  if (rootNode) names.add(rootNode.deptName);
+  return {ids, names};
+});
 const wardOptions = computed(() => {
     const map = new Map();
     for (const bed of beds.value) {
@@ -263,14 +299,11 @@ const wardOptions = computed(() => {
     }
     return [...map.values()];
 });
-const currentWardName = computed(() => wardId.value === 'ALL' ? '' : (wardOptions.value.find(w => String(w.wardId) === String(wardId.value))?.wardName || ''));
 const wardBeds = computed(() => wardId.value === 'ALL'
     ? beds.value
     : beds.value.filter(b => String(b.wardId) === String(wardId.value)));
-/** 默认只显示有患者的床：护士站先看“现在的病人”，空床点开关再看 */
-const visibleBeds = computed(() => showEmpty.value
-    ? wardBeds.value
-    : wardBeds.value.filter(b => b.patientName));
+/** 只显示有患者的床：护士站看的是“现在的病人”，空床不进大屏（空床数在右上角统计里给） */
+const visibleBeds = computed(() => wardBeds.value.filter(b => b.patientName));
 
 const stats = computed(() => {
     const occupied = wardBeds.value.filter(b => b.patientName).length;
@@ -297,11 +330,10 @@ const bedTelemetryByNo = computed(() => {
 });
 const bedDeviceByBedNo = computed(() => {
     const map = new Map();
-    const dept = currentDeptName.value;
+    const names = descendantScope.value.names;
     for (const dev of bedDevices.value) {
         if (!dev.bedNo) continue;
-        const sameDept = !dept || !dev.deptName || dev.deptName === dept
-            || dept.includes(dev.deptName) || dev.deptName.includes(dept);
+        const sameDept = !dev.deptName || (names.size ? names.has(dev.deptName) : true);
         if (sameDept) map.set(normBed(dev.bedNo), dev);
     }
     return map;
@@ -387,7 +419,7 @@ const numberValue = (v) => {
 const truthy = (v) => v === true || v === 'true' || v === '是' || v === 1 || v === '1';
 const metric = (device, key) => {
     const v = metricValue(device, key);
-    return v == null || v === '' ? '—' : v;
+    return v == null || v === '' ? '' : v;
 };
 const lowBattery = (d) => {
     const v = Number(metricValue(d, 'battery'));
@@ -401,8 +433,8 @@ const isStale = (d) => {
     return !Number.isFinite(t) || Date.now() - t > 60000;
 };
 
-const shortTime = (ts) => (ts ? String(ts).slice(11, 19) : '—');
-const genderText = (g) => (g === 1 ? '男' : g === 2 ? '女' : '—');
+const shortTime = (ts) => (ts ? String(ts).slice(11, 19) : '');
+const genderText = (g) => (g === 1 ? '男' : g === 2 ? '女' : '');
 
 const cardHeaderClass = (bed) => {
     if (pumpsOf(bed).some(p => p.alarm) || bedSensorOf(bed)?.vitalBad) return 'bg-red-50 border-red-100';
@@ -427,14 +459,104 @@ const alarmKeys = () => {
 };
 
 /**
- * 轮询兜底也要响（SSE 断了不能变成哑巴）：与上一轮比，只对新出现的告警键发声。
- * SSE 正常时事件会先记进 alarmSeen，这里就不会重复响。
+ * 告警键 → 音色级别：泵阻塞与体征越界都是「病人这头有事」，按严重档；其余按警告档。
+ * 重响间隔跟着级别走，严重档叫得更勤（与真实监护设备一致）。
+ */
+const levelOfAlarmKey = (key) => (key.startsWith('pump:') || key.endsWith(':vital')) ? 'critical' : 'warning';
+
+/**
+ * 轮询兜底也要响（SSE 断了不能变成哑巴）：
+ * - 新出现的告警键 → 立刻响；
+ * - 一直在的告警键 → 距上次发声满该级别间隔（严重 15 秒 / 警告 60 秒）再响一次；
+ * - 已解除的键从表里删掉，恢复后再次异常就是「新告警」。
+ * SSE 正常时事件会先把键与时间记进 lastAlarmBeep，这里不会重复响。
  */
 const syncAlarmSound = (silent = false) => {
     const now = alarmKeys();
-    const fresh = [...now].filter(k => !alarmSeen.has(k));
-    if (!silent && fresh.length) playAlert('critical');
-    alarmSeen = now;
+    const nowMs = Date.now();
+    const due = new Set();
+    for (const key of now) {
+        const level = levelOfAlarmKey(key);
+        const rec = lastAlarmBeep.get(key);
+        if (silent) {
+            lastAlarmBeep.set(key, {at: nowMs, level});
+            continue;
+        }
+        if (!rec) {
+            lastAlarmBeep.set(key, {at: nowMs, level});
+            due.add(level);
+            continue;
+        }
+        rec.level = level;
+        if (nowMs - rec.at >= (ALARM_REPEAT_MS[level] || ALARM_REPEAT_MS.warning)) {
+            rec.at = nowMs;
+            due.add(level);
+        }
+    }
+    for (const key of [...lastAlarmBeep.keys()]) {
+        if (!now.has(key)) lastAlarmBeep.delete(key);
+    }
+    // 同一轮里严重与警告都有到期，只响一次，按最高级别
+    if (due.has('critical')) playAlert('critical');
+    else if (due.has('warning')) playAlert('warning');
+};
+
+const pad2 = (n) => String(n).padStart(2, '0');
+const fmtDateTime = (d) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`
+    + ` ${pad2(d.getHours())}:${pad2(d.getMinutes())}:${pad2(d.getSeconds())}`;
+
+/** 设备档案：各类型设备编号 → 归属科室名。切科室时拉一次，不随 10 秒轮询反复请求 */
+const DEVICE_TYPES_FOR_ALARM = ['infusion', 'bed', 'coldchain', 'asset', 'robot', 'env', 'gas', 'cabinet', 'uv', 'dialysis'];
+const loadDeviceDirectory = async () => {
+    const lists = await Promise.all(DEVICE_TYPES_FOR_ALARM
+        .map((t) => iotDeviceSelectList({deviceType: t}).catch(() => null)));
+    const map = new Map();
+    for (const res of lists) {
+        for (const d of res?.data || []) {
+            if (d.deviceNo) map.set(d.deviceNo, d.deptName || '');
+        }
+    }
+    deviceDept.value = map;
+};
+
+/**
+ * 拉本科室近 15 分钟未处理的二级以上事件：
+ * - 归属判定两道：事件自带的 deptId（在用绑定折算）或「设备档案科室 = 当前科室」
+ *   —— 后者覆盖「设备在病区但没绑床」的泵，否则这类阻塞告警会彻底丢掉；
+ * - 新事件 → 响一次（级别 3 → 严重档，其余 → 警告档）；
+ * - 首轮/切科室静默，把已有事件记进 seenEventIds，不把接班时的一屏历史告警集体叫一遍；
+ * - 顶部显示最近一条，让「响过」有迹可循。
+ */
+const loadAlarmFeed = async (silent = false) => {
+    if (!deptId.value) return;
+    if (!deviceDept.value.size) await loadDeviceDirectory();
+    const now = new Date();
+    const start = new Date(now.getTime() - 15 * 60 * 1000);
+    const res = await iotEventListPage({
+        pageNum: 1,
+        pageSize: 50,
+        minLevel: 2,
+        handledFlag: 0,
+        startTime: fmtDateTime(start),
+        endTime: fmtDateTime(now),
+    });
+    const scope = descendantScope.value;
+    const rows = (res.data?.records || []).filter((r) => {
+        if (r.deptId && scope.ids.has(String(r.deptId))) return true;
+        const devDept = deviceDept.value.get(r.deviceNo);
+        return !!devDept && scope.names.has(devDept);
+    });
+    if (rows.length) recentAlarm.value = rows[0];
+    let beepLevel = '';
+    for (const r of rows) {
+        const id = String(r.id ?? '');
+        if (!id || seenEventIds.has(id)) continue;
+        seenEventIds.add(id);
+        if (silent) continue;
+        if (Number(r.level) >= 3) beepLevel = 'critical';
+        else if (!beepLevel) beepLevel = 'warning';
+    }
+    if (beepLevel) playAlert(beepLevel);
 };
 
 /** 连接科室告警流：设备事件一落库就响，不用等下一轮 10 秒 */
@@ -452,9 +574,10 @@ const connectAlarmStream = () => {
             if (eventId && buzzedEvents.has(eventId)) return;
             if (eventId) buzzedEvents.add(eventId);
             const level = Number(data.level) || 1;
-            // 先记账再响：随后 loadBeds 会把这台泵算进 alarmSeen，避免轮询兜底再响一遍
-            if (data.deviceNo) alarmSeen.add(`pump:${data.deviceNo}`);
-            if (level >= 2) playAlert(level >= 3 ? 'critical' : 'warning');
+            const tone = level >= 3 ? 'critical' : 'warning';
+            // 先记账再响：随后 loadBeds 会把这台泵算进当前告警，避免轮询兜底再响一遍
+            if (data.deviceNo) lastAlarmBeep.set(`pump:${data.deviceNo}`, {at: Date.now(), level: tone});
+            if (level >= 2) playAlert(tone);
             loadBeds(); // 卡片立即变红，不等下一轮轮询
         },
         onFallback: (reason) => {
@@ -464,16 +587,32 @@ const connectAlarmStream = () => {
     });
 };
 
-/** 切科室：告警键与去重集合都得重来，否则会把新科室的历史告警当成「新告警」叫一遍 */
+/** 切科室：发声记录与去重集合都得重来，否则会把新科室的历史告警当成「新告警」叫一遍 */
 const resetAlarmState = () => {
-    alarmSeen = new Set();
+    lastAlarmBeep.clear();
     alarmPrimed = false;
     buzzedEvents.clear();
+    seenEventIds.clear();
+    recentAlarm.value = null;
 };
+
+/** 当前告警条数（顶栏状态用） */
+const alarmCount = computed(() => alarmKeys().size);
+
+/** 顶部状态：上次真的发声的时间 / 最近一条科室告警（有没有出声、响了什么，一眼可见） */
+const lastBeepText = computed(() => lastAlertAt.value
+    ? new Date(lastAlertAt.value).toLocaleTimeString('zh-CN', {hour12: false})
+    : '');
+const recentAlarmText = computed(() => {
+    const a = recentAlarm.value;
+    if (!a) return '';
+    const time = String(a.ts || '').slice(11, 16);
+    return `${time} ${a.deviceNo || ''} ${a.eventCodeText || a.detail || ''}`.trim();
+});
 
 const loadDepts = async () => {
     try {
-        depts.value = await loadDeptOptions();
+        depts.value = flattenDeptTree(await loadDeptTreeOptions({mode: 'TREE'}));
         if (!depts.value.length) {
             loadError.value = '当前岗位没有被授权任何科室';
             return;
@@ -537,6 +676,7 @@ const loadBeds = async ({silent = false} = {}) => {
         lastRefresh.value = new Date().toLocaleTimeString('zh-CN', {hour12: false});
         // 轮询兜底发声：首轮静默，之后只叫「新出现」的告警（SSE 已在线的会被它提前记账，不会双响）
         syncAlarmSound(!alarmPrimed);
+        loadAlarmFeed(!alarmPrimed).catch((e) => console.warn('科室告警流水拉取失败', e));
         alarmPrimed = true;
     } catch (e) {
         console.error('加载病区监护数据失败', e);

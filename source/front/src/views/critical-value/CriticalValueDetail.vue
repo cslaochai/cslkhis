@@ -18,20 +18,20 @@
 
       <div class="grid grid-cols-2 gap-4 rounded-lg border border-slate-200 p-4">
         <div><p class="text-xs text-slate-400">患者</p>
-          <p class="text-sm font-medium">{{ detail.patientName || '—' }} {{ detail.genderText || '' }}
+          <p class="text-sm font-medium">{{ detail.patientName || '' }} {{ detail.genderText || '' }}
             {{ detail.age ? detail.age + '岁' : '' }}</p></div>
         <div><p class="text-xs text-slate-400">来源</p>
           <p class="text-sm font-medium">
-            {{ detail.source === 'RULE' ? '系统自动识别（硬规则）' : detail.source || '—' }}
+            {{ detail.source === 'RULE' ? '系统自动识别（硬规则）' : detail.source || '' }}
           </p></div>
         <div><p class="text-xs text-slate-400">检验项目</p>
-          <p class="text-sm font-medium">{{ detail.itemName || '—' }}</p></div>
+          <p class="text-sm font-medium">{{ detail.itemName || '' }}</p></div>
         <div><p class="text-xs text-slate-400">参考区间</p>
-          <p class="text-sm font-medium">{{ detail.referenceRange || '—' }}</p></div>
+          <p class="text-sm font-medium">{{ detail.referenceRange || '' }}</p></div>
         <div><p class="text-xs text-slate-400">报告科室</p>
-          <p class="text-sm font-medium">{{ detail.reportDeptName || '—' }}</p></div>
+          <p class="text-sm font-medium">{{ detail.reportDeptName || '' }}</p></div>
         <div><p class="text-xs text-slate-400">报告人</p>
-          <p class="text-sm font-medium">{{ detail.reportBy || '—' }}</p></div>
+          <p class="text-sm font-medium">{{ detail.reportBy || '' }}</p></div>
         <div><p class="text-xs text-slate-400">上报时间</p>
           <p class="text-sm font-medium">{{ fmtTime(detail.reportTime) }}</p></div>
         <div><p class="text-xs text-slate-400">处置时限</p>
@@ -48,7 +48,7 @@
             </el-icon>
             <div>
               <p class="text-sm text-slate-700">已上报并通知开单医生</p>
-              <p class="text-xs text-slate-400">{{ fmtTime(detail.reportTime) }} · {{ detail.reportBy || '—' }}</p>
+              <p class="text-xs text-slate-400">{{ fmtTime(detail.reportTime) }} · {{ detail.reportBy || '' }}</p>
             </div>
           </div>
           <div class="flex items-start gap-3">
@@ -124,7 +124,7 @@ const emit = defineEmits(['update:modelValue', 'saved', 'handle']);
 const visible = computed({get: () => props.modelValue, set: (v) => emit('update:modelValue', v)});
 const detailLoading = ref(false);
 const detail = ref(null);
-const fmtTime = (v) => (v ? String(v).replace('T', ' ').slice(0, 16) : '—');
+const fmtTime = (v) => (v ? String(v).replace('T', ' ').slice(0, 16) : '');
 /** 未处置且未作废才允许操作 */
 const canOperate = (row) => row.status === 1 || row.status === 2;
 watch(visible, async (open) => {

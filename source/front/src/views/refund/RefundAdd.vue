@@ -64,7 +64,7 @@
         </el-table-column>
         <el-table-column class-name="font-mono text-xs" label="来源单号" min-width="140" prop="sourceNo"
                          show-overflow-tooltip>
-          <template #default="{ row }">{{ row.sourceNo || '—' }}</template>
+          <template #default="{ row }">{{ row.sourceNo || '' }}</template>
         </el-table-column>
         <el-table-column align="right" label="剩余可退" width="100">
           <template #default="{ row }">{{ row.quantity }} {{ row.unit }}</template>

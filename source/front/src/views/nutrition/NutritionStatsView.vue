@@ -20,13 +20,13 @@
           <div class="stat-value"
                :class="{ 'under-target': Number(preview.screenRate) < Number(preview.screenRateTarget) }"
                data-testid="pv-screen-rate">
-            {{ preview.screenRate ?? '-' }}%
+            {{ preview.screenRate ?? '' }}%
           </div>
           <div class="stat-label">营养风险筛查率（目标 ≥{{ preview.screenRateTarget }}%）</div>
           <div class="stat-sub">{{ preview.screenedCount }} / {{ preview.dischargeCount }} 名出院患者</div>
         </div>
         <div class="stat-item">
-          <div class="stat-value" data-testid="pv-risk-rate">{{ preview.riskRate ?? '-' }}%</div>
+          <div class="stat-value" data-testid="pv-risk-rate">{{ preview.riskRate ?? '' }}%</div>
           <div class="stat-label">营养风险检出率（占已筛查）</div>
           <div class="stat-sub">{{ preview.riskCount }} / {{ preview.screenedCount }} 人</div>
         </div>
@@ -34,7 +34,7 @@
           <div class="stat-value"
                :class="{ 'under-target': Number(preview.dietConfirmRate) < Number(preview.dietConfirmRateTarget) }"
                data-testid="pv-diet-rate">
-            {{ preview.dietConfirmRate ?? '-' }}%
+            {{ preview.dietConfirmRate ?? '' }}%
           </div>
           <div class="stat-label">膳食医嘱执行率（目标 ≥{{ preview.dietConfirmRateTarget }}%）</div>
           <div class="stat-sub">已接收 {{ preview.dietConfirmCount }} / 方案 {{ preview.dietPlanCount }} 条</div>
@@ -43,7 +43,7 @@
           <div class="stat-value"
                :class="{ 'under-target': Number(preview.consultOnTimeRate) < Number(preview.consultOnTimeRateTarget) }"
                data-testid="pv-consult-rate">
-            {{ preview.consultOnTimeRate ?? '-' }}%
+            {{ preview.consultOnTimeRate ?? '' }}%
           </div>
           <div class="stat-label">营养会诊按时应答率（目标 ≥{{ preview.consultOnTimeRateTarget }}%）</div>
           <div class="stat-sub">{{ preview.consultOnTimeCount }} / {{ preview.consultCount }} 例</div>
@@ -52,7 +52,7 @@
           <div class="stat-value"
                :class="{ 'under-target': Number(preview.mealSignRate) < Number(preview.mealSignRateTarget) }"
                data-testid="pv-meal-rate">
-            {{ preview.mealSignRate ?? '-' }}%
+            {{ preview.mealSignRate ?? '' }}%
           </div>
           <div class="stat-label">订餐签收率（目标 ≥{{ preview.mealSignRateTarget }}%）</div>
           <div class="stat-sub">{{ preview.mealSignedCount }} / {{ preview.mealOrderCount }} 条 · 退订

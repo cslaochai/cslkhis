@@ -15,7 +15,7 @@
       <el-select v-model="bannerAdmission" :fit-input-width="false" class="!w-80" clearable data-testid="lv-banner-admission"
                  filterable placeholder="选择在院患者直接开请假单" @change="onBannerPick">
         <el-option v-for="p in inpatients" :key="p.admissionId"
-                   :label="`${p.bedNo || '—'}床 ${p.patientName}（${p.wardName || p.deptName || '—'}，在途请假 ${p.activeLeaveCount ?? 0} 张）`"
+                   :label="`${p.bedNo || ''}床 ${p.patientName}（${p.wardName || p.deptName || ''}，在途请假 ${p.activeLeaveCount ?? 0} 张）`"
                    :value="p.admissionId"/>
       </el-select>
       <el-button v-perm="'ipd:leave:add'" :icon="Plus" data-testid="lv-new" type="primary"
@@ -64,11 +64,11 @@
       <el-table v-loading="loading" :data="rows" :max-height="tableMaxHeight" data-testid="lv-table" stripe>
         <el-table-column label="单号" min-width="140" prop="leaveNo"/>
         <el-table-column label="患者" min-width="100">
-          <template #default="{ row }">{{ row.patientName }}（{{ row.admissionNo || '—' }}）</template>
+          <template #default="{ row }">{{ row.patientName }}（{{ row.admissionNo || '' }}）</template>
         </el-table-column>
         <el-table-column label="科室/病区/床位" min-width="160">
-          <template #default="{ row }">{{ row.deptName || '—' }} / {{ row.wardName || '—' }} / {{
-              row.bedNo || '—'
+          <template #default="{ row }">{{ row.deptName || '' }} / {{ row.wardName || '' }} / {{
+              row.bedNo || ''
             }}
           </template>
         </el-table-column>
@@ -212,7 +212,7 @@ const esc = (v) => String(v ?? '').replace(/[&<>"]/g, (c) => ({
   '>': '&gt;',
   '"': '&quot;'
 }[c]))
-const fmt = (t) => (t ? String(t).slice(0, 19) : '—')
+const fmt = (t) => (t ? String(t).slice(0, 19) : '')
 
 // ---------------- 字典 ----------------
 const dict = reactive({type: [], status: [], relation: [], contact: [], report: []})
@@ -397,25 +397,25 @@ const receiptHtml = (d) => {
   return `
     <div class="row"><span>姓名：${esc(d.patientName)}</span><span>性别：${esc(patientGenderText(d.gender))}</span>
       <span>年龄：${esc(d.age)}岁</span><span>住院号：${esc(d.admissionNo)}</span></div>
-    <div class="row"><span>科室：${esc(d.deptName || '—')}</span><span>病区/床号：${esc(d.wardName || '—')} / ${esc(d.bedNo || '—')}</span>
+    <div class="row"><span>科室：${esc(d.deptName || '')}</span><span>病区/床号：${esc(d.wardName || '')} / ${esc(d.bedNo || '')}</span>
       <span>请假类别：<b>${esc(typeText(d.leaveType))}</b></span></div>
-    <h3>一、请假事由与去向</h3><div class="para">事由：${esc(d.reason)}<br/>去向：${esc(d.destination)}　随行/联系人：${esc(d.companionName)}（${esc(relationText(d.companionRelation))}）　电话：${esc(d.companionPhoneMasked || '—')}</div>
+    <h3>一、请假事由与去向</h3><div class="para">事由：${esc(d.reason)}<br/>去向：${esc(d.destination)}　随行/联系人：${esc(d.companionName)}（${esc(relationText(d.companionRelation))}）　电话：${esc(d.companionPhoneMasked || '')}</div>
     <div class="row"><span>预计离院：${esc(fmt(d.expectedLeaveTime))}</span><span>预计返回：${esc(fmt(d.expectedReturnTime))}</span></div>
-    <h3>二、医师意见（病情评估）</h3><div class="para">${esc(d.doctorAdvice || '—')}</div>
+    <h3>二、医师意见（病情评估）</h3><div class="para">${esc(d.doctorAdvice || '')}</div>
     <h3>三、离院风险告知</h3><div class="para">住院期间擅自离开病区可能延误病情观察与救治，外出期间发生的病情变化、意外伤害及其他不良后果，
       由患者/家属自行承担相应责任；请保持联系电话畅通，按约定时间返回病区，如有特殊情况提前告知医护人员。</div>
     <h3>四、患方承诺</h3><div class="para">本人/家属已充分知晓上述风险与注意事项，自愿申请离院并承诺按期返回。</div>
     <div class="row"><span>实际离院时间：${esc(fmt(d.actualLeaveTime))}</span><span>实际返回时间：${esc(fmt(d.actualReturnTime))}</span></div>
     <div class="sign">
-      <span>审批医师（电子签名已锚定）：${esc(d.doctorName || '—')}</span>
+      <span>审批医师（电子签名已锚定）：${esc(d.doctorName || '')}</span>
       <span>审批时间：${esc(fmt(d.approveTime))}</span>
     </div>
     <div class="sign">
       <span>患方签名（亲笔）：${sigImg}</span>
-      <span>姓名：${esc(d.confirmName || '—')}　与患者关系：${esc(relationText(d.confirmRelation))}</span>
+      <span>姓名：${esc(d.confirmName || '')}　与患者关系：${esc(relationText(d.confirmRelation))}</span>
     </div>
-    <div class="row"><span>联系电话：${esc(d.confirmPhoneMasked || '—')}</span><span>签署时间：${esc(fmt(d.confirmTime))}</span></div>
-    <div class="foot">医师电子签名流水：${esc(d.signNo || '—')}　内容摘要(SHA-256)：${esc(d.contentDigest ? String(d.contentDigest).slice(0, 16) + '…' : '—')}
+    <div class="row"><span>联系电话：${esc(d.confirmPhoneMasked || '')}</span><span>签署时间：${esc(fmt(d.confirmTime))}</span></div>
+    <div class="foot">医师电子签名流水：${esc(d.signNo || '')}　内容摘要(SHA-256)：${esc(d.contentDigest ? String(d.contentDigest).slice(0, 16) + '…' : '')}
       ；验签：${esc(verify)}　第 ${esc(d.printCount || 1)} 次打印 · ${esc(d.printerName || '')} · 单号 ${esc(d.leaveNo)}</div>`
 }
 const onPrint = async (row) => {

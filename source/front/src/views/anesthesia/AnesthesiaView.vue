@@ -281,7 +281,7 @@
             <el-table-column label="Aldrete" width="150">
               <template #default="{ row }">
                 <span :class="(row.aldreteTotal ?? 0) >= A.ALDRETE_DISCHARGE_MIN ? 'text-green-600' : 'text-amber-600'">
-                  {{ row.aldreteTotal === null || row.aldreteTotal === undefined ? '—' : row.aldreteTotal + ' 分' }}
+                  {{ row.aldreteTotal === null || row.aldreteTotal === undefined ? '' : row.aldreteTotal + ' 分' }}
                 </span>
                 <div class="text-[11px] text-slate-400">{{ text(row.awarenessText) }}</div>
               </template>

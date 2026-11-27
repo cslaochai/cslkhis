@@ -121,7 +121,7 @@
         </el-table-column>
         <el-table-column label="结算时间" prop="createTime" width="160">
           <template #default="{ row }">
-            {{ row.createTime?.replace('T', ' ').substring(0, 16) || '-' }}
+            {{ row.createTime?.replace('T', ' ').substring(0, 16) || '' }}
           </template>
         </el-table-column>
         <el-table-column fixed="right" label="操作" width="330">
@@ -195,7 +195,7 @@
               <div><span class="text-slate-400">挂号单号：</span><span
                   class="font-mono font-medium">{{ text(detail.registNo) }}</span></div>
               <div><span class="text-slate-400">结算方式：</span><span
-                  class="font-medium">{{ settlementTypeMap[detail.settlementType] || '-' }}</span></div>
+                  class="font-medium">{{ settlementTypeMap[detail.settlementType] || '' }}</span></div>
               <div><span class="text-slate-400">医保类型：</span><span class="font-medium">{{
                   text(detail.insuranceType)
                 }}</span></div>
@@ -222,7 +222,7 @@
               <div><span class="text-slate-400">性别：</span><span
                   class="font-medium">{{ patientGenderText(detail.gender) }}</span></div>
               <div><span class="text-slate-400">年龄：</span><span
-                  class="font-medium">{{ detail.age != null ? detail.age + '岁' : '-' }}</span></div>
+                  class="font-medium">{{ detail.age != null ? detail.age + '岁' : '' }}</span></div>
               <div><span class="text-slate-400">患者号：</span><span
                   class="font-mono font-medium">{{ text(detail.patientNo) }}</span></div>
               <div><span class="text-slate-400">身份证号：</span><span
@@ -251,7 +251,7 @@
                 }}</span></div>
               <div class="col-span-2">
                 <span class="text-slate-400">诊断：</span>
-                <span class="font-medium">{{ detail.diagnosisName || detail.diagnosis || '-' }}</span>
+                <span class="font-medium">{{ detail.diagnosisName || detail.diagnosis || '' }}</span>
                 <span v-if="detail.diagnosisCode" class="ml-2 font-mono text-xs text-slate-400">（{{
                     detail.diagnosisCode
                   }}）</span>
@@ -288,7 +288,7 @@
                         size="small">
                 <el-table-column label="类型" width="90">
                   <template #default="{ row }">
-                    {{ itemTypeMap[row.itemType] || '-' }}
+                    {{ itemTypeMap[row.itemType] || '' }}
                   </template>
                 </el-table-column>
                 <el-table-column label="项目名称" min-width="140" prop="itemName"/>
@@ -367,7 +367,7 @@
             <h3 class="mb-2 border-l-4 border-blue-500 pl-2 text-sm font-bold text-slate-700">六、医保结算</h3>
             <div class="grid grid-cols-2 gap-3 rounded border border-slate-200 p-3 text-sm">
               <div><span class="text-slate-400">统筹报销比例：</span><span
-                  class="font-medium">{{ detail.coverageRatio != null ? detail.coverageRatio + '%' : '-' }}</span></div>
+                  class="font-medium">{{ detail.coverageRatio != null ? detail.coverageRatio + '%' : '' }}</span></div>
               <div><span class="text-slate-400">医保统筹支付：</span><span
                   class="font-medium text-emerald-600">¥{{ money(detail.insurancePay) }}</span></div>
               <div><span class="text-slate-400">个人账户支付：</span><span
@@ -384,7 +384,7 @@
               <div><span class="text-slate-400">DRG 分组编码：</span><span
                   class="font-mono font-medium">{{ text(detail.drgCode) }}</span></div>
               <div><span class="text-slate-400">DRG 权重：</span><span
-                  class="font-medium">{{ detail.drgWeight != null ? detail.drgWeight : '-' }}</span></div>
+                  class="font-medium">{{ detail.drgWeight != null ? detail.drgWeight : '' }}</span></div>
               <div><span class="text-slate-400">预估费用：</span><span
                   class="font-medium">¥{{ money(detail.estimatedCost) }}</span></div>
             </div>
@@ -589,7 +589,7 @@
               <p class="text-xs text-slate-400">
                 {{
                   auditResult.payStandard != null
-                      ? '¥' + money(auditResult.payStandard) + '（倍率 ' + (auditResult.costRatio ?? '-') + '）'
+                      ? '¥' + money(auditResult.payStandard) + '（倍率 ' + (auditResult.costRatio ?? '') + '）'
                       : '未接入 DRG 分组方案'
                 }}
               </p>
@@ -635,18 +635,18 @@
             </el-table-column>
             <el-table-column label="判定依据" min-width="280" prop="evidence">
               <template #default="{ row }">
-                <span :class="row.result === 3 ? 'text-slate-500' : ''">{{ row.evidence || '-' }}</span>
+                <span :class="row.result === 3 ? 'text-slate-500' : ''">{{ row.evidence || '' }}</span>
               </template>
             </el-table-column>
             <el-table-column label="整改建议" min-width="220" prop="suggestion">
               <template #default="{ row }">
-                <span class="text-xs text-slate-500">{{ row.suggestion || '-' }}</span>
+                <span class="text-xs text-slate-500">{{ row.suggestion || '' }}</span>
               </template>
             </el-table-column>
           </el-table>
 
           <p class="mt-2 text-xs text-slate-400">
-            审核单号 {{ auditResult.auditNo }} · 审核人 {{ auditResult.auditBy || '-' }} ·
+            审核单号 {{ auditResult.auditNo }} · 审核人 {{ auditResult.auditBy || '' }} ·
             {{ fmtTime(auditResult.auditTime) }}
           </p>
         </div>
@@ -669,13 +669,13 @@
       <div v-loading="reportLoading" class="space-y-3">
         <el-table :data="reports" border empty-text="该清单还没有发出过报文" size="small">
           <el-table-column label="类型" width="100">
-            <template #default="{ row }">{{ reportTypeMap[row.reportType] || '-' }}</template>
+            <template #default="{ row }">{{ reportTypeMap[row.reportType] || '' }}</template>
           </el-table-column>
           <el-table-column label="HIS 流水号" prop="tradeNo" width="200">
             <template #default="{ row }"><span class="font-mono text-xs">{{ row.tradeNo }}</span></template>
           </el-table-column>
           <el-table-column label="医保回执号" prop="receiptNo" width="180">
-            <template #default="{ row }"><span class="font-mono text-xs">{{ row.receiptNo || '-' }}</span></template>
+            <template #default="{ row }"><span class="font-mono text-xs">{{ row.receiptNo || '' }}</span></template>
           </el-table-column>
           <el-table-column align="center" label="状态" width="100">
             <template #default="{ row }">
@@ -768,15 +768,15 @@
           </div>
           <el-table v-if="reconcileResult.diffs?.length" :data="reconcileResult.diffs" border class="mt-3" size="small">
             <el-table-column label="结算清单号" min-width="200" prop="settlementNo">
-              <template #default="{ row }"><span class="font-mono text-xs">{{ row.settlementNo || '-' }}</span>
+              <template #default="{ row }"><span class="font-mono text-xs">{{ row.settlementNo || '' }}</span>
               </template>
             </el-table-column>
             <el-table-column label="差异" min-width="220" prop="issue"/>
             <el-table-column align="right" label="本地金额" width="110">
-              <template #default="{ row }">{{ row.localAmount != null ? money(row.localAmount) : '-' }}</template>
+              <template #default="{ row }">{{ row.localAmount != null ? money(row.localAmount) : '' }}</template>
             </el-table-column>
             <el-table-column align="right" label="医保侧金额" width="110">
-              <template #default="{ row }">{{ row.remoteAmount != null ? money(row.remoteAmount) : '-' }}</template>
+              <template #default="{ row }">{{ row.remoteAmount != null ? money(row.remoteAmount) : '' }}</template>
             </el-table-column>
           </el-table>
           <p v-else class="mt-3 text-xs text-slate-400">无差异明细。</p>
@@ -988,8 +988,8 @@ const runComplianceAudit = async () => {
   }
 };
 const complianceItems = computed(() => auditResult.value?.items || []);
-const fmtTime = (val, len = 19) => (val ? String(val).replace('T', ' ').substring(0, len) : '-');
-const text = (val) => (val === null || val === undefined || val === '' ? '-' : val);
+const fmtTime = (val, len = 19) => (val ? String(val).replace('T', ' ').substring(0, len) : '');
+const text = (val) => (val === null || val === undefined || val === '' ? '' : val);
 // 加载统计数据
 const loadStats = async () => {
   try {
@@ -1046,7 +1046,7 @@ const handleCurrentChange = (page) => {
 const acting = ref(false);
 const handleSettle = async (row) => {
   try {
-    await ElMessageBox.confirm(`确认对清单 ${row.settlementNo} 执行正式结算？将按统筹比例 ${row.coverageRatio ?? '-'}% 计算医保支付。`, '医保结算', {type: 'warning'});
+    await ElMessageBox.confirm(`确认对清单 ${row.settlementNo} 执行正式结算？将按统筹比例 ${row.coverageRatio ?? ''}% 计算医保支付。`, '医保结算', {type: 'warning'});
   } catch {
     return;
   }

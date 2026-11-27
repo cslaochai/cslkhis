@@ -15,8 +15,12 @@
         <div class="kpi-value" :class="kpi.offline ? 'text-red-500' : 'text-gray-400'">{{ kpi.offline }}</div>
       </div>
       <div class="kpi-card">
-        <div class="kpi-label"><i class="dot dot-red"></i>告警</div>
-        <div class="kpi-value text-red-500">{{ kpi.alarm }}</div>
+        <div class="kpi-label"><i class="dot dot-red"></i>严重</div>
+        <div class="kpi-value text-red-500">{{ kpi.critical }}</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label"><i class="dot dot-warning"></i>警告</div>
+        <div class="kpi-value text-[#E6A23C]">{{ kpi.warning }}</div>
       </div>
       <div class="kpi-card">
         <div class="kpi-label">在线率</div>
@@ -25,36 +29,23 @@
     </div>
 
     <el-card class="table-card" shadow="never">
-      <div class="monitor-toolbar">
-        <el-tabs v-model="activeType" class="type-tabs">
-          <el-tab-pane name="">
-            <template #label>
-              全部 <span class="tab-count">{{ kpi.total }}</span>
-              <i v-if="kpi.alarm" class="tab-alarm"></i>
-            </template>
-          </el-tab-pane>
-          <el-tab-pane v-for="t in typeTabs" :key="t.type" :name="t.type">
-            <template #label>
-              {{ t.label }} <span class="tab-count">{{ t.count }}</span>
-              <i v-if="t.alarmCount" class="tab-alarm"></i>
-            </template>
-          </el-tab-pane>
-        </el-tabs>
-        <div class="monitor-controls">
-          <el-input v-model="query.deviceNo" clearable placeholder="设备编号" size="small"
-                    style="width:150px" @keyup.enter="loadLatest()"/>
-          <el-switch v-model="alarmOnly" size="small" active-text="只看告警"/>
-          <el-switch v-model="query.autoRefresh" size="small" @change="resetTimer"/>
-          <span class="text-[12px] text-gray-500">自动刷新</span>
-          <el-select v-model="query.interval" :disabled="!query.autoRefresh" size="small"
-                     :fit-input-width="false" style="width:92px" @change="resetTimer">
-            <el-option label="3 秒" :value="3"/>
-            <el-option label="5 秒" :value="5"/>
-            <el-option label="10 秒" :value="10"/>
-          </el-select>
-          <el-button size="small" :icon="Refresh" @click="loadLatest()">刷新</el-button>
-          <span class="text-[12px] text-gray-400" title="数据窗口：TDengine 时序库">刷新于 {{ lastRefreshAt || '—' }}</span>
-        </div>
+      <el-tabs v-model="activeType" class="type-tabs">
+        <el-tab-pane v-for="t in deviceTypes" :key="t.type" :name="t.type" :label="t.label"/>
+      </el-tabs>
+      <div class="monitor-controls">
+        <el-input v-model="query.deviceNo" clearable placeholder="设备编号" size="small"
+                  style="width:150px" @keyup.enter="loadLatest()"/>
+        <el-switch v-model="alarmOnly" size="small" active-text="只看告警"/>
+        <el-switch v-model="query.autoRefresh" size="small" @change="resetTimer"/>
+        <span class="text-[12px] text-gray-500">自动刷新</span>
+        <el-select v-model="query.interval" :disabled="!query.autoRefresh" size="small"
+                   :fit-input-width="false" style="width:92px" @change="resetTimer">
+          <el-option label="3 秒" :value="3"/>
+          <el-option label="5 秒" :value="5"/>
+          <el-option label="10 秒" :value="10"/>
+        </el-select>
+        <el-button size="small" :icon="Refresh" @click="loadLatest()">刷新</el-button>
+        <span class="text-[12px] text-gray-400" title="数据窗口：TDengine 时序库">刷新于 {{ lastRefreshAt || '' }}</span>
       </div>
 
       <el-table v-loading="loading" :data="filteredRows" :max-height="tableMaxHeight" stripe
@@ -153,25 +144,11 @@ const isOnline = (row) => {
   return Number.isFinite(t) && clock.value - t <= ONLINE_WINDOW_MS;
 };
 
-// ============ 告警分级 ============
-// 明确异常才标色：冷链温度越界、门磁打开、断电、管路阻塞/防拆。
-// 温度只对冷链设备判定，环境/资产类温度不做 2~8℃ 推断。
-// 返回 '' 表示正常；'warning' / 'danger' 用于告警计数与筛选。
-const metricSeverity = (m, row) => {
-  const v = String(m.value ?? '').trim();
-  if (['occluded', 'tamper'].includes(m.key) && v === '是') return 'danger';
-  if (m.key === 'power' && v === '否') return 'danger';
-  if (m.key === 'door' && v === '是') return 'warning';
-  if (row?.deviceType === 'coldchain') {
-    const n = parseFloat(v);
-    if (m.key === 'temp' && Number.isFinite(n) && (n < 2 || n > 8)) return 'danger';
-    if (m.key === 'humidity' && Number.isFinite(n) && (n < 35 || n > 75)) return 'warning';
-  }
-  return '';
-};
-
-// 一台设备任一指标命中 warning/danger 即计为告警
-const isAlarmRow = (row) => (row.metrics || []).some(m => metricSeverity(m, row));
+// ============ 告警状态 ============
+// 告警以事件中心为准：后端在 latestList 上回传 alarmLevel（2-警告 3-严重，null=无未处理告警）。
+// 不在前端拿最新遥测快照二次推断——瞬时开门/取物等状态流水不该被置顶标红；
+// 告警与告警中心闭环联动：事件被处理/忽略后，下次刷新对应设备即不再告警。
+const isAlarmRow = (row) => row.alarmLevel != null;
 
 /**
  * 主指标展示映射：每类设备取最能反映运行状态的一个读数在列表直出。
@@ -198,7 +175,11 @@ const primaryMetric = (row) => {
 };
 
 const statusOf = (row) => {
-  if (isAlarmRow(row)) return {type: 'danger', text: '告警'};
+  if (isAlarmRow(row)) {
+    return row.alarmLevel === 3
+      ? {type: 'danger', text: '严重'}
+      : {type: 'warning', text: '警告'};
+  }
   return isOnline(row) ? {type: 'success', text: '在线'} : {type: 'info', text: '离线'};
 };
 
@@ -206,17 +187,12 @@ const statusOf = (row) => {
 const kpi = computed(() => {
   const total = rows.value.length;
   const online = rows.value.filter(isOnline).length;
-  const alarm = rows.value.filter(isAlarmRow).length;
+  const critical = rows.value.filter(r => r.alarmLevel === 3).length;
+  const warning = rows.value.filter(r => r.alarmLevel === 2).length;
   const offline = total - online;
-  const onlineRate = total ? `${Math.round(online / total * 100)}%` : '—';
-  return {total, online, offline, alarm, onlineRate};
+  const onlineRate = total ? `${Math.round(online / total * 100)}%` : '';
+  return {total, online, offline, critical, warning, onlineRate};
 });
-
-// 类型分组 Tab：全量统计每类台数与告警数，告警类带红点角标
-const typeTabs = computed(() => deviceTypes.value.map(t => {
-  const list = rows.value.filter(r => r.deviceType === t.type);
-  return {type: t.type, label: t.label, count: list.length, alarmCount: list.filter(isAlarmRow).length};
-}));
 
 const filteredRows = computed(() => {
   const kw = query.deviceNo.trim().toUpperCase();
@@ -224,15 +200,15 @@ const filteredRows = computed(() => {
   if (activeType.value) list = list.filter(r => r.deviceType === activeType.value);
   if (kw) list = list.filter(r => String(r.deviceNo || '').toUpperCase().includes(kw));
   if (alarmOnly.value) list = list.filter(isAlarmRow);
-  // 告警置顶 → 离线次之 → 在线按设备编号
+  // 严重 → 警告 → 在线 → 离线，同档按设备编号
   return [...list].sort((a, b) => {
-    const rank = (r) => (isAlarmRow(r) ? 0 : isOnline(r) ? 1 : 2);
+    const rank = (r) => (r.alarmLevel === 3 ? 0 : r.alarmLevel === 2 ? 1 : isOnline(r) ? 2 : 3);
     const d = rank(a) - rank(b);
     return d !== 0 ? d : String(a.deviceNo).localeCompare(String(b.deviceNo));
   });
 });
 
-const fmtTime = (ts) => (ts ? String(ts).replace('T', ' ').slice(11, 19) : '—');
+const fmtTime = (ts) => (ts ? String(ts).replace('T', ' ').slice(11, 19) : '');
 const ago = (ts) => {
   if (!ts) return '';
   const t = new Date(String(ts).replace(' ', 'T')).getTime();
@@ -383,57 +359,28 @@ onUnmounted(() => {
 
 .dot-green { background: #0E9488; }
 .dot-red { background: #F56C6C; }
+.dot-warning { background: #E6A23C; }
 .dot-gray { background: #C0C4CC; }
 
-.monitor-toolbar {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 12px;
-  padding: 8px 20px 0;
-  border-bottom: 1px solid var(--el-border-color-lighter);
+/* 卡片内边距对齐日志审计：body 20px，页签/工具栏/表格统一内缩（不套 table-card 的 0 内边距） */
+.table-card :deep(.el-card__body) {
+  padding: 20px;
 }
 
-/* 类型分组 Tab 紧凑化：去掉默认大间距与长下划线 */
+/* 类型页签：沿用项目默认 line 型 el-tabs（同日志审计），不覆盖页签高度/间距 */
 .type-tabs {
-  flex: 1;
-  min-width: 0;
-}
-
-.type-tabs :deep(.el-tabs__header) {
   margin: 0;
 }
 
-.type-tabs :deep(.el-tabs__nav-wrap::after) {
-  height: 1px;
-}
-
-.type-tabs :deep(.el-tabs__item) {
-  height: 40px;
-  padding: 0 14px;
-}
-
-.tab-count {
-  display: inline-block;
-  margin-left: 2px;
-  font-size: 12px;
-  color: #909399;
-}
-
-.tab-alarm {
-  display: inline-block;
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: #F56C6C;
-  margin-left: 5px;
+.type-tabs :deep(.el-tabs__header) {
+  margin: 0 0 15px;
 }
 
 .monitor-controls {
-  margin-left: auto;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 8px;
-  padding-bottom: 8px;
+  margin-bottom: 12px;
 }
 </style>

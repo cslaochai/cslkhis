@@ -37,7 +37,7 @@
       </el-form-item>
     </el-form>
     <template #footer>
-      <el-button v-perm="'medtech:transfusion:edit'" :loading="approveSubmitting" data-testid="p4-tf-approve-submit"
+      <el-button v-perm="'medtech:transfusion:audit'" :loading="approveSubmitting" data-testid="p4-tf-approve-submit"
                  type="primary" @click="submitApprove">
         提交审批结论
       </el-button>
@@ -63,7 +63,7 @@ const visible = computed({
   set: (v) => emit('update:modelValue', v),
 });
 
-const text = (v) => (v === null || v === undefined || v === '' ? '—' : String(v));
+const text = (v) => (v === null || v === undefined || v === '' ? '' : String(v));
 
 const approveSubmitting = ref(false);
 const approveForm = reactive({

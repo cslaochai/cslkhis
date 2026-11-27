@@ -56,7 +56,7 @@ export function getConsumeList(params) {
   return request.post('/supplies/consumeListPage', params)
 }
 
-// 科室下拉已收敛到统一入口：@/api/system 的 getDepartmentSelectList
+// 科室下拉已收敛到统一入口：@/lib/deptOptions 的 loadDeptTreeOptions（后端 /system/department/selectTree）
 // （原 /supplies/deptSelectList 返回下划线 dept_name，与全仓 deptName 不一致，
 //   且不经数据权限 —— 2026-09-21 移除，勿再新增模块私有的科室下拉接口）
 

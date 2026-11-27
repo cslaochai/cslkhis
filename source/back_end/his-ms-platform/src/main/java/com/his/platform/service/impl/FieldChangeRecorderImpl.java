@@ -187,7 +187,7 @@ public class FieldChangeRecorderImpl implements FieldChangeRecorder {
         }
         try {
             SysFieldChangeLog row = build(bizType, bizId, bizNo, bizName,
-                    new FieldSpec("-", operation, MaskEnum.NONE, null), null, null,
+                    new FieldSpec("", operation, MaskEnum.NONE, null), null, null,
                     TYPE_ACTION, null);
             row.setBatchNo(newBatchNo());
             sysFieldChangeLogMapper.insert(row);

@@ -68,7 +68,7 @@
               <template #default="{ row }">
                 <span
                     :class="row.actualDays != null && row.limitDays != null && row.actualDays > row.limitDays ? 'font-medium text-rose-600' : ''">
-                  {{ row.limitDays ?? '—' }} / {{ row.actualDays ?? '核不出' }} 日
+                  {{ row.limitDays ?? '' }} / {{ row.actualDays ?? '核不出' }} 日
                 </span>
               </template>
             </el-table-column>

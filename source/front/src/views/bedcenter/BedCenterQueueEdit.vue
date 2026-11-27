@@ -12,10 +12,8 @@
         </span>
       </el-form-item>
       <el-form-item label="拟收治科室">
-        <el-select v-model="form.applyDeptId" :fit-input-width="false" class="!w-full" clearable data-testid="bc-form-dept"
-                   filterable placeholder="选择科室">
-          <el-option v-for="d in deptOptions" :key="d.id" :label="d.deptName" :value="d.id"/>
-        </el-select>
+        <DeptTreeSelect v-model="form.applyDeptId" mode="LEAF" class="!w-full" data-testid="bc-form-dept"
+                        placeholder="选择科室"/>
       </el-form-item>
       <el-form-item label="期望病区">
         <el-select v-model="form.expectWardId" :fit-input-width="false" class="!w-full" clearable
@@ -75,6 +73,7 @@
 import {computed, reactive, ref, watch} from 'vue';
 import {ElMessage} from 'element-plus';
 import PatientSelect from '@/components/his/PatientSelect.vue';
+import DeptTreeSelect from '@/components/his/DeptTreeSelect.vue';
 import {upsertBedWait} from '@/api/bedCenter';
 
 const props = defineProps({
@@ -82,8 +81,7 @@ const props = defineProps({
   modelValue: {type: Boolean, default: false},
   // 编辑目标行（null = 登记新排队）
   row: {type: Object, default: null},
-  // 科室/病区候选：列表筛选也在用，由父页面加载一次传入
-  deptOptions: {type: Array, default: () => []},
+  // 病区候选：列表筛选也在用，由父页面加载一次传入
   wardOptions: {type: Array, default: () => []},
 });
 

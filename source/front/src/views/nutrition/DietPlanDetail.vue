@@ -6,34 +6,34 @@
         <el-input :value="`${detail.patientName || ''} · ${detail.admissionNo || ''}（${detail.wardName || detail.deptName || ''}${detail.bedNo ? ' ' + detail.bedNo + '床' : ''}）`" />
       </el-form-item>
       <el-form-item label="方案号 / 医嘱号">
-        <el-input :value="`${detail.dietNo || '—'} / ${detail.orderNo || '—'}`" />
+        <el-input :value="`${detail.dietNo || ''} / ${detail.orderNo || ''}`" />
       </el-form-item>
       <el-form-item label="来源">
-        <el-input :value="`${detail.sourceText || '—'} · ${detail.dietCode || ''} ${detail.dietName || ''}`" />
+        <el-input :value="`${detail.sourceText || ''} · ${detail.dietCode || ''} ${detail.dietName || ''}`" />
       </el-form-item>
       <el-form-item label="类别 / 途径">
-        <el-input :value="`${detail.dietCategoryText || '—'} · ${detail.routeText || '—'} · ${Number(detail.needsMeal) === 1 ? '食堂订餐' : '不订餐'}`" />
+        <el-input :value="`${detail.dietCategoryText || ''} · ${detail.routeText || ''} · ${Number(detail.needsMeal) === 1 ? '食堂订餐' : '不订餐'}`" />
       </el-form-item>
       <el-form-item label="供应餐次">
-        <el-input :value="detail.mealTypesText || '—'" />
+        <el-input :value="detail.mealTypesText || ''" />
       </el-form-item>
       <el-form-item label="管饲/输注">
-        <el-input :value="detail.feedWay || '—'" />
+        <el-input :value="detail.feedWay || ''" />
       </el-form-item>
       <el-form-item label="目标量">
-        <el-input :value="`热量 ${detail.calorieTarget ?? '—'} kcal · 蛋白 ${detail.proteinTarget ?? '—'} g · 液体 ${detail.fluidTarget ?? '—'} ml`" />
+        <el-input :value="`热量 ${detail.calorieTarget ?? ''} kcal · 蛋白 ${detail.proteinTarget ?? ''} g · 液体 ${detail.fluidTarget ?? ''} ml`" />
       </el-form-item>
       <el-form-item label="起止时间">
-        <el-input :value="`${detail.startTime || '—'} → ${detail.stopTime || '长期'}`" />
+        <el-input :value="`${detail.startTime || ''} → ${detail.stopTime || '长期'}`" />
       </el-form-item>
       <el-form-item label="接收">
-        <el-input :value="`${detail.confirmStatusText || '—'}${detail.confirmerName ? ' · ' + detail.confirmerName : ''}${detail.confirmTime ? ' · ' + detail.confirmTime : ''}`" />
+        <el-input :value="`${detail.confirmStatusText || ''}${detail.confirmerName ? ' · ' + detail.confirmerName : ''}${detail.confirmTime ? ' · ' + detail.confirmTime : ''}`" />
       </el-form-item>
       <el-form-item label="退回原因">
-        <el-input :value="detail.rejectReason || '—'" type="textarea" :rows="2" />
+        <el-input :value="detail.rejectReason || ''" type="textarea" :rows="2" />
       </el-form-item>
       <el-form-item label="备注">
-        <el-input :value="detail.remark || '—'" type="textarea" :rows="2" />
+        <el-input :value="detail.remark || ''" type="textarea" :rows="2" />
       </el-form-item>
     </el-form>
     <template #footer>

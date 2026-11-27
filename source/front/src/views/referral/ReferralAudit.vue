@@ -2,9 +2,7 @@
   <el-dialog v-model="visible" title="确认转诊" width="480px">
     <el-form label-width="90px">
       <el-form-item label="转入科室">
-        <el-select v-model="form.toDeptId" :fit-input-width="false" clearable filterable style="width: 240px">
-          <el-option v-for="d in depts" :key="d.id" :label="d.deptName" :value="Number(d.id)"/>
-        </el-select>
+        <DeptTreeSelect v-model="form.toDeptId" mode="LEAF" clearable style="width: 240px" placeholder="选择转入科室"/>
       </el-form-item>
       <el-form-item label="确认意见">
         <el-input v-model="form.auditRemark" :rows="2" type="textarea"/>
@@ -27,14 +25,13 @@
 import {computed, reactive, watch} from 'vue';
 import {ElMessage} from 'element-plus';
 import {referralAudit} from '@/api/referral';
+import DeptTreeSelect from '@/components/his/DeptTreeSelect.vue';
 
 const props = defineProps({
   // v-model 控制显隐
   modelValue: {type: Boolean, default: false},
   // 待确认行快照（referralId / toDeptId 从这取）
   row: {type: Object, default: null},
-  // 科室下拉数据（页面已加载）
-  depts: {type: Array, default: () => []},
 });
 const emit = defineEmits(['update:modelValue', 'saved']);
 

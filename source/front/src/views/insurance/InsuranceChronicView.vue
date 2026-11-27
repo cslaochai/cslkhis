@@ -104,14 +104,14 @@
         </el-table-column>
         <el-table-column label="诊断" show-overflow-tooltip width="160">
           <template #default="{row}">
-            <div class="text-xs">{{ row.certifyDeptName || '—' }} / {{ row.certifyDoctorName || '—' }}</div>
+            <div class="text-xs">{{ row.certifyDeptName || '' }} / {{ row.certifyDoctorName || '' }}</div>
             <div class="text-xs text-slate-400">{{ row.certifyDate }}</div>
           </template>
         </el-table-column>
         <el-table-column label="备案经办人" show-overflow-tooltip width="130">
           <template #default="{row}">
             <div data-testid="chronic-emp-name">{{ row.registerEmpName }}</div>
-            <div class="text-xs text-slate-400">{{ row.registerDeptName || '—' }}</div>
+            <div class="text-xs text-slate-400">{{ row.registerDeptName || '' }}</div>
           </template>
         </el-table-column>
         <el-table-column label="待遇有效期" width="180">

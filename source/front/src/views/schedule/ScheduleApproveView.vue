@@ -6,16 +6,9 @@
           <div class="flex items-start justify-between gap-4">
             <el-form :model="clinicSearchForm" inline @submit.prevent>
               <el-form-item label="科室">
-                <el-select
-                    v-model="clinicSearchForm.deptId"
-                    clearable
-                    filterable
-                    placeholder="门诊科室"
-                    style="width: 180px"
-                    @change="handleClinicDeptChange"
-                >
-                  <el-option v-for="d in departmentOptions" :key="d.id" :label="d.deptName" :value="d.id"/>
-                </el-select>
+                <DeptTreeSelect v-model="clinicSearchForm.deptId" mode="LEAF" dept-type="1" width="180px"
+                                placeholder="门诊科室" @change="handleClinicDeptChange"/>
+
               </el-form-item>
               <el-form-item label="医生">
                 <el-select
@@ -77,7 +70,7 @@
               </el-table-column>
               <el-table-column label="班次" min-width="170">
                 <template #default="{ row }">
-                  {{ row.shiftName || '—' }} {{ row.startTime }}~{{ row.endTime }}
+                  {{ row.shiftName || '' }} {{ row.startTime }}~{{ row.endTime }}
                 </template>
               </el-table-column>
               <el-table-column label="号源" width="110">
@@ -133,7 +126,8 @@ import {
   schedulePendingApproval as getClinicSchedulePendingApproval,
   scheduleReject as rejectClinicSchedule,
 } from '@/api/appoint'
-import {getDepartmentSelectList, getEmployeeList} from '@/api/system'
+import {getEmployeeList} from '@/api/system'
+import DeptTreeSelect from '@/components/his/DeptTreeSelect.vue'
 import {STAFF_TYPE_DOCTOR} from '@/lib/scheduleShift'
 import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination'
 import {useTableMaxHeight} from '@/lib/useTableMaxHeight'
@@ -150,18 +144,9 @@ const clinicSearchForm = reactive({
   doctorId: null,
   dateRange: [],
 })
-// 科室下拉（仅门诊科室 deptType=1）；医生下拉随所选科室联动
-const departmentOptions = ref([])
+// 医生下拉随所选科室联动
 const doctorOptions = ref([])
 
-const loadDepartmentOptions = async () => {
-  try {
-    const res = await getDepartmentSelectList({deptType: 1})
-    departmentOptions.value = res.data || []
-  } catch (e) /* 错误已由全局拦截器统一提示，无需在此弹窗 */ {
-
-  }
-}
 const loadDoctorOptions = async (deptId) => {
   doctorOptions.value = []
   if (!deptId) return
@@ -318,7 +303,6 @@ const handleClinicBatchReject = async () => {
 }
 
 onMounted(() => {
-  loadDepartmentOptions()
   loadClinicData()
 })
 </script>

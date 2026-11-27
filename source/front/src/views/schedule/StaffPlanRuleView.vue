@@ -37,7 +37,7 @@
       <div data-testid="plan-rule-table">
         <el-table v-loading="loading" :data="tableData" :max-height="tableMaxHeight" stripe>
           <el-table-column label="排班单元" min-width="170">
-            <template #default="{ row }">{{ row.orgName || '—' }}（{{ row.orgTypeText }}）</template>
+            <template #default="{ row }">{{ row.orgName || '' }}（{{ row.orgTypeText }}）</template>
           </el-table-column>
           <el-table-column label="班次" min-width="140">
             <template #default="{ row }">
@@ -51,13 +51,13 @@
             <template #default="{ row }">{{ row.maxStaff || '不限' }}</template>
           </el-table-column>
           <el-table-column label="周工时上限" width="110">
-            <template #default="{ row }">{{ row.maxWeekHours ?? '—' }}</template>
+            <template #default="{ row }">{{ row.maxWeekHours ?? '' }}</template>
           </el-table-column>
           <el-table-column label="连夜上限" width="100">
-            <template #default="{ row }">{{ row.maxConsecutiveNightDays ?? '—' }}</template>
+            <template #default="{ row }">{{ row.maxConsecutiveNightDays ?? '' }}</template>
           </el-table-column>
           <el-table-column label="连班上限" width="100">
-            <template #default="{ row }">{{ row.maxConsecutiveWorkDays ?? '—' }}</template>
+            <template #default="{ row }">{{ row.maxConsecutiveWorkDays ?? '' }}</template>
           </el-table-column>
           <el-table-column label="状态" width="80">
             <template #default="{ row }">

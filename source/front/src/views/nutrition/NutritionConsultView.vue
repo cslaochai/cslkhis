@@ -5,7 +5,7 @@
         <div class="stat-item">
           <div class="stat-value" :class="{ 'stat-value-danger': (overview.consultUnfinishedCount ?? 0) > 0 }"
                data-testid="ov-consult-unfinished">
-            {{ overview.consultUnfinishedCount ?? '-' }}
+            {{ overview.consultUnfinishedCount ?? '' }}
           </div>
           <div class="stat-label">未完成营养会诊</div>
           <div class="stat-sub">待应答 + 已应答，全部要有人收尾</div>
@@ -13,13 +13,13 @@
         <div class="stat-item">
           <div class="stat-value" :class="{ 'stat-value-warn': (overview.consultOverdueCount ?? 0) > 0 }"
                data-testid="ov-consult-overdue">
-            {{ overview.consultOverdueCount ?? '-' }}
+            {{ overview.consultOverdueCount ?? '' }}
           </div>
           <div class="stat-label">超时未应答</div>
           <div class="stat-sub">急会诊超 10 分钟 / 普通超 24 小时</div>
         </div>
         <div class="stat-item">
-          <div class="stat-value" data-testid="ov-risk">{{ overview.inHospitalRiskCount ?? '-' }}</div>
+          <div class="stat-value" data-testid="ov-risk">{{ overview.inHospitalRiskCount ?? '' }}</div>
           <div class="stat-label">在院有营养风险人数</div>
           <div class="stat-sub">筛出来没会诊的，就是这里的活</div>
         </div>
@@ -31,9 +31,7 @@
         <el-form :model="query" inline @submit.prevent>
           <el-form-item label="会诊科室">
             <div data-testid="filter-to-dept">
-              <el-select v-model="query.toDeptId" placeholder="会诊科室" clearable filterable style="width: 170px">
-                <el-option v-for="d in depts" :key="d.id" :label="d.deptName" :value="d.id"/>
-              </el-select>
+              <DeptTreeSelect v-model="query.toDeptId" mode="LEAF" width="170px" placeholder="会诊科室"/>
             </div>
           </el-form-item>
           <el-form-item label="会诊状态">
@@ -83,7 +81,7 @@
       <el-table :data="rows" stripe :max-height="tableMaxHeight" v-loading="loading" data-testid="consult-table">
         <el-table-column label="患者" min-width="130">
           <template #default="{ row }">
-            <div>{{ row.patientName || '-' }}</div>
+            <div>{{ row.patientName || '' }}</div>
             <div class="muted">{{ row.admissionNo || row.patientNo || '' }}{{
                 row.bedNo ? ' · ' + row.bedNo + '床' : ''
               }}
@@ -92,7 +90,7 @@
         </el-table-column>
         <el-table-column label="申请 → 会诊科室" min-width="170">
           <template #default="{ row }">
-            <div>{{ row.fromDeptName || '-' }} → {{ row.toDeptName || '-' }}</div>
+            <div>{{ row.fromDeptName || '' }} → {{ row.toDeptName || '' }}</div>
             <div class="muted">{{ row.consultTypeText || '' }} · {{ row.consultCategoryText || '' }}</div>
           </template>
         </el-table-column>
@@ -115,7 +113,7 @@
         </el-table-column>
         <el-table-column label="申请 / 应答" width="165">
           <template #default="{ row }">
-            <div class="muted">{{ row.applyTime || '-' }}</div>
+            <div class="muted">{{ row.applyTime || '' }}</div>
             <div class="muted">{{ row.acceptDoctorName ? row.acceptDoctorName + ' 接诊' : '尚未接诊' }}</div>
           </template>
         </el-table-column>
@@ -128,7 +126,7 @@
         </el-table-column>
         <el-table-column label="结论 / 病历" min-width="160">
           <template #default="{ row }">
-            <div class="muted">{{ row.conclusion || '—' }}</div>
+            <div class="muted">{{ row.conclusion || '' }}</div>
             <div class="muted">{{ row.recordNo ? '病历 ' + row.recordNo : '' }}</div>
           </template>
         </el-table-column>
@@ -188,7 +186,7 @@
     </el-card>
 
     <!-- 发起 / 修改申请 -->
-    <NutritionConsultEdit v-model="formVisible" :row="formRow" :depts="depts" @saved="onSaved" />
+    <NutritionConsultEdit v-model="formVisible" :row="formRow" @saved="onSaved" />
 
     <!-- 出结论 -->
     <NutritionConsultFinish v-model="finishVisible" :row="finishRow" @saved="onSaved" />
@@ -203,7 +201,7 @@ import {onMounted, reactive, ref} from 'vue'
 import {ElMessage, ElMessageBox} from 'element-plus'
 import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination'
 import {useTableMaxHeight} from '@/lib/useTableMaxHeight'
-import {getDepartmentSelectList} from '@/api/system'
+import DeptTreeSelect from '@/components/his/DeptTreeSelect.vue'
 import {
   acceptNutritionConsult,
   cancelNutritionConsult,
@@ -283,18 +281,6 @@ function onSizeChange() {
 }
 
 // ---------------- 基础数据 ----------------
-// 会诊科室下拉：查询卡与发起/修改弹框共用，留在页面按 prop 下发
-const depts = ref([])
-
-async function loadBaseData() {
-  try {
-    const res = await getDepartmentSelectList({})
-    depts.value = res?.data || []
-  } catch (e) {
-    depts.value = []
-  }
-}
-
 // ---------------- 发起 / 修改（子组件 NutritionConsultEdit） ----------------
 const formVisible = ref(false)
 const formRow = ref(null)
@@ -366,7 +352,6 @@ function onSaved() {
 onMounted(() => {
   loadOverview()
   loadList()
-  loadBaseData()
 })
 </script>
 

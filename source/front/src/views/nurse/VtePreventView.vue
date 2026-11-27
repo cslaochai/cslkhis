@@ -6,7 +6,7 @@
         <el-card class="stat-card" shadow="never">
           <div class="stat-items">
             <div class="stat-item">
-              <div class="stat-value" data-testid="ov-high-risk">{{ overview.inHospitalHighRiskCount ?? '-' }}</div>
+              <div class="stat-value" data-testid="ov-high-risk">{{ overview.inHospitalHighRiskCount ?? '' }}</div>
               <div class="stat-label">在院中高危人数</div>
               <div class="stat-sub">在院 {{ overview.inHospitalCount ?? 0 }} 人中已评
                 {{ overview.inHospitalAssessedCount ?? 0 }} 人
@@ -14,21 +14,21 @@
             </div>
             <div class="stat-item">
               <div class="stat-value stat-value-danger" data-testid="ov-pending">{{
-                  overview.highRiskPendingCount ?? '-'
+                  overview.highRiskPendingCount ?? ''
                 }}
               </div>
               <div class="stat-label">中高危未落实人数（今天要干的事）</div>
               <div class="stat-sub">在院中高危落实率 {{ overview.highRiskPreventRate ?? '0.00' }}%</div>
             </div>
             <div class="stat-item">
-              <div class="stat-value" data-testid="ov-month-event">{{ overview.monthVteEventCount ?? '-' }}</div>
+              <div class="stat-value" data-testid="ov-month-event">{{ overview.monthVteEventCount ?? '' }}</div>
               <div class="stat-label">本月院内新发 VTE</div>
               <div class="stat-sub">预防相关出血 {{ overview.monthBleedCount ?? 0 }} 例</div>
             </div>
             <div class="stat-item">
               <div :class="{ 'stat-value-warn': (overview.missedAssessCount ?? 0) > 0 }" class="stat-value"
                    data-testid="ov-missed">
-                {{ overview.missedAssessCount ?? '-' }}
+                {{ overview.missedAssessCount ?? '' }}
               </div>
               <div class="stat-label">在院未评 Caprini（漏评提醒）</div>
               <div class="stat-sub">未评者不进中高危名单</div>
@@ -75,20 +75,20 @@
         <el-table v-loading="loading" :data="rows" border data-testid="risk-table" stripe>
           <el-table-column label="患者" min-width="150">
             <template #default="{ row }">
-              <div>{{ row.patientName || '-' }}</div>
+              <div>{{ row.patientName || '' }}</div>
               <div class="muted">{{ row.patientNo || '' }}</div>
             </template>
           </el-table-column>
           <el-table-column label="住院号" prop="admissionNo" show-overflow-tooltip width="150"/>
           <el-table-column label="科室 / 病区" min-width="150">
             <template #default="{ row }">
-              <div>{{ row.deptName || '-' }}</div>
+              <div>{{ row.deptName || '' }}</div>
               <div class="muted">{{ row.wardName || '' }}{{ row.bedNo ? ' · ' + row.bedNo + '床' : '' }}</div>
             </template>
           </el-table-column>
           <el-table-column align="right" label="Caprini" width="110">
             <template #default="{ row }">
-              <span data-testid="cell-score">{{ row.capriniScore ?? '-' }}</span>
+              <span data-testid="cell-score">{{ row.capriniScore ?? '' }}</span>
               <span class="muted"> 分</span>
             </template>
           </el-table-column>
@@ -102,20 +102,20 @@
           </el-table-column>
           <el-table-column label="推荐措施" min-width="170">
             <template #default="{ row }">
-              <span class="muted">{{ row.recommendText || '-' }}</span>
+              <span class="muted">{{ row.recommendText || '' }}</span>
             </template>
           </el-table-column>
           <el-table-column label="落实状态" width="110">
             <template #default="{ row }">
               <el-tag :type="PREVENT_STATUS_TAG[row.preventStatus]" data-testid="cell-prevent-status"
                       disable-transitions>
-                {{ PREVENT_STATUS_TEXT[row.preventStatus] || '-' }}
+                {{ PREVENT_STATUS_TEXT[row.preventStatus] || '' }}
               </el-tag>
               <div class="muted">{{ row.doneCount }} / {{ row.recommendCount }} 条</div>
             </template>
           </el-table-column>
           <el-table-column label="最近落实" width="165">
-            <template #default="{ row }">{{ row.latestExecuteTime || '-' }}</template>
+            <template #default="{ row }">{{ row.latestExecuteTime || '' }}</template>
           </el-table-column>
           <el-table-column fixed="right" label="操作" width="190">
             <template #default="{ row }">

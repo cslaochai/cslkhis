@@ -11,9 +11,7 @@
                        @select="onPatientSelect"/>
       </el-form-item>
       <el-form-item label="手术科室">
-        <el-select v-model="applyForm.deptId" clearable filterable placeholder="请选择" style="width: 100%">
-          <el-option v-for="d in deptOptions" :key="d.id" :label="d.deptName || d.name" :value="d.id"/>
-        </el-select>
+        <DeptTreeSelect v-model="applyForm.deptId" mode="LEAF" width="100%" placeholder="请选择"/>
       </el-form-item>
       <el-form-item label="计划手术日期" required>
         <el-date-picker v-model="applyForm.planSurgeryDate" placeholder="请选择" style="width: 100%"
@@ -35,12 +33,12 @@ import {computed, reactive, ref, watch} from 'vue';
 import {ElMessage} from 'element-plus';
 import {daySurgeryApplyUpsert, getDaySurgeryDetail} from '@/api/daySurgery';
 import PatientSelect from '@/components/his/PatientSelect.vue';
+import DeptTreeSelect from '@/components/his/DeptTreeSelect.vue';
 
 const props = defineProps({
   modelValue: {type: Boolean, default: false},
   row: {type: Object, default: null},
   itemOptions: {type: Array, default: () => []},
-  deptOptions: {type: Array, default: () => []},
 });
 const emit = defineEmits(['update:modelValue', 'saved']);
 

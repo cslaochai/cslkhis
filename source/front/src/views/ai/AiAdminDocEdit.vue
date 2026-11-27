@@ -93,7 +93,7 @@
           <div class="history-head">
             <el-tag size="small" :type="changeTypeTag(h.changeType)">{{ changeTypeText(h.changeType) }}</el-tag>
             <span class="history-time">{{ h.createTime }}</span>
-            <span class="history-operator">{{ h.operatorName || '—' }}</span>
+            <span class="history-operator">{{ h.operatorName || '' }}</span>
             <div class="history-ops">
               <el-button size="small" link type="primary" @click="toggleDiff(h)">{{ diffRow?.id === h.id ? '收起对比' : '对比当前' }}</el-button>
               <el-button size="small" link type="primary" @click="viewHistory(h)">查看</el-button>
@@ -103,7 +103,7 @@
           <div v-if="diffRow?.id === h.id" class="history-diff">
             <div class="diff-tip">绿色 = 当前新增，红色 = 当前删除（相对该历史版本）</div>
             <div class="diff-body">
-              <div v-for="(l, i) in diffLines(h)" :key="i" :class="['diff-line', l.type]">{{ l.type === 'del' ? '-' : l.type === 'add' ? '+' : ' ' }} {{ l.text }}</div>
+              <div v-for="(l, i) in diffLines(h)" :key="i" :class="['diff-line', l.type]">{{ l.type === 'del' ? '' : l.type === 'add' ? '+' : ' ' }} {{ l.text }}</div>
             </div>
           </div>
         </div>
@@ -116,7 +116,7 @@
         <el-alert
             :closable="false"
             class="mb-3"
-            :description="`将按当前切块参数（单块 ${preview.chunkSize ?? '—'} 字符、重叠 ${preview.chunkOverlap ?? '—'} 字符）切成 ${preview.chunkCount ?? 0} 块，共 ${preview.totalChars ?? 0} 字符`"
+            :description="`将按当前切块参数（单块 ${preview.chunkSize ?? ''} 字符、重叠 ${preview.chunkOverlap ?? ''} 字符）切成 ${preview.chunkCount ?? 0} 块，共 ${preview.totalChars ?? 0} 字符`"
             show-icon
             type="info"
         />
@@ -134,10 +134,10 @@
       <div class="view-meta">
         <el-tag size="small" :type="changeTypeTag(viewRow?.changeType)">{{ changeTypeText(viewRow?.changeType) }}</el-tag>
         <span>标题：{{ viewRow?.title }}</span>
-        <span>分类：{{ viewRow?.category || '—' }}</span>
-        <span>版本：{{ viewRow?.version || '—' }}</span>
-        <span>来源：{{ viewRow?.sourceName || '—' }}</span>
-        <span>操作人：{{ viewRow?.operatorName || '—' }}</span>
+        <span>分类：{{ viewRow?.category || '' }}</span>
+        <span>版本：{{ viewRow?.version || '' }}</span>
+        <span>来源：{{ viewRow?.sourceName || '' }}</span>
+        <span>操作人：{{ viewRow?.operatorName || '' }}</span>
       </div>
       <el-input :model-value="viewRow?.content || ''" :rows="14" readonly type="textarea"/>
     </el-dialog>

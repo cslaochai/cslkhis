@@ -19,16 +19,16 @@
           </el-form-item>
         </el-col>
         <el-col :span="8">
-          <el-form-item label="飞检批次">{{ noticeDetail?.inspectionNo || '—' }}</el-form-item>
+          <el-form-item label="飞检批次">{{ noticeDetail?.inspectionNo || '' }}</el-form-item>
         </el-col>
         <el-col :span="8">
-          <el-form-item label="患者">{{ noticeDetail?.patientName || '—' }}</el-form-item>
+          <el-form-item label="患者">{{ noticeDetail?.patientName || '' }}</el-form-item>
         </el-col>
         <el-col :span="8">
-          <el-form-item label="被审科室">{{ noticeDetail?.deptName || '—' }}</el-form-item>
+          <el-form-item label="被审科室">{{ noticeDetail?.deptName || '' }}</el-form-item>
         </el-col>
         <el-col :span="8">
-          <el-form-item label="责任医师">{{ noticeDetail?.doctorName || '—' }}</el-form-item>
+          <el-form-item label="责任医师">{{ noticeDetail?.doctorName || '' }}</el-form-item>
         </el-col>
         <el-col :span="8">
           <el-form-item label="违规类型">{{

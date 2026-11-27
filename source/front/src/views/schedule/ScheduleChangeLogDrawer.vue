@@ -13,7 +13,7 @@
             {{ log.actionTypeText || scheduleChangeTypeText(log.actionType) }}
           </div>
           <div class="text-xs text-gray-500">
-            {{ log.fromEmployeeName || '—' }}
+            {{ log.fromEmployeeName || '' }}
             <span v-if="log.toEmployeeName"> → {{ log.toEmployeeName }}</span>
             <span v-if="log.amount"> · 号数 {{ log.amount }}</span>
           </div>

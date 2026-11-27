@@ -61,7 +61,7 @@
           <el-table-column label="值班日期" prop="dutyDate" width="120"/>
           <el-table-column label="值班线" prop="dutyTypeName" width="130">
             <template #default="{ row }">
-              <span>{{ row.dutyTypeName || '—' }}</span>
+              <span>{{ row.dutyTypeName || '' }}</span>
             </template>
           </el-table-column>
           <el-table-column label="班次" prop="shiftTypeText" width="90"/>
@@ -72,7 +72,7 @@
           </el-table-column>
           <el-table-column label="值班点位" min-width="170" prop="postName" show-overflow-tooltip>
             <template #default="{ row }">
-              <span>{{ row.postName || '—' }}</span>
+              <span>{{ row.postName || '' }}</span>
               <el-tag v-if="row.dutyLevelText && row.dutyLevelText !== '不适用'" size="small" style="margin-left: 4px"
                       type="success">
                 {{ row.dutyLevelText }}·{{ row.attendModeText }}

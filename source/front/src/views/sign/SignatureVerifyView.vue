@@ -147,8 +147,8 @@
           </el-table-column>
           <el-table-column label="对象" width="190">
             <template #default="{ row }">
-              <div class="text-xs">{{ row.bizTypeText }} · {{ row.bizNo || '—' }}</div>
-              <div class="text-xs text-slate-400">{{ row.patientName || '—' }}<span
+              <div class="text-xs">{{ row.bizTypeText }} · {{ row.bizNo || '' }}</div>
+              <div class="text-xs text-slate-400">{{ row.patientName || '' }}<span
                   v-if="row.deptName"> · {{ row.deptName }}</span></div>
             </template>
           </el-table-column>
@@ -160,19 +160,19 @@
           </el-table-column>
           <el-table-column label="签名人" width="130">
             <template #default="{ row }">
-              <div class="text-xs">{{ row.signerName || '—' }}</div>
-              <div class="text-xs text-slate-400">{{ row.signerDeptName || '—' }}</div>
+              <div class="text-xs">{{ row.signerName || '' }}</div>
+              <div class="text-xs text-slate-400">{{ row.signerDeptName || '' }}</div>
             </template>
           </el-table-column>
           <el-table-column label="摘要" width="150">
             <template #default="{ row }">
               <span :data-testid="`p5-sign-row-digest-${row.signNo}`"
-                    class="font-mono text-xs text-slate-600">{{ row.contentDigestShort || '—' }}</span>
+                    class="font-mono text-xs text-slate-600">{{ row.contentDigestShort || '' }}</span>
             </template>
           </el-table-column>
           <el-table-column label="签名时间" width="170">
             <template #default="{ row }">
-              <span class="text-xs">{{ row.signedTime || '—' }}</span>
+              <span class="text-xs">{{ row.signedTime || '' }}</span>
             </template>
           </el-table-column>
           <el-table-column label="状态" width="90">
@@ -333,8 +333,8 @@ const onDetailSaved = async () => {
 const coverages = computed(() => overview.value?.coverages || []);
 const pendingTotal = computed(() => coverages.value.reduce((sum, c) => sum + num(c.pendingSign), 0));
 const invalidatedTotal = computed(() => coverages.value.reduce((sum, c) => sum + num(c.invalidated), 0));
-// 分母为 0 时后端给的是「—（…）」占位，不是比率
-const isRatePlaceholder = (t) => !t || String(t).startsWith('—');
+// 分母为 0 时后端给空串，不是比率
+const isRatePlaceholder = (t) => !t;
 // 0-未校验（灰）1-通过（绿）2-失败（红）
 const verifyTag = (s) => (s === 1 ? 'success' : s === 2 ? 'danger' : 'info');
 onMounted(async () => {

@@ -25,9 +25,7 @@
       <el-row :gutter="12">
         <el-col :span="12">
           <el-form-item label="适用科室">
-            <el-select v-model="form.deptId" clearable filterable placeholder="请选择" style="width: 100%">
-              <el-option v-for="d in deptOptions" :key="d.id" :label="d.deptName || d.name" :value="d.id"/>
-            </el-select>
+            <DeptTreeSelect v-model="form.deptId" mode="LEAF" width="100%" placeholder="请选择"/>
           </el-form-item>
         </el-col>
         <el-col :span="12">
@@ -68,11 +66,11 @@
 import {computed, reactive, ref, watch} from 'vue';
 import {ElMessage} from 'element-plus';
 import {daySurgeryItemUpsert} from '@/api/daySurgery';
+import DeptTreeSelect from '@/components/his/DeptTreeSelect.vue';
 
 const props = defineProps({
   modelValue: {type: Boolean, default: false},
   row: {type: Object, default: null},
-  deptOptions: {type: Array, default: () => []},
   anesDict: {type: Array, default: () => []},
   operationLevelMap: {type: Object, default: () => ({})},
 });

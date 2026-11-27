@@ -25,6 +25,7 @@ import com.his.spi.service.SysMessageService;
 import com.his.common.utils.UserUtils;
 import com.his.spi.dto.InpatientAdmitDTO;
 import com.his.spi.service.DutyRosterFacadeService;
+import com.his.spi.service.DeptScopeService;
 import com.his.spi.service.SystemFacadeService;
 import com.his.spi.vo.DutyOfficerBriefVO;
 import lombok.RequiredArgsConstructor;
@@ -74,6 +75,11 @@ public class BedCenterServiceImpl extends ServiceImpl<BizBedWaitMapper, BizBedWa
      * 床位图聚合（与护士站共用，护士看在院患者，这里看可调配性）
      */
     private final BedMapMapper bedMapMapper;
+
+    /**
+     * 仅用于床位图子树层级展开（纯 BFS，不做岗位/数据权限收口）；本域跨科找床仍不走授权候选
+     */
+    private final DeptScopeService deptScopeService;
 
 
     private final BizAdmissionOrderMapper bizAdmissionOrderMapper;
@@ -754,21 +760,24 @@ public class BedCenterServiceImpl extends ServiceImpl<BizBedWaitMapper, BizBedWa
             return result;
         }
 
-        // 2) 病区必须落在已确定的科室内（防跨科窥探，与护士站同口径）
+        // 选中父科室时按子树聚合：床位/病区都落在「自身 + 后代」科室集合内
+        Set<Long> deptIds = deptScopeService.descendantDeptIds(deptId);
+
+        // 2) 病区必须落在已确定科室的子树内（防跨科窥探，与护士站同口径）
         Long wardId = query.getWardId();
         if (wardId != null) {
             BedMapVO.WardOption owner = bedMapMapper.selectWardOwner(wardId);
             if (owner == null) {
                 throw new BusinessException("病区不存在");
             }
-            if (!deptId.equals(owner.getDeptId())) {
+            if (!deptIds.contains(owner.getDeptId())) {
                 throw new BusinessException("该病区不属于当前科室，无法查看");
             }
             result.setWardId(wardId);
             result.setWardName(owner.getWardName());
         }
 
-        List<BedMapVO.BedCard> beds = bedMapMapper.selectBedCards(deptId, wardId);
+        List<BedMapVO.BedCard> beds = bedMapMapper.selectBedCards(deptIds, wardId);
         for (BedMapVO.BedCard bed : beds) {
             bed.setBedStatusText(BedStatusEnum.getLabel(bed.getBedStatus()));
             // 预留去向：锁定床必须说得出"留给谁、多急"。否则护士站看到的就是一张
@@ -790,7 +799,7 @@ public class BedCenterServiceImpl extends ServiceImpl<BizBedWaitMapper, BizBedWa
         if (!beds.isEmpty()) {
             result.setDeptName(beds.get(0).getDeptName());
         }
-        result.setWardOptions(bedMapMapper.selectWardOptions(deptId));
+        result.setWardOptions(bedMapMapper.selectWardOptions(deptIds));
         result.setSummary(summarizeMap(beds));
         return result;
     }

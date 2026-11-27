@@ -100,7 +100,7 @@ public class PatientVO {
      */
     private String occupation;
     /**
-     * 婚姻状况：1-未婚 2-已婚 3-离异 4-丧偶
+     * 婚姻状况：0-未婚 1-已婚 2-离异 3-丧偶（列注释 biz_patient.marital_status 同口径）
      */
     private Integer maritalStatus;
     /**

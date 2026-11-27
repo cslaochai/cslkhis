@@ -10,10 +10,10 @@
           <template #default="{ row }">{{ fmtDate(row.maintainDate) }}</template>
         </el-table-column>
         <el-table-column label="故障描述" min-width="140" prop="faultDesc" show-overflow-tooltip>
-          <template #default="{ row }">{{ row.faultDesc || '—' }}</template>
+          <template #default="{ row }">{{ row.faultDesc || '' }}</template>
         </el-table-column>
         <el-table-column label="处理结果" min-width="140" prop="handleResult" show-overflow-tooltip>
-          <template #default="{ row }">{{ row.handleResult || '—' }}</template>
+          <template #default="{ row }">{{ row.handleResult || '' }}</template>
         </el-table-column>
         <el-table-column label="结果" prop="maintainResultText" width="70"/>
         <el-table-column label="维保人" prop="handlerName" width="90"/>
@@ -38,10 +38,10 @@
         </el-table-column>
         <el-table-column label="结果" prop="meteringResultText" width="70"/>
         <el-table-column label="证书编号" prop="certNo" width="130">
-          <template #default="{ row }">{{ row.certNo || '—' }}</template>
+          <template #default="{ row }">{{ row.certNo || '' }}</template>
         </el-table-column>
         <el-table-column label="检定机构" min-width="130" prop="agency" show-overflow-tooltip>
-          <template #default="{ row }">{{ row.agency || '—' }}</template>
+          <template #default="{ row }">{{ row.agency || '' }}</template>
         </el-table-column>
         <el-table-column label="操作" width="70">
           <template #default="{ row }">

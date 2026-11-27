@@ -66,10 +66,8 @@
             </el-select>
           </el-form-item>
           <el-form-item label="发生科室">
-            <el-select v-model="query.occurDeptId" :fit-input-width="false" clearable filterable placeholder="发生科室"
-                       style="width: 160px">
-              <el-option v-for="d in deptOptions" :key="d.id" :label="d.deptName" :value="d.id"/>
-            </el-select>
+            <DeptTreeSelect v-model="query.occurDeptId" mode="LEAF" width="160px" placeholder="发生科室"/>
+
           </el-form-item>
           <el-form-item label="上报日期">
             <el-date-picker
@@ -113,7 +111,7 @@
         <el-table-column label="发生科室" prop="occurDeptName" show-overflow-tooltip width="120"/>
         <el-table-column label="事件摘要" min-width="180" prop="title" show-overflow-tooltip/>
         <el-table-column label="患者" width="90">
-          <template #default="{ row }">{{ row.patientName || '—' }}</template>
+          <template #default="{ row }">{{ row.patientName || '' }}</template>
         </el-table-column>
         <el-table-column label="上报人" prop="reporterName" width="90"/>
         <el-table-column align="center" label="状态" width="130">
@@ -157,7 +155,7 @@
     </el-card>
 
     <!-- 上报/修改弹窗（表单与提交已拆至 AdverseEventEdit.vue） -->
-    <AdverseEventEdit v-model="dialogVisible" :acquired-dict="acquiredDict" :dept-options="deptOptions"
+    <AdverseEventEdit v-model="dialogVisible" :acquired-dict="acquiredDict"
                       :level-dict="levelDict" :row="editRow" :type-dict="typeDict" @saved="onEditSaved"/>
 
     <!-- PDCA 流转弹窗 -->
@@ -199,7 +197,8 @@ import {
   handleAdverseEvent,
   rectifyAdverseEvent,
 } from '@/api/adverseEvent';
-import {getDepartmentSelectList, getDictDataMapList} from '@/api/system';
+import {getDictDataMapList} from '@/api/system';
+import DeptTreeSelect from '@/components/his/DeptTreeSelect.vue';
 import {DICT_TYPE} from '@/lib/dict-cache';
 import {dictLabelText} from '@/lib/utils';
 import {ADVERSE_EVENT_NEXT_ACTION, levelTagType, statusTagType} from '@/lib/adverseEvent';
@@ -229,7 +228,6 @@ const typeDict = ref([]);
 const levelDict = ref([]);
 const statusDict = ref([]);
 const acquiredDict = ref([]);
-const deptOptions = ref([]);
 const typeText = (v) => dictLabelText(typeDict.value, v);
 const levelText = (v) => dictLabelText(levelDict.value, v);
 const statusText = (v) => dictLabelText(statusDict.value, v);
@@ -256,15 +254,6 @@ const loadDicts = async () => {
     acquiredDict.value = res?.data?.[DICT_TYPE.ADVERSE_ACQUIRED] || [];
   } catch (e) {
     console.error('加载字典失败', e);
-  }
-};
-const loadDepts = async () => {
-  try {
-    const res = await getDepartmentSelectList({});
-    if (res.code === 200)
-      deptOptions.value = res.data || [];
-  } catch (e) {
-    console.error('加载科室失败', e);
   }
 };
 const loadStats = async () => {
@@ -398,7 +387,6 @@ const openDetail = (row) => {
 };
 onMounted(() => {
   loadDicts();
-  loadDepts();
   loadStats();
   loadList();
 });

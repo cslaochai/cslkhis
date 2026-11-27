@@ -67,7 +67,7 @@
         <el-table-column label="供应商" min-width="160" prop="supplierName" show-overflow-tooltip/>
         <el-table-column label="退货原因" min-width="150" prop="returnReason" show-overflow-tooltip/>
         <el-table-column label="原单据号" width="140">
-          <template #default="{ row }">{{ row.srcRefNo || '—' }}</template>
+          <template #default="{ row }">{{ row.srcRefNo || '' }}</template>
         </el-table-column>
         <el-table-column align="right" label="批次" width="70">
           <template #default="{ row }">{{ row.totalItems }}</template>

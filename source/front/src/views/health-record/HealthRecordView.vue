@@ -101,7 +101,7 @@
                   <span v-else class="text-slate-300">—</span>
                 </template>
                 <template v-else>
-                  {{ row[f.key] === null || row[f.key] === undefined || row[f.key] === '' ? '—' : row[f.key] }}
+                  {{ row[f.key] === null || row[f.key] === undefined || row[f.key] === '' ? '' : row[f.key] }}
                 </template>
               </template>
             </el-table-column>

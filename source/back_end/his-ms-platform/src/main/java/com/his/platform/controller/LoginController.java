@@ -82,12 +82,15 @@ public class LoginController {
     /**
      * 修改本人登录口令：校验旧口令后写入新口令，新旧口令均已加密提交。
      * 用于顶栏用户菜单「修改密码」弹框保存。
+     *
+     * <p><b>当前临时关闭</b>：本环境所有系统账号口令统一固定，由仿真器/信息科集中维护，
+     * 一旦有人从界面改掉某个账号的口令，仿真链路与其它岗位账号会全部登录失败。
+     * 恢复时删掉下面的 return，改回 {@code authService.updatePassword(request)} 即可。
      */
-    @Operation(summary = "修改密码")
+    @Operation(summary = "修改密码（已临时关闭）")
     @PostMapping("/changePassword")
     public Result<Void> changePassword(@Valid @RequestBody ChangePasswordDTO request) {
-        authService.updatePassword(request);
-        return Result.success("密码修改成功", null);
+        return Result.error("系统口令已统一固定，不支持修改；需要调整请找信息科统一处理");
     }
 
     /**

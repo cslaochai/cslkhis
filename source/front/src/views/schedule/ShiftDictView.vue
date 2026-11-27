@@ -45,7 +45,7 @@
         <el-table-column align="center" label="适用域" width="120">
           <template #default="{ row }">
             <el-tag :type="Number(row.useScope) === 2 ? 'success' : 'info'" data-testid="shift-scope-tag"
-                    size="small">{{ SHIFT_SCOPE_TEXT[Number(row.useScope ?? 1)] || '—' }}
+                    size="small">{{ SHIFT_SCOPE_TEXT[Number(row.useScope ?? 1)] || '' }}
             </el-tag>
           </template>
         </el-table-column>
@@ -62,7 +62,7 @@
         </el-table-column>
         <el-table-column align="center" label="班次类型" width="90">
           <template #default="{ row }">{{
-              row.scheduleType ? (shiftLabel[row.scheduleType] || '—') : '—'
+              row.scheduleType ? (shiftLabel[row.scheduleType] || '') : ''
             }}
           </template>
         </el-table-column>
@@ -154,7 +154,6 @@
     <!-- 班次编辑弹窗：展示完整详情，仅名称可改（时间/科室/类型/状态只读） -->
     <ScheduleShiftEdit
         v-model="shiftEditVisible"
-        :departments="departments"
         :row="shiftEditRow"
         @saved="loadShifts"
     />
@@ -162,7 +161,6 @@
     <!-- 新增班次弹窗：完整建条（防重/时间校验在后端 shiftUpsert） -->
     <ScheduleDictAdd
         v-model="shiftAddVisible"
-        :departments="departments"
         @saved="handleShiftSearch"
     />
   </div>
@@ -174,7 +172,7 @@ import {ElMessage, ElMessageBox} from 'element-plus';
 import {Plus, Refresh, Search} from '@element-plus/icons-vue';
 import {getShiftListPage} from '@/api/appoint';
 import {deleteOpdStation, getOpdStationPage} from '@/api/opdStation';
-import {getDepartmentSelectList} from '@/api/system';
+import {loadDeptTreeOptions, flattenDeptTree} from '@/lib/deptOptions';
 import {SCHEDULE_TYPE_TEXT, SHIFT_SCOPE_OPTIONS, SHIFT_SCOPE_TEXT} from '@/lib/scheduleShift';
 import {STATION_KIND_OPTIONS} from '@/lib/opdStation';
 import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination';
@@ -303,8 +301,8 @@ const handleStationDelete = async (row) => {
 
 const loadDepartments = async () => {
   try {
-    const res = await getDepartmentSelectList({deptType: 1});
-    departments.value = res.data || [];
+    const tree = await loadDeptTreeOptions({deptType: '1', mode: 'LEAF'});
+    departments.value = flattenDeptTree(tree);
   } catch (error) {
     console.error('加载科室下拉失败:', error);
   }

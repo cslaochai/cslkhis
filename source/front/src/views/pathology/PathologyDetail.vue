@@ -8,13 +8,13 @@
           <el-descriptions-item label="患者">{{ detail.patientName }}</el-descriptions-item>
           <el-descriptions-item label="状态">{{ detail.statusText }}</el-descriptions-item>
           <el-descriptions-item label="检查类型">{{ detail.examTypeText }}</el-descriptions-item>
-          <el-descriptions-item label="标本">{{ detail.specimenType || '-' }} / {{
-              detail.specimenPart || '-'
+          <el-descriptions-item label="标本">{{ detail.specimenType || '' }} / {{
+              detail.specimenPart || ''
             }}
           </el-descriptions-item>
-          <el-descriptions-item label="冰冻结果">{{ detail.frozenResult || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="冰冻结果">{{ detail.frozenResult || '' }}</el-descriptions-item>
           <el-descriptions-item :span="3" label="诊断">{{ detail.diagnosis || '未出' }}</el-descriptions-item>
-          <el-descriptions-item :span="3" label="建议">{{ detail.suggestion || '-' }}</el-descriptions-item>
+          <el-descriptions-item :span="3" label="建议">{{ detail.suggestion || '' }}</el-descriptions-item>
         </el-descriptions>
         <div class="mt-3 font-medium text-sm text-gray-600">蜡块明细</div>
         <el-table :data="detail.blocks || []" class="mt-1" size="small">

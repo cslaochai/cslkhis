@@ -13,17 +13,13 @@
         <el-input v-model="form.admissionId" placeholder="住院患者转诊时填（可空=门诊）"/>
       </el-form-item>
       <el-form-item label="转出科室" required>
-        <el-select v-model="form.fromDeptId" :fit-input-width="false" filterable style="width: 240px">
-          <el-option v-for="d in depts" :key="d.id" :label="d.deptName" :value="Number(d.id)"/>
-        </el-select>
+        <DeptTreeSelect v-model="form.fromDeptId" mode="LEAF" style="width: 240px" placeholder="选择转出科室"/>
       </el-form-item>
       <el-form-item label="转入医院">
         <el-input v-model="form.toHospital" placeholder="院际转诊必填（上转上级/下转基层）"/>
       </el-form-item>
       <el-form-item label="转入科室">
-        <el-select v-model="form.toDeptId" :fit-input-width="false" clearable filterable style="width: 240px">
-          <el-option v-for="d in depts" :key="d.id" :label="d.deptName" :value="Number(d.id)"/>
-        </el-select>
+        <DeptTreeSelect v-model="form.toDeptId" mode="LEAF" clearable style="width: 240px" placeholder="选择转入科室"/>
       </el-form-item>
       <el-form-item label="转诊原因" required>
         <el-input v-model="form.reason" :rows="2" type="textarea"/>
@@ -49,20 +45,19 @@
  * 转诊登记弹框（自 ReferralView 拆出）
  *
  * 上转=转往上级医院、下转=转回基层/社区（院际转诊 toHospital 必填；本院内转科室走「转科」，别混）。
- * 方向字典与科室列表由页面统一加载后传入（列表列渲染同一份数据，见拆分规范第 6 条）。
+ * 方向字典由页面统一加载后传入。
  */
 import {computed, reactive, ref, watch} from 'vue';
 import {ElMessage} from 'element-plus';
 import {referralCreate} from '@/api/referral';
 import PatientSelect from '@/components/his/PatientSelect.vue';
+import DeptTreeSelect from '@/components/his/DeptTreeSelect.vue';
 
 const props = defineProps({
   // v-model 控制显隐
   modelValue: {type: Boolean, default: false},
   // 转诊方向字典（页面已加载）
   dirDict: {type: Array, default: () => []},
-  // 科室下拉数据（页面已加载）
-  depts: {type: Array, default: () => []},
 });
 const emit = defineEmits(['update:modelValue', 'saved']);
 

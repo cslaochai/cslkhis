@@ -7,7 +7,7 @@
           <div class="dept-tree-panel">
             <div class="mb-3 flex items-center justify-between">
               <span class="font-medium">科室列表</span>
-              <div class="flex items-center">
+              <div class="tree-toolbar flex items-center">
                 <el-button :icon="Expand" bg size="small" text @click="handleExpandAll">展开</el-button>
                 <el-button :icon="Fold" bg size="small" text @click="handleCollapseAll">收缩</el-button>
                 <el-button :icon="Refresh" bg size="small" text @click="handleRefresh">刷新</el-button>
@@ -39,8 +39,13 @@
                   @node-click="handleTreeClick"
               >
                 <template #default="{ data }">
-                  <span class="flex w-full items-center gap-1 pr-2">
+                  <span
+                      class="dept-node-label"
+                      :class="{ 'is-dept-disabled': !isSubjectDept(data) }"
+                      :title="isSubjectDept(data) ? '' : `${data.nodeTypeText || '分组节点'}只做组织归集，不参与上报科室代码维护`"
+                  >
                     <span class="truncate">{{ data.deptName }}</span>
+                    <span v-if="!isSubjectDept(data)" class="dept-node-kind">{{ data.nodeTypeText || '不可维护' }}</span>
                     <span v-if="unmappedIds.has(String(data.id))" class="unmapped-dot"
                           title="未配上报科室代码"/>
                   </span>
@@ -93,7 +98,7 @@
                 </el-table-column>
                 <el-table-column label="上级科目" min-width="150">
                   <template #default="{ row }">
-                    <span class="text-slate-600">{{ row.parentName || '—' }}</span>
+                    <span class="text-slate-600">{{ row.parentName || '' }}</span>
                   </template>
                 </el-table-column>
                 <el-table-column label="主科目" width="100">
@@ -226,6 +231,7 @@
         :dept="currentDept"
         :dept-tree="deptTree"
         :groups="subjectGroups"
+        :mapped-dept-ids="mappedDeptIdList"
         @saved="handleAddSaved"
     />
 
@@ -246,6 +252,7 @@ import {
   deleteMedSubject,
   getDepartmentTree,
   getDeptSubjectMap,
+  getMappedDeptIds,
   getMedSubjectTree,
   getUnmappedDepts,
   saveDeptSubjectMap,
@@ -266,17 +273,34 @@ const deptKeyword = ref('')
 // 未配科目的临床科室（后端已排除“内科系统”这类有下级的分组目录节点）
 const unmappedDepts = ref([])
 const unmappedIds = computed(() => new Set(unmappedDepts.value.map(d => String(d.deptId))))
+// 已配过上报科目的科室：管理片区里的精神心理科/感染疾病科/健康管理中心靠它识别为可维护
+const mappedDeptIds = ref(new Set())
+const mappedDeptIdList = computed(() => Array.from(mappedDeptIds.value))
 
 const currentPrimary = computed(() => deptSubjects.value.find(s => s.isPrimary === 1) || null)
 
 // 库里存的是诊疗科目码（03.01），上报按 CT08.00.002 用 A 前缀（A03.01）；只有展示层加，写库不改
 const reportCode = (code) => (code ? `A${code}` : '')
 
-// 分组目录节点本身不参与上报，选中没有意义；在树里置灰，只让选叶子科室
+// 可维护节点：临床科室(2)、其他(7，体检/预防保健这类上报主体)，以及本身已配过上报科目的
+// 管理片区(1)——精神心理科/感染疾病科/健康管理中心虽然带下级，但自己也是上报主体。
+// 医疗机构根、纯管理片区、医技、药剂、行政后勤、医疗辅助只做分组定位，不允许挂科目。
+const isSubjectDept = (data) => {
+  if (!data) return false
+  const nodeType = String(data.nodeType ?? '')
+  if (nodeType === '2' || nodeType === '7') return true
+  if (!nodeType) {
+    // 旧数据/脏 node_type 兜底：按服务范围判断
+    const types = String(data.deptType ?? '').split(',').map(s => s.trim())
+    if (types.some(t => ['1', '4', '6'].includes(t))) return true
+  }
+  return mappedDeptIds.value.has(String(data.id))
+}
+
 const treeProps = {
   label: 'deptName',
   children: 'children',
-  disabled: (data) => (data.children || []).length > 0,
+  disabled: (data) => !isSubjectDept(data),
 }
 
 // 左侧树筛选：名称或科室编码命中；只过滤显示，不改树结构
@@ -311,7 +335,7 @@ const handleCollapseAll = () => setAllExpanded(false)
 
 const handleRefresh = async () => {
   deptKeyword.value = ''
-  await Promise.all([loadDeptTree(), loadUnmapped()])
+  await Promise.all([loadDeptTree(), loadUnmapped(), loadMappedDeptIds()])
   await nextTick()
   deptTreeRef.value?.filter('')
   if (currentDept.value) {
@@ -340,9 +364,9 @@ const subjectRow = ref(null)
 const subjectParent = ref(null)
 
 onMounted(async () => {
-  await Promise.all([loadDeptTree(), loadSubjectTree(), loadUnmapped()])
-  // 进页面直接落到第一个未配科室，避免空白页；没有未配的就落到第一个叶子科室
-  const first = unmappedDepts.value[0]?.deptId || firstLeafDeptId(deptTree.value)
+  await Promise.all([loadDeptTree(), loadSubjectTree(), loadUnmapped(), loadMappedDeptIds()])
+  // 进页面直接落到第一个未配科室，避免空白页；没有未配的就落到第一个可维护科室
+  const first = unmappedDepts.value[0]?.deptId || firstSubjectDeptId(deptTree.value)
   if (first) await selectDept(String(first))
 })
 
@@ -373,11 +397,19 @@ const loadUnmapped = async () => {
   }
 }
 
-const firstLeafDeptId = (nodes) => {
+const loadMappedDeptIds = async () => {
+  try {
+    const res = await getMappedDeptIds()
+    if (res.code === 200) mappedDeptIds.value = new Set((res.data || []).map(id => String(id)))
+  } catch (error) /* 错误已由全局拦截器统一提示，无需在此重复弹窗 */ {
+  }
+}
+
+const firstSubjectDeptId = (nodes) => {
   for (const n of nodes || []) {
-    if (!(n.children || []).length) return n.id
-    const hit = firstLeafDeptId(n.children)
+    const hit = firstSubjectDeptId(n.children)
     if (hit) return hit
+    if (isSubjectDept(n)) return n.id
   }
   return null
 }
@@ -399,9 +431,9 @@ const selectDept = async (id) => {
   deptTreeRef.value?.setCurrentKey(node.id)
 }
 
-// 分组目录节点（内科系统、外科系统…）本身不参与上报，点了也不出数据
+// 只维护上报主体：分组目录/医技/药剂/行政节点不切换右侧数据（节点本身已在 treeProps.disabled 置灰）
 const handleTreeClick = async (data) => {
-  if ((data.children || []).length) return
+  if (!isSubjectDept(data)) return
   await handleDeptChange(data.id)
 }
 
@@ -450,6 +482,7 @@ const handleMapSaved = async () => {
   await Promise.all([
     currentDept.value ? loadDeptMap(currentDept.value.id ?? currentDept.value.deptId) : Promise.resolve(),
     loadUnmapped(),
+    loadMappedDeptIds(),
     loadSubjectTree(),
   ])
 }
@@ -581,6 +614,35 @@ const handleDeleteSubject = async (row) => {
   min-height: 0;
 }
 
+.dept-node-label {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  align-items: center;
+  gap: 6px;
+  padding-right: 8px;
+}
+
+.dept-node-kind {
+  flex-shrink: 0;
+  padding: 0 4px;
+  border-radius: 2px;
+  background-color: #f2f3f5;
+  color: #909399;
+  font-size: 11px;
+  line-height: 16px;
+}
+
+.dept-node-label.is-dept-disabled {
+  cursor: not-allowed;
+  color: #a8abb2;
+}
+
+.dept-node-label.is-dept-disabled .dept-node-kind {
+  background-color: #f7f8fa;
+  color: #b4b8c0;
+}
+
 .unmapped-dot {
   display: inline-block;
   flex-shrink: 0;
@@ -588,5 +650,60 @@ const handleDeleteSubject = async (row) => {
   height: 6px;
   border-radius: 50%;
   background-color: #ef4444;
+}
+
+/* 树形连接线：与「菜单管理」左树一致，逐级画竖线 + 横向短横 */
+.tree-toolbar :deep(.el-button) {
+  padding: 5px 8px;
+}
+
+:deep(.el-tree) {
+  --el-tree-node-content-height: 28px;
+}
+
+:deep(.el-tree-node__content) {
+  border-radius: 4px;
+}
+
+:deep(.el-tree-node__content:hover) {
+  background-color: #f5f7fa;
+}
+
+:deep(.el-tree-node.is-current > .el-tree-node__content) {
+  background-color: #ecf5ff;
+}
+
+:deep(.el-tree-node) {
+  position: relative;
+  padding-left: 16px;
+}
+
+:deep(.el-tree-node::before) {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 6px;
+  width: 1px;
+  height: 100%;
+  background-color: #e4e7ed;
+}
+
+:deep(.el-tree-node::after) {
+  content: '';
+  position: absolute;
+  top: 14px;
+  left: 6px;
+  width: 10px;
+  height: 1px;
+  background-color: #e4e7ed;
+}
+
+:deep(.el-tree-node:last-child::before) {
+  height: 14px;
+}
+
+:deep(.el-tree-node__expand-icon) {
+  margin-left: -2px;
+  font-size: 14px;
 }
 </style>

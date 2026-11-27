@@ -195,7 +195,7 @@
         <el-descriptions-item label="匹配方式">{{ semanticDetailRow.matchMode === 2 ? '精确' : '包含' }}</el-descriptions-item>
         <el-descriptions-item label="优先级">{{ semanticDetailRow.priority }}</el-descriptions-item>
         <el-descriptions-item label="状态">{{ semanticDetailRow.isEnabled ? '启用' : '停用' }}</el-descriptions-item>
-        <el-descriptions-item label="口径说明">{{ semanticDetailRow.scopeDesc || '—' }}</el-descriptions-item>
+        <el-descriptions-item label="口径说明">{{ semanticDetailRow.scopeDesc || '' }}</el-descriptions-item>
       </el-descriptions>
     </el-dialog>
   </div>

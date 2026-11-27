@@ -14,9 +14,7 @@
       </el-form-item>
       <el-form-item label="会诊科室" required>
         <div data-testid="sel-to-dept" style="width: 100%">
-          <el-select v-model="form.toDeptId" filterable placeholder="选择营养科" style="width: 100%">
-            <el-option v-for="d in depts" :key="d.id" :label="d.deptName" :value="d.id"/>
-          </el-select>
+          <DeptTreeSelect v-model="form.toDeptId" mode="LEAF" width="100%" placeholder="选择营养科"/>
         </div>
       </el-form-item>
       <el-form-item label="会诊范围" required>
@@ -53,13 +51,12 @@ import { computed, reactive, ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { getInpatientListPage } from '@/api/inpatient'
 import { applyNutritionConsult } from '@/api/nutrition'
+import DeptTreeSelect from '@/components/his/DeptTreeSelect.vue'
 
 const props = defineProps({
   modelValue: { type: Boolean, default: false },
   /** 会诊行：为空是发起，非空是修改（后端同一 upsert） */
   row: { type: Object, default: null },
-  /** 科室下拉：页面查询卡同款数据，按 prop 传入 */
-  depts: { type: Array, default: () => [] },
 })
 const emit = defineEmits(['update:modelValue', 'saved'])
 
@@ -83,7 +80,7 @@ const form = reactive(emptyForm())
 // 住院患者下拉只在表单里出现，弹框打开时现取
 const admissions = ref([])
 
-const admissionLabel = (a) => `${a.bedNo || '—'} ${a.patientName || '—'}（${a.wardName || a.deptName || '—'}）`
+const admissionLabel = (a) => `${a.bedNo || ''} ${a.patientName || ''}（${a.wardName || a.deptName || ''}）`
 
 async function loadAdmissions() {
   try {

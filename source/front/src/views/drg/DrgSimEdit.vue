@@ -19,7 +19,7 @@
           </el-tag>
         </p>
         <p v-if="simResult.simStatus === 1" class="mt-1">
-          权重 {{ simResult.weight ?? '—' }}｜
+          权重 {{ simResult.weight ?? '' }}｜
           支付标准 {{ simResult.payStandard == null ? '未下发' : '¥' + simResult.payStandard }}｜实际费用
           ¥{{ simResult.actualAmount }}
           ｜<span v-if="simResult.profitAmount != null" :class="profitColor(simResult.profitAmount)">

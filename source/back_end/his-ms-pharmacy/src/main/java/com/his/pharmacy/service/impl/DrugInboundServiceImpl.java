@@ -113,7 +113,7 @@ public class DrugInboundServiceImpl extends ServiceImpl<BizDrugInboundMapper, Bi
             d.setDrugCode(drug.getDrugCode());
             d.setDrugName(drug.getDrugName());
             d.setSpecification(drug.getSpecification());
-            d.setUnit(TextUtil.hasText(drug.getUnit()) ? drug.getUnit() : "—");
+            d.setUnit(TextUtil.hasText(drug.getUnit()) ? drug.getUnit() : "");
             d.setBatchNo(batchNo);
             d.setProductionDate(item.getProductionDate());
             d.setExpiryDate(item.getExpiryDate());

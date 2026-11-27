@@ -6,17 +6,17 @@
         <el-tag :type="statusTag(detail.status)" size="small">{{ onlineStatusText(detail.status) }}</el-tag>
       </el-descriptions-item>
       <el-descriptions-item label="患者">{{ detail.patientName }}（{{
-          detail.patientNo || '—'
+          detail.patientNo || ''
         }}）
       </el-descriptions-item>
       <el-descriptions-item label="问诊方式">{{ onlineTypeText(detail.consultType) }}</el-descriptions-item>
-      <el-descriptions-item label="接诊科室">{{ detail.deptName || '—' }}</el-descriptions-item>
-      <el-descriptions-item label="接诊医生">{{ detail.doctorName || '—' }}</el-descriptions-item>
-      <el-descriptions-item label="发起时间">{{ detail.applyTime || '—' }}</el-descriptions-item>
-      <el-descriptions-item label="完成时间">{{ detail.finishTime || '—' }}</el-descriptions-item>
+      <el-descriptions-item label="接诊科室">{{ detail.deptName || '' }}</el-descriptions-item>
+      <el-descriptions-item label="接诊医生">{{ detail.doctorName || '' }}</el-descriptions-item>
+      <el-descriptions-item label="发起时间">{{ detail.applyTime || '' }}</el-descriptions-item>
+      <el-descriptions-item label="完成时间">{{ detail.finishTime || '' }}</el-descriptions-item>
       <el-descriptions-item :span="2" label="主诉/问题">{{ detail.chiefComplaint }}</el-descriptions-item>
-      <el-descriptions-item :span="2" label="医生回复">{{ detail.reply || '—' }}</el-descriptions-item>
-      <el-descriptions-item :span="2" label="处置建议">{{ detail.advice || '—' }}</el-descriptions-item>
+      <el-descriptions-item :span="2" label="医生回复">{{ detail.reply || '' }}</el-descriptions-item>
+      <el-descriptions-item :span="2" label="处置建议">{{ detail.advice || '' }}</el-descriptions-item>
       <el-descriptions-item :span="2" label="建议线下就诊">
         <el-tag v-if="Number(detail.needVisit) === 1" size="small" type="warning">是</el-tag>
         <span v-else>否</span>

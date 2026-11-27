@@ -10,9 +10,8 @@
         </el-col>
         <el-col :span="12">
           <el-form-item label="申请科室">
-            <el-select v-model="teleForm.applyDeptId" clearable filterable placeholder="请选择" style="width: 100%">
-              <el-option v-for="d in deptOptions" :key="d.id" :label="d.deptName || d.name" :value="d.id"/>
-            </el-select>
+            <DeptTreeSelect v-model="teleForm.applyDeptId" mode="LEAF" width="100%" placeholder="请选择"/>
+
           </el-form-item>
         </el-col>
       </el-row>
@@ -88,8 +87,8 @@
 import {computed, reactive, ref, watch} from 'vue';
 import {ElMessage} from 'element-plus';
 import {getTeleConsultDetail, teleConsultUpsert} from '@/api/teleconsult';
-import {getDepartmentSelectList} from '@/api/system';
 import PatientSelect from '@/components/his/PatientSelect.vue';
+import DeptTreeSelect from '@/components/his/DeptTreeSelect.vue';
 
 const props = defineProps({
   modelValue: {type: Boolean, default: false},
@@ -107,16 +106,6 @@ const visible = computed({
 
 const isEdit = computed(() => !!props.row?.id);
 const teleSaving = ref(false);
-const deptOptions = ref([]);
-const loadDepts = async () => {
-  try {
-    const res = await getDepartmentSelectList({});
-    if (res.code === 200)
-      deptOptions.value = res.data || [];
-  } catch (e) {
-    console.error('加载科室失败', e);
-  }
-};
 const teleForm = reactive({
   id: null,
   patientId: null,
@@ -136,7 +125,6 @@ const teleForm = reactive({
 
 watch(visible, async (open) => {
   if (!open) return;
-  if (!deptOptions.value.length) await loadDepts();
   if (props.row?.id) {
     const res = await getTeleConsultDetail(props.row.id);
     const d = res?.data || props.row;

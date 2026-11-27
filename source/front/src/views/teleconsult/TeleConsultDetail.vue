@@ -6,24 +6,24 @@
         <el-tag :type="statusTag(detail.status)" size="small">{{ teleStatusText(detail.status) }}</el-tag>
       </el-descriptions-item>
       <el-descriptions-item label="患者">{{ detail.patientName }}（{{
-          detail.patientNo || '—'
+          detail.patientNo || ''
         }}）
       </el-descriptions-item>
       <el-descriptions-item label="会诊类型">{{ teleTypeText(detail.consultType) }}</el-descriptions-item>
-      <el-descriptions-item label="申请科室">{{ detail.applyDeptName || '—' }}</el-descriptions-item>
-      <el-descriptions-item label="申请医生">{{ detail.applyDoctor || '—' }}</el-descriptions-item>
-      <el-descriptions-item label="专家医院">{{ detail.expertHospital || '—' }}</el-descriptions-item>
-      <el-descriptions-item label="专家">{{ detail.expertName || '—' }} {{
+      <el-descriptions-item label="申请科室">{{ detail.applyDeptName || '' }}</el-descriptions-item>
+      <el-descriptions-item label="申请医生">{{ detail.applyDoctor || '' }}</el-descriptions-item>
+      <el-descriptions-item label="专家医院">{{ detail.expertHospital || '' }}</el-descriptions-item>
+      <el-descriptions-item label="专家">{{ detail.expertName || '' }} {{
           detail.expertTitle || ''
         }}
       </el-descriptions-item>
-      <el-descriptions-item label="计划时间">{{ detail.planTime || '—' }}</el-descriptions-item>
-      <el-descriptions-item label="接入号">{{ detail.meetNo || '—' }}</el-descriptions-item>
-      <el-descriptions-item label="费用(元)">{{ detail.fee ?? '—' }}</el-descriptions-item>
-      <el-descriptions-item label="完成时间">{{ detail.completeTime || '—' }}</el-descriptions-item>
+      <el-descriptions-item label="计划时间">{{ detail.planTime || '' }}</el-descriptions-item>
+      <el-descriptions-item label="接入号">{{ detail.meetNo || '' }}</el-descriptions-item>
+      <el-descriptions-item label="费用(元)">{{ detail.fee ?? '' }}</el-descriptions-item>
+      <el-descriptions-item label="完成时间">{{ detail.completeTime || '' }}</el-descriptions-item>
       <el-descriptions-item :span="2" label="会诊目的">{{ detail.purpose }}</el-descriptions-item>
-      <el-descriptions-item :span="2" label="病情摘要">{{ detail.diagnosis || '—' }}</el-descriptions-item>
-      <el-descriptions-item :span="2" label="会诊意见">{{ detail.opinion || '—' }}</el-descriptions-item>
+      <el-descriptions-item :span="2" label="病情摘要">{{ detail.diagnosis || '' }}</el-descriptions-item>
+      <el-descriptions-item :span="2" label="会诊意见">{{ detail.opinion || '' }}</el-descriptions-item>
       <el-descriptions-item v-if="detail.cancelReason" :span="2" label="取消原因">{{
           detail.cancelReason
         }}

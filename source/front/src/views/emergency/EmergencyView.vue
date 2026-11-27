@@ -253,7 +253,7 @@
             </div>
             <!-- 主诉 -->
             <div class="mt-2 truncate text-xs text-slate-600" :title="row.chiefComplaint">{{
-                row.chiefComplaint || '—'
+                row.chiefComplaint || ''
               }}
             </div>
             <!-- 底部：等候 + 医生 + 操作 -->
@@ -407,7 +407,7 @@
         </el-table-column>
         <el-table-column label="入急诊时间" width="150">
           <template #default="{ row }">
-            <span class="text-xs text-slate-600">{{ row.admissionTime || '-' }}</span>
+            <span class="text-xs text-slate-600">{{ row.admissionTime || '' }}</span>
           </template>
         </el-table-column>
         <el-table-column align="center" label="留观" width="110">
@@ -593,7 +593,7 @@
         </el-table-column>
         <el-table-column label="备注" min-width="140" show-overflow-tooltip>
           <template #default="{ row }">
-            <span class="text-xs text-slate-500">{{ row.remark || '—' }}</span>
+            <span class="text-xs text-slate-500">{{ row.remark || '' }}</span>
           </template>
         </el-table-column>
         <el-table-column fixed="right" label="操作" width="80">
@@ -963,7 +963,7 @@ const openAdmit = async (row) => {
 const waitText = (row) => {
   // 时长与超时档位由后端算（服务端 NOW() 才是事实，浏览器时钟不算）
   if (row.waitMinutes == null)
-    return '-';
+    return '';
   const minutes = Number(row.waitMinutes);
   if (minutes < 60)
     return `${minutes}分钟`;
@@ -972,7 +972,7 @@ const waitText = (row) => {
 /** 留观时长：从占床那一刻算起，离观后停表 */
 const getObsTime = (row) => {
   if (!row.observationStartTime)
-    return '-';
+    return '';
   const start = new Date(row.observationStartTime);
   const end = row.observationEndTime ? new Date(row.observationEndTime) : new Date();
   const minutes = Math.floor((end.getTime() - start.getTime()) / 60000);

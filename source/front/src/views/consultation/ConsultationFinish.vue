@@ -80,7 +80,7 @@ const submitFinish = async () => {
       conclusion: finishForm.value.conclusion,
       consultTime: finishForm.value.consultTime || undefined,
     });
-    ElMessage.success(`会诊已完成，已回写病历（病历号 ${res.data || '—'}）`);
+    ElMessage.success(`会诊已完成，已回写病历（病历号 ${res.data || ''}）`);
     visible.value = false;
     emit('saved');
   } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{

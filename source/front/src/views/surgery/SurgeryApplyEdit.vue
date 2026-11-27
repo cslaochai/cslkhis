@@ -157,8 +157,8 @@ const visible = computed({
   set: (v) => emit('update:modelValue', v),
 });
 
-const text = (v) => (v === null || v === undefined || v === '' ? '—' : String(v));
-const admissionLabel = (a) => `${a.bedNo || '—'} ${a.patientName || '—'}（${a.deptName || a.wardName || '—'}）`;
+const text = (v) => (v === null || v === undefined || v === '' ? '' : String(v));
+const admissionLabel = (a) => `${a.bedNo || ''} ${a.patientName || ''}（${a.deptName || a.wardName || ''}）`;
 
 const applySubmitting = ref(false);
 const applyForm = reactive({

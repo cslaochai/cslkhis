@@ -5,14 +5,14 @@
     <div v-if="detail" v-loading="detailLoading" class="space-y-3">
       <div class="flex items-center gap-6 text-sm text-slate-600 flex-wrap">
         <span>调配日期：<b class="text-slate-800">{{ detail.admixDate }}</b></span>
-        <span>患者：<b class="text-slate-800">{{ detail.patientName || '—' }}</b>（{{ detail.patientNo || '—' }}）</span>
-        <span>病区：<b class="text-slate-800">{{ detail.wardName || '—' }}</b></span>
+        <span>患者：<b class="text-slate-800">{{ detail.patientName || '' }}</b>（{{ detail.patientNo || '' }}）</span>
+        <span>病区：<b class="text-slate-800">{{ detail.wardName || '' }}</b></span>
         <span>
           状态：<el-tag :type="pivasBatchStatusTag(detail.status)" size="small">{{
             batchStatusText(detail.status)
           }}</el-tag>
         </span>
-        <span>生成人：{{ detail.generateBy || '—' }}</span>
+        <span>生成人：{{ detail.generateBy || '' }}</span>
         <el-button v-if="canLabel(detail.status)" v-perm="'pharmacy:pivas:edit'" :icon="Tickets" :loading="actLoading"
                    data-testid="pivas-label-btn"
                    size="small" type="primary" @click="onLabelBatch">打标签排队
@@ -38,13 +38,13 @@
           </template>
         </el-table-column>
         <el-table-column label="审方人" prop="auditorName" width="90">
-          <template #default="{ row }">{{ row.auditorName || '—' }}</template>
+          <template #default="{ row }">{{ row.auditorName || '' }}</template>
         </el-table-column>
         <el-table-column label="调配人" prop="compounderName" width="90">
-          <template #default="{ row }">{{ row.compounderName || '—' }}</template>
+          <template #default="{ row }">{{ row.compounderName || '' }}</template>
         </el-table-column>
         <el-table-column label="核对人" prop="verifierName" width="90">
-          <template #default="{ row }">{{ row.verifierName || '—' }}</template>
+          <template #default="{ row }">{{ row.verifierName || '' }}</template>
         </el-table-column>
         <el-table-column fixed="right" label="操作" width="210">
           <template #default="{ row }">

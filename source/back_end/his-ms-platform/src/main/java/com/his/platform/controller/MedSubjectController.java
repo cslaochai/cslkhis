@@ -80,6 +80,15 @@ public class MedSubjectController {
     }
 
     /**
+     * 已配过上报科目的科室ID（前端据此区分可维护节点 / 只读分组节点）。
+     */
+    @Operation(summary = "已配上报科目的科室ID")
+    @GetMapping("/mappedDeptIds")
+    public Result<List<Long>> mappedDeptIds() {
+        return Result.success(sysMedSubjectService.listMappedDeptIds());
+    }
+
+    /**
      * 还没配科目的临床科室（数据治理待办清单）。
      */
     @Operation(summary = "未配科目的临床科室")

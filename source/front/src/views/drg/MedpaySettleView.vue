@@ -5,11 +5,11 @@
       <el-tag :type="modeInfo.mode === 'DIP' ? 'warning' : 'primary'" size="large">
         {{ modeInfo.mode === 'DIP' ? 'DIP 按病种分值付费' : 'DRG 按病组付费' }}
       </el-tag>
-      <span class="text-sm text-gray-500">DRG 版本 {{ modeInfo.drgVersion || '—' }}
+      <span class="text-sm text-gray-500">DRG 版本 {{ modeInfo.drgVersion || '' }}
         <template v-if="modeInfo.drgRate"> · 费率 {{ modeInfo.drgRate }} 元/权重</template>
         <template v-else> · 费率未下发</template>
       </span>
-      <span class="text-sm text-gray-500">DIP 版本 {{ modeInfo.dipVersion || '—' }}
+      <span class="text-sm text-gray-500">DIP 版本 {{ modeInfo.dipVersion || '' }}
         <template v-if="modeInfo.pointValue"> · 点值 {{ modeInfo.pointValue }} 元/分值</template>
         <template v-else> · 点值未下发</template>
       </span>
@@ -63,19 +63,19 @@
         </el-table-column>
         <el-table-column label="组名 / 病种名" min-width="170" prop="groupName" show-overflow-tooltip/>
         <el-table-column align="center" label="类型" width="70">
-          <template #default="{ row }">{{ row.groupType === 1 ? '核心' : row.groupType === 2 ? '综合' : '—' }}</template>
+          <template #default="{ row }">{{ row.groupType === 1 ? '核心' : row.groupType === 2 ? '综合' : '' }}</template>
         </el-table-column>
         <el-table-column align="right" label="权重 / 基准" width="85">
-          <template #default="{ row }">{{ row.weight ?? row.baseScore ?? '—' }}</template>
+          <template #default="{ row }">{{ row.weight ?? row.baseScore ?? '' }}</template>
         </el-table-column>
         <el-table-column align="right" label="系数 / 分值" width="85">
-          <template #default="{ row }">{{ row.coeff != null ? row.coeff + ' / ' + (row.score ?? '—') : (row.rate ?? '—') }}</template>
+          <template #default="{ row }">{{ row.coeff != null ? row.coeff + ' / ' + (row.score ?? '') : (row.rate ?? '') }}</template>
         </el-table-column>
         <el-table-column align="right" label="应付（元）" width="95">
-          <template #default="{ row }">{{ row.insuranceAmount ?? '—' }}</template>
+          <template #default="{ row }">{{ row.insuranceAmount ?? '' }}</template>
         </el-table-column>
         <el-table-column align="right" label="实际费用" width="95">
-          <template #default="{ row }">{{ row.actualAmount ?? '—' }}</template>
+          <template #default="{ row }">{{ row.actualAmount ?? '' }}</template>
         </el-table-column>
         <el-table-column align="right" label="盈亏" width="95">
           <template #default="{ row }">
@@ -166,7 +166,7 @@
         </el-form-item>
         <el-form-item label="盈亏快照">
           <span :class="profitColor(appealTarget?.profitAmount)">
-            {{ appealTarget?.profitAmount != null ? Number(appealTarget.profitAmount).toLocaleString() : '—' }}</span>
+            {{ appealTarget?.profitAmount != null ? Number(appealTarget.profitAmount).toLocaleString() : '' }}</span>
         </el-form-item>
         <el-form-item label="申请类型">
           <el-select v-model="appealForm.reasonType" placeholder="选择申请类型" style="width: 100%">

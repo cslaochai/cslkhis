@@ -107,7 +107,7 @@
               <template #default="{ row }">{{ money(row.chargeAmount ?? row.price) }}</template>
             </el-table-column>
             <el-table-column label="执行护士/时间" width="170">
-              <template #default="{ row }">{{ row.executorName || '—' }}<span
+              <template #default="{ row }">{{ row.executorName || '' }}<span
                   class="text-gray-400 text-xs"> {{ fmtTime(row.executeTime) }}</span></template>
             </el-table-column>
             <el-table-column fixed="right" label="操作" width="210">
@@ -335,7 +335,7 @@
               </template>
             </el-table-column>
             <el-table-column label="执行护士/时间" width="170">
-              <template #default="{ row }">{{ row.executorName || '—' }}<span
+              <template #default="{ row }">{{ row.executorName || '' }}<span
                   class="text-gray-400 text-xs"> {{ fmtTime(row.executeTime) }}</span></template>
             </el-table-column>
             <el-table-column fixed="right" label="操作" width="110">

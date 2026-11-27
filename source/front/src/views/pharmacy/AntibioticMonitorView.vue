@@ -25,28 +25,28 @@
       </div>
       <div class="stat-items" v-if="preview.statMonth">
         <div class="stat-item">
-          <div class="stat-value" data-testid="pv-op-rate">{{ preview.opUsageRate ?? '-' }}%</div>
+          <div class="stat-value" data-testid="pv-op-rate">{{ preview.opUsageRate ?? '' }}%</div>
           <div class="stat-label">门诊抗菌药物使用率（目标 ≤{{ preview.opUsageRateTarget }}%）</div>
           <div class="stat-sub">{{ preview.opAbxRxCount }} / {{ preview.opRxCount }} 张处方</div>
         </div>
         <div class="stat-item">
-          <div class="stat-value" data-testid="pv-ip-rate">{{ preview.ipUsageRate ?? '-' }}%</div>
+          <div class="stat-value" data-testid="pv-ip-rate">{{ preview.ipUsageRate ?? '' }}%</div>
           <div class="stat-label">住院抗菌药物使用率（目标 ≤{{ preview.ipUsageRateTarget }}%）</div>
           <div class="stat-sub">{{ preview.ipAbxPatientCount }} / {{ preview.ipDischargeCount }} 名出院患者</div>
         </div>
         <div class="stat-item">
-          <div class="stat-value" data-testid="pv-aud">{{ preview.aud ?? '-' }}</div>
+          <div class="stat-value" data-testid="pv-aud">{{ preview.aud ?? '' }}</div>
           <div class="stat-label">使用强度 AUD（目标 ≤{{ preview.audTarget }}）</div>
           <div class="stat-sub">DDDs {{ preview.ddds }} / 人天数 {{ preview.patientDays }}</div>
         </div>
         <div class="stat-item">
-          <div class="stat-value" data-testid="pv-micro-rate">{{ preview.microSubmitRate ?? '-' }}%</div>
+          <div class="stat-value" data-testid="pv-micro-rate">{{ preview.microSubmitRate ?? '' }}%</div>
           <div class="stat-label">微生物标本送检率（目标 ≥{{ preview.microSubmitRateTarget }}%）</div>
           <div class="stat-sub">{{ preview.microSubmitCount }} / {{ preview.abxTreatCount }} 名用药患者</div>
         </div>
         <div class="stat-item">
           <div class="stat-value" :class="{ 'stat-value-danger': preview.unmatchedOrderCount > 0 }" data-testid="pv-unmatched">
-            {{ preview.unmatchedOrderCount ?? '-' }}
+            {{ preview.unmatchedOrderCount ?? '' }}
           </div>
           <div class="stat-label">未匹配医嘱数（>0 请去维护别名）</div>
           <div class="stat-sub">这部分消耗没计入使用强度</div>

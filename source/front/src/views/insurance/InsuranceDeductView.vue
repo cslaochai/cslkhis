@@ -86,10 +86,10 @@
               <template #default="{row}">{{ dictText(DICT_TYPE.YB_DEDUCT_SOURCE, row.sourceType) }}</template>
             </el-table-column>
             <el-table-column label="患者" prop="patientName" width="90">
-              <template #default="{row}">{{ row.patientName || '—' }}</template>
+              <template #default="{row}">{{ row.patientName || '' }}</template>
             </el-table-column>
             <el-table-column label="被审科室" prop="deptName" show-overflow-tooltip width="110">
-              <template #default="{row}">{{ row.deptName || '—' }}</template>
+              <template #default="{row}">{{ row.deptName || '' }}</template>
             </el-table-column>
             <el-table-column label="违规类型" show-overflow-tooltip width="140">
               <template #default="{row}">{{ dictText(DICT_TYPE.YB_VIOLATION_TYPE, row.violationType) }}</template>
@@ -196,10 +196,10 @@
             </el-table-column>
             <el-table-column label="进驻/通知日期" prop="inspectDate" width="120"/>
             <el-table-column label="检查组" min-width="150" prop="inspectTeam" show-overflow-tooltip>
-              <template #default="{row}">{{ row.inspectTeam || '—' }}</template>
+              <template #default="{row}">{{ row.inspectTeam || '' }}</template>
             </el-table-column>
             <el-table-column label="院内接待" prop="ourReceiver" width="100">
-              <template #default="{row}">{{ row.ourReceiver || '—' }}</template>
+              <template #default="{row}">{{ row.ourReceiver || '' }}</template>
             </el-table-column>
             <el-table-column align="right" label="名下扣款" width="150">
               <template #default="{row}">
@@ -215,7 +215,7 @@
               </template>
             </el-table-column>
             <el-table-column label="结论" min-width="200" show-overflow-tooltip>
-              <template #default="{row}">{{ row.conclusion || '—' }}</template>
+              <template #default="{row}">{{ row.conclusion || '' }}</template>
             </el-table-column>
             <el-table-column fixed="right" label="操作" width="280">
               <template #default="{row}">
@@ -250,7 +250,7 @@
     </el-card>
 
     <!-- ==================== 通知单 新建/编辑 ==================== -->
-    <InsuranceDeductNoticeEdit v-model="noticeEditVisible" :dicts="dicts" :dept-options="deptOptions"
+    <InsuranceDeductNoticeEdit v-model="noticeEditVisible" :dicts="dicts"
                                :inspection-options="inspectionOptions" :row="noticeEditRow"
                                @saved="reloadNoticeData"/>
 
@@ -265,7 +265,7 @@
     <InsuranceDeductAppealResultEdit v-model="resultVisible" :row="resultRow" @saved="reloadNoticeData"/>
 
     <!-- ==================== 确认扣款并追责 ==================== -->
-    <InsuranceDeductConfirmEdit v-model="confirmVisible" :dicts="dicts" :dept-options="deptOptions"
+    <InsuranceDeductConfirmEdit v-model="confirmVisible" :dicts="dicts"
                                 :money="money" :row="confirmRow" @saved="reloadNoticeData"/>
 
     <!-- ==================== 录入缴回 ==================== -->
@@ -287,7 +287,6 @@ import {Delete, Edit, Money, Plus, Refresh, Search, View} from '@element-plus/ic
 import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination';
 import {DICT_TYPE, loadDictDataMap} from '@/lib/dict-cache';
 import {dictLabelText} from '@/lib/utils';
-import {getDepartmentSelectList} from '@/api/system';
 import InsuranceDeductAppealEdit from './InsuranceDeductAppealEdit.vue';
 import InsuranceDeductAppealResultEdit from './InsuranceDeductAppealResultEdit.vue';
 import InsuranceDeductConfirmEdit from './InsuranceDeductConfirmEdit.vue';
@@ -316,8 +315,6 @@ const dicts = ref({});
 const dictOptions = (type) => dicts.value[type] || [];
 const dictText = (type, value) => dictLabelText(dicts.value[type], value);
 const activeTab = ref('notice');
-// ==================== 科室下拉（跨科室选责任科室，要全院范围） ====================
-const deptOptions = ref([]);
 // ==================== 汇总（后端 SQL 聚合，禁止前端自算） ====================
 const summary = ref({});
 const loadSummary = async () => {
@@ -519,14 +516,6 @@ const drillNotices = (row) => {
 const inspectTagType = (s) => (s === 1 ? 'primary' : s === 2 ? 'success' : 'info');
 onMounted(async () => {
   dicts.value = await loadDictDataMap(DEDUCT_DICT_TYPES.join(','));
-  await Promise.all([loadDepts(), loadNotices(), loadSummary(), loadInspections(), loadInspectionOptions()]);
+  await Promise.all([loadNotices(), loadSummary(), loadInspections(), loadInspectionOptions()]);
 });
-const loadDepts = async () => {
-  try {
-    const res = await getDepartmentSelectList({scope: 'ALL'});
-    deptOptions.value = res.data || [];
-  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
-    
-  }
-};
 </script>

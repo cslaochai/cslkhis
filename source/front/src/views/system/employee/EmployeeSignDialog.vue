@@ -1,6 +1,6 @@
 <template>
   <!-- ---------------- 员工数字证书（CA 签名证书，只读弹框，从员工管理操作列进入） ---------------- -->
-  <el-dialog v-model="visible" width="640px" :title="`数字证书（${employee?.empName || '—'}）`">
+  <el-dialog v-model="visible" width="640px" :title="`数字证书（${employee?.empName || ''}）`">
     <div v-loading="loading">
       <template v-if="cert">
         <div class="rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs leading-6">

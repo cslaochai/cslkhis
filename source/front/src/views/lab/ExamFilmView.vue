@@ -102,8 +102,8 @@
         <el-table-column label="打印/发放" width="140">
           <template #default="{ row }">
             <div class="text-xs leading-5">
-              <div>{{ row.printBy ? '打印 ' + row.printBy : '—' }}</div>
-              <div>{{ row.deliverBy ? '发放 ' + row.deliverBy : '—' }}</div>
+              <div>{{ row.printBy ? '打印 ' + row.printBy : '' }}</div>
+              <div>{{ row.deliverBy ? '发放 ' + row.deliverBy : '' }}</div>
             </div>
           </template>
         </el-table-column>

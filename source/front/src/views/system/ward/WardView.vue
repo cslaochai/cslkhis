@@ -22,15 +22,13 @@
             />
           </el-form-item>
           <el-form-item label="收治科室">
-            <el-select
+            <DeptTreeSelect
                 v-model="searchForm.deptId"
-                clearable
+                mode="LEAF"
+                scope="ALL"
                 data-testid="ward-search-dept"
-                filterable
                 placeholder="任一收治科室"
-            >
-              <el-option v-for="d in deptOptions" :key="d.id" :label="d.deptName" :value="d.id"/>
-            </el-select>
+            />
           </el-form-item>
           <el-form-item label="状态">
             <el-select v-model="searchForm.status" clearable placeholder="请选择状态">
@@ -57,7 +55,7 @@
         <el-table-column label="病区名称" min-width="170" prop="wardName"/>
         <el-table-column label="本位科室" min-width="130">
           <template #default="{ row }">
-            <span class="text-slate-700">{{ row.deptName || '—' }}</span>
+            <span class="text-slate-700">{{ row.deptName || '' }}</span>
           </template>
         </el-table-column>
         <el-table-column label="收治科室" min-width="260">
@@ -117,15 +115,16 @@
       </div>
     </el-card>
 
-    <WardEdit v-model="dialogVisible" :dept-list="deptList" :row="dialogRow" @saved="loadData"/>
+    <WardEdit v-model="dialogVisible" :row="dialogRow" @saved="loadData"/>
   </div>
 </template>
 
 <script lang="js" setup>
-import {computed, onMounted, ref} from 'vue'
+import {onMounted, ref} from 'vue'
 import {ElMessage, ElMessageBox} from 'element-plus'
 import {Delete, Edit, Plus, Refresh, Search} from '@element-plus/icons-vue'
-import {deleteWard, getDepartmentTree, getWardListPage} from '@/api/system'
+import {deleteWard, getWardListPage} from '@/api/system'
+import DeptTreeSelect from '@/components/his/DeptTreeSelect.vue'
 import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination'
 import {useTableMaxHeight} from '@/lib/useTableMaxHeight'
 import WardEdit from '@/views/system/ward/WardEdit.vue'
@@ -146,37 +145,12 @@ const pagination = ref({
 
 const {queryCardRef, footerRef, tableMaxHeight} = useTableMaxHeight()
 
-const deptList = ref([])
 const dialogVisible = ref(false)
 const dialogRow = ref(null)
 
-const deptOptions = computed(() => {
-  const out = []
-  const walk = (list) => {
-    for (const d of list || []) {
-      out.push({id: d.id, deptName: d.deptName})
-      if (d.children && d.children.length) walk(d.children)
-    }
-  }
-  walk(deptList.value)
-  return out
-})
-
 onMounted(() => {
   loadData()
-  loadDeptList()
 })
-
-const loadDeptList = async () => {
-  try {
-    const res = await getDepartmentTree()
-    if (res.code === 200) {
-      deptList.value = res.data || []
-    }
-  } catch (error) {
-    console.error('加载科室列表失败', error)
-  }
-}
 
 const loadData = async () => {
   loading.value = true

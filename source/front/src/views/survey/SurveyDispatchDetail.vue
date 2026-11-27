@@ -15,10 +15,10 @@
         <el-input :model-value="`${detail.patientName || ''} ${detail.patientNo || ''}`"/>
       </el-form-item>
       <el-form-item label="联系电话">
-        <el-input :model-value="detail.phoneMasked || '—'"/>
+        <el-input :model-value="detail.phoneMasked || ''"/>
       </el-form-item>
       <el-form-item label="科室">
-        <el-input :model-value="detail.deptName || '—'"/>
+        <el-input :model-value="detail.deptName || ''"/>
       </el-form-item>
       <el-form-item label="发放来源">
         <el-input :model-value="sourceText(detail.sourceType)"/>
@@ -69,7 +69,7 @@ const visible = computed({
   set: (v) => emit('update:modelValue', v),
 });
 
-const fmtTime = (v) => (v ? String(v).slice(0, 16).replace('T', ' ') : '—');
+const fmtTime = (v) => (v ? String(v).slice(0, 16).replace('T', ' ') : '');
 const detail = computed(() => props.row);
 const sceneText = (v) => dictLabelText(props.dicts.scene, v);
 const sourceText = (v) => dictLabelText(props.dicts.source, v);

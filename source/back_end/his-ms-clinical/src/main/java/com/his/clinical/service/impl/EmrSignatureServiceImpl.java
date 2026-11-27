@@ -493,7 +493,7 @@ public class EmrSignatureServiceImpl extends ServiceImpl<BizEmrSignatureMapper, 
             }
             tb.append(SignBizTypeEnum.getLabel(t));
         }
-        vo.setBizTypeTexts(tb.length() == 0 ? "—" : tb.toString());
+        vo.setBizTypeTexts(tb.length() == 0 ? "" : tb.toString());
 
         vo.setCertTotal(certTotal());
         vo.setCertActive(signCertFacadeService.countByStatus(CertStatusEnum.ACTIVE.getCode()));

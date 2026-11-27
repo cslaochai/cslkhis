@@ -92,7 +92,7 @@
             <template #default="{ row }">{{ money(row.totalAmount) }}</template>
           </el-table-column>
           <el-table-column label="疗效" width="70">
-            <template #default="{ row }">{{ row.curativeEffect ? CURATIVE[row.curativeEffect] : '—' }}</template>
+            <template #default="{ row }">{{ row.curativeEffect ? CURATIVE[row.curativeEffect] : '' }}</template>
           </el-table-column>
           <el-table-column label="质控" width="80">
             <template #default="{ row }">

@@ -18,7 +18,7 @@
           <el-option
               v-for="a in archiveOptions"
               :key="a.id"
-              :label="`${a.recordNo} / ${a.patientName}（${a.deptName || '—'}）`"
+              :label="`${a.recordNo} / ${a.patientName}（${a.deptName || ''}）`"
               :value="String(a.id)"
           />
         </el-select>

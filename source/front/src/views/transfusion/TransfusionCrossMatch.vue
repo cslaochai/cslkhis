@@ -24,13 +24,13 @@
           本次录入 {{ bagRows.length }} 袋；已配 {{ row.matchedBagCount || 0 }}/{{ row.bagCount }} 袋。
           可分多批提交（血站分批到货是常态），累计不得超过申请袋数。
         </span>
-        <el-button v-perm="'medtech:transfusion:add'" :icon="Plus" size="small" @click="addBagRow">增加一袋
+        <el-button v-perm="'medtech:transfusion:dispatch'" :icon="Plus" size="small" @click="addBagRow">增加一袋
         </el-button>
       </div>
       <div v-for="(b, idx) in bagRows" :key="idx" class="rounded border border-slate-200 p-3">
         <div class="mb-2 flex items-center justify-between">
           <span class="text-[13px] font-medium text-slate-700">第 {{ idx + 1 }} 袋</span>
-          <el-button v-perm="'medtech:transfusion:delete'" :icon="Delete" link type="danger"
+          <el-button v-perm="'medtech:transfusion:dispatch'" :icon="Delete" link type="danger"
                      @click="removeBagRow(idx)">删除
           </el-button>
         </div>
@@ -91,7 +91,7 @@
     </div>
     <template #footer>
       <el-button
-          v-perm="'medtech:transfusion:edit'"
+          v-perm="'medtech:transfusion:dispatch'"
           :loading="crossSubmitting"
           data-testid="p4-tf-cross-submit"
           type="primary"
@@ -124,7 +124,7 @@ const visible = computed({
   set: (v) => emit('update:modelValue', v),
 });
 
-const text = (v) => (v === null || v === undefined || v === '' ? '—' : String(v));
+const text = (v) => (v === null || v === undefined || v === '' ? '' : String(v));
 
 const crossSubmitting = ref(false);
 const crossNote = ref('');

@@ -124,7 +124,7 @@ import {auditPublicHealth, getPublicHealthList} from '@/api/publicHealth'
 import PublicHealthReportDetail from './PublicHealthReportDetail.vue'
 import PublicHealthReportAdd from './PublicHealthReportAdd.vue'
 
-const fmtTime = (t) => (t ? String(t).replace('T', ' ').slice(0, 16) : '—')
+const fmtTime = (t) => (t ? String(t).replace('T', ' ').slice(0, 16) : '')
 
 // ---------------- 字典 ----------------
 const typeDict = ref([])

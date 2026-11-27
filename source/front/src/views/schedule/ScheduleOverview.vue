@@ -192,7 +192,7 @@
                   <span v-else class="text-slate-200">—</span>
                 </td>
                 <td class="sticky right-0 z-10 border-l border-slate-100 bg-emerald-50/40 px-3 py-1.5 text-center font-medium text-slate-700">
-                  {{ clinicWeek.pct == null ? '—' : clinicWeek.pct + '%' }}
+                  {{ clinicWeek.pct == null ? '' : clinicWeek.pct + '%' }}
                 </td>
               </tr>
               <!-- 停诊班次 -->

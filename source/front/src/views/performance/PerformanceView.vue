@@ -4,10 +4,7 @@
       <el-tab-pane label="绩效核算结果">
         <div class="bg-white rounded-lg border border-gray-100 p-4 shadow-sm">
           <div class="flex flex-wrap items-center gap-2 mb-3">
-            <el-select v-model="perfQuery.deptId" :fit-input-width="false" clearable filterable placeholder="科室"
-                       style="width: 180px">
-              <el-option v-for="d in depts" :key="d.id" :label="d.deptName" :value="String(d.id)"/>
-            </el-select>
+            <DeptTreeSelect v-model="perfQuery.deptId" mode="LEAF" width="180px" placeholder="科室"/>
             <el-date-picker v-model="perfQuery.costMonth" placeholder="核算月份" style="width: 130px"
                             type="month" value-format="YYYY-MM"/>
             <el-button :icon="Search" type="primary" @click="perfQuery.pageNum = 1; loadPerfList()">查询</el-button>
@@ -16,10 +13,8 @@
               重置
             </el-button>
             <div class="ml-auto flex items-center gap-2">
-              <el-select v-model="calcForm.deptId" :fit-input-width="false" data-testid="perf-calc-dept" filterable
-                         placeholder="选择科室" style="width: 160px">
-                <el-option v-for="d in depts" :key="d.id" :label="d.deptName" :value="String(d.id)"/>
-              </el-select>
+              <DeptTreeSelect v-model="calcForm.deptId" mode="LEAF" data-testid="perf-calc-dept" width="160px"
+                               placeholder="选择科室"/>
               <el-date-picker v-model="calcForm.costMonth" placeholder="核算月份" style="width: 130px"
                               type="month" value-format="YYYY-MM"/>
               <el-button data-testid="perf-calc-btn" plain type="primary" @click="openCalc">执行核算</el-button>
@@ -33,7 +28,7 @@
             </el-table-column>
             <el-table-column align="right" label="药占比" prop="drugRatio" width="80">
               <template #default="{ row }">
-                {{ row.drugRatio != null ? (Number(row.drugRatio) * 100).toFixed(1) + '%' : '—' }}
+                {{ row.drugRatio != null ? (Number(row.drugRatio) * 100).toFixed(1) + '%' : '' }}
               </template>
             </el-table-column>
             <el-table-column align="right" label="成本" prop="totalCost" width="110">
@@ -56,12 +51,12 @@
               <template #default="{ row }">
                 <el-tag :type="row.perfStatus === 3 ? 'success' : row.perfStatus === 2 ? 'primary' : 'info'"
                         size="small">
-                  {{ ({1: '草稿', 2: '已核算', 3: '已发布'})[row.perfStatus] || '—' }}
+                  {{ ({1: '草稿', 2: '已核算', 3: '已发布'})[row.perfStatus] || '' }}
                 </el-tag>
               </template>
             </el-table-column>
             <el-table-column label="核算时间" prop="updateTime" width="160">
-              <template #default="{ row }">{{ (row.updateTime || '').replace('T', ' ').slice(0, 19) || '—' }}</template>
+              <template #default="{ row }">{{ (row.updateTime || '').replace('T', ' ').slice(0, 19) || '' }}</template>
             </el-table-column>
           </el-table>
           <div class="mt-3 flex justify-end">
@@ -74,10 +69,7 @@
       <el-tab-pane label="科室月度成本">
         <div class="bg-white rounded-lg border border-gray-100 p-4 shadow-sm">
           <div class="flex flex-wrap items-center gap-2 mb-3">
-            <el-select v-model="costQuery.deptId" :fit-input-width="false" clearable filterable placeholder="科室"
-                       style="width: 180px">
-              <el-option v-for="d in depts" :key="d.id" :label="d.deptName" :value="String(d.id)"/>
-            </el-select>
+            <DeptTreeSelect v-model="costQuery.deptId" mode="LEAF" width="180px" placeholder="科室"/>
             <el-date-picker v-model="costQuery.costMonth" placeholder="核算月份" style="width: 130px"
                             type="month" value-format="YYYY-MM"/>
             <el-button :icon="Search" type="primary" @click="costQuery.pageNum = 1; loadCostList()">查询</el-button>
@@ -97,7 +89,7 @@
               <template #default="{ row }"><b>{{ money(row.totalCost) }}</b></template>
             </el-table-column>
             <el-table-column label="备注" min-width="140" prop="remark" show-overflow-tooltip>
-              <template #default="{ row }">{{ row.remark || '—' }}</template>
+              <template #default="{ row }">{{ row.remark || '' }}</template>
             </el-table-column>
           </el-table>
           <div class="mt-3 flex justify-end">
@@ -109,7 +101,7 @@
     </el-tabs>
 
     <!-- 成本录入 / 执行核算：拆到同目录兄弟组件，页面只管开关与递参 -->
-    <PerformanceCostAdd v-model="costVisible" :depts="depts" @saved="loadCostList"/>
+    <PerformanceCostAdd v-model="costVisible" @saved="loadCostList"/>
     <PerformanceCalcEdit v-model="calcVisible" :dept-id="calcForm.deptId" :cost-month="calcForm.costMonth"
                          @saved="loadPerfList"/>
   </div>
@@ -127,21 +119,11 @@ import {onMounted, reactive, ref} from 'vue';
 import {ElMessage} from 'element-plus';
 import {Refresh, Search} from '@element-plus/icons-vue';
 import {perfCostListPage, perfResultListPage} from '@/api/perf';
-import {getDepartmentSelectList} from '@/api/system';
+import DeptTreeSelect from '@/components/his/DeptTreeSelect.vue';
 import PerformanceCalcEdit from './PerformanceCalcEdit.vue';
 import PerformanceCostAdd from './PerformanceCostAdd.vue';
 import {DEFAULT_PAGE_SIZE} from '@/lib/pagination';
 import {money, surplusColor} from '@/lib/performance';
-// ---------------- 科室 ----------------
-const depts = ref([]);
-const loadDepts = async () => {
-  try {
-    const res = await getDepartmentSelectList({});
-    depts.value = res.data || [];
-  } catch (e) {
-    console.error('加载科室失败', e);
-  }
-};
 // ---------------- 成本录入（表单拆到 PerformanceCostAdd，页面只管开关） ----------------
 const costVisible = ref(false);
 const openCost = () => {
@@ -200,7 +182,6 @@ const loadPerfList = async () => {
   }
 };
 onMounted(() => {
-  loadDepts();
   loadCostList();
   loadPerfList();
 });

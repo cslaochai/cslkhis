@@ -39,10 +39,17 @@
               <span class="text-xs font-medium text-slate-700">{{ row.certNo }}</span>
             </template>
           </el-table-column>
-          <el-table-column label="持有人" width="140">
+          <el-table-column label="持有人" width="150">
             <template #default="{ row }">
-              <div class="text-xs">{{ row.empName || '—' }}</div>
-              <div class="text-xs text-slate-400">{{ row.deptName || '—' }}</div>
+              <!-- 只读入口不挂按钮码：姓名挂了 edit 码，没铺码的角色（含系统管理员）会被整段移除，
+                   只剩科室名，看上去像「持有人是科室」 -->
+              <el-tooltip content="点击查看该员工名下全部证书的申请与吊销记录" placement="top">
+                <el-button class="!p-0" link size="small" type="primary"
+                           :data-testid="`p5-sign-timeline-open-${row.certNo}`"
+                           @click="openEmpTimeline(row)">{{ row.empName || '' }}
+                </el-button>
+              </el-tooltip>
+              <div class="text-xs text-slate-400">{{ row.deptName || '' }}</div>
             </template>
           </el-table-column>
           <el-table-column label="算法" width="200">
@@ -84,6 +91,10 @@
               <div v-if="row.expired" :data-testid="`p5-sign-cert-expired-${row.certNo}`"
                    class="mt-0.5 text-xs text-red-600">已过期
               </div>
+              <!-- 临期单独提示：只看状态标签还是「有效」，操作员不会想到该办换发 -->
+              <div v-else-if="row.expiringSoon" class="mt-0.5 text-xs text-amber-600">
+                临期，剩 {{ row.daysToExpire }} 天
+              </div>
             </template>
           </el-table-column>
           <el-table-column label="有效期" width="200">
@@ -93,8 +104,8 @@
                 <div class="text-xs text-slate-300">有效期以签发为准</div>
               </template>
               <template v-else>
-                <div class="text-xs">{{ row.validFrom || '—' }}</div>
-                <div class="text-xs text-slate-400">至 {{ row.validTo || '—' }}</div>
+                <div class="text-xs">{{ row.validFrom || '' }}</div>
+                <div class="text-xs text-slate-400">至 {{ row.validTo || '' }}</div>
               </template>
             </template>
           </el-table-column>
@@ -104,18 +115,20 @@
               <div class="text-xs text-slate-400">{{ row.lastUsedTime || '未使用' }}</div>
             </template>
           </el-table-column>
-          <el-table-column fixed="right" label="操作" width="330">
+          <el-table-column fixed="right" label="操作" width="300">
             <template #default="{ row }">
-              <el-button v-perm="'sign:cert:edit'" link size="small" type="primary"
-                         @click="openCertDetail(row)">详情
+              <!-- 证书信息 / 申请进度是只读：不挂按钮码，能进页面的人都能看 -->
+              <el-button link size="small" type="primary"
+                         @click="openCertDetail(row)">证书信息
               </el-button>
-              <el-button v-perm="'sign:cert:edit'" link size="small" type="primary"
-                         data-testid="p5-sign-progress-open" @click="openProgress(row)">进度
+              <el-button link size="small" type="primary"
+                         data-testid="p5-sign-progress-open" @click="openProgress(row)">申请进度
               </el-button>
               <el-button v-if="row.certStatus === 0" v-perm="'sign:cert:edit'" data-testid="p5-sign-bind-open"
-                         link size="small" type="primary" @click="openBind(row)">回填
+                         link size="small" type="primary" @click="openBind(row)">回填证书
               </el-button>
-              <el-tooltip :content="caOfflineTip" :disabled="!caOffline" placement="top">
+              <!-- 只在「断了的单」上放重提：提交失败补送、驳回/撤销换新单；审核中与从未申请一律不出现 -->
+              <el-tooltip v-if="canRetryCa(row)" :content="caOfflineTip" :disabled="!caOffline" placement="top">
                   <el-button
                       v-perm="'sign:cert:edit'"
                       :data-testid="`p5-sign-cert-retry-${row.certNo}`"
@@ -132,12 +145,10 @@
                          :data-testid="`p5-sign-cert-revoke-${row.certNo}`"
                          link size="small" type="danger" @click="openRevoke(row)">吊销
               </el-button>
+              <!-- 临期=到期换发，过期/吊销=重新签发：同一个动作（给同一人开新证），文案跟着处境走 -->
               <el-button v-if="canReissue(row)" v-perm="'sign:cert:edit'"
                          :data-testid="`p5-sign-cert-reissue-${row.certNo}`"
-                         link size="small" type="primary" @click="openReissue(row)">重新签发
-              </el-button>
-              <el-button v-perm="'sign:cert:edit'" link size="small" type="primary"
-                         data-testid="p5-sign-timeline-open" @click="openEmpTimeline(row)">履历
+                         link size="small" type="primary" @click="openReissue(row)">{{ reissueLabel(row) }}
               </el-button>
             </template>
           </el-table-column>
@@ -162,7 +173,7 @@
     </div>
 
     <!-- ---------------- 证书详情（子组件 SignatureCenterCertDetail） ---------------- -->
-    <SignatureCenterCertDetail :id="certDetailId" v-model="certDetailVisible"/>
+    <SignatureCenterCertDetail :id="certDetailId" v-model="certDetailVisible" @progress="onCertProgress"/>
 
     <!-- ---------------- 办理证书（子组件 SignatureCenterCertIssue） ---------------- -->
     <SignatureCenterCertIssue v-model="issueVisible" :bind-cert-id="issueBindId" :preset-emp="issuePresetEmp"
@@ -192,7 +203,7 @@
 <script setup>
 import {computed, onMounted, reactive, ref} from 'vue';
 import {Search} from '@element-plus/icons-vue';
-import {ElMessage} from 'element-plus';
+import {ElMessage, ElMessageBox} from 'element-plus';
 import {
   getSignCaStatus,
   getSignCertList,
@@ -267,11 +278,15 @@ const caNotice = computed(() => {
 const retryingId = ref(null);
 // 断了就是断了：提交失败 / 被驳回 / 被撤销的在线申请不会再自行推进，只能重提或转线下
 const isCaBroken = (row) => ['FAILED', 'REJECTED', 'CANCELLED'].includes(row.caApplyStatus);
+// 只有「待 CA 签发 + 申请单断了」才给重提入口：审核中/从未申请/已生效一律不出现，后端同口径白名单再拦一次
 const canRetryCa = (row) => row.certStatus === 0 && isCaBroken(row);
 // 提交失败叫「重新调用」，CA 驳回/撤销叫「重新申请」：同一个动作，但操作员要知道卡在哪一方
 const retryLabel = (row) => (row.caApplyStatus === 'FAILED' ? '重新调用' : '重新申请');
-// 已吊销 / 已过期：原证不能再用于新签名，补办一张；有效期内的证书必须先吊销，交后端拦
-const canReissue = (row) => row.certStatus === 2 || (row.certStatus === 1 && row.expired === true);
+// 换发窗口由后端按 his.sign.renew-window-days 现算，前端只认结论，不自己算日期
+const canRenew = (row) => row.certStatus === 1 && row.expired !== true && row.expiringSoon === true;
+// 临期叫「到期换发」、过期/吊销叫「重新签发」：同一个动作（给同一人开新证），差别只在处境
+const canReissue = (row) => row.certStatus === 2 || (row.certStatus === 1 && row.expired === true) || canRenew(row);
+const reissueLabel = (row) => (canRenew(row) ? '到期换发' : '重新签发');
 // ---------------- 加载 ----------------
 const loadOptions = async () => {
   try {
@@ -339,6 +354,12 @@ const openProgress = (row) => {
   progressId.value = row.id;
   progressVisible.value = true;
 };
+// 证书信息里点「CA 申请单」直接跳到申请进度：同一个事实不让人在两个弹窗里各找一遍
+const onCertProgress = (id) => {
+  certDetailVisible.value = false;
+  progressId.value = id;
+  progressVisible.value = true;
+};
 // 员工维度全局履历：该员工名下所有证书的 CA 申请与吊销事件一条时间线看全
 const openEmpTimeline = (row) => {
   timelineEmpId.value = row.empId;
@@ -348,9 +369,23 @@ const openEmpTimeline = (row) => {
 const onIssueSaved = async () => {
   await loadCertList();
 };
-// 重新调用 CA：后端 caSubmit 对「仍在审核中」的单子等价刷新、不重复建单；
-// 驳回/撤销/提交失败的单子会换新幂等键重新送单，所以这里可以放心重复点。
+// 重新调用 CA：失败=补送同一张单，驳回/撤销=换新幂等键重送。
+// 两种后果不同（是否新建 CA 申请单），点之前先把「这次会发生什么」说清楚，再调接口
 const retryCa = async (row) => {
+  const rebuild = row.caApplyStatus === 'REJECTED' || row.caApplyStatus === 'CANCELLED';
+  const ok = await ElMessageBox.confirm(
+      rebuild
+          ? `CA 已${row.caApplyStatus === 'REJECTED' ? '驳回' : '撤销'}上一张申请单`
+          + `${row.caApplyNo ? `（${row.caApplyNo}）` : ''}，继续会按同一公钥新建一张申请单，旧单不复用。`
+          : '把失败的那一单重新提交给 CA（同一张申请单补送，不会新建）。',
+      retryLabel(row),
+      {confirmButtonText: '继续', cancelButtonText: '取消', type: 'warning'})
+      .then(() => true)
+      .catch((e) => {
+        console.error('取消重新申请', e);
+        return false;
+      });
+  if (!ok) return;
   retryingId.value = String(row.id);
   try {
     const res = await submitSignCaApply(row.id);

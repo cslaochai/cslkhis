@@ -45,6 +45,8 @@ his:
     # 本地生成密钥对时用它加密私钥落库、签名时解密私钥；CA 在线申请只把公钥送 CA，私钥不出 HIS。
     # 不注入即拒绝签发证书（私钥绝不明文落库）。注意：此值不是 CA 的 SSL_MASTER_KEY，HIS 不持有后者。
     master-secret: ${HIS_SIGN_SECRET:}
+    # 换发窗口（天）：有效证书距到期不足该天数即允许直接办新证，旧证保留到自然到期（不强制吊销）
+    renew-window-days: ${HIS_SIGN_RENEW_WINDOW_DAYS:90}
     # CA 在线申请：接入 csssl 对外 RA API。App ID / 接入密钥由 csssl 建租户时颁发，HIS 按 app-id 反查租户。
     # 私钥在 HIS 本地生成并用上面 master-secret 加密保管，只把公钥送 CA —— 与 CA 的 SSL_MASTER_KEY 是两回事。
     ca:

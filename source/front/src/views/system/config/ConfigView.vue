@@ -397,13 +397,14 @@ const handleSaveMedpay = async () => {
 
 // ---------------- 加载 ----------------
 const loadMedpayConfig = async () => {
-  const [medpay, drg] = await Promise.all([dipMedpayConfig(), getDrgDefaultVersion()])
-  if (medpay.code === 200 && medpay.data) {
-    medpayConfig.value = {...medpayConfig.value, ...medpay.data}
+  // 两个回显接口互不拖累：任一失败只跳过自身回显，不中断另一个
+  const [medpay, drg] = await Promise.allSettled([dipMedpayConfig(), getDrgDefaultVersion()])
+  if (medpay.status === 'fulfilled' && medpay.value.code === 200 && medpay.value.data) {
+    medpayConfig.value = {...medpayConfig.value, ...medpay.value.data}
   }
-  if (drg.code === 200 && drg.data) {
+  if (drg.status === 'fulfilled' && drg.value.code === 200 && drg.value.data) {
     // 未配置时留空，不在前端兜底成某个版本
-    medpayConfig.value.drgVersion = drg.data.dbVersion ?? ''
+    medpayConfig.value.drgVersion = drg.value.data.dbVersion ?? ''
   }
 }
 

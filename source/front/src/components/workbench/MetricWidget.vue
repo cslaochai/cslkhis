@@ -36,7 +36,7 @@ const ready = computed(() => !!props.data && !props.error);
 
 function value(item) {
   if (!ready.value)
-    return '—';
+    return '';
   const v = Number(props.data?.[item.key] ?? 0);
   const pair = Number(props.data?.[item.pairKey ?? ''] ?? 0);
   if (item.format === 'money')
@@ -44,7 +44,7 @@ function value(item) {
   if (item.format === 'pair')
     return `${v} / ${pair}`;
   if (item.format === 'percent')
-    return pair > 0 ? `${Math.round((v / pair) * 100)}%` : '—';
+    return pair > 0 ? `${Math.round((v / pair) * 100)}%` : '';
   return v.toLocaleString('zh-CN');
 }
 

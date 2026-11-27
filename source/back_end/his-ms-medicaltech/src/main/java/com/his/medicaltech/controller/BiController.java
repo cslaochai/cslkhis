@@ -25,20 +25,21 @@ public class BiController {
     private final BiService biService;
 
     /**
-     * 全院运营总览：当日挂号、在院、出院、收入、药占比、床位使用与近 7 日趋势、科室收入前五。
+     * 全院运营总览：当日挂号、入院、在院、出院、手术台次、收入、药占比、床位使用，
+     * 近 7 日趋势、科室收入前五与近 30 日收入结构；昨日对照值随环比一并返回。
      * 用于 BI 驾驶舱页面首屏取数，一次拿全、页面不二次拼装。
      */
-    @Operation(summary = "驾驶舱总览（今日挂号/在院/出院/收入/药占比/床位/7日趋势/科室TOP5）")
+    @Operation(summary = "驾驶舱总览（今日挂号/入院/在院/出院/手术/收入/药占比/床位/趋势/TOP5/收入结构）")
     @GetMapping("/overview")
     public Result<BiOverviewVO> overview() {
         return Result.success(biService.overview());
     }
 
     /**
-     * 国考四项指标近 30 日结果（平均住院日、床位周转、耗占比、CMI），连同各指标分母一并返回。
-     * 用于 BI 驾驶舱页面的国考指标区块，与总览并发拉取。
+     * 运营效率指标近 30 日结果（平均住院日、床位周转、耗占比、CMI、门诊次均、住院次均），
+     * 连同各指标分母一并返回。用于 BI 驾驶舱页面效率指标区块，与总览并发拉取。
      */
-    @Operation(summary = "国考四指标（近30日：平均住院日/床位周转/耗占比/CMI，分母一并返回）")
+    @Operation(summary = "运营效率指标（近30日：平均住院日/周转/耗占比/CMI/门诊次均/住院次均，分母一并返回）")
     @PreAuthorize("hasAuthority('report:bi:list')")
     @GetMapping("/nationalMetrics")
     public Result<BiNationalVO> nationalMetrics() {

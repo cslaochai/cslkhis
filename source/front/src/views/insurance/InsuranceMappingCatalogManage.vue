@@ -56,11 +56,11 @@
       <el-table-column label="规格" prop="spec" show-overflow-tooltip width="110"/>
       <el-table-column label="甲乙类" width="75">
         <template #default="{row}">
-          {{ row.insuranceLevel ? (levelMap[row.insuranceLevel] || `未知(${row.insuranceLevel})`) : '—' }}
+          {{ row.insuranceLevel ? (levelMap[row.insuranceLevel] || `未知(${row.insuranceLevel})`) : '' }}
         </template>
       </el-table-column>
       <el-table-column align="right" label="支付比例" width="85">
-        <template #default="{row}">{{ row.payRatio != null ? row.payRatio + '%' : '—' }}</template>
+        <template #default="{row}">{{ row.payRatio != null ? row.payRatio + '%' : '' }}</template>
       </el-table-column>
       <el-table-column label="状态" width="80">
         <template #default="{row}">

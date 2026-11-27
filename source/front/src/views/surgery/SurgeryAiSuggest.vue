@@ -51,7 +51,7 @@
       <el-table-column prop="patientName" label="患者" min-width="90" show-overflow-tooltip />
       <el-table-column prop="plannedOperationName" label="拟施术式" min-width="130" show-overflow-tooltip />
       <el-table-column label="级别" width="56" align="center">
-        <template #default="{ row }">{{ row.operationLevel ? row.operationLevel + '级' : '—' }}</template>
+        <template #default="{ row }">{{ row.operationLevel ? row.operationLevel + '级' : '' }}</template>
       </el-table-column>
       <el-table-column label="时长" width="64" align="center">
         <template #default="{ row }">{{ row.durationMinutes }}min</template>
@@ -127,7 +127,7 @@ const applying = ref(false);
 const hasResult = computed(() => result.value !== null);
 const suggestions = computed(() => result.value?.suggestions || []);
 const blocked = computed(() => result.value?.blocked || []);
-const hm = (t) => (t ? String(t).replace('T', ' ').slice(11, 16) : '—');
+const hm = (t) => (t ? String(t).replace('T', ' ').slice(11, 16) : '');
 
 watch(() => props.modelValue, (v) => {
   if (v && !result.value)

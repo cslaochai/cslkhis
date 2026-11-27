@@ -242,7 +242,7 @@ const loadStats = async () => {
     console.error(e);
   }
 };
-const fmtTime = (t) => (t ? String(t).replace('T', ' ').slice(0, 16) : '-');
+const fmtTime = (t) => (t ? String(t).replace('T', ' ').slice(0, 16) : '');
 const pendLoading = ref(false);
 const pendRows = ref([]);
 const pendTotal = ref(0);

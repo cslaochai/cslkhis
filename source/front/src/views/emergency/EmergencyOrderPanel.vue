@@ -13,7 +13,7 @@
         <el-table :data="insList" size="small" empty-text="暂无检查申请" data-testid="emg-order-ins-table"
                   :max-height="360">
           <el-table-column label="项目" min-width="160" show-overflow-tooltip>
-            <template #default="{row}">{{ row.inspectionItemName || row.inspectionItemCode || '—' }}</template>
+            <template #default="{row}">{{ row.inspectionItemName || row.inspectionItemCode || '' }}</template>
           </el-table-column>
           <el-table-column label="部位" prop="bodyPart" min-width="90" show-overflow-tooltip/>
           <el-table-column label="急诊" width="64" align="center">
@@ -24,7 +24,7 @@
           </el-table-column>
           <el-table-column label="状态" min-width="120">
             <template #default="{row}">
-              <span class="text-xs">{{ row.applyStatusText || row.applyStatus || '—' }}</span>
+              <span class="text-xs">{{ row.applyStatusText || row.applyStatus || '' }}</span>
               <span v-if="row.execStatusText" class="ml-1 text-xs text-slate-500">· {{ row.execStatusText }}</span>
               <el-tag v-if="row.critical" size="small" type="warning" effect="plain" class="ml-1">危急值</el-tag>
             </template>
@@ -58,7 +58,7 @@
         <el-table :data="labList" size="small" empty-text="暂无检验申请" data-testid="emg-order-lab-table"
                   :max-height="360">
           <el-table-column label="项目" min-width="160" show-overflow-tooltip>
-            <template #default="{row}">{{ row.laboratoryItemName || row.laboratoryItemCode || '—' }}</template>
+            <template #default="{row}">{{ row.laboratoryItemName || row.laboratoryItemCode || '' }}</template>
           </el-table-column>
           <el-table-column label="标本" prop="specimenType" min-width="90" show-overflow-tooltip/>
           <el-table-column label="急诊" width="64" align="center">
@@ -69,7 +69,7 @@
           </el-table-column>
           <el-table-column label="状态" min-width="120">
             <template #default="{row}">
-              <span class="text-xs">{{ row.applyStatusText || row.applyStatus || '—' }}</span>
+              <span class="text-xs">{{ row.applyStatusText || row.applyStatus || '' }}</span>
               <span v-if="row.execStatusText" class="ml-1 text-xs text-slate-500">· {{ row.execStatusText }}</span>
               <el-tag v-if="row.critical" size="small" type="warning" effect="plain" class="ml-1">危急值</el-tag>
             </template>
@@ -99,29 +99,29 @@
         <el-table :data="criticalList" size="small" empty-text="该患者暂无危急值记录"
                   data-testid="emg-critical-table" :max-height="360">
           <el-table-column label="项目" min-width="130" show-overflow-tooltip>
-            <template #default="{row}">{{ row.itemName || row.itemCode || '—' }}</template>
+            <template #default="{row}">{{ row.itemName || row.itemCode || '' }}</template>
           </el-table-column>
           <el-table-column label="结果" min-width="110">
             <template #default="{row}">
-              <span class="font-bold text-red-600">{{ row.resultValue ?? '—' }}{{ row.resultUnit || '' }}</span>
+              <span class="font-bold text-red-600">{{ row.resultValue ?? '' }}{{ row.resultUnit || '' }}</span>
             </template>
           </el-table-column>
           <el-table-column label="参考区间" prop="referenceRange" min-width="110" show-overflow-tooltip/>
           <el-table-column label="类型" width="72" align="center">
             <template #default="{row}">
-              <el-tag size="small" :type="row.criticalType === 2 ? 'danger' : 'warning'">{{ row.criticalTypeText || '—' }}</el-tag>
+              <el-tag size="small" :type="row.criticalType === 2 ? 'danger' : 'warning'">{{ row.criticalTypeText || '' }}</el-tag>
             </template>
           </el-table-column>
           <el-table-column label="闭环状态" width="90" align="center">
             <template #default="{row}">
-              <el-tag size="small" :type="row.status === 3 ? 'success' : (row.status === 4 ? 'info' : 'danger')">{{ row.statusText || '—' }}</el-tag>
+              <el-tag size="small" :type="row.status === 3 ? 'success' : (row.status === 4 ? 'info' : 'danger')">{{ row.statusText || '' }}</el-tag>
             </template>
           </el-table-column>
           <el-table-column label="报告时间" width="150">
             <template #default="{row}"><span class="text-xs">{{ (row.reportTime || '').replace('T', ' ') }}</span></template>
           </el-table-column>
           <el-table-column label="处置措施" min-width="120" show-overflow-tooltip>
-            <template #default="{row}"><span class="text-xs">{{ row.handleMeasure || '—' }}</span></template>
+            <template #default="{row}"><span class="text-xs">{{ row.handleMeasure || '' }}</span></template>
           </el-table-column>
         </el-table>
         <div class="mt-1 text-[11px] text-slate-400">危急值闭环（接收/处置/升级）在「危急值管理」页操作，此处只读提醒。</div>
@@ -258,7 +258,7 @@
                           :admission-label="admissionLabelFn" @saved="onInpatientSaved"/>
     <SurgeryApplyEdit v-model="surgeryVisible" :row="null" :admissions="admissionCandidates"
                       @saved="onInpatientSaved"/>
-    <ConsultationApply v-model="consultVisible" :admission="admissionObj" :depts="deptCandidates"
+    <ConsultationApply v-model="consultVisible" :admission="admissionObj"
                        @saved="onInpatientSaved"/>
 
     <!-- 软签二次确认：检查/检验开单即签，开单前由签名人本人输入 PIN -->
@@ -275,7 +275,6 @@ import {
   getLaboratoryApplyList, saveLaboratoryApply, deleteLaboratoryApply,
 } from '@/api/doctor';
 import {searchInspectionItem, searchLaboratoryItem} from '@/api/system';
-import {loadDeptOptions} from '@/lib/deptOptions';
 import {getInspectionTemplates, getLaboratoryTemplates} from '@/api/doctor';
 import {getInspectionDetail, getLaboratoryDetail, getCriticalValueListPage} from '@/api/medicaltech';
 import InspectionDetail from '@/views/lab/InspectionDetail.vue';
@@ -303,16 +302,6 @@ const admissionObj = computed(() => (admissionId.value != null
   ? {admissionId: admissionId.value, patientId: patientId.value, patientName: props.patient?.patientName}
   : null));
 const admissionCandidates = computed(() => (admissionObj.value ? [admissionObj.value] : []));
-const deptCandidates = ref([]);
-// 会诊/转住院弹框的科室候选：全院末级科室（不按当前岗位收口，否则急诊医生只能请到急诊科）
-const loadDeptCandidates = async () => {
-  try {
-    deptCandidates.value = await loadDeptOptions({scope: 'ALL', deptType: '1,2,4', nodeType: '2,3,7', leafOnly: true});
-  } catch (error) {
-    console.error('加载科室候选失败:', error);
-    deptCandidates.value = [];
-  }
-};
 const admissionLabelFn = (a) => `住院号 ${a?.admissionId ?? ''}`;
 
 // ---------- 检查 ----------
@@ -590,7 +579,7 @@ const applyLabTpl = (t) => {
 
 // ---------- 生命周期 ----------
 const reloadAll = () => { loadIns(); loadLab(); loadCritical(); };
-onMounted(() => { reloadAll(); loadTpls(); loadDeptCandidates(); });
+onMounted(() => { reloadAll(); loadTpls(); });
 watch(() => props.patient?.id, () => { insList.value = []; labList.value = []; criticalList.value = []; reloadAll(); });
 // 医嘱套套用后由父组件（EmergencyDoctorView）调用来刷新检查/检验列表
 defineExpose({reloadAll});

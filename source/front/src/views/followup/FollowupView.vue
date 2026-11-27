@@ -76,10 +76,10 @@
                   class="text-gray-400 text-xs ml-1">{{ row.patientNo }}</span></template>
             </el-table-column>
             <el-table-column label="联系电话" prop="phoneMasked" width="120">
-              <template #default="{ row }">{{ row.phoneMasked || '—' }}</template>
+              <template #default="{ row }">{{ row.phoneMasked || '' }}</template>
             </el-table-column>
             <el-table-column label="出院科室" prop="deptName" show-overflow-tooltip width="140">
-              <template #default="{ row }">{{ row.deptName || '—' }}</template>
+              <template #default="{ row }">{{ row.deptName || '' }}</template>
             </el-table-column>
             <el-table-column label="类型" prop="followupType" width="100">
               <template #default="{ row }">{{ typeText(row.followupType) }}</template>
@@ -90,7 +90,7 @@
               </template>
             </el-table-column>
             <el-table-column label="诊断" min-width="140" prop="diagnosis" show-overflow-tooltip>
-              <template #default="{ row }">{{ row.diagnosis || '—' }}</template>
+              <template #default="{ row }">{{ row.diagnosis || '' }}</template>
             </el-table-column>
             <el-table-column label="状态" prop="followupStatus" width="90">
               <template #default="{ row }">
@@ -107,7 +107,7 @@
               </template>
             </el-table-column>
             <el-table-column label="执行人" prop="executorName" width="90">
-              <template #default="{ row }">{{ row.executorName || '—' }}</template>
+              <template #default="{ row }">{{ row.executorName || '' }}</template>
             </el-table-column>
             <el-table-column label="复诊号" width="150">
               <template #default="{ row }">

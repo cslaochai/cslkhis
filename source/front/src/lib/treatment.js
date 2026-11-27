@@ -8,8 +8,8 @@ export const CHARGE = {NONE: 0, DONE: 1, FAIL: 2, NA: 3};
 export const execTag = (s) => (Number(s) === EXEC.DONE ? 'success' : Number(s) === EXEC.CANCELLED ? 'info' : 'warning');
 export const chargeTag = (s) => (Number(s) === CHARGE.DONE ? 'success'
     : Number(s) === CHARGE.FAIL ? 'danger' : Number(s) === CHARGE.NA ? 'info' : '');
-export const money = (v) => (v === null || v === undefined ? '—' : `¥${Number(v).toFixed(2)}`);
-export const fmtTime = (t) => (t ? String(t).replace('T', ' ').slice(0, 16) : '—');
+export const money = (v) => (v === null || v === undefined ? '' : `¥${Number(v).toFixed(2)}`);
+export const fmtTime = (t) => (t ? String(t).replace('T', ' ').slice(0, 16) : '');
 export const today = (() => {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;

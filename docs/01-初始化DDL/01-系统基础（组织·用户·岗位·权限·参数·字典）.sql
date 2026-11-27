@@ -246,7 +246,7 @@ CREATE TABLE `sys_employee_post` (
   `create_by_id` bigint NOT NULL COMMENT '创建人ID',
   `update_by_id` bigint NOT NULL COMMENT '更新人ID',
   PRIMARY KEY (`id`),
-  UNIQUE KEY `uk_emp_role_dept` (`employee_id`,`role_id`,`dept_id`),
+  UNIQUE KEY `uk_emp_role_dept_date` (`employee_id`,`role_id`,`dept_id`,`effective_date`),
   KEY `idx_user_id` (`employee_id`),
   KEY `idx_dept_id` (`dept_id`),
   KEY `idx_role_id` (`role_id`)

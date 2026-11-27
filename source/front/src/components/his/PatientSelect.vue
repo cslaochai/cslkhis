@@ -95,16 +95,16 @@
             <!-- 第三行：联系方式 -->
             <div class="ps-line ps-meta">
             <span class="ps-meta-item">
-              <span class="ps-meta-key">手机</span>{{ p.phoneMasked || '-' }}
+              <span class="ps-meta-key">手机</span>{{ p.phoneMasked || '' }}
             </span>
               <span class="ps-meta-sep">|</span>
               <span class="ps-meta-item">
-              <span class="ps-meta-key">证件</span>{{ p.idCardMasked || '-' }}
+              <span class="ps-meta-key">证件</span>{{ p.idCardMasked || '' }}
             </span>
               <span class="ps-meta-sep">|</span>
               <span class="ps-meta-item">
               <span class="ps-meta-key">联系人</span>{{
-                  p.contactName || '-'
+                  p.contactName || ''
                 }}{{ p.contactPhone ? ' ' + p.contactPhone : '' }}
             </span>
             </div>
@@ -112,7 +112,7 @@
             <!-- 第四行：地址 + 就诊统计 -->
             <div class="ps-line ps-meta">
             <span class="ps-meta-item ps-address">
-              <span class="ps-meta-key">住址</span>{{ p.address || '-' }}
+              <span class="ps-meta-key">住址</span>{{ p.address || '' }}
             </span>
               <span class="ps-stats">
               <span class="ps-stat"><b>{{ p.appointCount ?? 0 }}</b>次预约</span>
@@ -242,12 +242,12 @@ defineExpose({reset})
 
 /* ---------- 展示辅助 ---------- */
 const calcAge = (birthDate) => {
-  if (!birthDate) return '-'
+  if (!birthDate) return ''
   const b = new Date(birthDate), n = new Date()
   let age = n.getFullYear() - b.getFullYear()
   const m = n.getMonth() - b.getMonth()
   if (m < 0 || (m === 0 && n.getDate() < b.getDate())) age--
-  return age >= 0 ? age : '-'
+  return age >= 0 ? age : ''
 }
 const patientAge = (p) => (p.age != null && p.age !== '' ? p.age : calcAge(p.birthDate))
 

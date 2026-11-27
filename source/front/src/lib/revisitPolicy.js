@@ -25,7 +25,7 @@ export const REVISIT_MATCH_OPTIONS = [
 
 export function revisitMatchLabel(value) {
   const hit = REVISIT_MATCH_OPTIONS.find((o) => o.value === Number(value))
-  return hit ? hit.label : '—'
+  return hit ? hit.label : ''
 }
 
 /** 复诊收费方式码值（字典 his_revisit_charge_mode 的兜底文案，字典没拉到才用） */

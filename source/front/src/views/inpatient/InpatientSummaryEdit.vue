@@ -13,9 +13,9 @@
           <template v-if="summaryMeta.subjectCode">
             <span class="font-medium text-slate-700">A{{ summaryMeta.subjectCode }}</span>
             <span class="ml-1">{{ summaryMeta.subjectName }}</span>
-            <span class="ml-1 text-slate-400">（医保清单/卫统口径，非首页字段；按出院科室 {{ summaryMeta.deptName || '—' }} 折算）</span>
+            <span class="ml-1 text-slate-400">（医保清单/卫统口径，非首页字段；按出院科室 {{ summaryMeta.deptName || '' }} 折算）</span>
           </template>
-          <span v-else class="text-rose-600">未配（出院科室 {{ summaryMeta.deptName || '—' }} 没设主科目）</span>
+          <span v-else class="text-rose-600">未配（出院科室 {{ summaryMeta.deptName || '' }} 没设主科目）</span>
         </span>
         <span v-if="summaryMeta.readmit31d === 1" class="font-medium text-rose-600">31 日内再入院</span>
         <span class="ml-auto text-slate-400">归档后本页只读</span>

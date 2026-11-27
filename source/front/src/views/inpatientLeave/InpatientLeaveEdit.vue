@@ -8,13 +8,13 @@
                    data-testid="lv-form-admission" filterable placeholder="搜索姓名/住院号选择在院患者"
                    @change="onAdmissionPick">
           <el-option v-for="p in inpatients" :key="p.admissionId"
-                     :label="`${p.bedNo || '—'}床 ${p.patientName}（${p.deptName || '—'}）`" :value="p.admissionId"/>
+                     :label="`${p.bedNo || ''}床 ${p.patientName}（${p.deptName || ''}）`" :value="p.admissionId"/>
         </el-select>
       </el-form-item>
       <el-form-item label="患者快照">
         <span class="text-sm text-slate-600" data-testid="lv-form-snapshot">
-          {{ form.patientName || '—' }} / {{ form.admissionNo || '—' }} / {{
-            form.wardName || '—'
+          {{ form.patientName || '' }} / {{ form.admissionNo || '' }} / {{
+            form.wardName || ''
           }} {{ form.bedNo ? form.bedNo + '床' : '' }}
         </span>
       </el-form-item>

@@ -54,6 +54,11 @@ export function listQcCandidatePage(params) {
     return request.get('/emr/qualityControl/listCandidatePage', {params})
 }
 
+// 超时草稿看板分页（质控侧；含在途移交状态/承接人，handoverStatus: 0-未移交 1-待代补）
+export function getQcOverdueDraftPage(params) {
+    return request.post('/emr/qualityControl/overdueDraftPage', params)
+}
+
 // 质控类型字典（0-综合 1~3-三维度 4-AI内涵质控）
 export function getQcTypeDict() {
     return request.get('/emr/qualityControl/qcTypeDict')

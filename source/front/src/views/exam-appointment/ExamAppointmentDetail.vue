@@ -12,12 +12,12 @@
         </el-descriptions-item>
         <el-descriptions-item label="申请单号">{{ detail.data.applyNo }}</el-descriptions-item>
         <el-descriptions-item label="检查项目">{{ detail.data.itemName }}</el-descriptions-item>
-        <el-descriptions-item label="部位">{{ detail.data.bodyPart || '—' }}</el-descriptions-item>
+        <el-descriptions-item label="部位">{{ detail.data.bodyPart || '' }}</el-descriptions-item>
         <el-descriptions-item label="设备">{{ detail.data.deviceName }}（{{
             detail.data.deviceCode
           }}）
         </el-descriptions-item>
-        <el-descriptions-item label="机房">{{ detail.data.roomName || '—' }}</el-descriptions-item>
+        <el-descriptions-item label="机房">{{ detail.data.roomName || '' }}</el-descriptions-item>
         <el-descriptions-item label="检查时间">{{ detail.data.examDate }} {{
             detail.data.timeRange
           }}
@@ -27,7 +27,7 @@
             detail.data.doctorName
           }}
         </el-descriptions-item>
-        <el-descriptions-item label="执行科室">{{ detail.data.examDeptName || '—' }}</el-descriptions-item>
+        <el-descriptions-item label="执行科室">{{ detail.data.examDeptName || '' }}</el-descriptions-item>
         <el-descriptions-item label="占号">{{ detail.data.bookBy }} {{
             fmtTime(detail.data.bookTime)
           }}
@@ -35,8 +35,8 @@
         <el-descriptions-item label="到检">{{ fmtTime(detail.data.arriveTime) }}</el-descriptions-item>
         <el-descriptions-item label="完成">{{ fmtTime(detail.data.finishTime) }}</el-descriptions-item>
         <el-descriptions-item label="取消">{{ fmtTime(detail.data.cancelTime) }}</el-descriptions-item>
-        <el-descriptions-item :span="2" label="取消原因">{{ detail.data.cancelReason || '—' }}</el-descriptions-item>
-        <el-descriptions-item :span="2" label="备注">{{ detail.data.remark || '—' }}</el-descriptions-item>
+        <el-descriptions-item :span="2" label="取消原因">{{ detail.data.cancelReason || '' }}</el-descriptions-item>
+        <el-descriptions-item :span="2" label="备注">{{ detail.data.remark || '' }}</el-descriptions-item>
       </el-descriptions>
     </div>
   </el-dialog>
@@ -62,7 +62,7 @@ const visible = computed({
   set: (v) => emit('update:modelValue', v),
 });
 
-const fmtTime = (t) => (t ? String(t).replace('T', ' ').slice(0, 16) : '-');
+const fmtTime = (t) => (t ? String(t).replace('T', ' ').slice(0, 16) : '');
 
 // 详情抽屉
 const detail = reactive({loading: false, data: null});

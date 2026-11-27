@@ -7,11 +7,11 @@
         <el-descriptions-item label="患者">{{ detail.patientName }}</el-descriptions-item>
         <el-descriptions-item label="类型">{{ detail.usTypeText }}</el-descriptions-item>
         <el-descriptions-item label="状态">{{ detail.statusText }}</el-descriptions-item>
-        <el-descriptions-item :span="2" label="超声所见">{{ detail.findings || '-' }}</el-descriptions-item>
+        <el-descriptions-item :span="2" label="超声所见">{{ detail.findings || '' }}</el-descriptions-item>
         <el-descriptions-item :span="2" label="超声提示">{{ detail.conclusion || '未出' }}</el-descriptions-item>
-        <el-descriptions-item :span="2" label="建议">{{ detail.suggestion || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="报告医师">{{ detail.reportBy || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="审核医师">{{ detail.auditBy || '-' }}</el-descriptions-item>
+        <el-descriptions-item :span="2" label="建议">{{ detail.suggestion || '' }}</el-descriptions-item>
+        <el-descriptions-item label="报告医师">{{ detail.reportBy || '' }}</el-descriptions-item>
+        <el-descriptions-item label="审核医师">{{ detail.auditBy || '' }}</el-descriptions-item>
       </el-descriptions>
       <div class="mt-3 font-medium text-sm text-gray-600">测量值</div>
       <el-table :data="detail.measures || []" class="mt-1" size="small">

@@ -15,13 +15,13 @@
         <el-input :value="`${detail.totalScore} 分 · ${detail.riskFlagText}`"/>
       </el-form-item>
       <el-form-item label="BMI">
-        <el-input :value="detail.bmi ?? '—'"/>
+        <el-input :value="detail.bmi ?? ''"/>
       </el-form-item>
       <el-form-item label="下次筛查">
-        <el-input :value="detail.nextScreenDate || '—'"/>
+        <el-input :value="detail.nextScreenDate || ''"/>
       </el-form-item>
       <el-form-item label="备注">
-        <el-input :rows="2" :value="detail.remark || '—'" type="textarea"/>
+        <el-input :rows="2" :value="detail.remark || ''" type="textarea"/>
       </el-form-item>
     </el-form>
     <template #footer>

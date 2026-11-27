@@ -115,7 +115,7 @@
         <el-table-column label="患者" min-width="150">
           <template #default="{ row }">
             <div class="font-medium text-slate-800">{{ row.patientName }}</div>
-            <div class="text-xs text-slate-500">{{ row.genderText }} · {{ row.age ?? '—' }}岁 · {{
+            <div class="text-xs text-slate-500">{{ row.genderText }} · {{ row.age ?? '' }}岁 · {{
                 row.phone || '无电话'
               }}
             </div>
@@ -123,22 +123,22 @@
         </el-table-column>
         <el-table-column label="来源门诊" min-width="170">
           <template #default="{ row }">
-            <div class="text-slate-700">{{ row.sourceDeptName || '—' }} · {{ row.sourceDoctorName || '—' }}</div>
-            <div class="text-xs text-slate-500">挂号号 {{ row.registNo || '—' }}</div>
+            <div class="text-slate-700">{{ row.sourceDeptName || '' }} · {{ row.sourceDoctorName || '' }}</div>
+            <div class="text-xs text-slate-500">挂号号 {{ row.registNo || '' }}</div>
           </template>
         </el-table-column>
         <el-table-column label="拟收治科室" width="130">
-          <template #default="{ row }">{{ row.applyDeptName || '—' }}</template>
+          <template #default="{ row }">{{ row.applyDeptName || '' }}</template>
         </el-table-column>
         <el-table-column label="拟诊" min-width="150" show-overflow-tooltip>
           <template #default="{ row }">
-            <div>{{ row.diagnosisName || '—' }}</div>
+            <div>{{ row.diagnosisName || '' }}</div>
             <div v-if="row.diagnosisCode" class="text-xs text-slate-400">{{ row.diagnosisCode }}</div>
           </template>
         </el-table-column>
         <el-table-column label="有效期至" width="150">
           <template #default="{ row }">
-            <span :class="row.expired ? 'text-rose-500' : 'text-slate-600'">{{ row.validUntil || '—' }}</span>
+            <span :class="row.expired ? 'text-rose-500' : 'text-slate-600'">{{ row.validUntil || '' }}</span>
           </template>
         </el-table-column>
         <el-table-column align="center" label="状态" width="120">
@@ -153,9 +153,9 @@
         <el-table-column label="收治结果" min-width="170">
           <template #default="{ row }">
             <template v-if="row.admissionId">
-              <div class="text-slate-700">{{ row.admissionNo || '—' }}</div>
+              <div class="text-slate-700">{{ row.admissionNo || '' }}</div>
               <div class="text-xs text-slate-500">
-                收治科室 {{ row.admitDeptName || '—' }}
+                收治科室 {{ row.admitDeptName || '' }}
                 <el-tag v-if="row.deptAdjusted" class="ml-1" effect="plain" size="small" type="warning">调科</el-tag>
               </div>
             </template>
@@ -234,14 +234,14 @@
         <el-table-column label="住院号" prop="admissionNo" width="140"/>
         <el-table-column label="患者" min-width="140">
           <template #default="{ row }">
-            <div class="font-medium text-slate-800">{{ row.patientName || '—' }}</div>
-            <div class="text-xs text-slate-400">{{ genderText(row.gender) }} · {{ row.age ?? '—' }}岁</div>
+            <div class="font-medium text-slate-800">{{ row.patientName || '' }}</div>
+            <div class="text-xs text-slate-400">{{ genderText(row.gender) }} · {{ row.age ?? '' }}岁</div>
           </template>
         </el-table-column>
         <el-table-column label="科室 / 病区" min-width="160">
           <template #default="{ row }">
-            <div>{{ row.deptName || '—' }}</div>
-            <div class="text-xs text-slate-400">{{ row.wardName || '—' }} · {{ row.bedNo || '未分床' }}</div>
+            <div>{{ row.deptName || '' }}</div>
+            <div class="text-xs text-slate-400">{{ row.wardName || '' }} · {{ row.bedNo || '未分床' }}</div>
           </template>
         </el-table-column>
         <el-table-column align="center" label="入院途径" width="90">
@@ -249,21 +249,21 @@
         </el-table-column>
         <el-table-column label="门诊来源" show-overflow-tooltip width="160">
           <template #default="{ row }">
-            <div class="text-slate-700">{{ row.registNo || '—' }}</div>
+            <div class="text-slate-700">{{ row.registNo || '' }}</div>
             <div class="text-xs text-slate-400">{{ row.admissionOrderNo || '直接入院' }}</div>
           </template>
         </el-table-column>
         <el-table-column label="入院时间" width="150">
-          <template #default="{ row }">{{ row.admitTime || '—' }}</template>
+          <template #default="{ row }">{{ row.admitTime || '' }}</template>
         </el-table-column>
         <el-table-column align="center" label="住院天数" width="90">
           <template #default="{ row }">{{ row.inpatientDays ?? 0 }} 天</template>
         </el-table-column>
         <el-table-column label="主要诊断" min-width="150" show-overflow-tooltip>
-          <template #default="{ row }">{{ row.mainDiagnosisName || row.diagnosis || '—' }}</template>
+          <template #default="{ row }">{{ row.mainDiagnosisName || row.diagnosis || '' }}</template>
         </el-table-column>
         <el-table-column label="主管医生" width="100">
-          <template #default="{ row }">{{ row.doctorName || '—' }}</template>
+          <template #default="{ row }">{{ row.doctorName || '' }}</template>
         </el-table-column>
         <el-table-column align="center" label="病案首页" width="100">
           <template #default="{ row }">

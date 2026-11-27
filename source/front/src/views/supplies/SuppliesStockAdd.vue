@@ -4,11 +4,11 @@
       <el-form-item label="选择耗材" required>
         <el-select v-model="form.consumableId" :fit-input-width="false" filterable placeholder="从耗材字典选择"
                    style="width: 100%">
-          <el-option v-for="c in consumableOptions" :key="c.id" :label="`${c.consumableName}（${c.specification || '-'}）`"
+          <el-option v-for="c in consumableOptions" :key="c.id" :label="`${c.consumableName}（${c.specification || ''}）`"
                      :value="c.id"/>
         </el-select>
         <p v-if="selectedConsumable()" class="mt-1 text-xs text-slate-400">
-          单位：{{ selectedConsumable()?.unit || '-' }}　字典零售价：¥{{ selectedConsumable()?.retailPrice ?? 0 }}
+          单位：{{ selectedConsumable()?.unit || '' }}　字典零售价：¥{{ selectedConsumable()?.retailPrice ?? 0 }}
         </p>
       </el-form-item>
       <el-form-item label="批号" required>

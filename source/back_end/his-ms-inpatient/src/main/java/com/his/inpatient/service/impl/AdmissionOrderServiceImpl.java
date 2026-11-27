@@ -283,7 +283,7 @@ public class AdmissionOrderServiceImpl extends ServiceImpl<BizAdmissionOrderMapp
                 && !Objects.equals(vo.getAdmitDeptId(), vo.getApplyDeptId()));
 
         if (vo.getGenderText() == null) {
-            vo.setGenderText("—");
+            vo.setGenderText("");
         }
     }
 

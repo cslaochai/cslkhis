@@ -54,7 +54,7 @@
                 <el-table-column align="right" label="靶值" prop="meanValue" width="90"/>
                 <el-table-column align="right" label="SD" prop="sdValue" width="90"/>
                 <el-table-column align="right" label="实际 CV" width="90">
-                  <template #default="{ row }">{{ row.cvActual != null ? row.cvActual + '%' : '-' }}</template>
+                  <template #default="{ row }">{{ row.cvActual != null ? row.cvActual + '%' : '' }}</template>
                 </el-table-column>
                 <el-table-column label="效期" prop="expireDate" width="110"/>
                 <el-table-column label="状态" width="90">
@@ -358,7 +358,7 @@ const doReview = (row) => {
     
   });
 };
-const fmtTime = (t) => (t ? String(t).replace('T', ' ').slice(0, 16) : '-');
+const fmtTime = (t) => (t ? String(t).replace('T', ' ').slice(0, 16) : '');
 // 合并页签的当前页。被并页面自带 onMounted 请求，故其页签用 lazy —— 进页不预拉两套数据。
 const mergedTab = ref('iqc');
 onMounted(() => {

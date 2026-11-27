@@ -101,7 +101,7 @@ const visible = computed({
   set: (v) => emit('update:modelValue', v),
 });
 
-const text = (v) => (v === null || v === undefined || v === '' ? '—' : String(v));
+const text = (v) => (v === null || v === undefined || v === '' ? '' : String(v));
 
 const roomRows = ref([]);
 const roomLoading = ref(false);

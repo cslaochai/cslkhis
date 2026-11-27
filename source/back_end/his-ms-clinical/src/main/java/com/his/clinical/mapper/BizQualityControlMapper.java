@@ -3,6 +3,7 @@ package com.his.clinical.mapper;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.his.clinical.dto.QcCandidatePageQueryDTO;
+import com.his.clinical.dto.QcOverdueDraftPageQueryDTO;
 import com.his.clinical.dto.QcPageQueryDTO;
 import com.his.clinical.entity.BizQualityControl;
 import com.his.clinical.vo.*;
@@ -437,5 +438,42 @@ public interface BizQualityControlMapper extends BaseMapper<BizQualityControl> {
               AND record_status >= 2
             """)
     QcIndicatorVO selectSignIndicator();
+
+    /**
+     * 质控侧超时草稿看板：草稿态且就诊日期早于今天的门诊病历，左联在途移交单。
+     * deptIds 为科室数据权限收口集合（null = 全院）；移交单只关联「待代补」在途那一条。
+     */
+    @Select("<script>" + """
+            SELECT m.id AS recordId, m.regist_id AS registId, m.record_no AS recordNo,
+                   m.patient_id AS patientId, m.patient_name AS patientName, m.gender, m.age,
+                   m.dept_id AS deptId, m.dept_name AS deptName,
+                   m.doctor_id AS doctorId, m.doctor_name AS doctorName,
+                   m.visit_date AS visitDate,
+                   DATEDIFF(CURDATE(), m.visit_date) AS overdueDays,
+                   h.id AS handoverId, h.handover_no AS handoverNo, h.status AS handoverStatus,
+                   h.receiver_name AS receiverName, h.reason AS reason
+            FROM biz_medical_record m
+            LEFT JOIN biz_emr_draft_handover h
+                   ON h.record_id = m.id AND h.status = 1 AND h.del_flag = 0
+            WHERE m.del_flag = 0
+              AND m.record_status = 1
+              AND m.visit_date &lt; CURDATE()
+              <if test="q.deptId != null"> AND m.dept_id = #{q.deptId} </if>
+              <if test="q.keyword != null and q.keyword != ''">
+                AND (m.record_no LIKE CONCAT('%', #{q.keyword}, '%')
+                     OR m.patient_name LIKE CONCAT('%', #{q.keyword}, '%'))
+              </if>
+              <if test="q.handoverStatus != null and q.handoverStatus == 0"> AND h.id IS NULL </if>
+              <if test="q.handoverStatus != null and q.handoverStatus == 1"> AND h.id IS NOT NULL </if>
+              <if test="deptIds != null">
+                AND m.dept_id IN
+                <foreach collection="deptIds" item="d" open="(" separator="," close=")">#{d}</foreach>
+              </if>
+            ORDER BY m.visit_date ASC, m.id ASC
+            </script>
+            """)
+    IPage<QcOverdueDraftVO> selectOverdueDraftPage(IPage<QcOverdueDraftVO> page,
+                                                   @Param("q") QcOverdueDraftPageQueryDTO query,
+                                                   @Param("deptIds") List<Long> deptIds);
 
 }

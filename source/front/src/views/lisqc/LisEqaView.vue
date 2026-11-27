@@ -13,7 +13,7 @@
       <div class="bg-white rounded-lg border border-gray-100 p-4 shadow-sm">
         <div class="text-sm text-gray-500">{{ stats.thisYear }} 年 PT 均分</div>
         <div class="text-2xl font-semibold text-[#0E9488] mt-1">
-          {{ stats.yearAvgScore != null ? stats.yearAvgScore + '%' : '-' }}
+          {{ stats.yearAvgScore != null ? stats.yearAvgScore + '%' : '' }}
           <span class="text-xs text-gray-400 font-normal">/{{ stats.yearScoredCount }} 批</span>
         </div>
       </div>
@@ -63,7 +63,7 @@
             <el-table-column align="right" label="PT 得分" width="100">
               <template #default="{ row }">
                 <span :class="Number(row.passFlag) === 0 ? 'text-[#B91C1C] font-semibold' : ''">
-                  {{ row.ptScore != null ? row.ptScore + '%' : '-' }}
+                  {{ row.ptScore != null ? row.ptScore + '%' : '' }}
                 </span>
               </template>
             </el-table-column>
@@ -129,7 +129,7 @@
             </el-table-column>
             <el-table-column label="方法学" prop="methodName" show-overflow-tooltip width="110"/>
             <el-table-column align="right" label="本室测定值" width="110">
-              <template #default="{ row }">{{ row.testValue != null ? row.testValue : '-' }}</template>
+              <template #default="{ row }">{{ row.testValue != null ? row.testValue : '' }}</template>
             </el-table-column>
             <el-table-column label="流转状态" prop="statusText" width="90"/>
             <el-table-column fixed="right" label="操作" width="150">
@@ -189,32 +189,32 @@
               <template #default="{ row }">{{ row.instrumentName || '未指定' }}</template>
             </el-table-column>
             <el-table-column align="right" label="本室值" width="90">
-              <template #default="{ row }">{{ row.testValue != null ? row.testValue : '-' }}</template>
+              <template #default="{ row }">{{ row.testValue != null ? row.testValue : '' }}</template>
             </el-table-column>
             <el-table-column label="靶值" width="110">
               <template #default="{ row }">
-                <span v-if="Number(row.status) === 3">{{ row.targetValue ?? '-' }}</span>
+                <span v-if="Number(row.status) === 3">{{ row.targetValue ?? '' }}</span>
                 <el-input-number v-else v-model="row.targetValue" :controls="false" :precision="4" size="small"
                                  style="width: 100px"/>
               </template>
             </el-table-column>
             <el-table-column label="组SD" width="110">
               <template #default="{ row }">
-                <span v-if="Number(row.status) === 3">{{ row.groupSd ?? '-' }}</span>
+                <span v-if="Number(row.status) === 3">{{ row.groupSd ?? '' }}</span>
                 <el-input-number v-else v-model="row.groupSd" :controls="false" :precision="4" size="small"
                                  style="width: 100px"/>
               </template>
             </el-table-column>
             <el-table-column label="TEa%" width="100">
               <template #default="{ row }">
-                <span v-if="Number(row.status) === 3">{{ row.tea ?? '-' }}</span>
+                <span v-if="Number(row.status) === 3">{{ row.tea ?? '' }}</span>
                 <el-input-number v-else v-model="row.tea" :controls="false" :precision="2" size="small"
                                  style="width: 90px"/>
               </template>
             </el-table-column>
             <el-table-column label="可接受范围" width="160">
               <template #default="{ row }">
-                <span v-if="Number(row.status) === 3">{{ row.targetMin ?? '-' }} ~ {{ row.targetMax ?? '-' }}</span>
+                <span v-if="Number(row.status) === 3">{{ row.targetMin ?? '' }} ~ {{ row.targetMax ?? '' }}</span>
                 <div v-else class="flex items-center gap-1">
                   <el-input-number v-model="row.targetMin" :controls="false" :precision="4" size="small"
                                    style="width: 74px"/>
@@ -225,10 +225,10 @@
               </template>
             </el-table-column>
             <el-table-column align="right" label="SDI" width="80">
-              <template #default="{ row }">{{ row.sdi != null ? row.sdi : '-' }}</template>
+              <template #default="{ row }">{{ row.sdi != null ? row.sdi : '' }}</template>
             </el-table-column>
             <el-table-column align="right" label="偏倚%" width="80">
-              <template #default="{ row }">{{ row.biasRate != null ? row.biasRate : '-' }}</template>
+              <template #default="{ row }">{{ row.biasRate != null ? row.biasRate : '' }}</template>
             </el-table-column>
             <el-table-column label="判定" width="90">
               <template #default="{ row }">
@@ -296,7 +296,7 @@
             <el-table-column align="right" label="B 值" prop="valueB" width="90"/>
             <el-table-column align="right" label="互差" prop="diffValue" width="90"/>
             <el-table-column align="right" label="相对互差" width="100">
-              <template #default="{ row }">{{ row.diffRate != null ? row.diffRate + '%' : '-' }}</template>
+              <template #default="{ row }">{{ row.diffRate != null ? row.diffRate + '%' : '' }}</template>
             </el-table-column>
             <el-table-column label="允许限" width="130">
               <template #default="{ row }">
@@ -660,7 +660,7 @@ const submitScore = async () => {
     });
     if (res.code === 200) {
       const d = res.data;
-      ElMessage.success(`PT 得分 ${d?.ptScore ?? '—'}%，本次${d?.passFlagText || ''}；生成互差 ${d?.compareCount || 0} 条（超差 ${d?.compareFailedCount || 0} 条）`);
+      ElMessage.success(`PT 得分 ${d?.ptScore ?? ''}%，本次${d?.passFlagText || ''}；生成互差 ${d?.compareCount || 0} 条（超差 ${d?.compareFailedCount || 0} 条）`);
       retMode.value = 3;
       loadReturns();
       loadPlans();
@@ -724,7 +724,7 @@ const loadCompares = async () => {
   }
 };
 const cmpFailedCount = computed(() => cmpRows.value.filter((r) => Number(r.status) === 2).length);
-const fmtTime = (t) => (t ? String(t).replace('T', ' ').slice(0, 16) : '-');
+const fmtTime = (t) => (t ? String(t).replace('T', ' ').slice(0, 16) : '');
 onMounted(() => {
   loadDicts();
   loadStats();

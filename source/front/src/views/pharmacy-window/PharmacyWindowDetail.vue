@@ -23,7 +23,7 @@
             </p>
           </div>
           <div><p class="text-xs text-slate-400">规格</p>
-            <p class="text-sm font-medium text-slate-700">{{ detailData.specification || '—' }}</p></div>
+            <p class="text-sm font-medium text-slate-700">{{ detailData.specification || '' }}</p></div>
           <div><p class="text-xs text-slate-400">数量</p>
             <p class="text-sm font-medium text-slate-700">{{ detailData.quantity }}{{ detailData.unit || '' }}</p>
           </div>
@@ -38,13 +38,13 @@
           <div><p class="text-xs text-slate-400">发药单号</p>
             <p class="font-mono text-sm font-medium text-slate-700">{{ detailData.dispensingNo }}</p></div>
           <div><p class="text-xs text-slate-400">发药药师</p>
-            <p class="text-sm font-medium text-slate-700">{{ detailData.pharmacistName || '—' }}</p></div>
+            <p class="text-sm font-medium text-slate-700">{{ detailData.pharmacistName || '' }}</p></div>
           <div><p class="text-xs text-slate-400">发药时间</p>
-            <p class="text-sm font-medium text-slate-700">{{ detailData.dispensingTime || '—' }}</p></div>
+            <p class="text-sm font-medium text-slate-700">{{ detailData.dispensingTime || '' }}</p></div>
           <div><p class="text-xs text-slate-400">发药前库存（该药合计）</p>
-            <p class="text-sm font-medium text-slate-700">{{ detailData.stockBefore ?? '—' }}</p></div>
+            <p class="text-sm font-medium text-slate-700">{{ detailData.stockBefore ?? '' }}</p></div>
           <div><p class="text-xs text-slate-400">发药后库存（该药合计）</p>
-            <p class="text-sm font-medium text-slate-700">{{ detailData.stockAfter ?? '—' }}</p></div>
+            <p class="text-sm font-medium text-slate-700">{{ detailData.stockAfter ?? '' }}</p></div>
           <div v-if="detailData.remark" class="col-span-2"><p class="text-xs text-slate-400">备注/退药原因</p>
             <p class="text-sm text-slate-700">{{ detailData.remark }}</p></div>
         </div>

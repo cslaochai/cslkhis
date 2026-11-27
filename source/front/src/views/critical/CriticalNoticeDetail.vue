@@ -22,7 +22,7 @@
         <el-input :model-value="dv.doctorMeasures" :rows="2" type="textarea"/>
       </el-form-item>
       <el-form-item label="告知时间">{{ fmt(dv.notifyTime) }}</el-form-item>
-      <el-form-item label="告知/见证医师">{{ dv.doctorName }} / {{ dv.witnessDoctorName || '—' }}</el-form-item>
+      <el-form-item label="告知/见证医师">{{ dv.doctorName }} / {{ dv.witnessDoctorName || '' }}</el-form-item>
       <el-form-item label="状态">
         <el-tag :type="statusTag(Number(dv.noticeStatus))" size="small">{{ statusText(dv.noticeStatus) }}</el-tag>
         <el-tag class="ml-2" size="small" type="info">{{ signTagText(dv.signStatus) }}</el-tag>

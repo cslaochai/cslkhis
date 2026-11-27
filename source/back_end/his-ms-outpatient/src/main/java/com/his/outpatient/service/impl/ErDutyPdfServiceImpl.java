@@ -108,8 +108,8 @@ public class ErDutyPdfServiceImpl implements ErDutyPdfService {
         for (StaffScheduleVO r : rows) {
             addCell(table, dash(r.getDeptName()) + dash(r.getOrgName()), normalFont);
             addCell(table, dash(r.getShiftName()), normalFont);
-            addCell(table, (r.getStartTime() == null ? "-" : r.getStartTime())
-                    + " – " + (r.getEndTime() == null ? "-" : r.getEndTime()), normalFont);
+            addCell(table, (r.getStartTime() == null ? "" : r.getStartTime())
+                    + " – " + (r.getEndTime() == null ? "" : r.getEndTime()), normalFont);
             addCell(table, dash(r.getEmployeeName()), normalFont);
             addCell(table, dash(r.getAttendModeText()), normalFont);
         }
@@ -158,6 +158,6 @@ public class ErDutyPdfServiceImpl implements ErDutyPdfService {
     }
 
     private String dash(String value) {
-        return TextUtil.hasText(value) ? value : "-";
+        return TextUtil.hasText(value) ? value : "";
     }
 }

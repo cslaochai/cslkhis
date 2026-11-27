@@ -50,7 +50,7 @@ export const REVIEW_STATUS_OPTIONS = [
  * @returns {string} 草稿 / 已提交 / 已归档 / 已作废 / 未知(n) / —
  */
 export function recordStatusText(value) {
-  if (value === null || value === undefined || value === '') return '—'
+  if (value === null || value === undefined || value === '') return ''
   const hit = RECORD_STATUS_OPTIONS.find(o => o.value === Number(value))
   return hit ? hit.label : `未知(${value})`
 }
@@ -69,7 +69,7 @@ export function recordStatusTagType(value) {
  * @returns {string} 待提交 / 待审核 / 审核通过 / 审核驳回 / 未知(n) / —
  */
 export function reviewStatusText(value) {
-  if (value === null || value === undefined || value === '') return '—'
+  if (value === null || value === undefined || value === '') return ''
   const hit = REVIEW_STATUS_OPTIONS.find(o => o.value === Number(value))
   return hit ? hit.label : `未知(${value})`
 }

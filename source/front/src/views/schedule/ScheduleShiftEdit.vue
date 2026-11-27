@@ -32,7 +32,7 @@
           <el-input :model-value="shiftDeptName(form.deptId)" disabled/>
         </el-form-item>
         <el-form-item label="班别">
-          <el-input :model-value="form.scheduleType ? (shiftLabel[form.scheduleType] || '—') : '—'" disabled/>
+          <el-input :model-value="form.scheduleType ? (shiftLabel[form.scheduleType] || '') : ''" disabled/>
         </el-form-item>
       </div>
       <el-form-item label="是否夜班">
@@ -82,11 +82,11 @@ import {computed, ref, watch} from 'vue';
 import {ElMessage} from 'element-plus';
 import {createShift} from '@/api/appoint';
 import {SCHEDULE_TYPE_TEXT} from '@/lib/scheduleShift';
+import {loadDeptTreeOptions, flattenDeptTree} from '@/lib/deptOptions';
 
 const props = defineProps({
   modelValue: {type: Boolean, default: false},
   row: {type: Object, default: null},
-  departments: {type: Array, default: () => []},
 });
 const emit = defineEmits(['update:modelValue', 'saved']);
 
@@ -102,15 +102,28 @@ const COLOR_PRESETS = ['#67C23A', '#409EFF', '#F56C6C', '#909399', '#E6A23C', '#
 // 必须原样带回，否则会被后端按 null/默认值覆盖。
 const form = ref({});
 const saving = ref(false);
+// 科室名册仅用于只读回显科室名
+const deptList = ref([]);
+const loadDeptList = async () => {
+  if (deptList.value.length)
+    return;
+  try {
+    const tree = await loadDeptTreeOptions({deptType: '1', mode: 'LEAF'});
+    deptList.value = flattenDeptTree(tree);
+  } catch (e) {
+    console.error('加载科室列表失败:', e);
+  }
+};
 
 const shiftDeptName = (deptId) => {
   if (!deptId) return '全院通用';
-  const hit = props.departments.find((d) => String(d.id) === String(deptId));
+  const hit = deptList.value.find((d) => String(d.id) === String(deptId));
   return hit?.deptName || `科室${deptId}`;
 };
 
 watch(visible, (open) => {
   if (!open) return;
+  loadDeptList();
   const r = props.row;
   if (!r) return;
   form.value = {

@@ -1,9 +1,11 @@
 package com.his.clinical.service.impl;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.clinical.dto.QcCandidatePageQueryDTO;
 import com.his.clinical.dto.QcExecuteDTO;
+import com.his.clinical.dto.QcOverdueDraftPageQueryDTO;
 import com.his.clinical.dto.QcPageQueryDTO;
 import com.his.clinical.dto.QcSystemExecuteDTO;
 import com.his.clinical.entity.BizMedicalRecord;
@@ -35,7 +37,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.*;
 
 /**
@@ -375,6 +379,64 @@ public class QualityControlServiceImpl extends ServiceImpl<BizQualityControlMapp
         }
         log.info("[质控补扫] 住院侧近 {} 天漏单 {} 份，补跑成功 {} 份", RESCAN_WINDOW_DAYS, recordIds.size(), done);
         return done;
+    }
+
+    @Override
+    public int remindOverdueOutpatientDrafts(int limit) {
+        LocalDate today = LocalDate.now();
+        int batch = Math.min(Math.max(limit, 1), MAX_BATCH_SIZE);
+        LambdaQueryWrapper<BizMedicalRecord> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(BizMedicalRecord::getRecordStatus, RecordStatusEnum.DRAFT.getCode())
+                .lt(BizMedicalRecord::getVisitDate, today)
+                .orderByAsc(BizMedicalRecord::getVisitDate)
+                .last("LIMIT " + batch);
+        List<BizMedicalRecord> drafts = bizMedicalRecordMapper.selectList(wrapper);
+        int reminded = 0;
+        for (BizMedicalRecord draft : drafts) {
+            if (draft.getDoctorId() == null) {
+                continue;
+            }
+            // 24h 判重：挂住的草稿次日还会再催，不做永久判重
+            if (sysMessageService.sentWithinHours(BizTypeEnum.EMR_DRAFT_OVERDUE.getType(),
+                    draft.getId(), draft.getDoctorId(), "urgent", 24)) {
+                continue;
+            }
+            long overdueDays = ChronoUnit.DAYS.between(draft.getVisitDate(), today);
+            MessagePayloadVO payload = new MessagePayloadVO();
+            payload.setPatientName(draft.getPatientName());
+            payload.setRecordNo(draft.getRecordNo());
+            payload.setVisitDate(draft.getVisitDate() == null ? null : draft.getVisitDate().toString());
+            payload.setOverdueDays(overdueDays);
+            String content = String.format(
+                    "您于 %s 在 %s 接诊患者 %s 的门诊病历仍为草稿，已超时 %d 天未提交，请尽快补写并完成提交；已提交病历如需更正请走病历修改流程。",
+                    draft.getVisitDate(), draft.getDeptName() == null ? "本科室" : draft.getDeptName(),
+                    draft.getPatientName() == null ? "未知" : draft.getPatientName(), overdueDays);
+            sysMessageService.sendSystemMessage(draft.getDoctorId(), draft.getDoctorName(),
+                    "门诊病历超时未提交：" + draft.getRecordNo(), content,
+                    BizTypeEnum.EMR_DRAFT_OVERDUE.getType(), draft.getId(),
+                    "urgent", cn.hutool.json.JSONUtil.toJsonStr(payload), 0);
+            reminded++;
+        }
+        if (!drafts.isEmpty()) {
+            log.info("[病历催办] 超时草稿 {} 份，本轮催办 {} 份", drafts.size(), reminded);
+        }
+        return reminded;
+    }
+
+    @Override
+    public PageResult<QcOverdueDraftVO> pageOverdueDrafts(QcOverdueDraftPageQueryDTO query) {
+        Page<QcOverdueDraftVO> page = new Page<>(query.getPageNum(), query.getPageSize());
+        var result = baseMapper.selectOverdueDraftPage(page, query, deptScopeService.scopedDeptIds(null));
+        result.getRecords().forEach(vo -> {
+            if (vo.getHandoverStatus() == null) {
+                vo.setHandoverStatusText("未移交");
+            } else {
+                vo.setHandoverStatusText(EmrHandoverStatusEnum.getLabel(vo.getHandoverStatus()));
+                vo.setReasonText(EmrHandoverReasonEnum.getLabel(vo.getReason()));
+            }
+        });
+        return PageResult.of(result.getTotal(), result.getCurrent(), result.getSize(), result.getPages(),
+                result.getRecords());
     }
 
     @Override

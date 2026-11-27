@@ -87,7 +87,7 @@ public enum SignBizTypeEnum {
 
     public static String getLabel(Integer code) {
         if (null == code) {
-            return "—";
+            return StringUtils.EMPTY;
         }
         SignBizTypeEnum item = fromCode(code);
         return item == null ? StringUtils.EMPTY : item.label;

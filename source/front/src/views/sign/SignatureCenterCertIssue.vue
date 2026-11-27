@@ -62,11 +62,11 @@
         </el-form-item>
         <el-form-item v-if="applyInfo?.online" label="申请状态">
           <el-tag :type="statusTagType(applyInfo?.applyStatus)" size="small">
-            {{ applyInfo?.applyStatusText || applyInfo?.applyStatus || '—' }}
+            {{ applyInfo?.applyStatusText || applyInfo?.applyStatus || '' }}
           </el-tag>
         </el-form-item>
         <el-form-item v-if="applyInfo?.online" label="状态说明">
-          <span class="text-xs text-slate-600">{{ applyInfo?.applyMessage || '—' }}</span>
+          <span class="text-xs text-slate-600">{{ applyInfo?.applyMessage || '' }}</span>
         </el-form-item>
         <el-form-item label="主体 DN">
           <el-input :model-value="applyInfo?.subjectDn || ''" data-testid="p5-sign-apply-dn" readonly/>
@@ -497,7 +497,7 @@ const submitBind = async () => {
     const res = await bindSignCertFile(fd);
     // 有效期由证书文件的 notBefore/notAfter 解析，回填即覆盖申请时的预期值 —— 回显出来供核对
     const d = res.data || {};
-    ElMessage.success(`证书已回填生效 ${d.certNo || ''}，有效期 ${d.validFrom || '—'} ~ ${d.validTo || '—'}`);
+    ElMessage.success(`证书已回填生效 ${d.certNo || ''}，有效期 ${d.validFrom || ''} ~ ${d.validTo || ''}`);
     emit('saved');
     visible.value = false;
   } catch (e) {

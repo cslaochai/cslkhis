@@ -4,7 +4,7 @@ import com.his.common.base.PageResult;
 import com.his.platform.dto.DepartmentQueryDTO;
 import com.his.platform.dto.DepartmentSelectDTO;
 import com.his.platform.dto.DepartmentUpsertDTO;
-import com.his.platform.vo.DepartmentSelectListVO;
+import com.his.platform.vo.DepartmentTreeSelectVO;
 import com.his.platform.vo.DepartmentVO;
 
 import java.util.List;
@@ -33,12 +33,12 @@ public interface SysDepartmentService {
     List<DepartmentVO> list(DepartmentQueryDTO queryDTO);
 
     /**
-     * 科室下拉。数据范围默认按当前人收口，只有显式索取全部时才放开。
+     * 科室树形下拉：按当前人数据范围收口，不可选节点保留在树上做分组，逐节点标注 disabled 与原因。
      *
-     * <p>收口失败的方向必须是「看不到」而不是「看到太多」，所以授权集合为空时返回空列表，
-     * 不退化成全院。
+     * <p>选择模式由 {@code selectDTO.getMode()} 决定（LEAF/TREE/ORG），节点可选规则在服务端算好，
+     * 前端只按出参 disabled 渲染。
      */
-    List<DepartmentSelectListVO> selectList(DepartmentSelectDTO selectDTO);
+    List<DepartmentTreeSelectVO> selectTree(DepartmentSelectDTO selectDTO);
 
     /**
      * 单条科室详情：按主键取全量字段并带出负责人姓名。

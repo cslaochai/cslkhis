@@ -8,27 +8,27 @@
     <div class="grid grid-cols-2 gap-x-8 gap-y-2.5">
       <div class="flex items-baseline gap-2">
         <span class="w-[72px] shrink-0 text-xs text-slate-400">科室</span>
-        <span class="flex-1 text-sm text-slate-700">{{ formData.deptName || '—' }}</span>
+        <span class="flex-1 text-sm text-slate-700">{{ formData.deptName || '' }}</span>
       </div>
       <div class="flex items-baseline gap-2">
         <span class="w-[72px] shrink-0 text-xs text-slate-400">医生</span>
-        <span class="flex-1 text-sm text-slate-700">{{ formData.doctorName || '—' }}</span>
+        <span class="flex-1 text-sm text-slate-700">{{ formData.doctorName || '' }}</span>
       </div>
       <div class="flex items-baseline gap-2">
         <span class="w-[72px] shrink-0 text-xs text-slate-400">排班日期</span>
-        <span class="flex-1 text-sm text-slate-700">{{ formData.scheduleDate || '—' }}</span>
+        <span class="flex-1 text-sm text-slate-700">{{ formData.scheduleDate || '' }}</span>
       </div>
       <div class="flex items-baseline gap-2">
         <span class="w-[72px] shrink-0 text-xs text-slate-400">诊室</span>
-        <span class="flex-1 text-sm text-slate-700">{{ formData.roomName || '—' }}</span>
+        <span class="flex-1 text-sm text-slate-700">{{ formData.roomName || '' }}</span>
       </div>
       <div class="flex items-baseline gap-2">
         <span class="w-[72px] shrink-0 text-xs text-slate-400">班次</span>
-        <span class="flex-1 text-sm text-slate-700">{{ row?.shiftName || '—' }}</span>
+        <span class="flex-1 text-sm text-slate-700">{{ row?.shiftName || '' }}</span>
       </div>
       <div class="flex items-baseline gap-2">
         <span class="w-[72px] shrink-0 text-xs text-slate-400">时间段</span>
-        <span class="flex-1 font-mono text-sm text-slate-700">{{ formTimeRange || '—' }}</span>
+        <span class="flex-1 font-mono text-sm text-slate-700">{{ formTimeRange || '' }}</span>
       </div>
       <div class="flex items-baseline gap-2">
         <span class="w-[72px] shrink-0 text-xs text-slate-400">号源数</span>
@@ -43,7 +43,7 @@
       </div>
       <div class="flex items-baseline gap-2">
         <span class="w-[72px] shrink-0 text-xs text-slate-400">挂号级别</span>
-        <span class="flex-1 text-sm text-slate-700">{{ tierLabel(formData.diagnosisTier) || '—' }}</span>
+        <span class="flex-1 text-sm text-slate-700">{{ tierLabel(formData.diagnosisTier) || '' }}</span>
       </div>
       <div class="flex items-baseline gap-2">
         <span class="w-[72px] shrink-0 text-xs text-slate-400">支持预约</span>
@@ -92,9 +92,9 @@
             <td :class="s.availableSource <= 0 ? 'text-red-500 font-medium' : 'text-emerald-600'" class="py-1.5 pr-2">
               {{ s.availableSource }}
             </td>
-            <td class="py-1.5 pr-2">{{ (s.appointmentSource || 0) > 0 ? s.appointmentSource : '—' }}</td>
+            <td class="py-1.5 pr-2">{{ (s.appointmentSource || 0) > 0 ? s.appointmentSource : '' }}</td>
             <td class="py-1.5 pr-2">{{
-                (s.appointmentSource || 0) > 0 ? Math.max((s.appointmentSource || 0) - (s.usedAppointmentSource || 0), 0) : '—'
+                (s.appointmentSource || 0) > 0 ? Math.max((s.appointmentSource || 0) - (s.usedAppointmentSource || 0), 0) : ''
               }}
             </td>
             <td class="py-1.5">

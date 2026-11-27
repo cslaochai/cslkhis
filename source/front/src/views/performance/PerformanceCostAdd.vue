@@ -2,10 +2,8 @@
   <el-dialog v-model="visible" title="科室月度成本录入" width="520px">
     <el-form label-width="100px">
       <el-form-item label="科室" required>
-        <el-select v-model="costForm.deptId" :fit-input-width="false" data-testid="perf-cost-dept" filterable
-                   placeholder="选择科室" style="width: 100%">
-          <el-option v-for="d in depts" :key="d.id" :label="d.deptName" :value="String(d.id)"/>
-        </el-select>
+        <DeptTreeSelect v-model="costForm.deptId" mode="LEAF" data-testid="perf-cost-dept"
+                        class="!w-full" placeholder="选择科室"/>
       </el-form-item>
       <el-form-item label="核算月份" required>
         <el-date-picker v-model="costForm.costMonth" style="width: 100%" type="month" value-format="YYYY-MM"/>
@@ -38,14 +36,14 @@
 </template>
 
 <script setup>
-import {computed, reactive, watch} from 'vue';
+import {computed, reactive, ref, watch} from 'vue';
 import {ElMessage} from 'element-plus';
 import {perfCostSave} from '@/api/perf';
+import {loadDeptTreeOptions, flattenDeptTree} from '@/lib/deptOptions';
+import DeptTreeSelect from '@/components/his/DeptTreeSelect.vue';
 
 const props = defineProps({
   modelValue: {type: Boolean, default: false},
-  // 科室下拉由页面一次性加载（两个查询区也在用），这里只读取
-  depts: {type: Array, default: () => []},
 });
 const emit = defineEmits(['update:modelValue', 'saved']);
 
@@ -54,7 +52,19 @@ const visible = computed({
   set: (v) => emit('update:modelValue', v),
 });
 
-const deptName = (id) => props.depts.find(d => String(d.id) === String(id))?.deptName || '—';
+// 科室名册仅用于提交时回填科室名快照，下拉树由 DeptTreeSelect 自取
+const depts = ref([]);
+const loadDepts = async () => {
+  if (depts.value.length)
+    return;
+  try {
+    const tree = await loadDeptTreeOptions({mode: 'LEAF'});
+    depts.value = flattenDeptTree(tree);
+  } catch (e) {
+    console.error('加载科室失败', e);
+  }
+};
+const deptName = (id) => depts.value.find(d => String(d.id) === String(id))?.deptName || '';
 
 const costForm = reactive({
   deptId: null, costMonth: '', laborCost: 0, drugCost: 0,
@@ -63,6 +73,7 @@ const costForm = reactive({
 
 watch(visible, (open) => {
   if (!open) return;
+  loadDepts();
   costForm.deptId = null;
   const d = new Date();
   costForm.costMonth = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;

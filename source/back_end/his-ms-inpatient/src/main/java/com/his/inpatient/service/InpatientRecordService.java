@@ -83,4 +83,12 @@ public interface InpatientRecordService {
      * @return 落库后的病历（含ID与病历号，供发起单据回指）
      */
     BizInpatientRecord appendClosedLoopRecord(BizInpatientRecord record);
+
+    /**
+     * 超时草稿催办扫描：超过规范时限仍为草稿的住院文书，催书写医生补写提交（24h 判重）。
+     *
+     * @param limit 单批上限
+     * @return 本轮实际发送催办条数
+     */
+    int remindOverdueDrafts(int limit);
 }

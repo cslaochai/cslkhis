@@ -121,7 +121,7 @@ const visible = computed({
 // 住院患者下拉只在本弹框使用，弹框打开时现取（在院住院，一次抓全量供选择）
 const admissions = ref([])
 
-const admissionLabel = (a) => `${a.bedNo || '—'} ${a.patientName || '—'}（${a.wardName || a.deptName || '—'}）`
+const admissionLabel = (a) => `${a.bedNo || ''} ${a.patientName || ''}（${a.wardName || a.deptName || ''}）`
 
 async function loadAdmissions() {
   try {
@@ -206,7 +206,7 @@ async function submitForm() {
   try {
     const res = await upsertNutritionScreen({...form})
     const saved = res?.data || {}
-    ElMessage.success(`已保存：总分 ${saved.totalScore ?? '-'} 分 · ${saved.riskFlagText || ''}`
+    ElMessage.success(`已保存：总分 ${saved.totalScore ?? ''} 分 · ${saved.riskFlagText || ''}`
         + (saved.nextScreenDate ? ` · 下次筛查 ${saved.nextScreenDate}` : ''))
     visible.value = false
     emit('saved')

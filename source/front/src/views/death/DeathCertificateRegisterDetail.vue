@@ -7,7 +7,7 @@
           fmt(rd.deathTime)
         }}
       </el-form-item>
-      <el-form-item label="死亡科室/床位">{{ rd.deathDeptName || '—' }} / {{ rd.deathBedNo || '—' }}</el-form-item>
+      <el-form-item label="死亡科室/床位">{{ rd.deathDeptName || '' }} / {{ rd.deathBedNo || '' }}</el-form-item>
       <el-form-item label="关联证明">{{ rd.certNo || '未开证' }}（{{ certStatusText(rd.certStatus) }}）</el-form-item>
       <el-form-item label="死亡类型">{{ deathTypeText(rd.deathType) }}</el-form-item>
       <el-form-item label="公安报案">{{
@@ -15,10 +15,10 @@
         }}
       </el-form-item>
       <el-form-item label="法医出具">{{ Number(rd.forensicFlag) === 1 ? '是' : '否' }}</el-form-item>
-      <el-form-item label="尸体处理">{{ disposalText(rd.bodyDisposal) }} · {{ rd.bodyUnit || '—' }} · 移出
+      <el-form-item label="尸体处理">{{ disposalText(rd.bodyDisposal) }} · {{ rd.bodyUnit || '' }} · 移出
         {{ fmt(rd.bodyTransportTime) }}
       </el-form-item>
-      <el-form-item label="家属">{{ rd.relativeName || '—' }} {{ rd.relativeRelation || '' }}
+      <el-form-item label="家属">{{ rd.relativeName || '' }} {{ rd.relativeRelation || '' }}
         {{ rd.relativePhone || '' }}
       </el-form-item>
       <el-form-item label="领取联次">{{ copiesText(rd.receivedCopies) }} · {{ fmt(rd.receiveTime) }}</el-form-item>
@@ -26,9 +26,9 @@
           Number(rd.disputeFlag) === 1 ? `有：${rd.disputeDesc || ''}` : '无'
         }}
       </el-form-item>
-      <el-form-item label="登记人/时间">{{ rd.registrarName || '—' }} · {{ fmt(rd.registerTime) }}</el-form-item>
+      <el-form-item label="登记人/时间">{{ rd.registrarName || '' }} · {{ fmt(rd.registerTime) }}</el-form-item>
       <el-form-item v-if="rd.voidReason" label="作废原因">{{ rd.voidReason }}（{{ fmt(rd.voidTime) }}）</el-form-item>
-      <el-form-item label="备注">{{ rd.remark || '—' }}</el-form-item>
+      <el-form-item label="备注">{{ rd.remark || '' }}</el-form-item>
     </el-form>
     <template #footer>
       <el-button data-testid="rd-close" @click="visible = false">关闭</el-button>
@@ -60,7 +60,7 @@ const registerStatusText = (v) => dictLabelText(props.dict.registerStatus, v)
 const certStatusText = (v) => dictLabelText(props.dict.certStatus, v)
 const deathTypeText = (v) => dictLabelText(props.dict.deathType, v)
 const disposalText = (v) => dictLabelText(props.dict.disposal, v)
-const copiesText = (v) => (v ? String(v).split(',').map((x) => dictLabelText(props.dict.copies, x)).join('、') : '—')
+const copiesText = (v) => (v ? String(v).split(',').map((x) => dictLabelText(props.dict.copies, x)).join('、') : '')
 
 const rd = ref({})
 watch(() => props.modelValue, async (v) => {

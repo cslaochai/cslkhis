@@ -30,8 +30,10 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * 设备事件落库与处理。
@@ -127,16 +129,45 @@ public class IotEventServiceImpl extends ServiceImpl<IotEventMapper, IotEvent> i
         if (target == null) {
             throw new BusinessException(400, "未指定科室，且当前岗位没有科室归属");
         }
-        return alarmPushService.register(target);
+        // 子树聚合：订阅父科室时挂到自身 + 后代科室；受限角色再与授权集合交一次，不挂未授权后代
+        Set<Long> scope = new HashSet<>(deptScopeService.descendantDeptIds(target));
+        if (deptScopeService.isScoped()) {
+            Set<Long> allowed = deptScopeService.allowedDeptIds();
+            if (allowed != null) {
+                scope.retainAll(allowed);
+            }
+        }
+        if (scope.isEmpty()) {
+            throw new BusinessException(400, "当前科室子树内无可订阅的科室");
+        }
+        return alarmPushService.register(scope);
     }
 
     @Override
     public IPage<IotEventVO> listPage(IotEventPageQueryDTO query) {
         Page<IotEvent> page = new Page<>(query.getPageNum(), query.getPageSize());
+        // 选中父科室时按子树聚合：先过授权门禁，再展开「自身 + 后代」，受限角色与授权集合交一次
+        Set<Long> deptIds = null;
+        if (query.getDeptId() != null) {
+            Long target = deptScopeService.resolveDeptId(query.getDeptId());
+            if (target == null) {
+                throw new BusinessException(400, "未指定科室，且当前岗位没有科室归属");
+            }
+            deptIds = new HashSet<>(deptScopeService.descendantDeptIds(target));
+            if (deptScopeService.isScoped()) {
+                Set<Long> allowed = deptScopeService.allowedDeptIds();
+                if (allowed != null) {
+                    deptIds.retainAll(allowed);
+                }
+            }
+        }
+        boolean hasScope = deptIds != null && !deptIds.isEmpty();
         page(page, Wrappers.<IotEvent>lambdaQuery()
                 .eq(query.getDeviceType() != null && !query.getDeviceType().isBlank(),
                         IotEvent::getDeviceType, query.getDeviceType())
-                .eq(query.getDeptId() != null, IotEvent::getDeptId, query.getDeptId())
+                .in(hasScope, IotEvent::getDeptId, deptIds)
+                // 传了科室但授权子树为空：强制空结果，不能退化成不加科室条件=全院
+                .eq(!hasScope && query.getDeptId() != null, IotEvent::getDeptId, -1L)
                 .eq(query.getHandledFlag() != null, IotEvent::getHandledFlag, query.getHandledFlag())
                 .ge(query.getMinLevel() != null, IotEvent::getLevel, query.getMinLevel())
                 .ge(query.getStartTime() != null, IotEvent::getTs, query.getStartTime())
@@ -168,6 +199,20 @@ public class IotEventServiceImpl extends ServiceImpl<IotEventMapper, IotEvent> i
         if (!updated) {
             throw new BusinessException(400, "事件不存在或已处理，不能重复处理");
         }
+    }
+
+    @Override
+    public Map<String, Integer> activeAlarmDeviceLevels() {
+        Map<String, Integer> map = new HashMap<>();
+        for (Map<String, Object> row : baseMapper.selectActiveAlarmLevels()) {
+            Object no = row.get("deviceNo");
+            Object lv = row.get("maxLevel");
+            if (no == null || lv == null) {
+                continue;
+            }
+            map.put(String.valueOf(no), ((Number) lv).intValue());
+        }
+        return map;
     }
 
     private IotEventVO toVO(IotEvent e) {

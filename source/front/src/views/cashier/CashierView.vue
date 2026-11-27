@@ -81,8 +81,8 @@
         <div class="rounded-lg bg-slate-50 p-3">
           <div class="grid grid-cols-2 gap-2 text-sm sm:grid-cols-4">
             <div><span class="text-slate-500">患者：</span><b>{{ current.patientName }}</b></div>
-            <div><span class="text-slate-500">患者号：</span>{{ current.patientNo || '—' }}</div>
-            <div><span class="text-slate-500">就诊单号：</span>{{ current.encounterNo || '—' }}</div>
+            <div><span class="text-slate-500">患者号：</span>{{ current.patientNo || '' }}</div>
+            <div><span class="text-slate-500">就诊单号：</span>{{ current.encounterNo || '' }}</div>
             <div>
               <span class="text-slate-500">就诊类型：</span>
               {{ Number(current.encounterType) === 2 ? '住院' : '门诊' }}
@@ -214,7 +214,7 @@
                     class="text-red-600">¥{{ money(preview.payableAmount) }}</b></div>
                 <div>
                   <p class="text-xs text-slate-400">{{ preview.settlementModeText }}</p>
-                  <b class="text-sm">{{ preview.insuranceType || '—' }}
+                  <b class="text-sm">{{ preview.insuranceType || '' }}
                     <span v-if="preview.coverageRatio != null" class="text-xs font-normal text-slate-500">
                       报销 {{ money(preview.coverageRatio) }}%
                     </span>
@@ -228,7 +228,7 @@
                 </el-table-column>
                 <el-table-column align="center" label="目录" width="70">
                   <template #default="{ row }">
-                    {{ ['自费', '甲类', '乙类', '丙类'][Number(row.catalogType)] || '—' }}
+                    {{ ['自费', '甲类', '乙类', '丙类'][Number(row.catalogType)] || '' }}
                   </template>
                 </el-table-column>
                 <el-table-column align="right" label="金额" width="100">

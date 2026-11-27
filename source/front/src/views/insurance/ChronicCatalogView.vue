@@ -42,7 +42,7 @@
           <template #default="{row}">{{ dictText(DICT_TYPE.CHRONIC_DISEASE_TYPE, row.diseaseType) }}</template>
         </el-table-column>
         <el-table-column class-name="font-mono" label="ICD-10" prop="icdCode" width="120">
-          <template #default="{row}">{{ row.icdCode || '—' }}</template>
+          <template #default="{row}">{{ row.icdCode || '' }}</template>
         </el-table-column>
         <el-table-column label="默认有效期" width="120">
           <template #default="{row}">{{ row.defaultValidMonths ? `${row.defaultValidMonths} 个月` : '长期' }}</template>
@@ -56,7 +56,7 @@
           </template>
         </el-table-column>
         <el-table-column label="备注" min-width="180" prop="remark" show-overflow-tooltip>
-          <template #default="{row}">{{ row.remark || '—' }}</template>
+          <template #default="{row}">{{ row.remark || '' }}</template>
         </el-table-column>
         <el-table-column fixed="right" label="操作" width="240">
           <template #default="{row}">

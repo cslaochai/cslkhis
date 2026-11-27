@@ -47,7 +47,7 @@
         </el-form-item>
         <el-form-item>
           <span class="text-sm text-slate-500">
-            共 <span class="font-semibold text-slate-700">{{ loading ? '—' : pagination.total }}</span> 条政策
+            共 <span class="font-semibold text-slate-700">{{ loading ? '' : pagination.total }}</span> 条政策
           </span>
         </el-form-item>
       </el-form>
@@ -81,7 +81,7 @@
           </template>
         </el-table-column>
         <el-table-column label="备注" min-width="160" prop="remark" show-overflow-tooltip>
-          <template #default="{ row }">{{ row.remark || '—' }}</template>
+          <template #default="{ row }">{{ row.remark || '' }}</template>
         </el-table-column>
         <el-table-column fixed="right" label="操作" width="140">
           <template #default="{ row }">

@@ -30,7 +30,7 @@
           <template #default="{row}">{{ typeMap[row.itemType] || '其他' }}</template>
         </el-table-column>
         <el-table-column label="标本类型" prop="specimenType" width="90">
-          <template #default="{row}">{{ row.specimenType || '-' }}</template>
+          <template #default="{row}">{{ row.specimenType || '' }}</template>
         </el-table-column>
         <el-table-column align="right" label="价格" prop="price" width="90">
           <template #default="{row}">¥{{ row.price || 0 }}</template>

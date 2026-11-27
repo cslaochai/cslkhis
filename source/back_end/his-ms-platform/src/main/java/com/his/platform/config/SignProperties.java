@@ -33,6 +33,12 @@ public class SignProperties {
     private int defaultValidDays;
 
     /**
+     * 换发窗口（天）：有效证书距到期不足该天数即允许直接签发新证，旧证保留到自然到期
+     * （不强制吊销，历史签名仍可用旧证公钥验签）。窗口外仍拒绝重复签发。
+     */
+    private int renewWindowDays = 90;
+
+    /**
      * 缺证书时是否自动签发（可被系统参数的 sign.cert.auto_issue 覆盖）
      */
     private boolean autoIssueCert;

@@ -15,7 +15,7 @@
       <div class="rounded border border-slate-100 p-2">
         <div class="mb-1.5 flex items-baseline gap-2">
           <span class="text-xs font-bold text-slate-600">GCS 格拉斯哥昏迷</span>
-          <span class="text-lg font-bold" :class="gcsColor" data-testid="emg-score-gcs-total">{{ gcsTotal ?? '—' }}</span>
+          <span class="text-lg font-bold" :class="gcsColor" data-testid="emg-score-gcs-total">{{ gcsTotal ?? '' }}</span>
           <span class="text-[11px] text-slate-400">{{ gcsSeverity }}</span>
         </div>
         <div class="space-y-1.5">
@@ -44,7 +44,7 @@
       <div class="rounded border border-slate-100 p-2">
         <div class="mb-1.5 flex items-baseline gap-2">
           <span class="text-xs font-bold text-slate-600">RTS 修订创伤评分</span>
-          <span class="text-lg font-bold" :class="rtsColor" data-testid="emg-score-rts-total">{{ rtsTotal ?? '—' }}</span>
+          <span class="text-lg font-bold" :class="rtsColor" data-testid="emg-score-rts-total">{{ rtsTotal ?? '' }}</span>
           <span class="text-[11px] text-slate-400">{{ rtsSeverity }}</span>
         </div>
         <div class="space-y-1.5 text-xs text-slate-500">
@@ -55,12 +55,12 @@
           <div class="flex items-center gap-1.5">
             <span class="w-14">收缩压</span>
             <el-input v-model.number="rtsSbp" size="small" placeholder="mmHg" data-testid="emg-score-rts-sbp"/>
-            <span class="w-10 rounded bg-slate-50 px-1 py-1 text-center">{{ rtsSbpPts ?? '—' }}</span>
+            <span class="w-10 rounded bg-slate-50 px-1 py-1 text-center">{{ rtsSbpPts ?? '' }}</span>
           </div>
           <div class="flex items-center gap-1.5">
             <span class="w-14">呼吸频率</span>
             <el-input v-model.number="rtsRr" size="small" placeholder="次/分" data-testid="emg-score-rts-rr"/>
-            <span class="w-10 rounded bg-slate-50 px-1 py-1 text-center">{{ rtsRrPts ?? '—' }}</span>
+            <span class="w-10 rounded bg-slate-50 px-1 py-1 text-center">{{ rtsRrPts ?? '' }}</span>
           </div>
         </div>
       </div>
@@ -69,35 +69,35 @@
       <div class="rounded border border-slate-100 p-2">
         <div class="mb-1.5 flex items-baseline gap-2">
           <span class="text-xs font-bold text-slate-600">REMS 急诊死亡风险</span>
-          <span class="text-lg font-bold" :class="remsColor" data-testid="emg-score-rems-total">{{ remsTotal ?? '—' }}</span>
+          <span class="text-lg font-bold" :class="remsColor" data-testid="emg-score-rems-total">{{ remsTotal ?? '' }}</span>
           <span class="text-[11px] text-slate-400">/26 · 分高预后差</span>
         </div>
         <div class="grid grid-cols-2 gap-1.5 text-xs text-slate-500">
           <div class="flex items-center gap-1">
             <span class="w-9">年龄</span>
-            <span class="flex-1 rounded bg-slate-50 px-2 py-1" data-testid="emg-score-rems-age">{{ patient?.age ?? '—' }}（{{ remsAgePts ?? '—' }}）</span>
+            <span class="flex-1 rounded bg-slate-50 px-2 py-1" data-testid="emg-score-rems-age">{{ patient?.age ?? '' }}（{{ remsAgePts ?? '' }}）</span>
           </div>
           <div class="flex items-center gap-1">
             <span class="w-9">MAP</span>
-            <span class="flex-1 rounded bg-slate-50 px-2 py-1">{{ remsMap ?? '—' }}（{{ remsMapPts ?? '—' }}）</span>
+            <span class="flex-1 rounded bg-slate-50 px-2 py-1">{{ remsMap ?? '' }}（{{ remsMapPts ?? '' }}）</span>
           </div>
           <div class="flex items-center gap-1">
             <span class="w-9">心率</span>
             <el-input v-model.number="remsHr" size="small" placeholder="bpm"/>
-            <span class="w-8 text-center">{{ remsHrPts ?? '—' }}</span>
+            <span class="w-8 text-center">{{ remsHrPts ?? '' }}</span>
           </div>
           <div class="flex items-center gap-1">
             <span class="w-9">呼吸</span>
-            <span class="flex-1 rounded bg-slate-50 px-2 py-1">{{ rtsRr ?? '—' }}（{{ remsRrPts ?? '—' }}）</span>
+            <span class="flex-1 rounded bg-slate-50 px-2 py-1">{{ rtsRr ?? '' }}（{{ remsRrPts ?? '' }}）</span>
           </div>
           <div class="flex items-center gap-1">
             <span class="w-9">SpO₂%</span>
             <el-input v-model.number="remsSpo2" size="small" placeholder="%" data-testid="emg-score-rems-spo2"/>
-            <span class="w-8 text-center">{{ remsSpo2Pts ?? '—' }}</span>
+            <span class="w-8 text-center">{{ remsSpo2Pts ?? '' }}</span>
           </div>
           <div class="flex items-center gap-1">
             <span class="w-9">GCS</span>
-            <span class="flex-1 rounded bg-slate-50 px-2 py-1">{{ gcsTotal ?? '—' }}（{{ remsGcsPts ?? '—' }}）</span>
+            <span class="flex-1 rounded bg-slate-50 px-2 py-1">{{ gcsTotal ?? '' }}（{{ remsGcsPts ?? '' }}）</span>
           </div>
         </div>
       </div>

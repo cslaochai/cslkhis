@@ -9,16 +9,14 @@
         <el-input v-model="formData.wardCode" placeholder="留空由系统生成 W001 形式的编码"/>
       </el-form-item>
       <el-form-item label="本位科室" prop="deptId">
-        <el-select
+        <DeptTreeSelect
             v-model="formData.deptId"
+            mode="LEAF"
+            scope="ALL"
             class="!w-full"
-            data-testid="ward-primary-dept"
-            filterable
             placeholder="默认收治科室（病区的主责科室）"
             @change="handlePrimaryDeptChange"
-        >
-          <el-option v-for="d in deptOptions" :key="d.id" :label="d.deptName" :value="d.id"/>
-        </el-select>
+        />
         <div class="mt-1 text-[12px] text-slate-500">
           本位科室会同步写入病区主表，数据权限、排班、床位统计都按它折算；跨科收治的其它科室填在下方。
         </div>
@@ -32,15 +30,14 @@
               class="mb-2 flex items-center gap-2"
               :data-testid="`ward-dept-row-${idx}`"
           >
-            <el-select
+            <DeptTreeSelect
                 v-model="row.deptId"
+                mode="LEAF"
+                scope="ALL"
                 :disabled="row.isPrimary === 1"
-                class="!w-64"
-                filterable
+                width="256px"
                 placeholder="选择科室"
-            >
-              <el-option v-for="d in deptOptions" :key="d.id" :label="d.deptName" :value="d.id"/>
-            </el-select>
+            />
             <el-tag v-if="row.isPrimary === 1" size="small" type="primary">本位</el-tag>
             <el-input-number
                 v-model="row.bedQuota"
@@ -94,13 +91,12 @@ import {computed, reactive, ref, watch} from 'vue'
 import {ElMessage} from 'element-plus'
 import {Delete, Plus} from '@element-plus/icons-vue'
 import {getWardDetail, saveWard} from '@/api/system'
+import DeptTreeSelect from '@/components/his/DeptTreeSelect.vue'
 
 const props = defineProps({
   modelValue: {type: Boolean, default: false},
   // 编辑传入当前行；为空表示新增
   row: {type: Object, default: null},
-  // 科室树：页面加载一次下传，这里展平成可搜索的下拉
-  deptList: {type: Array, default: () => []},
 })
 const emit = defineEmits(['update:modelValue', 'saved'])
 
@@ -128,20 +124,6 @@ const rules = {
   wardName: [{required: true, message: '请输入病区名称', trigger: 'blur'}],
   deptId: [{required: true, message: '请选择本位科室', trigger: 'change'}],
 }
-
-// 科室树展平：病区收治科室不该选到「内科系统」这类汇总节点，所以只列真实科室，
-// 但要保留全部层级（临床科室可能挂在「内科系统」下）
-const deptOptions = computed(() => {
-  const out = []
-  const walk = (list) => {
-    for (const d of list || []) {
-      out.push({id: d.id, deptName: d.deptName})
-      if (d.children && d.children.length) walk(d.children)
-    }
-  }
-  walk(props.deptList)
-  return out
-})
 
 const resetForm = () => {
   formData.wardId = null

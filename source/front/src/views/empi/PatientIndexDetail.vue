@@ -5,7 +5,7 @@
         <p class="text-base font-semibold text-slate-900">
           {{ detail.patientNo }} {{ detail.patientName }}
           <span class="ml-2 text-sm font-normal text-slate-500">{{ detail.genderText }} / {{
-              detail.age ?? '—'
+              detail.age ?? ''
             }}岁</span>
         </p>
         <p class="mt-2 text-sm text-slate-600">身份证号：{{ detail.idCard || '（空）' }}</p>
@@ -53,7 +53,7 @@
         </p>
         <div v-for="s in detail.siblingPatients" :key="s.id" class="mb-2 text-sm text-slate-600">
           {{ s.patientNo }} {{ s.patientName }}（{{ s.genderText }}）｜
-          证件 {{ s.idCard || '空' }}｜并入时间 {{ s.mergeTime || '—' }}
+          证件 {{ s.idCard || '空' }}｜并入时间 {{ s.mergeTime || '' }}
         </div>
       </div>
     </div>

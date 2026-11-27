@@ -22,10 +22,9 @@
         </el-col>
         <el-col :span="12">
           <el-form-item label="诊断科室">
-            <el-select v-model="regForm.certifyDeptId" clearable data-testid="chronic-form-dept" filterable style="width: 100%"
-                       @change="onRegDept">
-              <el-option v-for="d in deptOptions" :key="d.id" :label="d.deptName" :value="String(d.id)"/>
-            </el-select>
+            <DeptTreeSelect v-model="regForm.certifyDeptId" mode="LEAF" scope="ALL" width="100%"
+                            placeholder="诊断科室" @change="onRegDept"/>
+
           </el-form-item>
         </el-col>
         <el-col :span="12">
@@ -100,7 +99,8 @@
 import {computed, ref, watch} from 'vue';
 import {ElMessage} from 'element-plus';
 import PatientSelect from '@/components/his/PatientSelect.vue';
-import {getDepartmentSelectList} from '@/api/system';
+import {loadDeptTreeOptions, flattenDeptTree} from '@/lib/deptOptions';
+import DeptTreeSelect from '@/components/his/DeptTreeSelect.vue';
 import {getChronicCatalogSelectList, getChronicRegDetail, upsertChronicReg} from '@/api/insuranceChronic';
 
 const props = defineProps({
@@ -119,8 +119,8 @@ const visible = computed({
 const deptOptions = ref([]);
 const loadDepts = async () => {
   try {
-    const res = await getDepartmentSelectList({scope: 'ALL'});
-    deptOptions.value = res.data || [];
+    const tree = await loadDeptTreeOptions({scope: 'ALL', mode: 'LEAF'});
+    deptOptions.value = flattenDeptTree(tree);
   } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
     
   }

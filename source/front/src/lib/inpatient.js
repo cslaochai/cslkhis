@@ -21,9 +21,9 @@ export const orderStatusMap = {
 export const operationLevelMap = {1: '一级', 2: '二级', 3: '三级', 4: '四级'};
 export const incisionLevelMap = {0: '0类', 1: 'Ⅰ类', 2: 'Ⅱ类', 3: 'Ⅲ类'};
 export const anesthesiaMap = {1: '全麻', 2: '椎管内', 3: '神经阻滞', 4: '局麻', 5: '其他'};
-export const textOf = (map, code, empty = '—') => {
+export const textOf = (map, code, empty = '') => {
   if (code === null || code === undefined)
     return empty;
   return map[code] ?? `未知(${code})`;
 };
-export const money = (v) => (v === null || v === undefined ? '—' : `¥${Number(v).toFixed(2)}`);
+export const money = (v) => (v === null || v === undefined ? '' : `¥${Number(v).toFixed(2)}`);

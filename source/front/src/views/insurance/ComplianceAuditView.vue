@@ -45,9 +45,9 @@
         <el-table-column label="风险分" prop="riskScore" width="80"/>
         <el-table-column label="规则命中" width="170">
           <template #default="{ row }">
-            命中 <b class="hit">{{ row.hitCount ?? '—' }}</b>
-            / 通过 <b class="pass">{{ row.passCount ?? '—' }}</b>
-            / 未评估 <b class="na">{{ row.naCount ?? '—' }}</b>
+            命中 <b class="hit">{{ row.hitCount ?? '' }}</b>
+            / 通过 <b class="pass">{{ row.passCount ?? '' }}</b>
+            / 未评估 <b class="na">{{ row.naCount ?? '' }}</b>
           </template>
         </el-table-column>
         <el-table-column label="结论" min-width="200" prop="conclusion" show-overflow-tooltip/>
@@ -105,7 +105,7 @@ import {getComplianceAuditList} from '@/api/compliance'
 import {useTableMaxHeight} from '@/lib/useTableMaxHeight'
 import ComplianceAuditDetail from './ComplianceAuditDetail.vue'
 
-const fmtTime = (t) => (t ? String(t).replace('T', ' ').slice(0, 16) : '—')
+const fmtTime = (t) => (t ? String(t).replace('T', ' ').slice(0, 16) : '')
 
 // ---------------- 字典 ----------------
 const typeDict = ref([])

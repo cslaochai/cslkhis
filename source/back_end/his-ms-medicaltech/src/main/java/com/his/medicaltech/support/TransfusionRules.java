@@ -197,7 +197,7 @@ public final class TransfusionRules {
      */
     public static String bloodTypeText(String abo, String rh) {
         if (abo == null && rh == null) {
-            return "—";
+            return "";
         }
         String a = abo == null ? "?" : abo;
         String r = RhTypeEnum.getRhText(rh);
@@ -209,7 +209,7 @@ public final class TransfusionRules {
      */
     public static String durationText(Long minutes) {
         if (minutes == null) {
-            return "—";
+            return "";
         }
         if (minutes < 60) {
             return minutes + " 分钟";

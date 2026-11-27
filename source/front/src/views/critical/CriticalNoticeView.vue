@@ -15,7 +15,7 @@
       <el-select v-model="bannerAdmission" :fit-input-width="false" class="!w-80" clearable data-testid="cn-banner-admission"
                  filterable placeholder="选择在院患者直接开通知单" @change="onBannerPick">
         <el-option v-for="p in inpatients" :key="p.admissionId"
-                   :label="`${p.bedNo || '—'}床 ${p.patientName}（${p.wardName || p.deptName || '—'}，已告知 ${p.noticeCount ?? 0} 次）`"
+                   :label="`${p.bedNo || ''}床 ${p.patientName}（${p.wardName || p.deptName || ''}，已告知 ${p.noticeCount ?? 0} 次）`"
                    :value="p.admissionId"/>
       </el-select>
       <el-button v-perm="'ipd:criticalNotice:add'" :icon="Plus" data-testid="cn-new" type="primary"
@@ -63,11 +63,11 @@
       <el-table v-loading="loading" :data="rows" :max-height="tableMaxHeight" data-testid="cn-table" stripe>
         <el-table-column label="单号" min-width="140" prop="noticeNo"/>
         <el-table-column label="患者" min-width="100">
-          <template #default="{ row }">{{ row.patientName }}（{{ row.admissionNo || '—' }}）</template>
+          <template #default="{ row }">{{ row.patientName }}（{{ row.admissionNo || '' }}）</template>
         </el-table-column>
         <el-table-column label="科室/病区/床位" min-width="160">
-          <template #default="{ row }">{{ row.deptName || '—' }} / {{ row.wardName || '—' }} / {{
-              row.bedNo || '—'
+          <template #default="{ row }">{{ row.deptName || '' }} / {{ row.wardName || '' }} / {{
+              row.bedNo || ''
             }}
           </template>
         </el-table-column>
@@ -86,7 +86,7 @@
         <el-table-column label="告知医师" prop="doctorName" width="100"/>
         <el-table-column label="签收人" min-width="120">
           <template #default="{ row }">{{
-              row.signerName || '—'
+              row.signerName || ''
             }}{{ row.signerName ? `（${relationText(row.signerRelation)}）` : '' }}
           </template>
         </el-table-column>
@@ -371,26 +371,26 @@ const receiptHtml = (d) => {
   return `
     <div class="row"><span>姓名：${esc(d.patientName)}</span><span>性别：${esc(patientGenderText(d.gender))}</span>
       <span>年龄：${esc(d.age)}岁</span><span>住院号：${esc(d.admissionNo)}</span></div>
-    <div class="row"><span>科室：${esc(d.deptName || '—')}</span><span>病区/床号：${esc(d.wardName || '—')} / ${esc(d.bedNo || '—')}</span>
+    <div class="row"><span>科室：${esc(d.deptName || '')}</span><span>病区/床号：${esc(d.wardName || '')} / ${esc(d.bedNo || '')}</span>
       <span>通知类别：<b>${esc(typeText(d.noticeType))}</b></span><span>患者神志：${esc(consText(d.consciousnessStatus))}</span></div>
     <h3>一、目前诊断</h3><div class="para">${esc(d.clinicalDiagnosis)}</div>
     <h3>二、患者目前情况（病情及危险因素）</h3><div class="para">${esc(d.conditionDesc)}</div>
     <h3>三、病情可能出现的危险情况（预警事项）</h3><div class="para">${esc(d.warningMatters)}</div>
-    <h3>四、医方措施与配合要求</h3><div class="para">${esc(d.doctorMeasures || '—')}</div>
+    <h3>四、医方措施与配合要求</h3><div class="para">${esc(d.doctorMeasures || '')}</div>
     <div class="row"><span>告知时间：${esc(fmt(d.notifyTime))}</span></div>
     <div class="sign">
       <span>告知医师（电子签名已锚定）：${esc(d.doctorName)}</span>
-      <span>见证医师：${esc(d.witnessDoctorName || '—')}</span>
+      <span>见证医师：${esc(d.witnessDoctorName || '')}</span>
       <span>签发时间：${esc(fmt(d.issueTime))}</span>
     </div>
     <div class="sign">
       <span>签收人（患方亲笔）：${sigImg}</span>
-      <span>姓名：${esc(d.signerName || '—')}　与患者关系：${esc(relationText(d.signerRelation))}</span>
+      <span>姓名：${esc(d.signerName || '')}　与患者关系：${esc(relationText(d.signerRelation))}</span>
     </div>
-    <div class="row"><span>签收人证件号：${esc(d.signerIdCardMasked || '—')}</span>
-      <span>联系电话：${esc(d.signerPhoneMasked || '—')}</span>
+    <div class="row"><span>签收人证件号：${esc(d.signerIdCardMasked || '')}</span>
+      <span>联系电话：${esc(d.signerPhoneMasked || '')}</span>
       <span>签收时间：${esc(fmt(d.acknowledgeTime))}</span></div>
-    <div class="foot">医师电子签名流水：${esc(d.signNo || '—')}　内容摘要(SHA-256)：${esc(d.contentDigest ? String(d.contentDigest).slice(0, 16) + '…' : '—')}
+    <div class="foot">医师电子签名流水：${esc(d.signNo || '')}　内容摘要(SHA-256)：${esc(d.contentDigest ? String(d.contentDigest).slice(0, 16) + '…' : '')}
       ；验签：${esc(verify)}　第 ${esc(d.printCount || 1)} 次打印 · ${esc(d.printerName || '')}</div>`
 }
 const onPrint = async (row) => {

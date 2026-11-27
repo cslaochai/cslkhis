@@ -198,7 +198,7 @@ public class PatientIndexServiceImpl extends ServiceImpl<BizPatientMapper, BizPa
      */
     private String tipOf(Integer level) {
         if (level == null) {
-            return "—";
+            return "";
         }
         PatientMatchLevelEnum item = PatientMatchLevelEnum.fromCode(level);
         // 脏码值按最可疑的人工判定档处理，不允许被升成可信档

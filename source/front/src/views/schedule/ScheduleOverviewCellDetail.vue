@@ -8,9 +8,9 @@
   >
     <!-- 头部：这一格是「哪个单元、哪一天、在岗多少」，与矩阵格子显示的数字对得上 -->
     <div class="mb-3 flex flex-wrap items-center gap-2 rounded-md border border-slate-200 bg-slate-50 px-3 py-2">
-      <span class="text-sm font-semibold text-slate-800" data-testid="cell-org-name">{{ orgName || '—' }}</span>
+      <span class="text-sm font-semibold text-slate-800" data-testid="cell-org-name">{{ orgName || '' }}</span>
       <span class="text-xs text-slate-400">{{ orgUnitTypeText(orgType) }}</span>
-      <el-tag effect="plain" size="small" type="info">{{ date || '—' }}</el-tag>
+      <el-tag effect="plain" size="small" type="info">{{ date || '' }}</el-tag>
       <span class="ml-auto text-sm text-slate-600" data-testid="cell-working-count">当日在岗 {{ workingCount }} 人次</span>
       <span class="text-xs text-slate-400" data-testid="cell-row-count">排班记录 {{ rows.length }} 条</span>
     </div>

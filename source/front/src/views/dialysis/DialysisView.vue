@@ -19,7 +19,7 @@
             <el-table :data="group.rows" :data-testid="`hd-board-slot${group.slot}`" border size="small">
               <el-table-column label="机位" prop="machineNo" width="90"/>
               <el-table-column label="分区" prop="roomName" width="130">
-                <template #default="{ row }">{{ row.roomName || '—' }}</template>
+                <template #default="{ row }">{{ row.roomName || '' }}</template>
               </el-table-column>
               <el-table-column label="机位状态" width="100">
                 <template #default="{ row }">
@@ -43,10 +43,10 @@
                 </template>
               </el-table-column>
               <el-table-column align="right" label="透前/透后 (kg)" width="140">
-                <template #default="{ row }">{{ row.beforeWeight ?? '—' }} / {{ row.afterWeight ?? '—' }}</template>
+                <template #default="{ row }">{{ row.beforeWeight ?? '' }} / {{ row.afterWeight ?? '' }}</template>
               </el-table-column>
               <el-table-column align="right" label="超滤 (ml)" width="110">
-                <template #default="{ row }">{{ row.ultraMl ?? '—' }}</template>
+                <template #default="{ row }">{{ row.ultraMl ?? '' }}</template>
               </el-table-column>
               <el-table-column fixed="right" label="操作" width="110">
                 <template #default="{ row }">
@@ -94,14 +94,14 @@
             <el-table-column label="患者" prop="patientName" width="100"/>
             <el-table-column label="患者编号" prop="patientNo" width="130"/>
             <el-table-column label="联系电话" width="120">
-              <template #default="{ row }">{{ row.phoneMasked || '—' }}</template>
+              <template #default="{ row }">{{ row.phoneMasked || '' }}</template>
             </el-table-column>
             <el-table-column label="首透日期" prop="firstDialysisDate" width="110"/>
             <el-table-column label="血管通路" width="120">
               <template #default="{ row }">{{ dictText('access', row.accessType) }}</template>
             </el-table-column>
             <el-table-column label="通路部位" min-width="140" prop="accessSite">
-              <template #default="{ row }">{{ row.accessSite || '—' }}</template>
+              <template #default="{ row }">{{ row.accessSite || '' }}</template>
             </el-table-column>
             <el-table-column label="频次" width="110">
               <template #default="{ row }">{{ dictText('freq', row.dialysisFreq) }}</template>
@@ -118,7 +118,7 @@
               <template #default="{ row }">{{ row.sessionDone || 0 }}/{{ row.sessionTotal || 0 }}</template>
             </el-table-column>
             <el-table-column label="最近透析" prop="lastSessionDate" width="110">
-              <template #default="{ row }">{{ row.lastSessionDate || '—' }}</template>
+              <template #default="{ row }">{{ row.lastSessionDate || '' }}</template>
             </el-table-column>
             <el-table-column label="状态" width="90">
               <template #default="{ row }">
@@ -199,13 +199,13 @@
               </template>
             </el-table-column>
             <el-table-column align="right" label="透前/透后" width="120">
-              <template #default="{ row }">{{ row.beforeWeight ?? '—' }} / {{ row.afterWeight ?? '—' }}</template>
+              <template #default="{ row }">{{ row.beforeWeight ?? '' }} / {{ row.afterWeight ?? '' }}</template>
             </el-table-column>
             <el-table-column align="right" label="超滤(ml)" prop="ultraMl" width="100">
-              <template #default="{ row }">{{ row.ultraMl ?? '—' }}</template>
+              <template #default="{ row }">{{ row.ultraMl ?? '' }}</template>
             </el-table-column>
             <el-table-column align="right" label="实际时长" prop="actualDurationMin" width="90">
-              <template #default="{ row }">{{ row.actualDurationMin ?? '—' }}</template>
+              <template #default="{ row }">{{ row.actualDurationMin ?? '' }}</template>
             </el-table-column>
             <el-table-column label="不良反应" width="120">
               <template #default="{ row }">
@@ -279,12 +279,12 @@
             </div>
             <div class="border border-slate-200 rounded p-3">
               <div class="text-xs text-slate-500">人均例次</div>
-              <div class="text-2xl font-semibold text-slate-800">{{ stats.sessionsPerPatient ?? '—' }}</div>
+              <div class="text-2xl font-semibold text-slate-800">{{ stats.sessionsPerPatient ?? '' }}</div>
             </div>
             <div class="border border-slate-200 rounded p-3">
               <div class="text-xs text-slate-500">平均超滤 (ml) / 平均时长 (min)</div>
               <div class="text-2xl font-semibold text-slate-800">
-                {{ stats.avgUltraMl ?? '—' }} / {{ stats.avgActualDurationMin ?? '—' }}
+                {{ stats.avgUltraMl ?? '' }} / {{ stats.avgActualDurationMin ?? '' }}
               </div>
             </div>
           </div>

@@ -12,14 +12,7 @@
         <el-input v-model="formData.location" placeholder="如：门诊楼A座3层"/>
       </el-form-item>
       <el-form-item label="所属科室" prop="deptId">
-        <el-tree-select
-            v-model="formData.deptId"
-            :data="deptList"
-            :props="{ label: 'deptName', value: 'id', children: 'children' }"
-            check-strictly
-            clearable
-            placeholder="请选择科室"
-        />
+        <DeptTreeSelect v-model="formData.deptId" mode="ORG" scope="ALL" width="100%" placeholder="请选择科室"/>
       </el-form-item>
       <el-form-item label="状态" prop="status">
         <el-radio-group v-model="formData.status">
@@ -44,13 +37,12 @@
 import {computed, reactive, ref, watch} from 'vue'
 import {ElMessage} from 'element-plus'
 import {createClinicRoom, getClinicRoomDetail, updateClinicRoom} from '@/api/system'
+import DeptTreeSelect from '@/components/his/DeptTreeSelect.vue'
 
 const props = defineProps({
   modelValue: {type: Boolean, default: false},
   // 编辑传入当前行；为空表示新增
   row: {type: Object, default: null},
-  // 科室树：查询卡与表格列也要用，由页面加载一次下传
-  deptList: {type: Array, default: () => []},
 })
 const emit = defineEmits(['update:modelValue', 'saved'])
 

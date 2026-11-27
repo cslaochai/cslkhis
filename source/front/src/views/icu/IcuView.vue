@@ -38,13 +38,13 @@
                 {{ bed.patientName }}
                 <span class="text-xs text-slate-500 ml-1">{{ bed.patientNo }}</span>
               </div>
-              <div class="text-xs text-slate-500 mb-2">入科 {{ bed.inTime }} · GCS {{ bed.inGcs ?? '—' }}</div>
+              <div class="text-xs text-slate-500 mb-2">入科 {{ bed.inTime }} · GCS {{ bed.inGcs ?? '' }}</div>
               <div class="grid grid-cols-3 gap-1 text-xs text-slate-600 mb-2">
-                <span>T {{ bed.lastTemperature ?? '—' }}</span>
-                <span>P {{ bed.lastPulse ?? '—' }}</span>
-                <span>SpO2 {{ bed.lastSpo2 ?? '—' }}</span>
-                <span>BP {{ bed.lastSbp ?? '—' }}/{{ bed.lastDbp ?? '—' }}</span>
-                <span>GCS {{ bed.lastGcsTotal ?? '—' }}</span>
+                <span>T {{ bed.lastTemperature ?? '' }}</span>
+                <span>P {{ bed.lastPulse ?? '' }}</span>
+                <span>SpO2 {{ bed.lastSpo2 ?? '' }}</span>
+                <span>BP {{ bed.lastSbp ?? '' }}/{{ bed.lastDbp ?? '' }}</span>
+                <span>GCS {{ bed.lastGcsTotal ?? '' }}</span>
                 <span>记录 {{ bed.monitorCount ?? 0 }} 条</span>
               </div>
               <div :class="monitorLagDanger(bed) ? 'text-red-600' : 'text-slate-500'" class="text-xs mb-2">
@@ -115,7 +115,7 @@
           </el-table-column>
           <el-table-column label="来源科室" prop="fromDeptName" show-overflow-tooltip width="120"/>
           <el-table-column label="ICU 床位" width="110">
-            <template #default="{ row }">{{ row.wardName || '—' }} {{ row.bedNo }}</template>
+            <template #default="{ row }">{{ row.wardName || '' }} {{ row.bedNo }}</template>
           </el-table-column>
           <el-table-column label="监护等级" width="100">
             <template #default="{ row }">
@@ -133,10 +133,10 @@
             </template>
           </el-table-column>
           <el-table-column label="出科时间" prop="outTime" width="160">
-            <template #default="{ row }">{{ row.outTime || '—' }}</template>
+            <template #default="{ row }">{{ row.outTime || '' }}</template>
           </el-table-column>
           <el-table-column label="去向" width="110">
-            <template #default="{ row }">{{ row.outDest ? dictText('outDest', row.outDest) : '—' }}</template>
+            <template #default="{ row }">{{ row.outDest ? dictText('outDest', row.outDest) : '' }}</template>
           </el-table-column>
           <el-table-column label="转归说明" min-width="160" prop="outReason" show-overflow-tooltip/>
           <el-table-column label="记录数" width="90">
@@ -223,9 +223,9 @@
           <el-table-column label="CVP" prop="cvp" width="70"/>
           <el-table-column label="入/出/平衡" width="150">
             <template #default="{ row }">
-              {{ row.intakeMl ?? '—' }} / {{ row.outputMl ?? '—' }} /
+              {{ row.intakeMl ?? '' }} / {{ row.outputMl ?? '' }} /
               <span :class="Number(row.fluidBalance) > 0 ? 'text-red-600' : 'text-slate-700'">{{
-                  row.fluidBalance ?? '—'
+                  row.fluidBalance ?? ''
                 }}</span>
             </template>
           </el-table-column>
@@ -345,7 +345,7 @@
         <el-table-column label="GCS" prop="gcsTotal" width="70"/>
         <el-table-column label="呼吸支持" width="150">
           <template #default="{ row }">
-            {{ row.ventMode ? dictText('ventMode', row.ventMode) : '—' }}
+            {{ row.ventMode ? dictText('ventMode', row.ventMode) : '' }}
             <span v-if="row.fio2 != null" class="text-xs text-slate-500">{{ row.fio2 }}%</span>
           </template>
         </el-table-column>
@@ -584,7 +584,7 @@ const tubeText = (row) => {
     [row.hasCatheter, '尿管'],
     [row.hasDrain, '引流'],
   ].filter((t) => Number(t[0]) === 1).map((t) => t[1]);
-  return items.length ? items.join('/') : '—';
+  return items.length ? items.join('/') : '';
 };
 // ---------------- 趋势弹框 ----------------
 const trendDialog = ref(false);
@@ -637,11 +637,11 @@ const statCards = computed(() => {
   const s = stats.value || {};
   return [
     {key: 'inBed', label: '当前在科 / 开放床位', value: `${s.inCount ?? 0} / ${s.bedTotal ?? 0}`},
-    {key: 'useRate', label: '床位使用率', value: s.bedUseRate == null ? '—' : `${s.bedUseRate}%`},
+    {key: 'useRate', label: '床位使用率', value: s.bedUseRate == null ? '' : `${s.bedUseRate}%`},
     {key: 'inOut', label: '区间入科 / 出科', value: `${s.inCountRange ?? 0} / ${s.outCountRange ?? 0}`},
     {key: 'monitorTotal', label: '区间监护记录', value: s.monitorTotalRange ?? 0},
-    {key: 'perStay', label: '人均记录条数', value: s.monitorsPerStay ?? '—'},
-    {key: 'avgStay', label: '平均滞留小时', value: s.avgStayHours ?? '—'},
+    {key: 'perStay', label: '人均记录条数', value: s.monitorsPerStay ?? ''},
+    {key: 'avgStay', label: '平均滞留小时', value: s.avgStayHours ?? ''},
     {key: 'death', label: '死亡人数', value: s.deathCount ?? 0},
     {
       key: 'lag',

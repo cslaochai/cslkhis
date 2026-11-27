@@ -85,12 +85,12 @@
         <el-table-column label="调配日期" prop="admixDate" width="110"/>
         <el-table-column label="患者" min-width="110" prop="patientName">
           <template #default="{ row }">
-            <span>{{ row.patientName || '—' }}</span>
+            <span>{{ row.patientName || '' }}</span>
             <span class="text-xs text-slate-400 ml-1">{{ row.patientNo }}</span>
           </template>
         </el-table-column>
         <el-table-column label="病区" min-width="130" prop="wardName">
-          <template #default="{ row }">{{ row.wardName || '—' }}</template>
+          <template #default="{ row }">{{ row.wardName || '' }}</template>
         </el-table-column>
         <el-table-column label="状态" width="100">
           <template #default="{ row }">
@@ -99,10 +99,10 @@
         </el-table-column>
         <el-table-column align="right" label="明细数" prop="itemCount" width="80"/>
         <el-table-column label="生成人" prop="generateBy" width="100">
-          <template #default="{ row }">{{ row.generateBy || '—' }}</template>
+          <template #default="{ row }">{{ row.generateBy || '' }}</template>
         </el-table-column>
         <el-table-column label="排队操作" prop="labelBy" width="120">
-          <template #default="{ row }">{{ row.labelBy || '—' }}</template>
+          <template #default="{ row }">{{ row.labelBy || '' }}</template>
         </el-table-column>
         <el-table-column fixed="right" label="操作" width="90">
           <template #default="{ row }">

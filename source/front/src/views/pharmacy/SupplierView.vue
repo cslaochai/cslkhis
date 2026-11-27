@@ -59,7 +59,7 @@
         <el-table-column label="联系人" prop="contactPerson" width="100"/>
         <el-table-column label="联系电话" prop="phone" width="130"/>
         <el-table-column label="证照有效期" width="120">
-          <template #default="{ row }">{{ row.licenseExpiry || '—' }}</template>
+          <template #default="{ row }">{{ row.licenseExpiry || '' }}</template>
         </el-table-column>
         <el-table-column align="center" label="评级" width="90">
           <template #default="{ row }">

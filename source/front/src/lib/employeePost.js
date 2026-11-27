@@ -59,7 +59,8 @@ export function checkPosts(rows, names = {}) {
   }
   const seen = new Set()
   picked.forEach((row) => {
-    const key = `${row.roleCode}#${row.deptId}`
+    // 同科多段（A→B→回 A）按生效日区分，完全相同的行才算重复
+    const key = `${row.roleCode}#${row.deptId}#${row.effectiveDate || '∅'}`
     if (seen.has(key)) {
       const roleName = names.roleNameOf ? names.roleNameOf(row.roleCode) : row.roleCode
       const deptName = names.deptNameOf ? names.deptNameOf(row.deptId) : row.deptId

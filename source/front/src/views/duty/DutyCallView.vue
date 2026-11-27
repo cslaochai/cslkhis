@@ -36,16 +36,8 @@
             </el-select>
           </el-form-item>
           <el-form-item label="呼叫科室">
-            <el-select
-                v-model="searchForm.deptId"
-                clearable
-                data-testid="duty-call-filter-dept"
-                filterable
-                placeholder="全部"
-                style="width: 170px"
-            >
-              <el-option v-for="d in deptOptions" :key="d.id" :label="d.name" :value="d.id"/>
-            </el-select>
+            <DeptTreeSelect v-model="searchForm.deptId" mode="LEAF" data-testid="duty-call-filter-dept"
+                            width="170px" placeholder="全部"/>
           </el-form-item>
           <el-form-item label="视角">
             <el-select v-model="searchForm.mineType" clearable data-testid="duty-call-mine" placeholder="全部" style="width: 150px">
@@ -86,14 +78,14 @@
           <el-table-column label="联系电话" prop="targetPhone" width="130"/>
           <el-table-column label="患者" min-width="150">
             <template #default="{ row }">
-              <span>{{ row.patientName || '—' }}</span>
+              <span>{{ row.patientName || '' }}</span>
               <span v-if="row.patientLocation" class="ml-1 text-xs text-gray-500">{{ row.patientLocation }}</span>
             </template>
           </el-table-column>
           <el-table-column label="呼叫事由" prop="callReason" min-width="220" show-overflow-tooltip/>
           <el-table-column label="呼叫时间" prop="callTime" width="160"/>
           <el-table-column label="到岗时间" prop="arriveTime" width="160">
-            <template #default="{ row }">{{ row.arriveTime || '—' }}</template>
+            <template #default="{ row }">{{ row.arriveTime || '' }}</template>
           </el-table-column>
           <el-table-column label="状态" prop="status" width="120">
             <template #default="{ row }">
@@ -154,7 +146,7 @@
       </div>
     </el-card>
 
-    <DutyCallCreate v-model="createVisible" :dept-options="deptOptions" @saved="handleSaved"/>
+    <DutyCallCreate v-model="createVisible" @saved="handleSaved"/>
     <DutyCallDetail v-model="detailVisible" :id="currentId"/>
   </div>
 </template>
@@ -164,7 +156,7 @@ import {onMounted, ref} from 'vue';
 import {Check, Close, Plus, Refresh, Search, View} from '@element-plus/icons-vue';
 import {ElMessage, ElMessageBox} from 'element-plus';
 import {dutyCallArrive, dutyCallCancel, dutyCallEscalateOverdue, getDutyCallListPage} from '@/api/dutyCall';
-import {getDepartmentSelectList} from '@/api/system';
+import DeptTreeSelect from '@/components/his/DeptTreeSelect.vue';
 import DutyCallCreate from './DutyCallCreate.vue';
 import DutyCallDetail from './DutyCallDetail.vue';
 import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination';
@@ -172,7 +164,6 @@ import {useTableMaxHeight} from '@/lib/useTableMaxHeight';
 
 const loading = ref(false);
 const tableData = ref([]);
-const deptOptions = ref([]);
 const createVisible = ref(false);
 const detailVisible = ref(false);
 const currentId = ref(null);
@@ -307,18 +298,7 @@ const handleSaved = () => {
   loadData();
 };
 
-// 科室下拉：查询卡按科室筛 + 发起弹框也要用（页面加载一次，弹框复用这份，避免两处各拉一遍）
-const loadDeptOptions = async () => {
-  if (deptOptions.value.length) return;
-  try {
-    const res = await getDepartmentSelectList({});
-    deptOptions.value = (res?.data || []).map((d) => ({id: d.id ?? d.deptId, name: d.deptName ?? d.name}));
-  } catch (e) /* 错误已由全局拦截器统一提示 */{
-  }
-};
-
 onMounted(() => {
-  loadDeptOptions();
   loadData();
 });
 </script>

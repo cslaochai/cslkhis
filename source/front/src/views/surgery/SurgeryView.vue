@@ -636,8 +636,8 @@ import SurgeryRoomAssign from './SurgeryRoomAssign.vue';
 import SurgeryRoomManage from './SurgeryRoomManage.vue';
 import SurgerySafetyCheck from './SurgerySafetyCheck.vue';
 
-const fmt = (v) => (v ? String(v).replace('T', ' ') : '—');
-const text = (v) => (v === null || v === undefined || v === '' ? '—' : String(v));
+const fmt = (v) => (v ? String(v).replace('T', ' ') : '');
+const text = (v) => (v === null || v === undefined || v === '' ? '' : String(v));
 // ---------------- 基础数据 ----------------
 const admissions = ref([]);
 const employees = ref([]);
@@ -646,7 +646,7 @@ const rooms = ref([]);
 const surgeonOptions = ref([]);
 const anesthetistOptions = ref([]);
 const nurseOptions = ref([]);
-const admissionLabel = (a) => `${a.bedNo || '—'} ${a.patientName || '—'}（${a.deptName || a.wardName || '—'}）`;
+const admissionLabel = (a) => `${a.bedNo || ''} ${a.patientName || ''}（${a.deptName || a.wardName || ''}）`;
 const loadBaseData = async () => {
   try {
     const res = await getInpatientListPage({admitStatus: 1, pageNum: 1, pageSize: 200});
@@ -859,7 +859,7 @@ const onTabChangeAll = (name) => {
   onTabChange(name);
   onTabChangeUtil(name);
 };
-const hm = (t) => (t ? String(t).replace('T', ' ').slice(11, 16) : '—');
+const hm = (t) => (t ? String(t).replace('T', ' ').slice(11, 16) : '');
 const phaseOf = (op) => Number(op.safetyCheckPhases ?? 0);
 const phaseClass = (op) => phaseOf(op) >= 3 ? 'text-emerald-600' : phaseOf(op) > 0 ? 'text-amber-600' : 'text-slate-400';
 /** 手术间列 + 未登记手术间兜底列拼成一排渲染（others 恒在正规列之后） */

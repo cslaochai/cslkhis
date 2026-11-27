@@ -3,10 +3,10 @@
     <div v-loading="cashierDetailLoading" class="space-y-4 text-sm">
       <div class="grid grid-cols-2 gap-3 rounded-lg border border-slate-200 p-4">
         <div><span class="text-slate-400">交班单号：</span>
-          <span class="font-mono text-slate-700">{{ cashierDetail?.settlementNo || '—' }}</span>
+          <span class="font-mono text-slate-700">{{ cashierDetail?.settlementNo || '' }}</span>
         </div>
         <div><span class="text-slate-400">收费员：</span>
-          <span class="text-slate-700">{{ cashierDetail?.cashierName || '—' }}</span>
+          <span class="text-slate-700">{{ cashierDetail?.cashierName || '' }}</span>
         </div>
         <div><span class="text-slate-400">班次：</span>
           <span class="text-slate-700">{{ shiftTypeText(cashierDetail?.shiftType) }}</span>
@@ -16,7 +16,7 @@
         </div>
         <div class="col-span-2"><span class="text-slate-400">统计区间：</span>
           <span class="font-mono text-slate-700">
-            {{ cashierDetail?.periodBegin || '—' }} ~ {{ cashierDetail?.periodEnd || '—' }}
+            {{ cashierDetail?.periodBegin || '' }} ~ {{ cashierDetail?.periodEnd || '' }}
           </span>
         </div>
         <div><span class="text-slate-400">收费：</span>
@@ -77,7 +77,7 @@
         <span class="text-slate-400">备注：</span><span class="text-slate-700">{{ cashierDetail.remark }}</span>
       </div>
       <div class="text-xs text-slate-400">
-        制单：{{ cashierDetail?.createBy || '—' }} / {{ cashierDetail?.createTime || '—' }}
+        制单：{{ cashierDetail?.createBy || '' }} / {{ cashierDetail?.createTime || '' }}
         <span v-if="cashierDetail?.auditBy" class="ml-3">审核：{{ cashierDetail.auditBy }} / {{
             cashierDetail.auditTime
           }}</span>

@@ -4,11 +4,13 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import lombok.Data;
 
+import java.util.List;
+
 /**
- * 科室下拉统一入口出参。
+ * 科室树形下拉出参：每个节点自带可选标记，前端只按 {@link #disabled} 渲染灰显，不自行判定业务规则。
  */
 @Data
-public class DepartmentSelectListVO {
+public class DepartmentTreeSelectVO {
 
     /**
      * 科室ID（序列化成字符串，避免 JS 精度丢失）
@@ -27,8 +29,7 @@ public class DepartmentSelectListVO {
     private String deptName;
 
     /**
-     * 科室类型：1-门诊科室 2-医技科室 3-药房 4-住院科室 5-其他，多个类型逗号分隔
-     * （口径见列注释与字典 {@code his_dept_type}）
+     * 科室类型（1-门诊科室 2-医技科室 3-药房 4-住院科室 5-其他），多个类型逗号分隔
      */
     private String deptType;
 
@@ -49,7 +50,17 @@ public class DepartmentSelectListVO {
     private Long parentId;
 
     /**
-     * 上级科室名称（用于下拉展示层级关系）
+     * 是否不可选：true 时前端灰显，仅作分组展示
      */
-    private String parentDeptName;
+    private Boolean disabled;
+
+    /**
+     * 不可选原因（disabled=true 时返回，供 hover 提示）
+     */
+    private String disabledReason;
+
+    /**
+     * 子科室
+     */
+    private List<DepartmentTreeSelectVO> children;
 }

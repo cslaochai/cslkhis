@@ -4,7 +4,7 @@
       <el-form-item label="选择耗材" required>
         <el-select v-model="form.consumableId" :fit-input-width="false" filterable placeholder="从耗材字典选择"
                    style="width: 100%">
-          <el-option v-for="c in consumableOptions" :key="c.id" :label="`${c.consumableName}（${c.specification || '-'}）`"
+          <el-option v-for="c in consumableOptions" :key="c.id" :label="`${c.consumableName}（${c.specification || ''}）`"
                      :value="c.id"/>
         </el-select>
       </el-form-item>
@@ -12,10 +12,7 @@
         <el-input-number v-model="form.quantity" :min="0.01" :precision="2" style="width: 100%"/>
       </el-form-item>
       <el-form-item label="领用科室" required>
-        <el-select v-model="form.deptId" :fit-input-width="false" filterable placeholder="选择科室"
-                   style="width: 100%">
-          <el-option v-for="d in deptOptions" :key="d.id" :label="d.deptName" :value="d.id"/>
-        </el-select>
+        <DeptTreeSelect v-model="form.deptId" mode="LEAF" width="100%" placeholder="选择科室"/>
       </el-form-item>
       <el-form-item label="用途">
         <el-input v-model="form.purpose" :rows="2" placeholder="如 病房日常换药使用" type="textarea"/>
@@ -33,11 +30,10 @@
 import {computed, ref, watch} from 'vue';
 import {ElMessage} from 'element-plus';
 import {consume, getConsumableSelectList} from '@/api/supplies';
+import DeptTreeSelect from '@/components/his/DeptTreeSelect.vue';
 
 const props = defineProps({
   modelValue: {type: Boolean, default: false},
-  // 科室下拉由父页统一加载后传入（溯源登记也在用同一份，避免两处各拉一次）
-  deptOptions: {type: Array, default: () => []},
 });
 const emit = defineEmits(['update:modelValue', 'saved']);
 

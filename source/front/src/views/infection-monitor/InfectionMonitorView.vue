@@ -280,8 +280,8 @@ import {
 import {DEFAULT_PAGE_SIZE} from '@/lib/pagination'
 
 const activeTab = ref('case')
-const fmtDate = (d) => (d ? String(d).slice(0, 10) : '—')
-const pct = (v) => (v === null || v === undefined ? '—' : Number(v).toFixed(1))
+const fmtDate = (d) => (d ? String(d).slice(0, 10) : '')
+const pct = (v) => (v === null || v === undefined ? '' : Number(v).toFixed(1))
 
 // ---------------- 字典（筛选用；列表文案取后端 *Text） ----------------
 const caseStatusDict = ref([])

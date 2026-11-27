@@ -367,7 +367,7 @@ public class DutyRosterServiceImpl extends ServiceImpl<BizDutyRosterMapper, BizD
             releaseFactIfUnused(boundFactId);
         }
         log.info("值班排班{} date={} post={} shift={} role={} emp={}", insert ? "登记" : "修改",
-                row.getDutyDate(), post == null ? "-" : post.getPostName(),
+                row.getDutyDate(), post == null ? "" : post.getPostName(),
                 row.getShiftType(), row.getRoleType(), row.getEmployeeName());
         return toRosterVO(row, post, typeNamesOf(row.getDutyTypeId()));
     }

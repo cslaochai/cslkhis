@@ -11,9 +11,7 @@
       </div>
 
       <div class="flex items-center gap-3">
-        <el-select v-model="deptId" placeholder="选择科室" style="width: 200px" filterable @change="onDeptChange">
-          <el-option v-for="d in deptOptions" :key="d.id" :label="d.name" :value="String(d.id)"/>
-        </el-select>
+        <DeptTreeSelect v-model="deptId" mode="TREE" placeholder="选择科室" @change="onDeptChange"/>
         <el-select v-model="wardId" placeholder="全部病区" style="width: 190px" @change="onWardChange">
           <el-option label="全部病区" value="ALL"/>
           <el-option v-for="w in wardOptions" :key="w.wardId" :label="w.wardName" :value="String(w.wardId)"/>
@@ -48,7 +46,7 @@
       </div>
       <div class="flex items-center gap-2 text-[12px] text-gray-400">
         <span class="inline-block w-2 h-2 rounded-full bg-green-500"></span>
-        自动刷新 10s · {{ lastRefresh || '—' }}
+        自动刷新 10s · {{ lastRefresh || '' }}
       </div>
     </div>
 
@@ -87,7 +85,7 @@
               <div class="text-[12px] text-gray-500 flex items-center gap-2">
                 <span v-if="box.patientName">{{ box.genderText }} · {{ box.age == null ? '年龄未知' : box.age + '岁' }}</span>
                 <span v-if="box.admitDays != null" class="text-gray-400">住院 {{ box.admitDays }} 天</span>
-                <span class="ml-auto text-gray-400">更新 {{ box.lastSeen || '—' }}</span>
+                <span class="ml-auto text-gray-400">更新 {{ box.lastSeen || '' }}</span>
               </div>
               <div v-if="box.doctorName || box.allergyHistory" class="mt-1 text-[12px] flex items-center gap-3">
                 <span class="text-gray-500 truncate" v-if="box.doctorName">医生 {{ box.doctorName }}</span>
@@ -98,23 +96,23 @@
                 <div class="rounded bg-gray-50 px-2 py-2">
                   <div class="text-[11px] text-gray-400">心率</div>
                   <div class="text-[20px] font-semibold leading-6" :class="box.hrBad ? 'text-red-600' : 'text-gray-800'">
-                    {{ box.hr == null || box.hr === 0 ? '—' : box.hr }}<span v-if="box.hr" class="text-[11px] text-gray-400 ml-1">bpm</span>
+                    {{ box.hr == null || box.hr === 0 ? '' : box.hr }}<span v-if="box.hr" class="text-[11px] text-gray-400 ml-1">bpm</span>
                   </div>
                 </div>
                 <div class="rounded bg-gray-50 px-2 py-2">
                   <div class="text-[11px] text-gray-400">呼吸</div>
                   <div class="text-[20px] font-semibold leading-6" :class="box.rrBad ? 'text-red-600' : 'text-gray-800'">
-                    {{ box.rr == null || box.rr === 0 ? '—' : box.rr }}<span v-if="box.rr" class="text-[11px] text-gray-400 ml-1">次/分</span>
+                    {{ box.rr == null || box.rr === 0 ? '' : box.rr }}<span v-if="box.rr" class="text-[11px] text-gray-400 ml-1">次/分</span>
                   </div>
                 </div>
                 <div class="rounded bg-gray-50 px-2 py-2">
                   <div class="text-[11px] text-gray-400">体动</div>
-                  <div class="text-[20px] font-semibold leading-6 text-gray-800">{{ box.movement == null ? '—' : box.movement }}</div>
+                  <div class="text-[20px] font-semibold leading-6 text-gray-800">{{ box.movement == null ? '' : box.movement }}</div>
                 </div>
                 <div class="rounded bg-gray-50 px-2 py-2">
                   <div class="text-[11px] text-gray-400">累计翻身</div>
                   <div class="text-[20px] font-semibold leading-6 text-gray-800">
-                    {{ box.turns == null ? '—' : box.turns }}<span class="text-[11px] text-gray-400 ml-1">次</span>
+                    {{ box.turns == null ? '' : box.turns }}<span class="text-[11px] text-gray-400 ml-1">次</span>
                   </div>
                 </div>
               </div>
@@ -153,7 +151,7 @@
           <template #default="{row}">{{ boxByNo.get(row.deviceNo)?.bedNo || row.deviceNo }}</template>
         </el-table-column>
         <el-table-column label="患者" width="110">
-          <template #default="{row}">{{ boxByNo.get(row.deviceNo)?.patientName || '—' }}</template>
+          <template #default="{row}">{{ boxByNo.get(row.deviceNo)?.patientName || '' }}</template>
         </el-table-column>
         <el-table-column label="事件" width="150">
           <template #default="{row}">
@@ -179,7 +177,7 @@
               <el-button link type="primary" @click="handleEvent(row, 1)">处理</el-button>
               <el-button link type="info" @click="handleEvent(row, 2)">忽略</el-button>
             </template>
-            <span v-else class="text-[12px] text-gray-400">{{ row.handleBy || '—' }}</span>
+            <span v-else class="text-[12px] text-gray-400">{{ row.handleBy || '' }}</span>
           </template>
         </el-table-column>
       </el-table>
@@ -213,7 +211,8 @@ import {ElMessage, ElMessageBox} from 'element-plus';
 import {getBedMap} from '@/api/inpatient';
 import {iotDeviceSelectList, iotEventHandle, iotEventListPage, iotLatestList} from '@/api/iot';
 import {DEFAULT_PAGE_SIZE} from '@/lib/pagination';
-import {loadDeptOptions} from '@/lib/deptOptions';
+import {loadDeptTreeOptions, flattenDeptTree} from '@/lib/deptOptions';
+import DeptTreeSelect from '@/components/his/DeptTreeSelect.vue';
 import DeviceHistoryDialog from './DeviceHistoryDialog.vue';
 
 /** 床垫 5 秒一条，超过 2 分钟未上报按离线 */
@@ -246,6 +245,33 @@ const eventPage = ref({pageNum: 1, pageSize: DEFAULT_PAGE_SIZE});
 const trendVisible = ref(false);
 const trendDevice = ref(null);
 
+// 选中业务父科室时按子树聚合：设备/告警归属覆盖「自身 + 全部后代」科室
+const descendantScope = computed(() => {
+  const root = String(deptId.value ?? '');
+  const childrenByParent = new Map();
+  for (const d of deptOptions.value) {
+    const pid = String(d.parentId ?? '');
+    if (!childrenByParent.has(pid)) childrenByParent.set(pid, []);
+    childrenByParent.get(pid).push(d);
+  }
+  const ids = new Set([root]);
+  const names = new Set();
+  const queue = [root];
+  while (queue.length) {
+    const pid = queue.shift();
+    for (const child of childrenByParent.get(pid) || []) {
+      const cid = String(child.id);
+      if (ids.has(cid)) continue;
+      ids.add(cid);
+      names.add(child.name);
+      queue.push(cid);
+    }
+  }
+  const rootNode = deptOptions.value.find(d => String(d.id) === root);
+  if (rootNode) names.add(rootNode.name);
+  return {ids, names};
+});
+
 const latestByNo = computed(() => {
   const map = new Map();
   for (const d of latest.value) map.set(d.deviceNo, d);
@@ -274,7 +300,7 @@ const boxes = computed(() => sensors.value.map(dev => {
     ...dev,
     bed,
     telemetry,
-    bedNo: dev.bedNo || bed?.bedNo || '—',
+    bedNo: dev.bedNo || bed?.bedNo || '',
     wardName: bed?.wardName || dev.location || '未分病区',
     patientName: bed?.patientName || '',
     genderText: genderText(bed?.gender),
@@ -299,7 +325,7 @@ const boxes = computed(() => sensors.value.map(dev => {
     headerClass: alarm ? 'bg-red-50 border-red-100' : 'bg-[#F2F7FC] border-gray-100',
     borderClass: alarm ? 'border-red-200' : 'border-gray-100',
     alarmText: !online ? '床垫离线，当前读数不可信'
-        : vitalBad ? `体征异常：心率 ${hr ?? '—'} bpm / 呼吸 ${rr ?? '—'} 次/分（正常 ${HR_MIN}~${HR_MAX} / ${RR_MIN}~${RR_MAX}）`
+        : vitalBad ? `体征异常：心率 ${hr ?? ''} bpm / 呼吸 ${rr ?? ''} 次/分（正常 ${HR_MIN}~${HR_MAX} / ${RR_MIN}~${RR_MAX}）`
             : out ? '患者当前不在床上（离床超 2 分钟会进告警表）' : '',
     lastSeen: telemetry?.ts ? String(telemetry.ts).replace('T', ' ').slice(11, 19) : '',
   };
@@ -351,10 +377,10 @@ const siteState = (row) => {
     return box.inBed ? {text: '已回床', cls: 'text-green-600'} : {text: '仍离床', cls: 'text-orange-600 font-semibold'};
   }
   if (row.eventCode === 'VITAL_ABNORMAL') {
-    return box.vitalBad ? {text: `仍异常 ${box.hr ?? '—'}/${box.rr ?? '—'}`, cls: 'text-red-600 font-semibold'}
+    return box.vitalBad ? {text: `仍异常 ${box.hr ?? ''}/${box.rr ?? ''}`, cls: 'text-red-600 font-semibold'}
         : {text: '体征已恢复', cls: 'text-green-600'};
   }
-  return {text: '—', cls: 'text-gray-400'};
+  return {text: '', cls: 'text-gray-400'};
 };
 
 const metricValue = (device, key) => {
@@ -376,8 +402,8 @@ const levelClass = (level) => (level === 3 ? 'text-red-600 font-semibold' : leve
 
 const loadDepts = async () => {
   try {
-    const list = await loadDeptOptions();
-    deptOptions.value = (list || []).map(d => ({id: d.id, name: d.deptName || d.name, deptType: d.deptType}));
+    const tree = await loadDeptTreeOptions({mode: 'TREE'});
+    deptOptions.value = flattenDeptTree(tree).map(d => ({id: d.id, name: d.deptName, deptType: d.deptType, parentId: d.parentId}));
     // 默认当前岗位所在科室；没有岗位科室时退第一个住院类科室，不再硬编码演示科室
     const own = deptOptions.value.find(d => String(d.id) === String(localStorage.getItem('deptId')));
     const firstIpd = deptOptions.value.find(d => String(d.deptType || '').includes('4'));
@@ -403,10 +429,9 @@ const loadData = async ({silent = false} = {}) => {
     const map = bedRes.data || {};
     beds.value = (map.beds || []).filter(b => b.bedNo);
     wardOptions.value = map.wardOptions || [];
-    const deptName = map.deptName || '';
+    const scopeNames = descendantScope.value.names;
     sensors.value = (devRes.data || []).filter(d => {
-      const matchDept = !deptName || !d.deptName || d.deptName === deptName
-          || deptName.includes(d.deptName) || d.deptName.includes(deptName);
+      const matchDept = !d.deptName || (scopeNames.size ? scopeNames.has(d.deptName) : true);
       const matchWard = wardId.value === 'ALL'
           || (beds.value.some(b => normBed(b.bedNo) === normBed(d.bedNo) && String(b.wardId) === String(wardId.value)));
       return d.bedNo && matchDept && matchWard;
@@ -416,7 +441,7 @@ const loadData = async ({silent = false} = {}) => {
     lastRefresh.value = new Date().toLocaleTimeString('zh-CN', {hour12: false});
     if (!deptOptions.value.length && map.deptOptions) {
       // bedMap 自带授权科室清单，首屏 deptOptions 拉取失败时兜底
-      deptOptions.value = (map.deptOptions || []).map(d => ({id: d.deptId, name: d.deptName}));
+      deptOptions.value = (map.deptOptions || []).map(d => ({id: d.deptId, name: d.deptName, parentId: null}));
     }
   } catch (e) {
     console.error('加载床位安全数据失败', e);

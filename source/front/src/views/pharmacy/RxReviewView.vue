@@ -20,31 +20,31 @@
           </div>
           <div class="stat-items">
             <div class="stat-item">
-              <div class="stat-value">{{ stats.totalPrescriptions ?? '-' }}</div>
+              <div class="stat-value">{{ stats.totalPrescriptions ?? '' }}</div>
               <div class="stat-label">期内处方总数</div>
             </div>
             <div class="stat-item">
-              <div class="stat-value">{{ stats.reviewedCount ?? '-' }}</div>
+              <div class="stat-value">{{ stats.reviewedCount ?? '' }}</div>
               <div class="stat-label">已点评处方</div>
             </div>
             <div class="stat-item">
-              <div class="stat-value">{{ stats.reviewRate ?? '-' }}%</div>
+              <div class="stat-value">{{ stats.reviewRate ?? '' }}%</div>
               <div class="stat-label">处方点评率</div>
             </div>
             <div class="stat-item">
-              <div class="stat-value">{{ stats.unreasonableCount ?? '-' }}</div>
-              <div class="stat-label">不合理处方（{{ stats.unreasonableRate ?? '-' }}%）</div>
+              <div class="stat-value">{{ stats.unreasonableCount ?? '' }}</div>
+              <div class="stat-label">不合理处方（{{ stats.unreasonableRate ?? '' }}%）</div>
             </div>
             <div class="stat-item">
-              <div class="stat-value stat-value-danger">{{ stats.abnormalCount ?? '-' }}</div>
+              <div class="stat-value stat-value-danger">{{ stats.abnormalCount ?? '' }}</div>
               <div class="stat-label">超常处方</div>
             </div>
             <div class="stat-item">
-              <div class="stat-value">{{ stats.publicityCount ?? '-' }}</div>
+              <div class="stat-value">{{ stats.publicityCount ?? '' }}</div>
               <div class="stat-label">已公示</div>
             </div>
             <div class="stat-item">
-              <div class="stat-value">{{ stats.pendingCount ?? '-' }}</div>
+              <div class="stat-value">{{ stats.pendingCount ?? '' }}</div>
               <div class="stat-label">待点评</div>
             </div>
           </div>

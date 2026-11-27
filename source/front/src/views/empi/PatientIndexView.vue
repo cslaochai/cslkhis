@@ -14,7 +14,7 @@
       <div class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
         <p class="text-xs text-slate-500">患者档案总数</p>
         <p class="text-lg font-bold text-slate-900" data-testid="p5-empi-stats-total">
-          {{ stats.patientTotal ?? '—' }}
+          {{ stats.patientTotal ?? '' }}
         </p>
         <p class="text-[11px] text-slate-400">含已并入主档的影子档案</p>
       </div>
@@ -25,21 +25,21 @@
             class="text-lg font-bold"
             data-testid="p5-empi-stats-dup"
         >
-          {{ stats.strongDupGroups ?? '—' }}
+          {{ stats.strongDupGroups ?? '' }}
         </p>
         <p class="text-[11px] text-slate-400">手机号重复不计入（存在多人共用号码）</p>
       </div>
       <div class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
         <p class="text-xs text-slate-500">已并入主档的档案</p>
         <p class="text-lg font-bold text-slate-900" data-testid="p5-empi-stats-shadow">
-          {{ stats.mergedCount ?? '—' }}
+          {{ stats.mergedCount ?? '' }}
         </p>
         <p class="text-[11px] text-slate-400">可在「合并历史」中撤销</p>
       </div>
       <div class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
         <p class="text-xs text-slate-500">唯一性 / 身份证完整率</p>
         <p class="text-lg font-bold text-slate-900" data-testid="p5-empi-stats-unique">
-          {{ stats.uniqueRate ?? '—' }}% / {{ stats.idCardCompleteRate ?? '—' }}%
+          {{ stats.uniqueRate ?? '' }}% / {{ stats.idCardCompleteRate ?? '' }}%
         </p>
         <p class="text-[11px] text-slate-400">5 级数据质量门槛 ≥ 80%</p>
       </div>
@@ -121,7 +121,7 @@
                 <el-table-column label="患者号" prop="patientNo" width="140"/>
                 <el-table-column label="姓名" prop="patientName" width="140"/>
                 <el-table-column label="性别/年龄" width="100">
-                  <template #default="{ row }">{{ row.genderText }} / {{ row.age ?? '—' }}</template>
+                  <template #default="{ row }">{{ row.genderText }} / {{ row.age ?? '' }}</template>
                 </el-table-column>
                 <el-table-column label="身份证号" min-width="180" prop="idCard">
                   <template #default="{ row }">
@@ -187,7 +187,7 @@
             <el-table-column label="患者号" prop="patientNo" width="140"/>
             <el-table-column label="姓名" prop="patientName" width="130"/>
             <el-table-column label="性别/年龄" width="100">
-              <template #default="{ row }">{{ row.genderText }} / {{ row.age ?? '—' }}</template>
+              <template #default="{ row }">{{ row.genderText }} / {{ row.age ?? '' }}</template>
             </el-table-column>
             <el-table-column label="身份证号" min-width="170" prop="idCard">
               <template #default="{ row }">
@@ -494,7 +494,7 @@ const mergeForm = reactive({
   fillBlank: false,
 });
 const currentGroup = ref(null);
-const memberLabel = (m) => `${m.patientNo} ${m.patientName}（${m.genderText || '—'}${m.age != null ? ' ' + m.age + '岁' : ''}｜数据 ${m.totalDataCount} 条｜档案完整度 ${m.completeRate}%）`;
+const memberLabel = (m) => `${m.patientNo} ${m.patientName}（${m.genderText || ''}${m.age != null ? ' ' + m.age + '岁' : ''}｜数据 ${m.totalDataCount} 条｜档案完整度 ${m.completeRate}%）`;
 const openMerge = (group, masterId, mergedId) => {
   currentGroup.value = group;
   const members = group.members || [];

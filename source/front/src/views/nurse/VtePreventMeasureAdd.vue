@@ -3,14 +3,14 @@
   <el-dialog v-model="visible" :title="formTitle" data-testid="measure-dialog" width="520px">
     <el-form label-width="110px">
       <el-form-item label="患者">
-        <div>{{ row.patientName || '-' }}（{{ row.admissionNo || '-' }}）</div>
+        <div>{{ row.patientName || '' }}（{{ row.admissionNo || '' }}）</div>
       </el-form-item>
       <el-form-item label="风险等级">
         <el-tag :type="riskLevelTag(row.riskLevel)" disable-transitions>{{
             riskLevelText(row.riskLevel)
           }}
         </el-tag>
-        <span class="muted">Caprini {{ row.capriniScore ?? '-' }} 分</span>
+        <span class="muted">Caprini {{ row.capriniScore ?? '' }} 分</span>
       </el-form-item>
       <el-form-item label="措施" required>
         <div data-testid="sel-measure-code" style="width: 100%">

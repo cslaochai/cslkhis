@@ -23,7 +23,7 @@
       </el-alert>
     </div>
     <template #footer>
-      <el-button v-perm="'medtech:transfusion:edit'" :loading="issueSubmitting" data-testid="p4-tf-issue-submit"
+      <el-button v-perm="'medtech:transfusion:dispatch'" :loading="issueSubmitting" data-testid="p4-tf-issue-submit"
                  type="primary" @click="submitIssue">
         确认发血
       </el-button>
@@ -49,8 +49,8 @@ const visible = computed({
   set: (v) => emit('update:modelValue', v),
 });
 
-const fmt = (v) => (v ? String(v).replace('T', ' ') : '—');
-const text = (v) => (v === null || v === undefined || v === '' ? '—' : String(v));
+const fmt = (v) => (v ? String(v).replace('T', ' ') : '');
+const text = (v) => (v === null || v === undefined || v === '' ? '' : String(v));
 
 const issueSubmitting = ref(false);
 const issueForm = reactive({issueRemark: ''});

@@ -13,7 +13,7 @@
  * 用 `flag !== 1 && flag !== 2 ? '正常'` 会把「不知道」显示成「正常」。
  * 缺失就显示 —，不要替后端猜一个结论。
  */
-export const abnormalText = (row) => row.abnormalFlagText || '—';
+export const abnormalText = (row) => row.abnormalFlagText || '';
 
 export const abnormalTagType = (row) => {
   const text = abnormalText(row);

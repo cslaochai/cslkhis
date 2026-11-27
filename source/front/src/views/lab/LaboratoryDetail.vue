@@ -38,7 +38,7 @@
             </el-table-column>
             <el-table-column label="判定说明" min-width="160" show-overflow-tooltip>
               <template #default="{ row }">
-                <span class="text-xs text-slate-500">{{ row.judgeNote || '—' }}</span>
+                <span class="text-xs text-slate-500">{{ row.judgeNote || '' }}</span>
               </template>
             </el-table-column>
           </el-table>
@@ -151,7 +151,7 @@
               </el-table-column>
               <el-table-column label="判定留痕" min-width="170" show-overflow-tooltip>
                 <template #default="{ row }">
-                  <span class="text-xs text-slate-500">{{ row.judgeNote || '—' }}</span>
+                  <span class="text-xs text-slate-500">{{ row.judgeNote || '' }}</span>
                 </template>
               </el-table-column>
             </el-table>

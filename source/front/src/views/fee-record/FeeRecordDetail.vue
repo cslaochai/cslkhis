@@ -6,7 +6,7 @@
           <el-descriptions-item label="记账流水号">{{ detail.feeNo }}</el-descriptions-item>
           <el-descriptions-item label="状态">{{ feeStatusText(detail.feeStatus) }}</el-descriptions-item>
           <el-descriptions-item label="患者">{{ detail.patientName }}（{{
-              detail.patientNo || '—'
+              detail.patientNo || ''
             }}）
           </el-descriptions-item>
           <el-descriptions-item label="项目">{{ detail.itemName }}</el-descriptions-item>
@@ -18,7 +18,7 @@
           <el-descriptions-item label="已红冲金额">¥{{ formatMoney(detail.reversedAmount) }}</el-descriptions-item>
           <el-descriptions-item label="剩余金额">¥{{ formatMoney(detail.remainingAmount) }}</el-descriptions-item>
           <el-descriptions-item label="记账时间">{{ detail.bookTime }}</el-descriptions-item>
-          <el-descriptions-item label="记账人">{{ detail.bookByName || '—' }}</el-descriptions-item>
+          <el-descriptions-item label="记账人">{{ detail.bookByName || '' }}</el-descriptions-item>
         </el-descriptions>
         <template v-if="detail.reverseRows?.length">
           <div class="mt-3 mb-1 text-sm font-medium">红冲链（负数为红冲行）</div>

@@ -53,9 +53,7 @@
             </el-select>
           </el-form-item>
           <el-form-item label="被投诉科室">
-            <el-select v-model="query.deptId" clearable filterable placeholder="被投诉科室" style="width: 180px">
-              <el-option v-for="d in deptOptions" :key="d.id" :label="d.deptName || d.name" :value="d.id"/>
-            </el-select>
+            <DeptTreeSelect v-model="query.deptId" mode="LEAF" width="180px" placeholder="被投诉科室"/>
           </el-form-item>
           <el-form-item label="登记日期">
             <el-date-picker v-model="query.dateRange" end-placeholder="登记截止" start-placeholder="登记起始"
@@ -109,10 +107,10 @@
           </template>
         </el-table-column>
         <el-table-column label="处理途径" width="120">
-          <template #default="{ row }">{{ row.dealType ? dealTypeText(row.dealType) : '—' }}</template>
+          <template #default="{ row }">{{ row.dealType ? dealTypeText(row.dealType) : '' }}</template>
         </el-table-column>
         <el-table-column align="right" label="赔偿(元)" width="100">
-          <template #default="{ row }">{{ row.compensation ?? '—' }}</template>
+          <template #default="{ row }">{{ row.compensation ?? '' }}</template>
         </el-table-column>
         <el-table-column align="right" label="受理天数" width="90">
           <template #default="{ row }">{{ row.openDays ?? 0 }}</template>
@@ -157,7 +155,7 @@
       </div>
     </el-card>
 
-    <DisputeEdit v-model="editVisible" :row="editRow" :dicts="dicts" :dept-options="deptOptions" @saved="onSaved"/>
+    <DisputeEdit v-model="editVisible" :row="editRow" :dicts="dicts" @saved="onSaved"/>
 
     <DisputeDetail v-model="detailVisible" :id="detailId" :dicts="dicts"/>
 
@@ -188,7 +186,7 @@ import {onMounted, reactive, ref} from 'vue';
 import {ElMessage, ElMessageBox} from 'element-plus';
 import {Plus, Refresh, Search} from '@element-plus/icons-vue';
 import {deleteDispute, getDisputeStat, listDisputePage, sealDisputeNow} from '@/api/dispute';
-import {getDepartmentSelectList} from '@/api/system';
+import DeptTreeSelect from '@/components/his/DeptTreeSelect.vue';
 import {dictLabelText} from '@/lib/utils';
 import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination';
 import {useTableMaxHeight} from '@/lib/useTableMaxHeight';
@@ -225,21 +223,11 @@ const statusText = (v) => dictLabelText(dicts.value.status, v);
 const levelText = (v) => dictLabelText(dicts.value.level, v);
 const dealTypeText = (v) => dictLabelText(dicts.value.dealType, v);
 const sealText = (v) => dictLabelText(dicts.value.seal, v);
-const deptOptions = ref([]);
 const loadDicts = async () => {
   try {
     dicts.value = await fetchDisputeDicts();
   } catch (e) {
     console.error('加载纠纷字典失败', e);
-  }
-};
-const loadDepts = async () => {
-  try {
-    const res = await getDepartmentSelectList({});
-    if (res.code === 200)
-      deptOptions.value = res.data || [];
-  } catch (e) {
-    console.error('加载科室失败', e);
   }
 };
 const loadStats = async () => {
@@ -364,7 +352,7 @@ const remove = async (row) => {
   }
 };
 onMounted(async () => {
-  await Promise.all([loadDicts(), loadDepts()]);
+  await loadDicts();
   await loadList();
   await loadStats();
 });

@@ -22,7 +22,7 @@
         </el-descriptions-item>
         <el-descriptions-item label="转科类型">{{ text(detail.transferTypeText) }}</el-descriptions-item>
         <el-descriptions-item label="已住院天数">
-          {{ detail.hospitalDays === undefined || detail.hospitalDays === null ? '—' : detail.hospitalDays + ' 天' }}
+          {{ detail.hospitalDays === undefined || detail.hospitalDays === null ? '' : detail.hospitalDays + ' 天' }}
         </el-descriptions-item>
         <el-descriptions-item label="发起医生">{{ text(detail.applyDoctorName) }}</el-descriptions-item>
         <el-descriptions-item label="发起时间">{{ fmt(detail.applyTime) }}</el-descriptions-item>

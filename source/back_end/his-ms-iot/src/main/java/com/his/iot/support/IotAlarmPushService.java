@@ -6,6 +6,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.io.IOException;
+import java.util.Collection;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -31,13 +32,37 @@ public class IotAlarmPushService {
     private final Map<Long, CopyOnWriteArrayList<SseEmitter>> emitters = new ConcurrentHashMap<>();
 
     /**
-     * 注册一个科室告警连接。必须在请求线程调用（deptId 已在 service 层过完权限）。
+     * 注册一组科室告警连接（子树聚合：父科室订阅时挂到自身 + 后代每个科室 key 上）。
+     * 必须在请求线程调用（科室集合已在 service 层过完权限与授权交集）。
      */
-    public SseEmitter register(Long deptId) {
+    public SseEmitter register(Collection<Long> deptIds) {
         SseEmitter emitter = new SseEmitter(TIMEOUT_MILLIS);
-        CopyOnWriteArrayList<SseEmitter> list = emitters.computeIfAbsent(deptId, k -> new CopyOnWriteArrayList<>());
-        list.add(emitter);
-        Runnable cleanup = () -> list.remove(emitter);
+        if (deptIds != null) {
+            for (Long deptId : deptIds) {
+                if (deptId == null) {
+                    continue;
+                }
+                CopyOnWriteArrayList<SseEmitter> list = emitters.computeIfAbsent(deptId, k -> new CopyOnWriteArrayList<>());
+                list.add(emitter);
+            }
+        }
+        Runnable cleanup = () -> {
+            if (deptIds == null) {
+                return;
+            }
+            for (Long deptId : deptIds) {
+                if (deptId == null) {
+                    continue;
+                }
+                CopyOnWriteArrayList<SseEmitter> list = emitters.get(deptId);
+                if (list != null) {
+                    list.remove(emitter);
+                    if (list.isEmpty()) {
+                        emitters.remove(deptId, list);
+                    }
+                }
+            }
+        };
         emitter.onCompletion(cleanup);
         emitter.onTimeout(cleanup);
         emitter.onError(e -> cleanup.run());

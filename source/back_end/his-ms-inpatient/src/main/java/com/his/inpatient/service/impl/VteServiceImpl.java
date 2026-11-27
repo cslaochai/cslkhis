@@ -136,7 +136,7 @@ public class VteServiceImpl extends ServiceImpl<BizVteEventMapper, BizVteEvent> 
         List<String> codes = VteRules.codesOf(row.getRiskLevel());
         row.setRecommendCodes(codes);
         row.setRecommendCount(codes.size());
-        row.setRecommendText(codes.stream().map(VteRules::measureCodeText).reduce((a, b) -> a + " + " + b).orElse("-"));
+        row.setRecommendText(codes.stream().map(VteRules::measureCodeText).reduce((a, b) -> a + " + " + b).orElse(""));
         row.setMeasures(states);
         row.setDoneCount(row.getDoneCount() == null ? 0 : row.getDoneCount());
         if (row.getDoneCount() == 0) {

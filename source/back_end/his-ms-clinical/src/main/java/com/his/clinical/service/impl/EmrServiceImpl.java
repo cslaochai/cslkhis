@@ -12,6 +12,7 @@ import com.his.clinical.event.ClinicSubmittedEvent;
 import com.his.clinical.mapper.*;
 import com.his.clinical.service.AiDraftDiffService;
 import com.his.clinical.service.EmrService;
+import com.his.clinical.service.EmrHandoverService;
 import com.his.clinical.service.EmrSignatureService;
 import com.his.clinical.service.QualityControlService;
 import com.his.clinical.support.QcOperator;
@@ -86,6 +87,8 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
     private final SignCertFacadeService signCertFacadeService;
     private final SystemFacadeService systemFacadeService;
     private final SysMessageService sysMessageService;
+    private final EmrHandoverService emrHandoverService;
+    private final com.his.clinical.service.EmrCorrectionService emrCorrectionService;
     private final ApplicationEventPublisher eventPublisher;
     private final UploadProperties uploadProperties;
 
@@ -198,6 +201,34 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
 
         Page<BizMedicalRecord> page = this.page(new Page<>(queryDTO.getPageNum(), queryDTO.getPageSize()), wrapper);
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(), toVoList(page.getRecords()));
+    }
+
+    @Override
+    public List<BizMedicalRecordVO> listMyDrafts() {
+        CurrentUser currentUser = UserUtils.getCurrentUser();
+        List<Long> receivingRecordIds = emrHandoverService.listPendingReceivingRecordIds(currentUser.getEmployeeId());
+        LambdaQueryWrapper<BizMedicalRecord> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(BizMedicalRecord::getRecordStatus, RecordStatusEnum.DRAFT.getCode())
+                .and(w -> w.eq(BizMedicalRecord::getDoctorId, currentUser.getEmployeeId())
+                        .in(!receivingRecordIds.isEmpty(), BizMedicalRecord::getId, receivingRecordIds))
+                .orderByDesc(BizMedicalRecord::getVisitDate)
+                .orderByDesc(BizMedicalRecord::getId);
+        List<BizMedicalRecord> records = this.list(wrapper);
+        // 标记哪些是移交我代补的草稿：经治医生仍是原接诊人，承接人只获得续写权
+        List<BizEmrDraftHandover> pendingRows = emrHandoverService.listPendingByRecordIds(
+                records.stream().map(BizMedicalRecord::getId).toList());
+        Map<Long, BizEmrDraftHandover> pendingByRecord = pendingRows.stream()
+                .collect(Collectors.toMap(BizEmrDraftHandover::getRecordId, h -> h, (a, b) -> a));
+        List<BizMedicalRecordVO> voList = toVoList(records);
+        for (BizMedicalRecordVO vo : voList) {
+            BizEmrDraftHandover handover = pendingByRecord.get(vo.getId());
+            if (handover != null) {
+                vo.setHandoverFlag(Boolean.TRUE);
+                vo.setHandoverReceiverName(handover.getReceiverName());
+                vo.setHandoverReasonText(EmrHandoverReasonEnum.getLabel(handover.getReason()));
+            }
+        }
+        return voList;
     }
 
     @Override
@@ -1474,21 +1505,45 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
                 effectiveRecordId = existing.getId();
             }
         }
+        com.his.clinical.entity.BizEmrCorrectionRequest approvedCorrection = null;
         if (effectiveRecordId != null) {
             bizMedicalRecord = this.getById(effectiveRecordId);
             if (bizMedicalRecord == null) {
                 throw new BusinessException("病历不存在");
             }
-            if (bizMedicalRecord.getRecordStatus() == 2) {
-                throw new BusinessException("病历已提交，不可修改");
+            // 已提交/归档病历原则上只读；有已批准待修改的更正申请才授权回写（审批流见 EmrCorrectionService）。
+            Integer existingRecordStatus = bizMedicalRecord.getRecordStatus();
+            boolean lockedByState = Objects.equals(existingRecordStatus, RecordStatusEnum.SUBMITTED.getCode())
+                    || Objects.equals(existingRecordStatus, RecordStatusEnum.ARCHIVED.getCode());
+            if (lockedByState) {
+                approvedCorrection = emrCorrectionService.findApprovedByRecord(effectiveRecordId);
+                if (approvedCorrection == null) {
+                    throw new BusinessException("病历已提交/归档，不可直接修改；如确需更正，请先发起更正申请并经审批批准");
+                }
             }
             // 签名即锁定（P5.5）：锁挂在内容上。recordStatus 只拦得住"已提交"，
             // 拦不住"已签名但状态被别的入口改回去"这类情况，两道都要有。
-            if (java.util.Objects.equals(ObjectSignStatusEnum.SIGNED.getCode(), bizMedicalRecord.getSignStatus())) {
+            // 已批准的更正申请本身就是解除锁定的授权，不再被签名锁二次拦下。
+            if (approvedCorrection == null
+                    && java.util.Objects.equals(ObjectSignStatusEnum.SIGNED.getCode(), bizMedicalRecord.getSignStatus())) {
                 throw new BusinessException("病历 " + bizMedicalRecord.getRecordNo()
                         + " 已由 " + bizMedicalRecord.getDoctorName() + " 签名（"
                         + bizMedicalRecord.getSignedTime() + "），签名即锁定，不允许修改；"
                         + "如确需更正，请先在「签名验签」作废该签名（作废会留痕并解除锁定）");
+            }
+            // 续写权限闸：经治医生本人、该草稿待代补移交单的承接人，或已批准更正申请的申请人/原经治；其余身份不可编辑。
+            // 岗位转科/跨日不影响本人补写；离岗移交后由承接人凭移交单获得续写权；归档更正凭批准单获得回写权。
+            Long currentEmployeeId = currentUser.getEmployeeId();
+            boolean isOwner = Objects.equals(bizMedicalRecord.getDoctorId(), currentEmployeeId);
+            BizEmrDraftHandover pendingHandover = isOwner
+                    ? null : emrHandoverService.findPendingByRecord(effectiveRecordId);
+            boolean isCorrectionAuthorized = approvedCorrection != null && (
+                    Objects.equals(approvedCorrection.getApplicantId(), currentEmployeeId)
+                            || Objects.equals(approvedCorrection.getOriginalDoctorId(), currentEmployeeId));
+            boolean handoverAuthorized = pendingHandover != null
+                    && Objects.equals(pendingHandover.getReceiverId(), currentEmployeeId);
+            if (!isOwner && !handoverAuthorized && !isCorrectionAuthorized) {
+                throw new BusinessException("无权修改该病历：仅经治医生、移交承接人或已批准更正申请人可继续补写");
             }
         } else {
             // 新增病历
@@ -1580,6 +1635,11 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
             this.save(bizMedicalRecord);
         }
         Long recordId = bizMedicalRecord.getId();
+
+        // 已批准更正申请的回写：病历落库后闭环申请单，记实际修改人与时间并写病历日志留痕。
+        if (approvedCorrection != null) {
+            emrCorrectionService.markCompleted(recordId, currentUser.getEmployeeId(), currentUser.getRealName());
+        }
 
         // AI 草稿留痕（G-10）：前端只在「本次填过草稿」时携带原文，保存成功后即清空，
         // 所以正常不会重复落行；医生一字未改也落（changed=0，「模型零修改率」同样是训练信号）。
@@ -2454,10 +2514,10 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
         infoCell.addElement(title);
         infoCell.addElement(createParagraph("姓名：" + record.getPatientName()
                 + "    性别：" + SysGenderEnum.getLabel(record.getGender(), "未知")
-                + "    年龄：" + (record.getAge() != null ? record.getAge() + "岁" : "-"), normalFont));
+                + "    年龄：" + (record.getAge() != null ? record.getAge() + "岁" : ""), normalFont));
         infoCell.addElement(createParagraph("科别：" + record.getDeptName()
                 + "    病历号：" + record.getRecordNo(), normalFont));
-        infoCell.addElement(createParagraph("临床诊断：" + (TextUtil.hasText(record.getDiagnosisName()) ? record.getDiagnosisName() : "-"), normalFont));
+        infoCell.addElement(createParagraph("临床诊断：" + (TextUtil.hasText(record.getDiagnosisName()) ? record.getDiagnosisName() : ""), normalFont));
         infoCell.addElement(createParagraph("开具日期：" + record.getVisitDate(), normalFont));
         headTable.addCell(infoCell);
         document.add(headTable);
@@ -2482,11 +2542,11 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
             for (BizPrescriptionDetail d : rxDetails) {
                 addCell(table, nullToDash(d.getDrugName()), normalFont);
                 addCell(table, nullToDash(d.getSpecification()), normalFont);
-                addCell(table, (d.getQuantity() != null ? d.getQuantity().toPlainString() : "-")
+                addCell(table, (d.getQuantity() != null ? d.getQuantity().toPlainString() : "")
                         + (TextUtil.hasText(d.getUnit()) ? " " + d.getUnit() : ""), normalFont);
                 addCell(table, nullToDash(d.getUsageDosage()), normalFont);
                 addCell(table, nullToDash(d.getFrequency()), normalFont);
-                addCell(table, d.getDuration() != null ? String.valueOf(d.getDuration()) : "-", normalFont);
+                addCell(table, d.getDuration() != null ? String.valueOf(d.getDuration()) : "", normalFont);
             }
             document.add(table);
             document.add(createParagraph(" ", normalFont));
@@ -2530,7 +2590,7 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
     }
 
     private String nullToDash(String value) {
-        return TextUtil.hasText(value) ? value : "-";
+        return TextUtil.hasText(value) ? value : "";
     }
 
     /**
@@ -2597,6 +2657,22 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
                 qualityControlService.executeQcBySystem(qcDto);
             } catch (Exception ex) {
                 log.error("[结诊收尾] 规则质控失败 recordNo={}", record.getRecordNo(), ex);
+            }
+
+            // ③ 闭环「病历草稿超时未提交」催办：病历已提交，名下待办置为已处理
+            try {
+                sysMessageService.closeTodoByBiz(BizTypeEnum.EMR_DRAFT_OVERDUE.getType(), recordId, 1);
+            } catch (Exception ex) {
+                log.warn("[结诊收尾] 关闭草稿超时催办待办失败 recordNo={}", record.getRecordNo(), ex);
+            }
+
+            // ④ 闭环「病历草稿移交代补」：代补提交后移交单置完成并关闭承接人待办；无移交单静默返回
+            try {
+                emrHandoverService.markCompleted(recordId,
+                        operator != null ? operator.getEmployeeId() : null,
+                        operator != null ? operator.getName() : null);
+            } catch (Exception ex) {
+                log.warn("[结诊收尾] 闭环移交代补单失败 recordNo={}", record.getRecordNo(), ex);
             }
         } finally {
             if (bound) {

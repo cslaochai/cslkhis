@@ -11,15 +11,15 @@
         <span v-if="row.greenChannel" class="wb-green">{{ row.greenChannel }}</span>
       </div>
       <div class="wb-body">
-        <div class="wb-name">{{ row.patientName || '—' }}</div>
-        <div class="wb-sub">{{ genderText }} · {{ row.age != null ? row.age + '岁' : '—' }}</div>
+        <div class="wb-name">{{ row.patientName || '' }}</div>
+        <div class="wb-sub">{{ genderText }} · {{ row.age != null ? row.age + '岁' : '' }}</div>
         <div class="wb-row">
           <span class="wb-k">急诊号</span>
-          <span class="wb-v wb-mono">{{ row.emergencyNo || '—' }}</span>
+          <span class="wb-v wb-mono">{{ row.emergencyNo || '' }}</span>
         </div>
         <div class="wb-row">
           <span class="wb-k">科室</span>
-          <span class="wb-v">{{ row.deptName || '—' }}</span>
+          <span class="wb-v">{{ row.deptName || '' }}</span>
         </div>
         <div class="wb-row">
           <span class="wb-k">血型</span>
@@ -72,7 +72,7 @@ const levelLabel = computed(
 const genderText = computed(() => patientGenderText(props.row.gender))
 const createTimeText = computed(() => {
   const t = props.row.createTime || props.row.admissionTime || ''
-  return (String(t).replace('T', ' ').slice(0, 19)) || '—'
+  return (String(t).replace('T', ' ').slice(0, 19)) || ''
 })
 
 const loadPatient = async () => {

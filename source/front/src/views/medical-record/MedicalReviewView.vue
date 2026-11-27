@@ -44,7 +44,7 @@
         <el-table-column label="患者" prop="patientName" width="90"/>
         <el-table-column align="center" label="性别/年龄" width="110">
           <template #default="{ row }">
-            <span class="text-xs text-slate-600">{{ patientGenderText(row.gender) }} {{ row.age ?? '-' }}岁</span>
+            <span class="text-xs text-slate-600">{{ patientGenderText(row.gender) }} {{ row.age ?? '' }}岁</span>
           </template>
         </el-table-column>
         <el-table-column label="科室" prop="deptName" width="120"/>
@@ -52,12 +52,12 @@
         <el-table-column label="就诊日期" prop="visitDate" width="120"/>
         <el-table-column label="诊断" min-width="160" show-overflow-tooltip>
           <template #default="{ row }">
-            <span>{{ row.diagnosisName || row.diagnosis || '-' }}</span>
+            <span>{{ row.diagnosisName || row.diagnosis || '' }}</span>
           </template>
         </el-table-column>
         <el-table-column label="提交时间" width="160">
           <template #default="{ row }">
-            <span class="text-xs text-slate-500">{{ row.submitTime || '-' }}</span>
+            <span class="text-xs text-slate-500">{{ row.submitTime || '' }}</span>
           </template>
         </el-table-column>
         <el-table-column label="已等待" width="110">
@@ -131,13 +131,13 @@
         <div class="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 p-4">
           <div class="flex flex-wrap items-center gap-3 text-sm">
             <span class="text-slate-400">患者号：<span
-                class="font-mono text-slate-700">{{ selectedRecord?.patientNo || '-' }}</span></span>
-            <span class="text-slate-400">科室：<span class="text-slate-700">{{ selectedRecord?.deptName || '-' }}</span></span>
+                class="font-mono text-slate-700">{{ selectedRecord?.patientNo || '' }}</span></span>
+            <span class="text-slate-400">科室：<span class="text-slate-700">{{ selectedRecord?.deptName || '' }}</span></span>
             <span class="text-slate-400">医生：<span class="text-slate-700">{{
-                selectedRecord?.doctorName || '-'
+                selectedRecord?.doctorName || ''
               }}</span></span>
             <span class="text-slate-400">就诊日期：<span class="text-slate-700">{{
-                selectedRecord?.visitDate || '-'
+                selectedRecord?.visitDate || ''
               }}</span></span>
           </div>
           <div v-if="selectedRecord?.reviewStatus === 1" class="flex shrink-0 gap-2">
@@ -155,11 +155,11 @@
           <div class="grid grid-cols-2 gap-4">
             <div class="rounded-lg border border-slate-200 p-4">
               <h4 class="mb-2 text-sm font-medium text-slate-700">主诉</h4>
-              <p class="text-sm text-slate-600">{{ detailData.record.chiefComplaint || '-' }}</p>
+              <p class="text-sm text-slate-600">{{ detailData.record.chiefComplaint || '' }}</p>
             </div>
             <div class="rounded-lg border border-slate-200 p-4">
               <h4 class="mb-2 text-sm font-medium text-slate-700">现病史</h4>
-              <p class="text-sm text-slate-600">{{ detailData.record.presentIllness || '-' }}</p>
+              <p class="text-sm text-slate-600">{{ detailData.record.presentIllness || '' }}</p>
             </div>
           </div>
           <div class="rounded-lg border-2 border-red-200 bg-red-50 p-4">
@@ -170,10 +170,10 @@
             <div class="rounded-lg border border-slate-200 p-4">
               <h4 class="mb-2 text-sm font-medium text-slate-700">生命体征</h4>
               <div class="space-y-1 text-sm text-slate-600">
-                <div>体温：{{ detailData.record.temperature || '-' }}℃</div>
-                <div>脉搏：{{ detailData.record.pulse || '-' }}次/分</div>
-                <div>血压：{{ detailData.record.systolicPressure || '-' }}/{{
-                    detailData.record.diastolicPressure || '-'
+                <div>体温：{{ detailData.record.temperature || '' }}℃</div>
+                <div>脉搏：{{ detailData.record.pulse || '' }}次/分</div>
+                <div>血压：{{ detailData.record.systolicPressure || '' }}/{{
+                    detailData.record.diastolicPressure || ''
                   }}mmHg
                 </div>
               </div>
@@ -181,13 +181,13 @@
             <div class="rounded-lg border border-slate-200 p-4">
               <h4 class="mb-2 text-sm font-medium text-slate-700">诊断</h4>
               <p class="text-sm font-medium text-slate-900">
-                {{ detailData.record.diagnosisName || detailData.record.diagnosis || '-' }}</p>
+                {{ detailData.record.diagnosisName || detailData.record.diagnosis || '' }}</p>
               <p v-if="detailData.record.diagnosisCode" class="mt-1 font-mono text-xs text-slate-400">
                 编码：{{ detailData.record.diagnosisCode }}</p>
             </div>
             <div class="rounded-lg border border-slate-200 p-4">
               <h4 class="mb-2 text-sm font-medium text-slate-700">治疗方案</h4>
-              <p class="text-sm text-slate-600">{{ detailData.record.treatmentPlan || '-' }}</p>
+              <p class="text-sm text-slate-600">{{ detailData.record.treatmentPlan || '' }}</p>
             </div>
           </div>
 
@@ -198,10 +198,10 @@
               <div class="flex items-center justify-between">
                 <span class="font-mono text-sm font-medium text-slate-900">{{ p.prescriptionNo }}</span>
                 <span class="text-xs text-slate-400">{{
-                    p.createTime ? String(p.createTime).substring(0, 10) : '-'
+                    p.createTime ? String(p.createTime).substring(0, 10) : ''
                   }}</span>
               </div>
-              <div class="mt-1 text-xs text-slate-500">{{ p.diagnosis || '-' }} | {{ p.drugCount || 0 }}种药 |
+              <div class="mt-1 text-xs text-slate-500">{{ p.diagnosis || '' }} | {{ p.drugCount || 0 }}种药 |
                 ¥{{ p.totalAmount || 0 }}
               </div>
             </div>
@@ -217,7 +217,7 @@
               <div v-for="ins in detailData.inspectionApplies" :key="ins.id"
                    class="mb-1 rounded border border-slate-200 p-2 text-xs">
                 <span class="font-medium text-slate-900">{{ ins.inspectionItemName }}</span>
-                <span class="ml-2 text-slate-400">{{ ins.bodyPart || '-' }}</span>
+                <span class="ml-2 text-slate-400">{{ ins.bodyPart || '' }}</span>
               </div>
             </div>
             <div v-if="detailData.laboratoryApplies?.length">
@@ -225,7 +225,7 @@
               <div v-for="lab in detailData.laboratoryApplies" :key="lab.id"
                    class="mb-1 rounded border border-slate-200 p-2 text-xs">
                 <span class="font-medium text-slate-900">{{ lab.laboratoryItemName }}</span>
-                <span class="ml-2 text-slate-400">{{ lab.specimenType || '-' }}</span>
+                <span class="ml-2 text-slate-400">{{ lab.specimenType || '' }}</span>
               </div>
             </div>
           </div>
@@ -237,9 +237,9 @@
               class="rounded-lg border border-slate-200 p-4 text-sm"
           >
             <h4 class="mb-1 text-sm font-medium text-slate-700">审核意见</h4>
-            <p class="text-slate-600">{{ detailData.record.reviewRemark || '-' }}</p>
+            <p class="text-slate-600">{{ detailData.record.reviewRemark || '' }}</p>
             <p class="mt-1 text-xs text-slate-400">
-              {{ detailData.record.reviewBy || '-' }} · {{ detailData.record.reviewTime || '-' }}
+              {{ detailData.record.reviewBy || '' }} · {{ detailData.record.reviewTime || '' }}
             </p>
           </div>
         </div>
@@ -371,11 +371,11 @@ const handleReview = async (row, approved) => {
 const getReviewStatus = (row) => reviewMap[row.reviewStatus] || {label: '未知', type: 'info'};
 const getWaitDuration = (row) => {
   if (!row.submitTime)
-    return '-';
+    return '';
   const start = new Date(String(row.submitTime).replace(' ', 'T'));
   const minutes = Math.floor((Date.now() - start.getTime()) / 60000);
   if (Number.isNaN(minutes) || minutes < 0)
-    return '-';
+    return '';
   if (minutes < 60)
     return `${minutes}分钟`;
   if (minutes < 60 * 24)

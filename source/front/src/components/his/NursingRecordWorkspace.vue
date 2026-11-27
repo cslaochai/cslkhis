@@ -48,7 +48,7 @@
       <el-tab-pane label="三测单" name="sheet">
         <div class="mb-3 flex items-center gap-3">
           <span class="text-sm text-slate-600">
-            {{ sheet.patientName || '—' }} · 床 {{ sheet.bedNo || '—' }} · 数据点 {{ sheet.pointCount ?? 0 }}
+            {{ sheet.patientName || '' }} · 床 {{ sheet.bedNo || '' }} · 数据点 {{ sheet.pointCount ?? 0 }}
           </span>
           <el-button v-perm="'ipd:nurse:add'" :icon="DocumentChecked" class="!ml-auto" data-testid="g14-open-batch"
                      @click="openBatch">
@@ -94,13 +94,13 @@
 
         <el-table :data="sheet.points" border class="mt-3" data-testid="p2-sheet-table" style="width: 100%">
           <el-table-column label="日期" width="120">
-            <template #default="{ row }">{{ row.measureDate || '—' }}</template>
+            <template #default="{ row }">{{ row.measureDate || '' }}</template>
           </el-table-column>
           <el-table-column label="时点" width="90">
-            <template #default="{ row }">{{ row.measureClock || '—' }}</template>
+            <template #default="{ row }">{{ row.measureClock || '' }}</template>
           </el-table-column>
           <el-table-column label="班次" width="90">
-            <template #default="{ row }">{{ row.shiftText || '—' }}</template>
+            <template #default="{ row }">{{ row.shiftText || '' }}</template>
           </el-table-column>
           <el-table-column label="体温℃" width="90">
             <template #default="{ row }">
@@ -114,7 +114,7 @@
             <template #default="{ row }">{{ num(row.respiration) }}</template>
           </el-table-column>
           <el-table-column label="血压" width="110">
-            <template #default="{ row }">{{ row.bloodPressureText || '—' }}</template>
+            <template #default="{ row }">{{ row.bloodPressureText || '' }}</template>
           </el-table-column>
           <el-table-column label="大便" width="80">
             <template #default="{ row }">{{ num(row.stoolCount) }}</template>
@@ -123,7 +123,7 @@
             <template #default="{ row }">{{ num(row.urineVolume) }}</template>
           </el-table-column>
           <el-table-column label="记录护士" min-width="110">
-            <template #default="{ row }">{{ row.nurseName || '—' }}</template>
+            <template #default="{ row }">{{ row.nurseName || '' }}</template>
           </el-table-column>
           <template #empty>
             <div class="py-6 text-sm text-slate-400">暂无三测单数据</div>
@@ -167,9 +167,9 @@
               </div>
               <p class="mt-1 truncate text-[11px] text-slate-400">
                 {{
-                  latestByType[t.type].assessTime ? String(latestByType[t.type].assessTime).replace('T', ' ').slice(5, 16) : '—'
+                  latestByType[t.type].assessTime ? String(latestByType[t.type].assessTime).replace('T', ' ').slice(5, 16) : ''
                 }}
-                · {{ latestByType[t.type].assessNurseName || '—' }}
+                · {{ latestByType[t.type].assessNurseName || '' }}
               </p>
             </template>
             <template v-else>
@@ -181,7 +181,7 @@
 
         <div class="mb-3 flex items-center gap-3">
           <span class="text-sm text-slate-600">
-            {{ sheet.patientName || '—' }} 的评估流水 · 风险等级由后端按分数段判定（NRS 3 / VTE Caprini 4 / 管路滑脱 5）
+            {{ sheet.patientName || '' }} 的评估流水 · 风险等级由后端按分数段判定（NRS 3 / VTE Caprini 4 / 管路滑脱 5）
           </span>
         </div>
         <el-table v-loading="assessLoading" :data="assessRows" border data-testid="g14-assess-table"
@@ -207,13 +207,13 @@
           </el-table-column>
           <el-table-column label="评估时间" width="160">
             <template #default="{ row }">{{
-                row.assessTime ? String(row.assessTime).replace('T', ' ').slice(0, 16) : '—'
+                row.assessTime ? String(row.assessTime).replace('T', ' ').slice(0, 16) : ''
               }}
             </template>
           </el-table-column>
           <el-table-column label="评估护士" prop="assessNurseName" width="110"/>
           <el-table-column label="备注" min-width="160">
-            <template #default="{ row }">{{ row.remark || '—' }}</template>
+            <template #default="{ row }">{{ row.remark || '' }}</template>
           </el-table-column>
           <template #empty>
             <div class="py-6 text-sm text-slate-400">该患者暂无评估单，点上方卡片「去评估」</div>
@@ -322,7 +322,7 @@
           </el-table-column>
           <el-table-column label="测量时间" width="160">
             <template #default="{ row }">
-              {{ row.measureTime ? String(row.measureTime).replace('T', ' ').slice(0, 16) : '—' }}
+              {{ row.measureTime ? String(row.measureTime).replace('T', ' ').slice(0, 16) : '' }}
             </template>
           </el-table-column>
           <el-table-column label="体温℃" width="80">
@@ -332,14 +332,14 @@
             <template #default="{ row }">{{ num(row.pulse) }} / {{ num(row.respiration) }}</template>
           </el-table-column>
           <el-table-column label="血压" width="100">
-            <template #default="{ row }">{{ row.bloodPressureText || '—' }}</template>
+            <template #default="{ row }">{{ row.bloodPressureText || '' }}</template>
           </el-table-column>
           <el-table-column label="护理级别" width="110">
-            <template #default="{ row }">{{ row.nursingLevelText || '—' }}</template>
+            <template #default="{ row }">{{ row.nursingLevelText || '' }}</template>
           </el-table-column>
           <el-table-column label="护理正文" min-width="200">
             <template #default="{ row }">
-              <span class="text-xs text-slate-600">{{ row.nursingContent || '—' }}</span>
+              <span class="text-xs text-slate-600">{{ row.nursingContent || '' }}</span>
             </template>
           </el-table-column>
           <el-table-column label="记录护士" prop="nurseName" width="110"/>
@@ -591,7 +591,7 @@
           <el-col :span="14">
             <el-form-item label="合计/风险">
               <span class="text-lg font-bold text-slate-800" data-testid="n-assess-total">{{
-                  specialTotal ?? '—'
+                  specialTotal ?? ''
                 }}</span>
               <el-tag v-if="specialRiskPreview" :type="(RISK_LEVEL_TAG[specialRiskPreview] || 'info')"
                       class="ml-2" data-testid="n-assess-risk">
@@ -735,8 +735,8 @@ import {
 const admissions = ref([]);
 const admissionId = ref('');
 const typeOptions = ref([]);
-const num = (v) => (v === null || v === undefined || v === '' ? '—' : String(v));
-const patientLabel = (a) => `${a.bedNo || '—'} ${a.patientName || '—'}（${a.wardName || a.deptName || '—'}）`;
+const num = (v) => (v === null || v === undefined || v === '' ? '' : String(v));
+const patientLabel = (a) => `${a.bedNo || ''} ${a.patientName || ''}（${a.wardName || a.deptName || ''}）`;
 const loadAdmissions = async () => {
   try {
     const res = await getInpatientListPage({admitStatus: 1, pageNum: 1, pageSize: 200});

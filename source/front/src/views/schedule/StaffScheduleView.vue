@@ -275,10 +275,10 @@
               <template #default="{ row }">{{ row.actionTypeText || scheduleChangeTypeText(row.actionType) }}</template>
             </el-table-column>
             <el-table-column label="值班人变化" min-width="150">
-              <template #default="{ row }">{{ row.fromEmployeeName || '—' }}<span v-if="row.toEmployeeName"> → {{ row.toEmployeeName }}</span></template>
+              <template #default="{ row }">{{ row.fromEmployeeName || '' }}<span v-if="row.toEmployeeName"> → {{ row.toEmployeeName }}</span></template>
             </el-table-column>
             <el-table-column label="班次变化" min-width="150">
-              <template #default="{ row }">{{ row.fromShiftName || '—' }}<span v-if="row.toShiftName"> → {{ row.toShiftName }}</span></template>
+              <template #default="{ row }">{{ row.fromShiftName || '' }}<span v-if="row.toShiftName"> → {{ row.toShiftName }}</span></template>
             </el-table-column>
             <el-table-column label="号数" prop="amount" width="70"/>
             <el-table-column label="原因" prop="reason" min-width="160" show-overflow-tooltip/>
@@ -328,7 +328,7 @@
               <template #default="{ row }">{{ row.shiftName || '全部班次' }}</template>
             </el-table-column>
             <el-table-column label="员工" width="130">
-              <template #default="{ row }">{{ row.employeeName || '—' }}<span v-if="row.staffTypeName" class="text-gray-400">（{{ row.staffTypeName }}）</span></template>
+              <template #default="{ row }">{{ row.employeeName || '' }}<span v-if="row.staffTypeName" class="text-gray-400">（{{ row.staffTypeName }}）</span></template>
             </el-table-column>
             <el-table-column label="实际/标准" width="90">
               <template #default="{ row }">

@@ -220,6 +220,8 @@ public class IotDeviceRentalServiceImpl extends ServiceImpl<IotDeviceRentalOrder
         List<IotDeviceRentalItem> items = itemsOf(order.getId());
         Set<String> activeBindDevices = activeBindDeviceNos();
         Set<String> activeRentalDevices = activeRentalDeviceNos();
+        /** 本单刚绑上去的设备，换机解绑时不能把自己解掉 */
+        Set<String> issuedNow = new HashSet<>();
         for (IotDeviceRentalItem item : items) {
             if (!Objects.equals(item.getStatus(), DeviceRentalItemStatusEnum.PENDING_ISSUE.getCode())) {
                 continue;
@@ -242,6 +244,9 @@ public class IotDeviceRentalServiceImpl extends ServiceImpl<IotDeviceRentalOrder
                 item.setDeviceNo(device.getDeviceNo());
                 item.setDeviceType(device.getDeviceType());
                 if (order.getAdmissionId() != null) {
+                    // 换机：同一患者、同类型设备还在用（旧泵/旧监护仪）→ 先把旧机解绑。
+                    // 旧机由护士拔下送充电/维修，不单独建归还单；不解的话一张床上会同时挂两台。
+                    releaseSameTypeDevices(order, device, issuedNow);
                     IotDeviceBindDTO bind = new IotDeviceBindDTO();
                     bind.setDeviceNo(device.getDeviceNo());
                     bind.setDeviceType(device.getDeviceType());
@@ -249,6 +254,7 @@ public class IotDeviceRentalServiceImpl extends ServiceImpl<IotDeviceRentalOrder
                     bind.setBindSource(com.his.common.enums.IotBindSourceEnum.DISPATCH.getCode());
                     bind.setRemark("设备共享调配 " + order.getOrderNo());
                     item.setBindId(iotDeviceBindService.bindDevice(bind));
+                    issuedNow.add(device.getDeviceNo());
                 }
                 activeRentalDevices.add(device.getDeviceNo());
                 activeBindDevices.add(device.getDeviceNo());
@@ -319,6 +325,34 @@ public class IotDeviceRentalServiceImpl extends ServiceImpl<IotDeviceRentalOrder
     }
 
     // ---------------- 内部 ----------------
+
+    /**
+     * 换机解绑：把同一患者在用的同类型旧设备解掉（旧泵拔管送充电桩）。
+     * 只动"同患者 + 同类型 + 不是本单刚发的那台"，不影响别的患者，也不会误伤本单的第二台。
+     */
+    private void releaseSameTypeDevices(IotDeviceRentalOrder order, IotDevice device, Set<String> issuedNow) {
+        String deviceType = device.getDeviceType();
+        if (deviceType == null || deviceType.isBlank() || order.getAdmissionId() == null) {
+            return;
+        }
+        IotBindQueryDTO query = new IotBindQueryDTO();
+        query.setDeviceType(deviceType);
+        for (IotDeviceBindVO old : iotDeviceBindService.listActiveBinds(query)) {
+            if (old.getAdmissionId() == null || !Objects.equals(old.getAdmissionId(), order.getAdmissionId())) {
+                continue;
+            }
+            if (old.getDeviceNo() == null || old.getDeviceNo().equals(device.getDeviceNo())) {
+                continue;
+            }
+            if (issuedNow.contains(old.getDeviceNo())) {
+                continue;
+            }
+            IotDeviceUnbindDTO unbind = new IotDeviceUnbindDTO();
+            unbind.setDeviceNo(old.getDeviceNo());
+            unbind.setReason("换机下机：共享调配 " + order.getOrderNo());
+            iotDeviceBindService.unbindDevice(unbind);
+        }
+    }
 
     private CurrentUser requireUser() {
         CurrentUser user = UserUtils.getCurrentUser();

@@ -8,14 +8,14 @@
             <el-tag :type="statusTagType(detail.status)" size="small">{{ detail.statusText }}</el-tag>
           </el-descriptions-item>
           <el-descriptions-item label="值班">{{ detail.dutyDate }} {{ detail.shiftTypeText }}</el-descriptions-item>
-          <el-descriptions-item label="呼叫科室">{{ detail.deptName || '—' }}</el-descriptions-item>
+          <el-descriptions-item label="呼叫科室">{{ detail.deptName || '' }}</el-descriptions-item>
           <el-descriptions-item label="被叫层级">{{ detail.targetLevelText }}</el-descriptions-item>
           <el-descriptions-item label="被叫值班人">
-            {{ detail.targetEmpName || '—' }}
+            {{ detail.targetEmpName || '' }}
             <span v-if="detail.targetPhone" class="ml-2 text-xs text-gray-500">{{ detail.targetPhone }}</span>
           </el-descriptions-item>
-          <el-descriptions-item label="患者">{{ detail.patientName || '—' }}</el-descriptions-item>
-          <el-descriptions-item label="患者位置">{{ detail.patientLocation || '—' }}</el-descriptions-item>
+          <el-descriptions-item label="患者">{{ detail.patientName || '' }}</el-descriptions-item>
+          <el-descriptions-item label="患者位置">{{ detail.patientLocation || '' }}</el-descriptions-item>
           <el-descriptions-item label="呼叫时间">{{ detail.callTime }}</el-descriptions-item>
           <el-descriptions-item label="到岗时间">{{ detail.arriveTime || '未到岗' }}</el-descriptions-item>
           <el-descriptions-item v-if="detail.escalateTime" label="升级时间">

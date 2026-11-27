@@ -94,7 +94,7 @@
             </div>
             <div class="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-400">
               <span v-if="cdrPatient">
-                档案完整度 {{ cdrPatient.completeRate ?? '—' }}%
+                档案完整度 {{ cdrPatient.completeRate ?? '' }}%
                 <template v-if="(cdrPatient.missingFields || []).length">
                   （缺 {{ cdrPatient.missingFields.join('、') }}）
                 </template>
@@ -111,7 +111,7 @@
       <div v-if="summary" class="patient-detail-fixed mb-4 grid grid-cols-3 gap-3 lg:grid-cols-6">
         <div class="rounded-lg border border-slate-200 p-3">
           <p class="text-xs text-slate-400">就诊次</p>
-          <p class="text-lg font-semibold text-slate-900">{{ summary.visitCount ?? '—' }}</p>
+          <p class="text-lg font-semibold text-slate-900">{{ summary.visitCount ?? '' }}</p>
           <p class="text-[11px] text-slate-400">
             门诊 {{ summary.outpatientCount ?? 0 }} / 住院 {{ summary.inpatientCount ?? 0 }} / 急诊
             {{ summary.emergencyCount ?? 0 }}
@@ -543,7 +543,7 @@ const reloadAll = () => load()
 /* ---------- 头部身份卡：优先用主档详情，回落到列表行数据 ---------- */
 const headPatient = computed(() => detail.value || props.patient || {})
 
-const headName = computed(() => headPatient.value.patientName || '—')
+const headName = computed(() => headPatient.value.patientName || '')
 
 // 头像：显示姓名首字（此前放的是性别符号 ♂/♀，那是「身份属性」不是「头像」，
 // 而且旁边一行已经写了「男 · 38岁」，性别重复出现两次还占掉了唯一能放姓名缩写的位置）
@@ -696,7 +696,7 @@ const basicGroups = computed(() => {
         {label: '医保卡号', value: freeText(d.medicalInsuranceNoMasked)},
         {label: '账户余额', value: moneyText(d.balance)},
         {label: '累计消费', value: moneyText(d.totalExpense)},
-        {label: '就诊次数', value: d.visitCount === null || d.visitCount === undefined ? '—' : `${d.visitCount} 次`},
+        {label: '就诊次数', value: d.visitCount === null || d.visitCount === undefined ? '' : `${d.visitCount} 次`},
         {label: '最近就诊', value: freeText(d.lastVisitTime)},
         {label: '档案状态', value: patientStatusText(d.status)},
       ],

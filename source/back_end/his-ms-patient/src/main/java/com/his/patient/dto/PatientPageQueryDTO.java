@@ -1,6 +1,7 @@
 package com.his.patient.dto;
 
 import com.his.common.base.PageParam;
+import jakarta.validation.constraints.Pattern;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
@@ -14,6 +15,32 @@ public class PatientPageQueryDTO extends PageParam {
      * 患者姓名（模糊查询）
      */
     private String patientName;
+    /**
+     * 身份证号（模糊查询，常用输入末 4 位）
+     */
+    private String idCard;
+    /**
+     * 性别（1-男 2-女 9-未知，精确匹配）
+     */
+    private Integer gender;
+    /**
+     * 婚姻状况（0-未婚 1-已婚 2-离异 3-丧偶，精确匹配）
+     */
+    private Integer maritalStatus;
+    /**
+     * 档案状态（0-停用 1-启用，精确匹配）
+     */
+    private Integer status;
+    /**
+     * 建档日期起（含当天 00:00:00）
+     */
+    @Pattern(regexp = "^\\d{4}-\\d{2}-\\d{2}$", message = "建档日期格式应为 yyyy-MM-dd")
+    private String createDateStart;
+    /**
+     * 建档日期止（含当天 23:59:59）
+     */
+    @Pattern(regexp = "^\\d{4}-\\d{2}-\\d{2}$", message = "建档日期格式应为 yyyy-MM-dd")
+    private String createDateEnd;
     /**
      * 联系电话（模糊查询）
      */

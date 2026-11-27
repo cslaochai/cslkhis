@@ -61,7 +61,7 @@ const visible = computed({
   set: (v) => emit('update:modelValue', v),
 })
 
-const fmtTime = (t) => (t ? String(t).replace('T', ' ').slice(0, 16) : '—')
+const fmtTime = (t) => (t ? String(t).replace('T', ' ').slice(0, 16) : '')
 
 const detail = ref({})
 const detailCard = () => detail.value.card || {}

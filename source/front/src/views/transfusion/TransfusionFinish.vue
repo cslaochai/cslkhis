@@ -69,7 +69,7 @@
     </div>
     <template #footer>
       <el-button
-          v-perm="'medtech:transfusion:edit'"
+          v-perm="'medtech:transfusion:execute'"
           :loading="finishSubmitting"
           data-testid="p4-tf-finish-submit"
           type="primary"
@@ -99,8 +99,8 @@ const visible = computed({
   set: (v) => emit('update:modelValue', v),
 });
 
-const fmt = (v) => (v ? String(v).replace('T', ' ') : '—');
-const text = (v) => (v === null || v === undefined || v === '' ? '—' : String(v));
+const fmt = (v) => (v ? String(v).replace('T', ' ') : '');
+const text = (v) => (v === null || v === undefined || v === '' ? '' : String(v));
 
 const finishSubmitting = ref(false);
 const finishForm = reactive({

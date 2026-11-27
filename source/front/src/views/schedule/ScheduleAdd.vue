@@ -5,10 +5,8 @@
     <el-form :model="formData" label-position="left" label-width="96px">
       <div class="grid grid-cols-2 gap-4">
         <el-form-item label="科室" required>
-          <el-select v-model="formData.deptId" class="w-full" filterable placeholder="输入科室名称搜索"
-                     @change="handleDeptChange">
-            <el-option v-for="d in departments" :key="d.id" :label="d.deptName" :value="d.id"/>
-          </el-select>
+          <DeptTreeSelect v-model="formData.deptId" mode="LEAF" dept-type="1" class="w-full"
+                          placeholder="输入科室名称搜索" @change="handleDeptChange"/>
         </el-form-item>
         <el-form-item label="医生人员" required>
           <el-select v-model="formData.doctorIds" :disabled="!formData.deptId" :max-collapse-tags="1"
@@ -215,6 +213,8 @@ import {DUTY_STATUS_OPTIONS, DUTY_STATUS_TEXT} from '@/lib/staffSchedule';
 import {batchDays, fmtISO} from '@/lib/scheduleDate';
 import {getTitleLabel} from '@/lib/scheduleTitle';
 import {DIAGNOSIS_TIER_LIST, tierAmount, tierDefaultOf} from '@/lib/diagnosisTier';
+import {loadDeptTreeOptions, flattenDeptTree} from '@/lib/deptOptions';
+import DeptTreeSelect from '@/components/his/DeptTreeSelect.vue';
 
 /**
  * 新增排班（批量：人员多选 × 日期区间，人 × 日一次请求）。
@@ -232,7 +232,6 @@ const props = defineProps({
   modelValue: {type: Boolean, default: false},
   // 打开时预填：面板空格子点「加排班」带进来的 科室/人员/日期
   seed: {type: Object, default: null},
-  departments: {type: Array, default: () => []},
   titleMap: {type: Object, default: () => ({})},
 });
 const emit = defineEmits(['update:modelValue', 'saved']);
@@ -245,6 +244,18 @@ const visible = computed({
 const employees = ref([]);
 const clinicRooms = ref([]);
 const submitLoading = ref(false);
+// 科室名册仅用于提交时回填科室名快照，下拉树由 DeptTreeSelect 自取
+const deptList = ref([]);
+const loadDeptList = async () => {
+  if (deptList.value.length)
+    return;
+  try {
+    const tree = await loadDeptTreeOptions({deptType: '1', mode: 'LEAF'});
+    deptList.value = flattenDeptTree(tree);
+  } catch (e) {
+    console.error('加载科室列表失败:', e);
+  }
+};
 const formData = ref({});
 
 // ========== 下拉选人时提示：该人在所选日期区间内的排班/停诊/休息状态 ==========
@@ -642,6 +653,7 @@ const loadClinicRooms = async (deptId) => {
 watch(visible, (open) => {
   if (!open)
     return;
+  loadDeptList();
   const seed = props.seed || {};
   resetForm(seed);
   shiftDictId.value = null;
@@ -750,7 +762,7 @@ const handleSubmit = async () => {
     ElMessage.warning('请选择班次');
     return;
   }
-  const dept = props.departments.find((d) => d.id === formData.value.deptId);
+  const dept = deptList.value.find((d) => String(d.id) === String(formData.value.deptId));
   if (dept)
     formData.value.deptName = dept.deptName;
   // 新增是「每位医生一行、各填各的」（见 doctorRows：号源/费用/预约按人不同，

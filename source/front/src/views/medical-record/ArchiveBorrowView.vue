@@ -89,7 +89,7 @@
         <el-table-column label="科室" prop="deptName" show-overflow-tooltip width="120"/>
         <el-table-column label="用途" min-width="160" prop="purpose" show-overflow-tooltip/>
         <el-table-column align="center" label="应还日期" width="110">
-          <template #default="{ row }">{{ row.expectReturnDate || '—' }}</template>
+          <template #default="{ row }">{{ row.expectReturnDate || '' }}</template>
         </el-table-column>
         <el-table-column align="center" label="状态" width="110">
           <template #default="{ row }">
@@ -139,7 +139,7 @@
       <div v-if="auditRow" class="text-sm text-gray-600 mb-3">
         <div><span class="text-gray-400">病案：</span>{{ auditRow.recordNo }} / {{
             auditRow.patientName
-          }}（{{ auditRow.deptName || '—' }}）
+          }}（{{ auditRow.deptName || '' }}）
         </div>
         <div><span class="text-gray-400">用途：</span>{{ auditRow.purpose }}</div>
         <div v-if="auditRow.expectReturnDate"><span class="text-gray-400">应还日期：</span>{{

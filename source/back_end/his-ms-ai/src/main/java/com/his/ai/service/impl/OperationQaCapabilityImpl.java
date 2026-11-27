@@ -410,7 +410,7 @@ public class OperationQaCapabilityImpl implements OperationQaCapability {
             List<String> line = new ArrayList<>();
             for (int c = 0; c < columns.size() && c < cells.size(); c++) {
                 Object value = cells.get(c);
-                line.add(value == null ? "-" : String.valueOf(value));
+                line.add(value == null ? "" : String.valueOf(value));
             }
             text.append(String.join(" | ", line)).append('\n');
         }

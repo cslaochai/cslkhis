@@ -4,7 +4,7 @@
     <div class="space-y-3">
       <div class="rounded bg-slate-50 px-3 py-2 text-sm text-slate-600">
         为 <span class="font-semibold text-slate-800">{{ rescheduleForm.patientName }}</span> 改约
-        （当前就诊日期：{{ rescheduleForm.visitDate || '-' }}）
+        （当前就诊日期：{{ rescheduleForm.visitDate || '' }}）
         <p v-if="rescheduleForm.currentSourceText" class="mt-1 text-xs text-slate-500">
           当前号源：{{ rescheduleForm.currentSourceText }}
           <template v-if="rescheduleForm.currentSlotText"> · 时间段 {{ rescheduleForm.currentSlotText }}</template>

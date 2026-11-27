@@ -180,14 +180,14 @@
                   <div class="flex justify-between"><span class="text-slate-400">UDI-DI</span><span
                       class="font-mono text-xs">{{ traceScan.udiDi }}</span></div>
                   <div class="flex justify-between"><span class="text-slate-400">序列号 / 批号 / 效期</span><span
-                      class="font-mono text-xs">{{ traceScan.udiSerial || '-' }} / {{
-                      traceScan.udiBatch || '-'
-                    }} / {{ traceScan.udiExpiryDate || '-' }}</span></div>
+                      class="font-mono text-xs">{{ traceScan.udiSerial || '' }} / {{
+                      traceScan.udiBatch || ''
+                    }} / {{ traceScan.udiExpiryDate || '' }}</span></div>
                   <div class="flex justify-between"><span class="text-slate-400">命中耗材</span><span
-                      class="font-medium">{{ traceScan.consumableName }}（{{ traceScan.specification || '-' }}）</span>
+                      class="font-medium">{{ traceScan.consumableName }}（{{ traceScan.specification || '' }}）</span>
                   </div>
                   <div class="flex justify-between"><span class="text-slate-400">注册证号</span><span
-                      class="font-mono text-xs">{{ traceScan.regCertNo || '-' }}</span></div>
+                      class="font-mono text-xs">{{ traceScan.regCertNo || '' }}</span></div>
                   <div class="flex justify-between"><span class="text-slate-400">零售单价</span><span
                       class="font-semibold text-red-600">¥{{ traceScan.retailPrice }}</span></div>
                 </div>
@@ -224,7 +224,7 @@
               <el-form-item label="出库批次" required>
                 <el-select v-model="traceForm.stockId" :disabled="!traceScan?.batches?.length" :fit-input-width="false"
                            placeholder="选择扫码结果中的有货批次" style="width: 100%">
-                  <el-option v-for="b in traceScan?.batches || []" :key="b.stockId" :label="`批 ${b.batchNo}｜效期 ${b.expiryDate || '-'}｜剩 ${b.quantity}${traceScan?.unit || ''}｜${b.location || '-'}`"
+                  <el-option v-for="b in traceScan?.batches || []" :key="b.stockId" :label="`批 ${b.batchNo}｜效期 ${b.expiryDate || ''}｜剩 ${b.quantity}${traceScan?.unit || ''}｜${b.location || ''}`"
                              :value="String(b.stockId)"/>
                 </el-select>
               </el-form-item>
@@ -250,15 +250,13 @@
                 <el-select v-model="traceForm.admissionId" :fit-input-width="false" filterable
                            placeholder="选择该患者的住院记录（计费锚点）" style="width: 100%">
                   <el-option v-for="a in admissionOptions" :key="String(a.admissionId ?? a.id)"
-                             :label="`${a.admissionNo || ''}｜${a.deptName || ''}｜床位 ${a.bedNo || '-'}`"
+                             :label="`${a.admissionNo || ''}｜${a.deptName || ''}｜床位 ${a.bedNo || ''}`"
                              :value="String(a.admissionId ?? a.id)"/>
                 </el-select>
               </el-form-item>
               <el-form-item label="使用科室">
-                <el-select v-model="traceForm.deptId" :fit-input-width="false" clearable filterable
-                           placeholder="手术/使用科室（计费明细科室）" style="width: 100%">
-                  <el-option v-for="d in deptOptions" :key="d.id" :label="d.deptName" :value="d.id"/>
-                </el-select>
+                <DeptTreeSelect v-model="traceForm.deptId" mode="LEAF" width="100%"
+                                placeholder="手术/使用科室（计费明细科室）"/>
               </el-form-item>
               <el-form-item label="用途">
                 <el-input v-model="traceForm.purpose" :rows="2" placeholder="如 PCI 术中植入前降支" type="textarea"/>
@@ -297,13 +295,13 @@
           <el-table-column label="耗材" min-width="140" prop="consumableName" show-overflow-tooltip/>
           <el-table-column label="UDI（序列号/批号）" min-width="150" show-overflow-tooltip>
             <template #default="{ row }"><span class="font-mono text-xs">{{
-                row.udiSerial || '-'
-              }} / {{ row.udiBatch || '-' }}</span></template>
+                row.udiSerial || ''
+              }} / {{ row.udiBatch || '' }}</span></template>
           </el-table-column>
           <el-table-column label="患者" prop="patientName" width="90"/>
           <el-table-column align="center" label="就诊" width="70">
             <template #default="{ row }">{{
-                row.visitType === 1 ? '门诊' : row.visitType === 2 ? '住院' : '-'
+                row.visitType === 1 ? '门诊' : row.visitType === 2 ? '住院' : ''
               }}
             </template>
           </el-table-column>
@@ -354,7 +352,7 @@
     <SuppliesStockAdd v-model="addDialogVisible" @saved="loadStock"/>
 
     <!-- 科室领用弹窗 -->
-    <SuppliesConsumeAdd v-model="consumeDialogVisible" :dept-options="deptOptions" @saved="onConsumeSaved"/>
+    <SuppliesConsumeAdd v-model="consumeDialogVisible" @saved="onConsumeSaved"/>
 
     <!-- 溯源详情弹窗（字典→入库批次→使用患者→计费 全链） -->
     <el-dialog v-model="traceDetailVisible" destroy-on-close title="溯源全链" width="640px">
@@ -370,17 +368,17 @@
             <div class="col-span-2 flex justify-between"><span class="text-slate-400">UDI 原文</span><span
                 class="max-w-[60%] break-all font-mono text-xs">{{ traceDetail.udiCode }}</span></div>
             <div class="flex justify-between"><span class="text-slate-400">DI / 序列号</span><span
-                class="font-mono text-xs">{{ traceDetail.udiDi }} / {{ traceDetail.udiSerial || '-' }}</span></div>
+                class="font-mono text-xs">{{ traceDetail.udiDi }} / {{ traceDetail.udiSerial || '' }}</span></div>
             <div class="flex justify-between"><span class="text-slate-400">批号 / 效期</span><span
-                class="font-mono text-xs">{{ traceDetail.udiBatch || '-' }} / {{
-                traceDetail.udiExpiryDate || '-'
+                class="font-mono text-xs">{{ traceDetail.udiBatch || '' }} / {{
+                traceDetail.udiExpiryDate || ''
               }}</span></div>
             <div class="flex justify-between"><span class="text-slate-400">耗材</span><span
                 class="font-medium">{{ traceDetail.consumableName }}</span></div>
             <div class="flex justify-between"><span
-                class="text-slate-400">厂家</span><span>{{ traceDetail.manufacturer || '-' }}</span></div>
+                class="text-slate-400">厂家</span><span>{{ traceDetail.manufacturer || '' }}</span></div>
             <div class="col-span-2 flex justify-between"><span class="text-slate-400">注册证号</span><span
-                class="font-mono text-xs">{{ traceDetail.regCertNo || '-' }}</span></div>
+                class="font-mono text-xs">{{ traceDetail.regCertNo || '' }}</span></div>
           </div>
         </div>
         <div class="rounded-lg border border-slate-200 p-3">
@@ -389,12 +387,12 @@
             <div class="flex justify-between"><span class="text-slate-400">批号</span><span
                 class="font-mono text-xs">{{ traceDetail.batchNo }}</span></div>
             <div class="flex justify-between"><span
-                class="text-slate-400">供应商</span><span>{{ traceDetail.supplier || '-' }}</span></div>
+                class="text-slate-400">供应商</span><span>{{ traceDetail.supplier || '' }}</span></div>
             <div class="flex justify-between"><span
-                class="text-slate-400">存放位置</span><span>{{ traceDetail.location || '-' }}</span></div>
+                class="text-slate-400">存放位置</span><span>{{ traceDetail.location || '' }}</span></div>
             <div class="flex justify-between"><span class="text-slate-400">入库数量/成本</span><span>{{
-                traceDetail.batchQuantity ?? '-'
-              }} / ¥{{ traceDetail.costPrice ?? '-' }}</span></div>
+                traceDetail.batchQuantity ?? ''
+              }} / ¥{{ traceDetail.costPrice ?? '' }}</span></div>
           </div>
         </div>
         <div class="rounded-lg border border-slate-200 p-3">
@@ -406,7 +404,7 @@
                 traceDetail.visitType === 1 ? '门诊' : traceDetail.visitType === 2 ? '住院' : '未关联'
               }}</span></div>
             <div class="flex justify-between"><span
-                class="text-slate-400">使用科室</span><span>{{ traceDetail.deptName || '-' }}</span></div>
+                class="text-slate-400">使用科室</span><span>{{ traceDetail.deptName || '' }}</span></div>
             <div class="flex justify-between"><span class="text-slate-400">使用时间/登记人</span><span>{{
                 traceDetail.usageTime
               }} / {{ traceDetail.operatorName }}</span></div>
@@ -428,9 +426,9 @@
                 class="font-semibold text-red-600">¥{{ traceDetail.chargeAmount ?? traceDetail.retailPrice }}</span>
             </div>
             <div class="flex justify-between"><span class="text-slate-400">收费单号</span><span
-                class="font-mono text-xs">{{ traceDetail.chargeNo || '-' }}</span></div>
+                class="font-mono text-xs">{{ traceDetail.chargeNo || '' }}</span></div>
             <div class="flex justify-between"><span class="text-slate-400">收费明细ID</span><span
-                class="font-mono text-xs">{{ traceDetail.chargeDetailId || '-' }}</span></div>
+                class="font-mono text-xs">{{ traceDetail.chargeDetailId || '' }}</span></div>
           </div>
           <p v-if="traceDetail.chargeFailReason" class="mt-1 text-xs text-amber-600">{{
               traceDetail.chargeFailReason
@@ -466,7 +464,7 @@ import {getInpatientListPage} from '@/api/inpatient';
 import PatientSelect from '@/components/his/PatientSelect.vue';
 import SuppliesStockAdd from './SuppliesStockAdd.vue';
 import SuppliesConsumeAdd from './SuppliesConsumeAdd.vue';
-import {getDepartmentSelectList} from '@/api/system';
+import DeptTreeSelect from '@/components/his/DeptTreeSelect.vue';
 import {categoryLabel} from '@/lib/supplies';
 import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination';
 
@@ -545,9 +543,7 @@ const handleOutbound = async (row) => {
 };
 // ========== 科室领用 ==========
 const consumeDialogVisible = ref(false);
-const deptOptions = ref([]);
 const openConsumeDialog = () => {
-  loadDeptOptions();
   consumeDialogVisible.value = true;
 };
 const onConsumeSaved = () => {
@@ -633,13 +629,6 @@ const handleUdiScan = async () => {
 // 科室下拉改用统一入口：原先走 /supplies/deptSelectList，返回的是下划线 dept_name，
 // 与全仓 20 多处 deptName 不一致（本页靠模板里写 d.dept_name 硬顶）。
 // 统一后不传 scope → 默认按当前人过滤，字段名也是 deptName。
-// 领用弹窗（科室下拉）与高值使用登记共用这一份，只拉一次。
-const loadDeptOptions = async () => {
-  if (deptOptions.value.length)
-    return;
-  const res = await getDepartmentSelectList();
-  deptOptions.value = res.data || [];
-};
 // 就诊锚点跟着患者走：换患者就重拉该患者的挂号/在院记录
 const loadVisitAnchors = async () => {
   traceForm.value.registId = null;
@@ -811,8 +800,6 @@ const handleTabChange = (tab) => {
     loadLog();
   else if (tab === 'traceLedger')
     loadTrace();
-  else if (tab === 'trace')
-    loadDeptOptions();
 };
 onMounted(() => {
   loadStock();

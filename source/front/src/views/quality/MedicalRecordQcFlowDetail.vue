@@ -10,7 +10,7 @@
             </el-tag>
           </div>
           <div><span class="text-slate-400">患者：</span>{{ flowDetail.patientName }}</div>
-          <div><span class="text-slate-400">科室：</span>{{ flowDetail.deptName || '—' }}</div>
+          <div><span class="text-slate-400">科室：</span>{{ flowDetail.deptName || '' }}</div>
           <div><span class="text-slate-400">当前级：</span>{{ flowDetail.currentLevelText }}</div>
           <div><span class="text-slate-400">终审定级：</span>{{ flowGradeText(flowDetail.grade) }}<span
               v-if="flowDetail.finalScore !== null && flowDetail.finalScore !== undefined">（{{

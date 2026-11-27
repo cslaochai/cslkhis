@@ -162,7 +162,7 @@
                       {{ shortShift(row.dayCells[i]) }}
                     </span>
                         <span v-else class="status-chip">{{
-                            (row.dayCells[i].scheduleStatusText || '—').slice(0, 2)
+                            (row.dayCells[i].scheduleStatusText || '').slice(0, 2)
                           }}</span>
                         <p v-if="row.dayCells[i].scheduleStatus === 1" class="cell-time">{{
                             row.dayCells[i].startTime
@@ -228,7 +228,7 @@
               <el-table-column label="工位" prop="stationName" min-width="140"/>
               <el-table-column label="类别" prop="stationKindText" width="100"/>
               <el-table-column label="人员" min-width="130">
-                <template #default="{ row }">{{ row.employeeName }}（{{ row.empCode || '—' }}）</template>
+                <template #default="{ row }">{{ row.employeeName }}（{{ row.empCode || '' }}）</template>
               </el-table-column>
               <el-table-column label="班次" min-width="170">
                 <template #default="{ row }">

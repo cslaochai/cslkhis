@@ -3,12 +3,12 @@
     <div v-if="patient"
          class="mb-4 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-xs text-slate-600">
       <div class="font-semibold text-slate-800">患者：{{ patient.patientName }}（{{
-          patient.patientNo || '—'
+          patient.patientNo || ''
         }}）
       </div>
       <div class="mt-1">
-        本次挂号：{{ patient.registNo || '—' }} · 开证科室：{{ patient.deptName || '—' }}
-        · 开证医生：{{ patient.doctorName || '—' }}
+        本次挂号：{{ patient.registNo || '' }} · 开证科室：{{ patient.deptName || '' }}
+        · 开证医生：{{ patient.doctorName || '' }}
       </div>
       <div class="mt-1 text-slate-500">
         开证后患者持证到「入出院管理 → 待收治（住院证）」排床收治；入院记录会记下这张证的号与本次挂号号。
@@ -16,9 +16,9 @@
     </div>
     <el-form :model="orderForm" label-width="110px">
       <el-form-item label="拟收治科室" required>
-        <el-select v-model="orderForm.applyDeptId" class="!w-full" filterable placeholder="选择收治科室">
-          <el-option v-for="d in departments" :key="d.id" :label="d.deptName" :value="String(d.id)"/>
-        </el-select>
+        <DeptTreeSelect v-model="orderForm.applyDeptId" mode="LEAF" dept-type="1" node-type="2,7"
+                        width="100%" placeholder="选择收治科室"/>
+
         <p class="mt-1 text-xs text-slate-400">住哪个科是临床决策；入院处收治时可以调科，调科会被系统标记出来</p>
       </el-form-item>
       <div class="grid grid-cols-2 gap-x-4">
@@ -63,7 +63,8 @@
 import {computed, onMounted, reactive, ref, watch} from 'vue';
 import {ElMessage} from 'element-plus';
 import {createAdmissionOrder} from '@/api/admissionOrder';
-import {getDepartmentSelectList} from '@/api/system';
+import {loadDeptTreeOptions, flattenDeptTree} from '@/lib/deptOptions';
+import DeptTreeSelect from '@/components/his/DeptTreeSelect.vue';
 import IcdDiagnosisSelect from '@/components/his/IcdDiagnosisSelect.vue';
 
 // ------------------------------------------------------------------
@@ -125,8 +126,8 @@ watch(() => props.modelValue, (v) => {
 const loadDepartments = async () => {
   try {
     // 不传 scope → 默认按当前人过滤（医生站只看自己被授权的科室）
-    const res = await getDepartmentSelectList({deptType: 1, nodeType: '2,7'});
-    departments.value = res.data || [];
+    const tree = await loadDeptTreeOptions({deptType: '1', nodeType: '2,7', mode: 'LEAF'});
+    departments.value = flattenDeptTree(tree);
   } catch (error) {
     console.error('加载科室失败:', error);
   }

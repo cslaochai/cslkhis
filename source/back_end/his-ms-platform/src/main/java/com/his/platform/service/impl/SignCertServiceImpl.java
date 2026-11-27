@@ -170,10 +170,14 @@ public class SignCertServiceImpl extends ServiceImpl<SysSignCertMapper, SysSignC
             throw new BusinessException("员工姓名不能为空（证书上必须能看出这是谁）");
         }
         SysSignCert exist = sysSignCertMapper.selectActiveByEmp(dto.getEmpId(), TimeUtil.nowSeconds());
-        if (exist != null) {
+        // 换发窗口内允许直接签新证：旧证保留到自然到期、不强制吊销，历史签名仍用旧证公钥验签；
+        // 窗口外仍拒绝，避免同一个人平白多出两张长期有效证书
+        if (exist != null && !withinRenewWindow(exist)) {
             throw new BusinessException("员工「" + dto.getEmpName() + "」已持有有效证书 "
-                    + exist.getCertNo() + "（有效期至 " + exist.getValidTo() + "）；"
-                    + "如需换新证书请先吊销原证书（吊销会留痕）");
+                    + exist.getCertNo() + "（有效期至 " + exist.getValidTo() + "，"
+                    + "距到期超过 " + renewWindowDays() + " 天）；"
+                    + "到期前 " + renewWindowDays() + " 天进入换发窗口，届时可直接办理新证；"
+                    + "如证书丢失/泄露需立即换发，请先吊销原证书（吊销会留痕）");
         }
         // 唯一性校验：建号自动生成与手工办理两条路径都汇到 keygen，不拦在途证书
         // 就会给同一个人攒出多张「待CA签发」，CA 侧也会收到重复申请单
@@ -189,6 +193,24 @@ public class SignCertServiceImpl extends ServiceImpl<SysSignCertMapper, SysSignC
         // 默认走在线申请：没接入 CA 才留待线下回填
         submitOnKeygen(cert, operatorName);
         return toApplyVO(cert);
+    }
+
+    /**
+     * 换发窗口（天）：配置缺失或误配为 0 时兜底为 1，避免把换发入口彻底关死。
+     */
+    private int renewWindowDays() {
+        return Math.max(1, signProperties.getRenewWindowDays());
+    }
+
+    /**
+     * 是否已进入换发窗口：有效证书距到期不足 renewWindowDays 天。
+     *
+     * <p>有效期为空一律视为窗口外（保守拒绝）——没有到期时间就没法判断是不是临期，
+     * 不能凭「没数据」放行重复签发。</p>
+     */
+    private boolean withinRenewWindow(SysSignCert cert) {
+        return cert.getValidTo() != null
+                && cert.getValidTo().isBefore(TimeUtil.nowSeconds().plusDays(renewWindowDays()));
     }
 
     /**
@@ -386,16 +408,26 @@ public class SignCertServiceImpl extends ServiceImpl<SysSignCertMapper, SysSignC
     public SignCaApplyVO applyToCa(Long certId, Long operatorId, String operatorName) {
         SysSignCert cert = requireCertForCa(certId);
         if (Objects.equals(CertStatusEnum.ACTIVE.getCode(), cert.getCertStatus())) {
+            // 已生效证书不存在「重提申请」：到期换发走 keygen，界面也只对坏单放出这个动作
             return toApplyVO(cert);
         }
-        // 已提交且仍在 CA 审核/待签发：状态由 CA 推送，不重复送单（HIS 无查询权限）
         SysSignCaApply latest = signCaApplyService.latestOf(cert.getId());
-        boolean waiting = latest != null && TextUtil.hasText(latest.getApplyNo())
-                && (CaApplyStatusEnum.PENDING.getCode().equals(latest.getApplyStatus())
-                || CaApplyStatusEnum.APPROVED.getCode().equals(latest.getApplyStatus()));
-        if (!waiting) {
-            submitToCa(cert, true, operatorName);
+        CaApplyStatusEnum latestStatus = latest == null ? null : CaApplyStatusEnum.fromCode(latest.getApplyStatus());
+        // 审核/签发中：结果只由 CA 推送，重提等于在 CA 侧再压一张单（HIS 无查询权限）
+        if (latestStatus == CaApplyStatusEnum.PENDING || latestStatus == CaApplyStatusEnum.APPROVED) {
+            return toApplyVO(cert);
         }
+        // 白名单：只接「断了的单」——提交失败补送，驳回/撤销换新幂等键重送。
+        // 从未在线申请（线下流程）不从这里送单，否则会把线下证书改判为线上并凭空多出一张 CA 申请单。
+        boolean retryable = latestStatus == CaApplyStatusEnum.FAILED
+                || latestStatus == CaApplyStatusEnum.REJECTED
+                || latestStatus == CaApplyStatusEnum.CANCELLED;
+        if (!retryable) {
+            throw new BusinessException("该证书没有可重提的 CA 申请单（从未在线申请或申请仍在审核中）；"
+                    + "线下流程请在「申请进度」里按指引送 CA 并「回填证书」，"
+                    + "如需转线上请先吊销本证再重新办理");
+        }
+        submitToCa(cert, true, operatorName);
         return toApplyVO(cert);
     }
 
@@ -1370,6 +1402,15 @@ public class SignCertServiceImpl extends ServiceImpl<SysSignCertMapper, SysSignC
         boolean pendingCa = Objects.equals(CertStatusEnum.PENDING_CA.getCode(), c.getCertStatus());
         boolean expired = !pendingCa && c.getValidTo() != null && c.getValidTo().isBefore(TimeUtil.nowSeconds());
         vo.setExpired(expired);
+        // 换发窗口：只有「已生效、未过期」的证书才谈临期；待签发的是申请预估，取下限只会误报
+        boolean active = Objects.equals(CertStatusEnum.ACTIVE.getCode(), c.getCertStatus());
+        boolean expiringSoon = false;
+        if (active && !expired && c.getValidTo() != null) {
+            long days = java.time.Duration.between(TimeUtil.nowSeconds(), c.getValidTo()).toDays();
+            vo.setDaysToExpire((int) Math.max(days, 0L));
+            expiringSoon = days <= Math.max(1, signProperties.getRenewWindowDays());
+        }
+        vo.setExpiringSoon(expiringSoon);
         boolean revoked = Objects.equals(CertStatusEnum.REVOKED.getCode(), c.getCertStatus());
         vo.setCanRevoke(!revoked);
         if (revoked) {
@@ -1377,6 +1418,9 @@ public class SignCertServiceImpl extends ServiceImpl<SysSignCertMapper, SysSignC
         } else if (expired) {
             vo.setActionHint("证书已过有效期（" + c.getValidTo() + "），不可用于新的签名；"
                     + "历史签名仍可用本证书公钥验签，不要吊销它");
+        } else if (expiringSoon) {
+            vo.setActionHint("距到期还有 " + vo.getDaysToExpire() + " 天，已进入换发窗口："
+                    + "可直接办理新证，旧证保留到自然到期，历史签名照旧可验");
         } else if (pendingCa) {
             vo.setActionHint("待 CA 签发：有效期以 CA 实际签发的证书为准，当前显示的是申请时的预期值");
         } else {

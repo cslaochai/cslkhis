@@ -60,7 +60,7 @@
         <el-table-column label="盘点单号" prop="stocktakeNo" width="150"/>
         <el-table-column label="主题" min-width="170" prop="stocktakeTitle" show-overflow-tooltip/>
         <el-table-column label="范围" min-width="140" show-overflow-tooltip>
-          <template #default="{ row }">{{ row.scopeDesc || '—' }}</template>
+          <template #default="{ row }">{{ row.scopeDesc || '' }}</template>
         </el-table-column>
         <el-table-column label="账面快照时点" prop="snapshotTime" width="160"/>
         <el-table-column align="right" label="批次(已录/总)" width="115">
@@ -315,7 +315,7 @@ const doDelete = async (row) => {
 };
 const diffText = (v) => {
   if (v === null || v === undefined)
-    return '—';
+    return '';
   const n = Number(v);
   return (n > 0 ? '+' : '') + n;
 };

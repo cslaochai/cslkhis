@@ -13,10 +13,8 @@
         </el-radio-group>
         <el-date-picker v-model="genForm.periodValue" :clearable="false" :type="periodPickerType"
                         :value-format="periodFormat" class="!w-40" placeholder="上报期间"/>
-        <el-select v-model="genForm.deptId" :fit-input-width="false" class="!w-44" clearable filterable
-                   placeholder="科室（默认全院）">
-          <el-option v-for="d in deptOptions" :key="d.id" :label="d.deptName" :value="String(d.id)"/>
-        </el-select>
+        <DeptTreeSelect v-model="genForm.deptId" mode="LEAF" width="176px" placeholder="科室（默认全院）"/>
+
         <el-input v-model="genForm.remark" class="!w-52" clearable placeholder="备注（可选）"/>
         <el-button v-perm="'report:statReport:add'" :icon="DataAnalysis" :loading="genLoading" type="primary"
                    @click="handleGenerate">生成报文
@@ -195,7 +193,7 @@ import {
   submitStatReport,
   voidStatReport,
 } from '@/api/statReport';
-import {getDepartmentSelectList} from '@/api/system';
+import DeptTreeSelect from '@/components/his/DeptTreeSelect.vue';
 import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination';
 import {useTableMaxHeight} from '@/lib/useTableMaxHeight';
 
@@ -218,7 +216,6 @@ const genForm = ref({
   deptId: null,
   remark: '',
 });
-const deptOptions = ref([]);
 const genLoading = ref(false);
 const periodPickerType = computed(() => (genForm.value.periodType === 1 ? 'month' : 'year'));
 const periodFormat = computed(() => (genForm.value.periodType === 1 ? 'YYYY-MM' : 'YYYY'));
@@ -393,11 +390,5 @@ const handlePrint = () => {
 };
 onMounted(async () => {
   loadList();
-  try {
-    const res = await getDepartmentSelectList();
-    deptOptions.value = res.data || [];
-  } catch (e) {
-    console.error('加载科室下拉失败:', e);
-  }
 });
 </script>

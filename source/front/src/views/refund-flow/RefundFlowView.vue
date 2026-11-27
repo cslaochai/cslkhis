@@ -46,9 +46,9 @@
           <span class="text-sm text-slate-500">
             本页合计
             <span class="font-semibold text-slate-700">{{
-                sumAmount === null ? '—' : `¥${formatMoney(sumAmount)}`
+                sumAmount === null ? '' : `¥${formatMoney(sumAmount)}`
               }}</span>
-            · 共 <span class="font-semibold text-slate-700">{{ loading ? '—' : pagination.total }}</span> 笔流水
+            · 共 <span class="font-semibold text-slate-700">{{ loading ? '' : pagination.total }}</span> 笔流水
           </span>
         </div>
       </div>
@@ -58,10 +58,10 @@
       <el-table v-loading="loading" :data="rows" :max-height="tableMaxHeight" data-testid="refund-flow-table" stripe>
         <el-table-column class-name="font-mono" label="退费单号" min-width="180" prop="refundNo"/>
         <el-table-column label="患者" min-width="100">
-          <template #default="{ row }">{{ row.patientName || '—' }}</template>
+          <template #default="{ row }">{{ row.patientName || '' }}</template>
         </el-table-column>
         <el-table-column class-name="font-mono" label="原收费单号" min-width="180" prop="chargeNo">
-          <template #default="{ row }">{{ row.chargeNo || '—' }}</template>
+          <template #default="{ row }">{{ row.chargeNo || '' }}</template>
         </el-table-column>
         <el-table-column label="退费类型" width="100">
           <template #default="{ row }">{{ dictLabelText(refundTypeOptions, row.refundType) }}</template>
@@ -91,16 +91,16 @@
           <template #default="{ row }">{{ dictLabelText(payMethodOptions, row.payMethod) }}</template>
         </el-table-column>
         <el-table-column class-name="font-mono" label="渠道退费流水号" min-width="190">
-          <template #default="{ row }">{{ row.channelRefundNo || '—' }}</template>
+          <template #default="{ row }">{{ row.channelRefundNo || '' }}</template>
         </el-table-column>
         <el-table-column class-name="font-mono" label="来源申请号" min-width="180">
-          <template #default="{ row }">{{ row.applyNo || '—' }}</template>
+          <template #default="{ row }">{{ row.applyNo || '' }}</template>
         </el-table-column>
         <el-table-column label="退费人" prop="refundBy" width="100">
-          <template #default="{ row }">{{ row.refundBy || '—' }}</template>
+          <template #default="{ row }">{{ row.refundBy || '' }}</template>
         </el-table-column>
         <el-table-column label="退费时间" prop="refundTime" width="170">
-          <template #default="{ row }">{{ row.refundTime || '—' }}</template>
+          <template #default="{ row }">{{ row.refundTime || '' }}</template>
         </el-table-column>
         <el-table-column fixed="right" label="操作" width="90">
           <template #default="{ row }">

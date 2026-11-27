@@ -201,7 +201,7 @@ public class PrescriptionSignContentServiceImpl implements SignableContentServic
 
     private static String rxStatusText(Integer status) {
         if (status == null) {
-            return "—";
+            return "";
         }
         return switch (status) {
             case 1 -> "草稿";

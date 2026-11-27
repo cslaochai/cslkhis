@@ -12,7 +12,7 @@
         <template #default="{ row }">{{ row.plannedMinutes ?? 0 }}</template>
       </el-table-column>
       <el-table-column align="right" label="实际工时" width="90">
-        <template #default="{ row }">{{ row.actualMinutes ?? '—' }}</template>
+        <template #default="{ row }">{{ row.actualMinutes ?? '' }}</template>
       </el-table-column>
       <el-table-column label="打卡" width="130">
         <template #default="{ row }">

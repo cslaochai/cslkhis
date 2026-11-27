@@ -71,7 +71,7 @@
         </el-table-column>
         <el-table-column label="供应商" min-width="150" prop="supplier" show-overflow-tooltip/>
         <el-table-column label="采购订单号" prop="purchaseOrderNo" width="150">
-          <template #default="{ row }">{{ row.purchaseOrderNo || '—' }}</template>
+          <template #default="{ row }">{{ row.purchaseOrderNo || '' }}</template>
         </el-table-column>
         <el-table-column label="创建时间" prop="createTime" width="160"/>
         <el-table-column align="right" label="数量合计" width="90">

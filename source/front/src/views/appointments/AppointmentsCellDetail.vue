@@ -7,7 +7,7 @@
       <el-table :data="schedules" border max-height="520" size="small">
         <el-table-column label="班次" width="110">
           <template #default="{ row }">
-            <span class="text-xs text-slate-600">{{ deskShiftLabel(Number(row.scheduleType)) || '—' }}</span>
+            <span class="text-xs text-slate-600">{{ deskShiftLabel(Number(row.scheduleType)) || '' }}</span>
           </template>
         </el-table-column>
         <el-table-column label="时段" width="180">
@@ -17,7 +17,7 @@
         </el-table-column>
         <el-table-column label="诊室" width="140">
           <template #default="{ row }">
-            <span class="text-xs text-slate-600">{{ row.roomName || '—' }}</span>
+            <span class="text-xs text-slate-600">{{ row.roomName || '' }}</span>
           </template>
         </el-table-column>
         <el-table-column label="余号 / 总数" width="140">

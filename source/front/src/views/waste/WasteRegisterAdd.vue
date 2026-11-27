@@ -11,10 +11,9 @@
         <el-input-number v-model="createForm.weightKg" :min="0" :precision="2" style="width: 180px"/>
       </el-form-item>
       <el-form-item label="产生科室" required>
-        <el-select v-model="createForm.deptId" :fit-input-width="false" filterable
-                   placeholder="请选择科室" style="width: 220px" @change="onCreateDeptChange">
-          <el-option v-for="d in deptOptions" :key="d.id" :label="d.deptName" :value="d.id"/>
-        </el-select>
+        <DeptTreeSelect v-model="createForm.deptId" mode="LEAF" width="220px" placeholder="请选择科室"
+                        @change="onCreateDeptChange"/>
+
       </el-form-item>
       <el-form-item label="收集时间" required>
         <el-date-picker v-model="createForm.collectTime" format="YYYY-MM-DD HH:mm:ss" style="width: 220px"
@@ -40,7 +39,9 @@
 import {computed, reactive, ref, watch} from 'vue';
 import {ElMessage} from 'element-plus';
 import {wasteCreate} from '@/api/waste';
-import {getDepartmentSelectList, getEmployeeList} from '@/api/system';
+import {getEmployeeList} from '@/api/system';
+import {loadDeptTreeOptions, flattenDeptTree} from '@/lib/deptOptions';
+import DeptTreeSelect from '@/components/his/DeptTreeSelect.vue';
 
 const props = defineProps({
   modelValue: {type: Boolean, default: false},
@@ -58,8 +59,8 @@ const deptOptions = ref([]);
 const employeeOptions = ref([]);
 const loadDeptsAndEmployees = async () => {
   try {
-    const [d, e] = await Promise.all([getDepartmentSelectList({}), getEmployeeList({})]);
-    deptOptions.value = d?.data || [];
+    const [tree, e] = await Promise.all([loadDeptTreeOptions({mode: 'LEAF'}), getEmployeeList({})]);
+    deptOptions.value = flattenDeptTree(tree);
     employeeOptions.value = e?.data || [];
   } catch (e) {
     console.error('加载科室/员工失败', e);

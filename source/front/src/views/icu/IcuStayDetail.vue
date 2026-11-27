@@ -16,7 +16,7 @@
           <el-input :model-value="`${stayDetail.patientName}（${stayDetail.patientNo}）`"/>
         </el-form-item>
         <el-form-item label="来源科室">
-          <el-input :model-value="stayDetail.fromDeptName || '—'"/>
+          <el-input :model-value="stayDetail.fromDeptName || ''"/>
         </el-form-item>
         <el-form-item label="ICU 床位">
           <el-input :model-value="`${stayDetail.wardName || ''} ${stayDetail.bedNo}`"/>
@@ -28,37 +28,37 @@
           <el-input :model-value="stayDetail.inTime"/>
         </el-form-item>
         <el-form-item label="入科登记人">
-          <el-input :model-value="stayDetail.inBy || '—'"/>
+          <el-input :model-value="stayDetail.inBy || ''"/>
         </el-form-item>
         <el-form-item label="入科 GCS">
-          <el-input :model-value="String(stayDetail.inGcs ?? '—')"/>
+          <el-input :model-value="String(stayDetail.inGcs ?? '')"/>
         </el-form-item>
         <el-form-item label="滞留时长">
           <el-input :model-value="`${stayDetail.stayHours ?? 0} 小时`"/>
         </el-form-item>
         <el-form-item class="col-span-2" label="入科诊断">
-          <el-input :model-value="stayDetail.inDiag || '—'"/>
+          <el-input :model-value="stayDetail.inDiag || ''"/>
         </el-form-item>
         <el-form-item label="出科时间">
-          <el-input :model-value="stayDetail.outTime || '—'"/>
+          <el-input :model-value="stayDetail.outTime || ''"/>
         </el-form-item>
         <el-form-item label="转出去向">
-          <el-input :model-value="stayDetail.outDest ? dictText('outDest', stayDetail.outDest) : '—'"/>
+          <el-input :model-value="stayDetail.outDest ? dictText('outDest', stayDetail.outDest) : ''"/>
         </el-form-item>
         <el-form-item label="出科 GCS">
-          <el-input :model-value="String(stayDetail.outGcs ?? '—')"/>
+          <el-input :model-value="String(stayDetail.outGcs ?? '')"/>
         </el-form-item>
         <el-form-item label="出科登记人">
-          <el-input :model-value="stayDetail.outBy || '—'"/>
+          <el-input :model-value="stayDetail.outBy || ''"/>
         </el-form-item>
         <el-form-item class="col-span-2" label="转归说明">
-          <el-input :model-value="stayDetail.outReason || '—'"/>
+          <el-input :model-value="stayDetail.outReason || ''"/>
         </el-form-item>
         <el-form-item label="监护记录">
           <el-input :model-value="`${stayDetail.monitorCount ?? 0} 条 · 最近 ${stayDetail.lastMonitorTime || '无'}`"/>
         </el-form-item>
         <el-form-item label="备注">
-          <el-input :model-value="stayDetail.remark || '—'"/>
+          <el-input :model-value="stayDetail.remark || ''"/>
         </el-form-item>
       </div>
     </el-form>

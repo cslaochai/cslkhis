@@ -40,9 +40,7 @@
             </el-select>
           </el-form-item>
           <el-form-item label="手术科室">
-            <el-select v-model="query.deptId" clearable filterable placeholder="手术科室" style="width: 170px">
-              <el-option v-for="d in deptOptions" :key="d.id" :label="d.deptName || d.name" :value="d.id"/>
-            </el-select>
+            <DeptTreeSelect v-model="query.deptId" mode="LEAF" width="170px" placeholder="手术科室"/>
           </el-form-item>
           <el-form-item label="计划日期">
             <el-date-picker v-model="query.dateRange" end-placeholder="计划截止" start-placeholder="计划起始"
@@ -70,7 +68,7 @@
         <el-table-column label="患者" prop="patientName" width="100"/>
         <el-table-column label="术式" min-width="180" prop="itemName" show-overflow-tooltip/>
         <el-table-column align="right" label="最长滞留(h)" width="100">
-          <template #default="{ row }">{{ row.maxStayHours ?? '—' }}</template>
+          <template #default="{ row }">{{ row.maxStayHours ?? '' }}</template>
         </el-table-column>
         <el-table-column label="计划手术日" prop="planSurgeryDate" width="120"/>
         <el-table-column label="术前评估" width="100">
@@ -147,7 +145,7 @@
 
     <!-- 预约登记 -->
     <DaySurgeryApplyEdit v-model="applyVisible" :row="applyRow" :item-options="itemOptions"
-                         :dept-options="deptOptions" @saved="handleSaved"/>
+                         @saved="handleSaved"/>
 
     <!-- 术前评估 -->
     <DaySurgeryAssess v-model="evalVisible" :row="evalRow" :eval-dict="evalDict" @saved="handleSaved"/>
@@ -204,7 +202,8 @@ import {
   getDaySurgeryStat,
   listDaySurgeryPage,
 } from '@/api/daySurgery';
-import {getDepartmentSelectList, getDictDataMapList} from '@/api/system';
+import {getDictDataMapList} from '@/api/system';
+import DeptTreeSelect from '@/components/his/DeptTreeSelect.vue';
 import {DICT_TYPE} from '@/lib/dict-cache';
 import {dictLabelText} from '@/lib/utils';
 import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination';
@@ -228,7 +227,6 @@ const leaveDict = ref([]);
 const followResultDict = ref([]);
 const followTypeDict = ref([]);
 const evalDict = ref([]);
-const deptOptions = ref([]);
 const itemOptions = ref([]);
 const statusText = (v) => dictLabelText(statusDict.value, v);
 const statusTag = (v) => {
@@ -434,17 +432,8 @@ const loadDicts = async () => {
     console.error('加载字典失败', e);
   }
 };
-const loadDepts = async () => {
-  try {
-    const res = await getDepartmentSelectList({});
-    if (res.code === 200)
-      deptOptions.value = res.data || [];
-  } catch (e) {
-    console.error('加载科室失败', e);
-  }
-};
 onMounted(async () => {
-  await Promise.all([loadDicts(), loadDepts(), loadItemOptions()]);
+  await Promise.all([loadDicts(), loadItemOptions()]);
   await loadList();
   await loadStats();
 });

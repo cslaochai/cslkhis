@@ -8,7 +8,7 @@ import {dictLabelText} from './utils';
 export function deptTypeLabel(options, type) {
     // 管理片区/机构本身不设服务范围（列存空串），显示成「—」而不是「未知(0)」
     if (type === null || type === undefined || String(type).trim() === '') {
-        return '—';
+        return '';
     }
     const list = Array.isArray(options) ? options : [];
     if (typeof type === 'string' && type.includes(',')) {

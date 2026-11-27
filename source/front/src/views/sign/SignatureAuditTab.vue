@@ -31,8 +31,8 @@
       </el-table-column>
       <el-table-column label="对象" width="190">
         <template #default="{ row }">
-          <div class="text-xs">{{ row.bizTypeText }} · {{ row.bizNo || '—' }}</div>
-          <div class="text-xs text-slate-400">{{ row.patientName || '—' }}<span
+          <div class="text-xs">{{ row.bizTypeText }} · {{ row.bizNo || '' }}</div>
+          <div class="text-xs text-slate-400">{{ row.patientName || '' }}<span
               v-if="row.deptName"> · {{ row.deptName }}</span></div>
         </template>
       </el-table-column>
@@ -44,18 +44,18 @@
       </el-table-column>
       <el-table-column label="签名人" width="130">
         <template #default="{ row }">
-          <div class="text-xs">{{ row.signerName || '—' }}</div>
-          <div class="text-xs text-slate-400">{{ row.signerDeptName || '—' }}</div>
+          <div class="text-xs">{{ row.signerName || '' }}</div>
+          <div class="text-xs text-slate-400">{{ row.signerDeptName || '' }}</div>
         </template>
       </el-table-column>
       <el-table-column label="摘要" width="150">
         <template #default="{ row }">
-          <span class="font-mono text-xs text-slate-600">{{ row.contentDigestShort || '—' }}</span>
+          <span class="font-mono text-xs text-slate-600">{{ row.contentDigestShort || '' }}</span>
         </template>
       </el-table-column>
       <el-table-column label="签名时间" width="170">
         <template #default="{ row }">
-          <span class="text-xs">{{ row.signedTime || '—' }}</span>
+          <span class="text-xs">{{ row.signedTime || '' }}</span>
         </template>
       </el-table-column>
       <el-table-column label="状态" width="90">

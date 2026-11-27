@@ -13,12 +13,12 @@
           <el-option
               v-for="d in drugOptions"
               :key="d.id"
-              :label="`${d.drugName}（${d.specification || '—'}）`"
+              :label="`${d.drugName}（${d.specification || ''}）`"
               :value="d.id"
           >
             <span>{{ d.drugName }}</span>
             <span class="text-xs text-slate-400 ml-2">{{ d.drugCode }} / {{
-                d.specification || '—'
+                d.specification || ''
               }} / ¥{{ d.retailPrice }}</span>
           </el-option>
         </el-select>
@@ -26,15 +26,15 @@
       <div v-if="selectedDrug" class="grid grid-cols-3 gap-4 mb-4">
         <div class="rounded bg-slate-50 p-2.5">
           <p class="text-xs text-slate-500">规格</p>
-          <p class="text-sm font-medium text-slate-900">{{ selectedDrug.specification || '—' }}</p>
+          <p class="text-sm font-medium text-slate-900">{{ selectedDrug.specification || '' }}</p>
         </div>
         <div class="rounded bg-slate-50 p-2.5">
           <p class="text-xs text-slate-500">单位</p>
-          <p class="text-sm font-medium text-slate-900">{{ selectedDrug.unit || '—' }}</p>
+          <p class="text-sm font-medium text-slate-900">{{ selectedDrug.unit || '' }}</p>
         </div>
         <div class="rounded bg-slate-50 p-2.5">
           <p class="text-xs text-slate-500">字典零售价</p>
-          <p class="text-sm font-medium text-slate-900">¥{{ selectedDrug.retailPrice ?? '—' }}</p>
+          <p class="text-sm font-medium text-slate-900">¥{{ selectedDrug.retailPrice ?? '' }}</p>
         </div>
       </div>
       <div class="grid grid-cols-2 gap-4">

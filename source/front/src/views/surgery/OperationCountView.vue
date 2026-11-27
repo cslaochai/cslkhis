@@ -57,18 +57,18 @@
           </el-table-column>
           <el-table-column align="center" label="术前" width="90">
             <template #default="{ row }">{{
-                row.beforeQty === null || row.beforeQty === undefined ? '—' : row.beforeQty
+                row.beforeQty === null || row.beforeQty === undefined ? '' : row.beforeQty
               }}
             </template>
           </el-table-column>
           <el-table-column align="center" label="关体前" width="90">
             <template #default="{ row }">
-              {{ row.closureQty === null || row.closureQty === undefined ? '—' : row.closureQty }}
+              {{ row.closureQty === null || row.closureQty === undefined ? '' : row.closureQty }}
             </template>
           </el-table-column>
           <el-table-column align="center" label="关体后" width="90">
             <template #default="{ row }">{{
-                row.finalQty === null || row.finalQty === undefined ? '—' : row.finalQty
+                row.finalQty === null || row.finalQty === undefined ? '' : row.finalQty
               }}
             </template>
           </el-table-column>

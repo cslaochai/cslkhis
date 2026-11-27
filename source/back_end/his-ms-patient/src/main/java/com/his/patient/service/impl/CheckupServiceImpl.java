@@ -17,6 +17,7 @@ import com.his.patient.service.CheckupService;
 import com.his.patient.vo.CheckupVO;
 import com.his.common.entity.CurrentUser;
 import com.his.spi.service.DictCacheService;
+import com.his.spi.service.DeptScopeService;
 import com.his.common.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -46,6 +47,8 @@ public class CheckupServiceImpl extends ServiceImpl<BizCheckupRecordMapper, BizC
     private final BizCheckupResultMapper bizCheckupResultMapper;
 
     private final BizPatientMapper bizPatientMapper;
+
+    private final DeptScopeService deptScopeService;
 
     @Transactional(rollbackFor = Exception.class)
     public CheckupVO.PackageVO savePackage(CheckupDTO.PackageSave dto) {
@@ -168,6 +171,7 @@ public class CheckupServiceImpl extends ServiceImpl<BizCheckupRecordMapper, BizC
         }
         BizCheckupRecord r = new BizCheckupRecord();
         r.setRecordNo(redisSequenceService.generateCheckupRecordNo());
+        r.setDeptId(operatorUser.getDeptId());
         r.setPatientId(patient.getId());
         r.setPatientName(patient.getPatientName());
         r.setGender(patient.getGender());
@@ -212,8 +216,12 @@ public class CheckupServiceImpl extends ServiceImpl<BizCheckupRecordMapper, BizC
                         .or().like(BizCheckupRecord::getRecordNo, TextUtil.trimToEmpty(dto.getKeyword())))
                 .eq(dto.getRecordStatus() != null, BizCheckupRecord::getRecordStatus, dto.getRecordStatus())
                 .eq(dto.getPersonType() != null, BizCheckupRecord::getPersonType, dto.getPersonType())
-                .eq(dto.getCheckupDate() != null, BizCheckupRecord::getCheckupDate, dto.getCheckupDate())
-                .orderByDesc(BizCheckupRecord::getCheckupDate)
+                .eq(dto.getCheckupDate() != null, BizCheckupRecord::getCheckupDate, dto.getCheckupDate());
+        // 受限岗位按授权科室行级收口；全院角色（data_scope=1）不收口
+        if (deptScopeService.isScoped()) {
+            qw.in(BizCheckupRecord::getDeptId, deptScopeService.allowedDeptIds());
+        }
+        qw.orderByDesc(BizCheckupRecord::getCheckupDate)
                 .orderByDesc(BizCheckupRecord::getId);
         IPage<BizCheckupRecord> page = bizCheckupRecordMapper.selectPage(Page.of(dto.getPageNum(), dto.getPageSize()), qw);
         return page.convert(r -> toRecordVo(r, false));
@@ -237,6 +245,7 @@ public class CheckupServiceImpl extends ServiceImpl<BizCheckupRecordMapper, BizC
         if (r == null || r.getDelFlag() != null && r.getDelFlag() == 1) {
             throw new BusinessException("体检登记不存在或已删除");
         }
+        deptScopeService.assertDeptAccessible(r.getDeptId());
         return toRecordVo(r, true);
     }
 
@@ -257,6 +266,7 @@ public class CheckupServiceImpl extends ServiceImpl<BizCheckupRecordMapper, BizC
         if (r == null || r.getDelFlag() != null && r.getDelFlag() == 1) {
             throw new BusinessException("体检登记不存在或已删除");
         }
+        deptScopeService.assertDeptAccessible(r.getDeptId());
         if (r.getRecordStatus() == CheckupStatusEnum.REPORTED.getCode()) {
             throw new BusinessException("已出报告，结果禁止修改");
         }
@@ -288,6 +298,7 @@ public class CheckupServiceImpl extends ServiceImpl<BizCheckupRecordMapper, BizC
         if (r == null || r.getDelFlag() != null && r.getDelFlag() == 1) {
             throw new BusinessException("体检登记不存在或已删除");
         }
+        deptScopeService.assertDeptAccessible(r.getDeptId());
         if (r.getRecordStatus() == CheckupStatusEnum.REPORTED.getCode()) {
             throw new BusinessException("已出报告，禁止重复总检");
         }
@@ -316,6 +327,7 @@ public class CheckupServiceImpl extends ServiceImpl<BizCheckupRecordMapper, BizC
         if (r == null || r.getDelFlag() != null && r.getDelFlag() == 1) {
             throw new BusinessException("体检登记不存在或已删除");
         }
+        deptScopeService.assertDeptAccessible(r.getDeptId());
         if (r.getRecordStatus() != CheckupStatusEnum.REGISTERED.getCode()) {
             throw new BusinessException("只有已登记状态可以开始体检");
         }
@@ -339,6 +351,7 @@ public class CheckupServiceImpl extends ServiceImpl<BizCheckupRecordMapper, BizC
         if (r == null || r.getDelFlag() != null && r.getDelFlag() == 1) {
             throw new BusinessException("体检登记不存在或已删除");
         }
+        deptScopeService.assertDeptAccessible(r.getDeptId());
         if (r.getRecordStatus() != CheckupStatusEnum.REGISTERED.getCode()) {
             throw new BusinessException("已开始的体检登记不能删除");
         }
@@ -426,6 +439,7 @@ public class CheckupServiceImpl extends ServiceImpl<BizCheckupRecordMapper, BizC
         if (r == null || r.getDelFlag() != null && r.getDelFlag() == 1) {
             throw new BusinessException("体检登记不存在或已删除");
         }
+        deptScopeService.assertDeptAccessible(r.getDeptId());
         if (r.getRecordStatus() == CheckupStatusEnum.IN_PROGRESS.getCode()) {
             long pending = bizCheckupResultMapper.selectCount(new LambdaQueryWrapper<BizCheckupResult>()
                     .eq(BizCheckupResult::getRecordId, r.getId())

@@ -22,9 +22,8 @@
         </el-radio-group>
       </el-form-item>
       <el-form-item v-if="orgIdRequired" label="所属科室">
-        <el-select v-model="formData.orgId" filterable placeholder="选择科室" style="width: 100%">
-          <el-option v-for="o in deptOptions" :key="o.id" :label="o.name" :value="o.id"/>
-        </el-select>
+        <DeptTreeSelect v-model="formData.orgId" mode="LEAF" width="100%" placeholder="选择科室"/>
+
       </el-form-item>
       <el-form-item label="班次" prop="shiftId">
         <div data-testid="dp-shift">
@@ -72,8 +71,8 @@
 import {computed, reactive, ref, watch} from 'vue'
 import {ElMessage} from 'element-plus'
 import {dutyPostUpsert} from '@/api/dutyPost'
-import {getDepartmentSelectList} from '@/api/system'
 import {getShiftSelectList} from '@/api/appoint'
+import DeptTreeSelect from '@/components/his/DeptTreeSelect.vue'
 import {
   DUTY_ROLE_TYPE_OPTIONS,
   DUTY_SCOPE_OPTIONS,
@@ -113,7 +112,6 @@ const rules = {
 
 const orgIdRequired = computed(() => Number(formData.orgType) !== ORG_UNIT_TYPE_HOSPITAL)
 
-const deptOptions = ref([])
 // 值班班次册（use_scope=3）：班次决定这一位几点到几点，点位不能再自己填一遍时间
 const shiftOptions = ref([])
 
@@ -135,11 +133,7 @@ const resetForm = () => {
 
 const loadOptions = async () => {
   try {
-    const [dRes, sRes] = await Promise.all([
-      getDepartmentSelectList({}),
-      getShiftSelectList({status: 1, useScope: SHIFT_USE_SCOPE_DUTY}),
-    ])
-    deptOptions.value = (dRes?.data || []).map((d) => ({id: d.id ?? d.deptId, name: d.deptName ?? d.name}))
+    const sRes = await getShiftSelectList({status: 1, useScope: SHIFT_USE_SCOPE_DUTY})
     shiftOptions.value = (sRes?.data || []).map((s) => ({id: s.id, shiftName: s.shiftName, useScope: s.useScope}))
   } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
     

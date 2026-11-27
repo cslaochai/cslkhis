@@ -218,11 +218,36 @@ public class BizPatientServiceImpl extends ServiceImpl<BizPatientMapper, BizPati
                                                     String medicalInsuranceType, String keyword, int pageNum, int pageSize,
                                                     List<Long> tagPatientIds, PatientSearchScopeDTO scope,
                                                     List<Long> scopeDeptIds) {
+        PatientPageQueryDTO dto = new PatientPageQueryDTO();
+        dto.setPatientName(patientName);
+        dto.setPhone(phone);
+        dto.setPatientNo(patientNo);
+        dto.setMedicalInsuranceType(medicalInsuranceType);
+        dto.setKeyword(keyword);
+        dto.setPageNum(pageNum);
+        dto.setPageSize(pageSize);
+        return selectPatientPage(dto, tagPatientIds, scope, scopeDeptIds);
+    }
+
+    /**
+     * 分页查询唯一实现：所有筛选条件都在这里落 SQL，字符串重载只做形状适配。
+     */
+    @Override
+    public PageResult<BizPatient> selectPatientPage(PatientPageQueryDTO dto, List<Long> tagPatientIds,
+                                                    PatientSearchScopeDTO scope, List<Long> scopeDeptIds) {
         LambdaQueryWrapper<BizPatient> wrapper = new LambdaQueryWrapper<>();
-        wrapper.like(TextUtil.hasText(patientName), BizPatient::getPatientName, patientName)
-                .like(TextUtil.hasText(phone), BizPatient::getPhone, phone)
-                .like(TextUtil.hasText(patientNo), BizPatient::getPatientNo, patientNo)
-                .eq(TextUtil.hasText(medicalInsuranceType), BizPatient::getMedicalInsuranceType, medicalInsuranceType)
+        wrapper.like(TextUtil.hasText(dto.getPatientName()), BizPatient::getPatientName, dto.getPatientName())
+                .like(TextUtil.hasText(dto.getIdCard()), BizPatient::getIdCard, dto.getIdCard())
+                .like(TextUtil.hasText(dto.getPhone()), BizPatient::getPhone, dto.getPhone())
+                .like(TextUtil.hasText(dto.getPatientNo()), BizPatient::getPatientNo, dto.getPatientNo())
+                .eq(TextUtil.hasText(dto.getMedicalInsuranceType()), BizPatient::getMedicalInsuranceType, dto.getMedicalInsuranceType())
+                .eq(dto.getGender() != null, BizPatient::getGender, dto.getGender())
+                .eq(dto.getMaritalStatus() != null, BizPatient::getMaritalStatus, dto.getMaritalStatus())
+                .eq(dto.getStatus() != null, BizPatient::getStatus, dto.getStatus())
+                .ge(TextUtil.hasText(dto.getCreateDateStart()), BizPatient::getCreateTime,
+                        parseStartOfDay(dto.getCreateDateStart()))
+                .le(TextUtil.hasText(dto.getCreateDateEnd()), BizPatient::getCreateTime,
+                        parseEndOfDay(dto.getCreateDateEnd()))
                 .in(tagPatientIds != null && !tagPatientIds.isEmpty(), BizPatient::getId, tagPatientIds);
         // 档案视图受限岗位：只看最近就诊科室落在授权科室集合内的患者。
         // 候选检索（工作站选患者）与全院角色不传集合，跨科检索身份，不收口。
@@ -230,11 +255,12 @@ public class BizPatientServiceImpl extends ServiceImpl<BizPatientMapper, BizPati
                 BizPatient::getLastVisitDept, scopeDeptIds);
         // 综合关键字：姓名 / 患者号 / 手机号 / 身份证号四者 OR，必须整体括号包裹，
         // 否则会把前面精确条件的 AND 关系吃掉（OR 优先级低于 AND）
-        if (TextUtil.hasText(keyword)) {
-            wrapper.and(w -> w.like(BizPatient::getPatientName, keyword)
-                    .or().like(BizPatient::getPatientNo, keyword)
-                    .or().like(BizPatient::getPhone, keyword)
-                    .or().like(BizPatient::getIdCard, keyword));
+        if (TextUtil.hasText(dto.getKeyword())) {
+            String kw = dto.getKeyword();
+            wrapper.and(w -> w.like(BizPatient::getPatientName, kw)
+                    .or().like(BizPatient::getPatientNo, kw)
+                    .or().like(BizPatient::getPhone, kw)
+                    .or().like(BizPatient::getIdCard, kw));
         }
 
         // 今日就诊置顶。
@@ -265,8 +291,30 @@ public class BizPatientServiceImpl extends ServiceImpl<BizPatientMapper, BizPati
             wrapper.orderByDesc(BizPatient::getCreateTime).orderByDesc(BizPatient::getId);
         }
 
-        Page<BizPatient> page = this.page(new Page<>(pageNum, pageSize), wrapper);
+        Page<BizPatient> page = this.page(new Page<>(dto.getPageNum(), dto.getPageSize()), wrapper);
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(), page.getRecords());
+    }
+
+    /**
+     * 建档日期起：当天 00:00:00。格式非法直接抛业务错误（DTO 的 @Pattern 只管 web 入口）。
+     * 空白入参返回 null：MP 条件构造器先求值 value 再判断 condition，不判空会在 parse 处先抛 NPE。
+     */
+    private LocalDateTime parseStartOfDay(String date) {
+        if (!TextUtil.hasText(date)) {
+            return null;
+        }
+        return LocalDate.parse(date, DateTimeFormatter.ISO_LOCAL_DATE).atStartOfDay();
+    }
+
+    /**
+     * 建档日期止：当天 23:59:59。不能写成 {@code <= 'yyyy-MM-dd'} —— 会把当天全部时点滤掉。
+     * 空白入参返回 null，理由同 {@link #parseStartOfDay}。
+     */
+    private LocalDateTime parseEndOfDay(String date) {
+        if (!TextUtil.hasText(date)) {
+            return null;
+        }
+        return LocalDate.parse(date, DateTimeFormatter.ISO_LOCAL_DATE).atTime(23, 59, 59);
     }
 
     /**
@@ -405,11 +453,7 @@ public class BizPatientServiceImpl extends ServiceImpl<BizPatientMapper, BizPati
         PatientSearchScopeDTO scope = buildSearchScope(todayVisits);
         List<Long> scopeDeptIds = resolveArchiveScopeDeptIds();
 
-        PageResult<BizPatient> pageResult = selectPatientPage(
-                queryDTO.getPatientName(), queryDTO.getPhone(), queryDTO.getPatientNo(),
-                queryDTO.getMedicalInsuranceType(), queryDTO.getKeyword(),
-                queryDTO.getPageNum(), queryDTO.getPageSize(), tagPatientIds,
-                scope, scopeDeptIds);
+        PageResult<BizPatient> pageResult = selectPatientPage(queryDTO, tagPatientIds, scope, scopeDeptIds);
 
         PageResult<PatientVO> voPageResult = new PageResult<>();
         voPageResult.setTotal(pageResult.getTotal());
@@ -424,6 +468,14 @@ public class BizPatientServiceImpl extends ServiceImpl<BizPatientMapper, BizPati
         fillTagsAndAppointCount(voList);
         fillTodayVisit(voList, todayVisits);
         maskListSensitiveFields(voList);
+        // 列表与详情同口径：自述过敏史/既往史属临床内容，没有 patient:cdr:list 的岗位
+        // （前台导诊/收费/药房）服务端就不返回 —— 不能因为「列表里只占一列」就漏出去。
+        if (!canReadPatientClinical()) {
+            for (PatientVO vo : voList) {
+                vo.setAllergyHistory(null);
+                vo.setMedicalHistory(null);
+            }
+        }
         voPageResult.setRecords(voList);
         return voPageResult;
     }

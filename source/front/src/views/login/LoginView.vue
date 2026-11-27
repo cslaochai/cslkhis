@@ -103,7 +103,7 @@
             v-model="credKeyword"
             class="cred-filter"
             clearable
-            placeholder="按角色 / 科室 / 姓名 / 账号 / 能做什么筛选（模糊匹配）"
+            placeholder="按角色 / 科室 / 姓名 / 姓名首拼（如 xs=许霜）/ 账号 / 能做什么筛选（模糊匹配）"
             prefix-icon="Search"
         />
         <p class="cred-hint">
@@ -149,6 +149,7 @@ import {credAccounts} from './credAccounts'
 import {encryptPassword} from '@/lib/password'
 import {copyText} from '@/lib/clipboard'
 import {useCurrentPatientStore} from '@/stores/currentPatient'
+import {initialsOf} from '@/lib/pinyin'
 import {clearSessionCaches} from '@/lib/session-cache'
 
 const router = useRouter()
@@ -191,7 +192,9 @@ const ROLE_ABILITY = {
   '收费员': '窗口收费、退费申请、发票管理、财务日结、费用记账、结算账单与支付流水查询、住院结算（自费与医保同一入口）',
   '药剂师': PHARM_ABILITY,
   '医技人员': MEDTECH_ABILITY,
+  '设备与供应室管理员': 'CSSD 器械包与灭菌管理、设备台账与调配、医废管理、气体监测、资产定位（限本科室）',
   '前台导诊': '挂号预约（全院科室）、收费结算窗口、患者管理与患者标签',
+  '体检中心前台': '体检登记与签到、套餐确认、现场建档、报告跟进（限本中心）；不进门诊挂号号源、不收费开票、不做临床总检',
   '急诊医生': ER_ABILITY,
   '分诊护士': '分诊工作站（队列/呼叫/过号/复诊优先/分诊卡体征与分级）+ 急诊护士工作站（急诊登记、四级分级 MEWS 辅助）',
   '检验技师': '检验工作站、标本管理、检验项目字典、输血管理、危急值处置（限本科室）',
@@ -208,8 +211,8 @@ const ROLE_ABILITY = {
   '公卫医师': '院感监测、公卫上报、慢病建档与长处方认定、门诊日志、我的未报、随访回访（限本科室）',
   '行政人员': '工作台、排班总览、值班点位与值班类型配置、工单受理、满意度评价、总值班日志（无临床业务页面）',
   '客服专员': '患者常见问题维护、工单受理、满意度评价、线上问诊、体检管理',
-  '门诊办': '门诊排班审核、排班总览、双向转诊、满意度评价、诊室管理、体检管理与体检套餐',
-  '医务科': '员工排班与急诊排班审核、人力配置标准、全院总值班、病历质控、专项质控、危急值、医疗安全、技术授权、科室管理、签名证书/验签、会诊、死亡证明、公卫上报、抗菌药物处方权',
+  '门诊办管理员': '门诊排班审核、排班总览、双向转诊、满意度评价、诊室管理、体检管理与体检套餐',
+  '医务科管理员': '员工/急诊排班审核、人力配置标准、全院总值班、病历/专项/单病种质控、危急值监督、医疗安全与纠纷、技术授权与抗菌药物处方权、科室管理、签名证书/验签/吊销、日间手术准入、死亡证明审核签发',
   '科主任': '本科室急诊/员工排班（提交后由医务科审核发布）、住院医生站、病历质控、专项质控、危急值、会诊、死亡证明',
   '科室排班员': SCHEDULE_PLANNER_ABILITY,
   '护理部主任': '护理排班整周备案与退回（全院）、排班总览、全院总值班、护理质控与医疗安全、设备共享调配',
@@ -232,206 +235,217 @@ const credRows = [
   {
     accounts: ['admin ( 超级管理员  )'],
     role: '系统管理员',
-    dept: '医院信息系统',
+    dept: '长沙麓康医院',
     ability: '全部业务页面 + 系统管理（用户/角色/菜单/字典/参数/日志审计）'
   },
   {
-    accounts: ['xuyan ( 许妍  )'],
+    accounts: ['xushuang ( 许霜  )'],
     role: '前台导诊',
-    dept: '院办',
+    dept: '门诊部',
     ability: '挂号预约（全院科室）、收费结算窗口、结算账单查询、患者管理、患者标签（分诊工作站与就诊总览已收回）'
   },
   {
-    accounts: ['wanghaitao ( 王海涛 )'],
+    accounts: ['wangyongbang ( 王永邦 )'],
     role: '科室排班员',
     dept: '心血管内科',
     ability: SCHEDULE_PLANNER_ABILITY
   },
   {
-    accounts: ['liumin ( 刘敏 )'],
-    role: '门诊办',
-    dept: '医院信息系统',
+    accounts: ['liudonglin ( 刘冬琳 )'],
+    role: '门诊办管理员',
+    dept: '长沙麓康医院',
     ability: SCHEDULE_AUDITOR_ABILITY + '；心血管内科排班审核人'
   },
   {
-    accounts: ['linxinyi ( 林心怡  )'],
+    accounts: ['linzhenqing ( 林珍晴  )'],
     role: '分诊护士',
     dept: '心血管内科',
     ability: '分诊工作站：队列/呼叫/重呼/过号/复诊优先/分诊卡体征与分级/患者签到，默认诊区=心内科（限本科室）'
   },
   // 动态岗演示对象：仅在心内科病区在册，无排班权限；改岗位归属/有效期验证名册与排班边界
   {
-    accounts: ['shiyu ( 时雨 )'],
+    accounts: ['shijingling ( 时静玲 )'],
     role: '护士',
-    dept: '心血管内科',
-    ability: NURSE_ABILITY + '；动态岗演示：转科前后在册名册与排班边界（本身不能排班）'
+    dept: '神经内科',
+    ability: NURSE_ABILITY + '；动态岗演示：转科前后在册名册与排班边界（本身不能排班）；顶栏可切岗位：护士（心血管内科）'
   },
   {
-    accounts: ['caoyumei ( 曹玉梅  )', 'qiuhaotian ( 邱昊天  )'],
-    role: '区护士长',
+    accounts: ['caoyaxia ( 曹亚霞  )', 'qiulifeng ( 邱立峰  )'],
+    role: '护士长',
     dept: '心血管内科',
     ability: HEAD_NURSE_ABILITY
   },
   // 动态岗对照组：神经内科是心内科的接收科室，两边名册互斥（转科生效日当天换边）
   {
-    accounts: ['xuheyu ( 徐和玉 )'],
-    role: '区护士长',
+    accounts: ['xusue ( 徐素娥 )'],
+    role: '护士长',
     dept: '神经内科',
     ability: '病区护理排班编制/改格/删除/整周提交（神经内科病区，限本科室）；无审核权（审核在内科系统科护士长）'
   },
   // 护理三级链第二档：科护士长，审核发布片区内病区的整周排班
   {
-    accounts: ['yangshuhua ( 杨淑华 )'],
+    accounts: ['yangmeimei ( 杨美梅 )'],
     role: '科护士长',
     dept: '内科系统',
     ability: SCHEDULE_NURSING_AREA_AUDITOR_ABILITY
   },
   {
-    accounts: ['chenhuilan ( 陈慧兰 )'],
+    accounts: ['chenmengyu ( 陈梦玉 )'],
     role: '护理部主任',
     dept: '护理部',
     ability: SCHEDULE_NURSING_FILING_ABILITY
   },
   // 护理部人力调配岗：跨科室改岗位 + 排班，演示「今天护士 A 去某科做分诊、护士 B 去输液室」
   {
-    accounts: ['shenqing ( 沈清  )'],
+    accounts: ['shenxiuying ( 沈秀莹  )'],
     role: '护理调配员',
     dept: '护理部',
     ability: NURSING_DISPATCH_ABILITY
   },
   {
-    accounts: ['tanyiming ( 谭一鸣 )'],
-    role: '医务科 / 医务调配员（顶栏切岗位）',
+    accounts: ['tanxiangli ( 谭向礼 )'],
+    role: '医务科管理员',
     dept: '医务科',
-    ability: '医务科岗：员工排班（全院，含审核发布）、急诊排班审核发布、人力配置标准、排班总览、门诊排班审核、排班字典管理、急诊值班。'
-        + '切「医务调配员」岗：改医师岗位归属（可填生效/失效日期，不改编制）+ 跨科室排门诊号源/急诊值班 + 排班总览，只排不自批'
+    ability: '全院总值班登记/换班/审核发布、急诊排班审核、人力配置标准与岗位人力标准维护、排班总览；'
+        + '顶栏可切岗位：医务调配员（医务科）= 改医师岗位归属（可填生效/失效日期，不改编制）+ 跨科室排门诊号源/急诊值班 + 排班总览，只排不自批'
   },
 
   // 三个治疗科室（推荐账号）
   {
-    accounts: ['moyuanhang ( 莫远航 )', 'shijiaming ( 施佳明  )', 'wangsheng ( 王升  )', 'zengjie ( 曾洁 )', 'zhengmingyuan ( 郑明远 )'],
+    accounts: ['mojixin ( 莫吉信 )', 'shizhiqing ( 施志庆  )', 'wangyong ( 王勇  )', 'zengleimin ( 曾蕾敏 )', 'zhengchenglei ( 郑晟磊 )'],
     role: '医生',
     dept: '心血管内科',
     ability: DOCTOR_ABILITY
   },
   {
-    accounts: ['lirui ( 李瑞  )'],
-    role: '系统管理员 / 医技人员',
-    dept: '信息科 / 设备科',
-    ability: '切「系统管理员」= 同 admin；切「医技人员」= 只做检查检验与报告'
+    accounts: ['lijinxin ( 李金信  )'],
+    role: '信息科管理员',
+    dept: '信息科',
+    ability: '签名证书台账与办理（生成密钥对 / CA 在线申请 / 证书回填）、用户/角色/菜单/字典/参数/日志审计；顶栏可切岗位：设备与供应室管理员（设备科）'
   },
   // 签名证书固定账号（信息科管理员）：台账查询 + 办理（CA在线申请/回填）；吊销处置归医务科（分权）
   {
-    accounts: ['jiangjunjie ( 蒋俊杰 )'],
+    accounts: ['jianglinhao ( 蒋林浩 )'],
     role: '信息科管理员',
     dept: '信息科',
     ability: '签名证书：台账查询、办理（生成密钥对 / CA 在线申请 / 状态刷新 / 证书回填）、CA 通道状态自检；吊销不在本岗（医务科处置，分权）'
   },
-  // 手术麻醉链：这些人默认岗位是「医生」（落在自己科室），登录后要切「麻醉医师」/「手术室护士」才能做本岗动作
+  // 手术麻醉链：主岗位是「医生」（落麻醉科），登录后切「麻醉医师」岗做麻醉动作
   {
-    accounts: ['yuanheyu ( 袁和玉 )', 'liusiqi ( 刘思琪 )', 'jiangna ( 江娜 )', 'chenyihang ( 陈亦航 )'],
-    role: '麻醉医师',
+    accounts: ['yuanfengzhi ( 袁凤芝 )', 'liuguifeng ( 刘桂凤 )', 'jiangxiajing ( 江夏静 )', 'chengui ( 陈贵 )'],
+    role: '医生',
     dept: '麻醉科',
-    ability: '麻醉访视与术前评估、麻醉记录（生命体征时间轴）、PACU 复苏、术后随访、三方核查签名（登录后切「麻醉医师」岗）'
+    ability: DOCTOR_ABILITY + '；顶栏可切岗位：麻醉医师（麻醉科）= 麻醉访视与术前评估、麻醉记录（生命体征时间轴）、PACU 复苏、术后随访、三方核查签名'
   },
-  // 手术室没有独立科室节点，护士的「手术室护士」岗位落在本人现科室（孟瑶=呼吸内科、温俊杰=麻醉科）；
-  // 该角色 data_scope=1（全院），手术/清点数据不受落点科室收口，所以能看全院的台
+  // 手术室没有独立科室节点，「手术室护士」岗位落在本人现科室；该角色 data_scope=1（全院），手术/清点数据不受落点科室收口
   {
-    accounts: ['mengyao ( 孟瑶  )', 'wenjunjie ( 温俊杰 )'],
-    role: '手术室护士',
-    dept: '呼吸内科 / 麻醉科',
-    ability: '器械清点（术前 → 关体前 → 关体后三轮）、三方核查签名、手术间与排台查看（登录后切「手术室护士」岗）'
+    accounts: ['mengyuni ( 孟雨妮  )'],
+    role: '护士长',
+    dept: '呼吸内科',
+    ability: HEAD_NURSE_ABILITY + '；顶栏可切岗位：手术室护士（呼吸内科）= 器械清点（术前 → 关体前 → 关体后三轮）、三方核查签名、手术间与排台查看'
   },
   {
-    accounts: ['fengruchu ( 冯如初  )', 'yuanchenxi ( 袁晨曦  )'],
+    accounts: ['wenchengyan ( 温晟岩 )'],
+    role: '护士',
+    dept: '麻醉科',
+    ability: NURSE_ABILITY + '；顶栏可切岗位：手术室护士（麻醉科）= 器械清点（术前 → 关体前 → 关体后三轮）、三方核查签名、手术间与排台查看'
+  },
+  {
+    accounts: ['fengxuejing ( 冯雪晶  )', 'yuanhaibang ( 袁海邦  )'],
     role: '收费员',
     dept: '财务科',
     ability: '窗口收费、退费申请、发票管理、财务日结、费用记账、账单与支付流水查询（全院，可跨科室结账单）、住院结算（收预交金、办出院结算——自费与医保同一入口）'
   },
   {
-    accounts: ['hanlei ( 韩蕾  )'],
-    role: '收费员 / 医保结算员',
-    dept: '医保科 / 财务科',
-    ability: '切「收费员」= 收费全部 + 住院结算；切「医保结算员」加做医保结算清单、慢特病备案、目录对照、政策配置、合规审核、扣款飞检、渠道对账、资金账户、欠费管控、医保住院结算与2304/2305报盘'
+    accounts: ['hannaying ( 韩娜颖  )'],
+    role: '收费员',
+    dept: '财务科',
+    ability: '窗口收费、退费申请、发票管理、财务日结、费用记账、账单与支付流水查询、住院结算（自费与医保同一入口）；顶栏可切岗位：医保结算员（医保科）= 医保结算清单、慢特病备案、目录对照、政策配置、合规审核、扣款飞检、渠道对账、资金账户、欠费管控、医保住院结算与 2304/2305 报盘'
   },
-  {accounts: ['denghoupu ( 邓厚朴  )'], role: '药剂师', dept: '门诊中药房', ability: PHARM_ABILITY},
-  {accounts: ['dongxinyi ( 董心怡  )'], role: '药剂师', dept: '住院药房', ability: PHARM_ABILITY},
-  {accounts: ['jiangqian ( 江倩  )'], role: '药剂师', dept: '静脉配液中心', ability: PHARM_ABILITY},
-  {accounts: ['jiangzhiyuan ( 蒋致远  )'], role: '药剂师', dept: '门诊西药房', ability: PHARM_ABILITY},
-  {accounts: ['caihanmei ( 蔡寒梅  )'], role: '医技人员', dept: '消毒供应中心', ability: MEDTECH_ABILITY},
-  {accounts: ['kanghui ( 康慧  )'], role: '医技人员', dept: '输血科', ability: MEDTECH_ABILITY},
+  {accounts: ['dengrongdong ( 邓荣东  )'], role: '药剂师', dept: '门诊中药房', ability: PHARM_ABILITY},
+  {accounts: ['dongxiaxia ( 董夏霞  )'], role: '药剂师', dept: '住院药房', ability: PHARM_ABILITY},
+  {accounts: ['jiangleijie ( 江蕾洁  )'], role: '药剂师', dept: '静脉配液中心', ability: PHARM_ABILITY},
+  {accounts: ['jiangzheng ( 蒋政  )'], role: '药剂师', dept: '门诊西药房', ability: PHARM_ABILITY},
+  {accounts: ['caipingling ( 蔡萍玲  )'], role: '设备与供应室管理员', dept: '消毒供应中心', ability: 'CSSD 器械包与灭菌管理、设备台账与调配、医废管理、气体监测、资产定位（限本科室）'},
+  {accounts: ['kangjie ( 康洁  )'], role: '检验技师', dept: '输血科', ability: '检验工作站、标本管理、检验项目字典、输血管理、危急值处置（限本科室）'},
   {
-    accounts: ['cenjing ( 岑静  )'],
+    accounts: ['cenzhenlu ( 岑珍璐  )'],
     role: '检验技师',
     dept: '医学检验科',
     ability: '检验工作站、标本管理、检验项目字典、输血管理、危急值处置（限本科室）'
   },
-  {accounts: ['shiruotong ( 石若彤  )'], role: '急诊医生', dept: '急诊内科', ability: ER_ABILITY},
-  {accounts: ['zhouyuan ( 周远 )'], role: '急诊医生', dept: '急诊内科', ability: ER_ABILITY},
-  {accounts: ['chengruotong ( 程若彤  )'], role: '急诊医生', dept: '急诊外科', ability: ER_ABILITY},
-  {accounts: ['donghanmei ( 董寒梅  )'], role: '急诊医生', dept: '急诊内科', ability: ER_ABILITY},
-  {accounts: ['helicheng ( 何立诚  )'], role: '急诊医生', dept: '急诊儿科', ability: ER_ABILITY},
-  {accounts: ['jiangbailu ( 江白露  )'], role: '急诊医生', dept: '肠道门诊', ability: ER_ABILITY},
-  {accounts: ['mojingwen ( 莫静文  )'], role: '急诊医生', dept: '发热门诊', ability: ER_ABILITY},
+  {accounts: ['shiaiyan ( 石爱燕  )'], role: '急诊医生', dept: '急诊内科', ability: ER_ABILITY},
+  {accounts: ['zhouhaiyong ( 周海永 )'], role: '急诊医生', dept: '急诊内科', ability: ER_ABILITY + '；顶栏可切岗位：科主任（急诊内科）= 本科室急诊排班（排班/修改/删除），提交后由医务科审核发布'},
+  {accounts: ['chengmeimin ( 程梅敏  )'], role: '急诊医生', dept: '急诊外科', ability: ER_ABILITY},
+  {accounts: ['dongxuejie ( 董雪洁  )'], role: '急诊医生', dept: '急诊内科', ability: ER_ABILITY},
+  {accounts: ['heshaode ( 何少德  )'], role: '急诊医生', dept: '急诊儿科', ability: ER_ABILITY},
+  {accounts: ['jiangqianjing ( 江倩静  )'], role: '急诊医生', dept: '肠道门诊', ability: ER_ABILITY},
+  {accounts: ['mohainan ( 莫海楠  )'], role: '急诊医生', dept: '发热门诊', ability: ER_ABILITY},
   // 急诊挂号链路（2026-10-27 新增夹具）：汤晓岚急诊登记 → 急诊医生工作站接诊
   {
-    accounts: ['tangxiaolan ( 汤晓岚  )'],
+    accounts: ['tangshi ( 汤诗  )'],
     role: '分诊护士',
     dept: '急诊内科',
     ability: '急诊护士工作站：急诊登记（选急诊科室单元 + 四级分级 MEWS 辅助 + 在岗值班医生）、批量登记、转归、复评、交班清零；不进门诊分诊台'
   },
   // 急诊排班链路（2026-10-26 下放科主任）：科主任切岗排班 → 医务科(tanyiming)审核发布
   {
-    accounts: ['zhouyuan ( 周远 )', 'linxiaozhou ( 林小舟 )', 'wutong ( 吴桐 )'],
-    role: '急诊医生 / 科主任',
-    dept: '急诊内科 / 急诊外科 / 急诊儿科',
-    ability: ER_ABILITY + '；切「科主任」岗 = 本科室急诊排班（排班/修改/删除），提交后由医务科谭一鸣审核发布'
+    accounts: ['linyanling ( 林艳玲 )'],
+    role: '急诊医生',
+    dept: '急诊外科',
+    ability: ER_ABILITY + '；顶栏可切岗位：科主任（急诊外科）= 本科室急诊排班（排班/修改/删除），提交后由医务科审核发布'
   },
   {
-    accounts: ['longyuebai ( 龙月白  )'],
+    accounts: ['wujiehui ( 吴洁慧 )'],
+    role: '急诊医生',
+    dept: '急诊儿科',
+    ability: ER_ABILITY + '；顶栏可切岗位：科主任（急诊儿科）= 本科室急诊排班（排班/修改/删除），提交后由医务科审核发布'
+  },
+  {
+    accounts: ['longchunyun ( 龙春云  )'],
     role: '护士长',
     dept: '护理部',
     ability: HEAD_NURSE_ABILITY + '；落点科室为护理部，四类排班页按护理部口径展示（非某个病区）'
   },
   {
-    accounts: ['qiwei ( 齐伟  )'],
+    accounts: ['qiqihang ( 齐启航  )'],
     role: '检查技师',
     dept: '放射科',
     ability: '检查工作站、检查预约中心、检查设备与号源、检查项目字典、标本管理、危急值处置（限本科室）'
   },
   {
-    accounts: ['kangyao ( 康瑶  )'],
-    role: '病案编码员 / 统计上报员',
+    accounts: ['kangqinwen ( 康琴雯  )'],
+    role: '病案编码员',
     dept: '病案室',
-    ability: '病案编码员：病历查阅、病案管理、患者主索引、健康档案与 360、上报科室代码对照（维护）；切「统计上报员」= 病案统计上报 + 上报科室代码对照（只读）'
+    ability: '病历查阅、病案管理、患者主索引、健康档案与 360、上报科室代码对照（维护）；顶栏可切岗位：统计上报员（病案室）= 病案统计上报（生成报文/报出/作废）+ 上报科室代码对照（只读）'
   },
   {
-    accounts: ['hanyuwei ( 韩雨薇  )'],
+    accounts: ['hanyandan ( 韩艳丹  )'],
     role: '营养师',
     dept: '营养科',
     ability: '营养风险筛查、膳食医嘱执行、订餐配送、营养会诊、营养指标监测（全院）'
   },
   {
-    accounts: ['gaoheyu ( 高和玉  )'],
+    accounts: ['gaofangjuan ( 高芳娟  )'],
     role: '行政人员',
     dept: '总务科',
     ability: '只有工作台与统一待办，无任何业务页面（用于岗位/权限实验）'
   },
   {
-    accounts: ['longjiaming ( 龙佳明  )'],
+    accounts: ['longjianlin ( 龙建林  )'],
     role: '行政人员',
     dept: '保卫科',
     ability: '只有工作台与统一待办，无任何业务页面（用于岗位/权限实验）'
   },
   {
-    accounts: ['kefulina ( 李娜  )'],
+    accounts: ['liyuying ( 李玉莹  )'],
     role: '客服专员',
     dept: '客户服务中心',
     ability: '患者常见问题维护、工单受理'
   },
 ]
 
-// 账号统一显示成「登录名 ( 姓名 )」：手工清单里有几个多敲了空格（`xuyan ( 许妍  )`），
+// 账号统一显示成「登录名 ( 姓名 )」：手工清单里有几个多敲了空格（`xushuang ( 许霜  )`），
 // 库里导出的又统一是单个空格，两段并在一张表里能看出参差，这里一次性抹平
 const formatAccount = (item) => {
   const matched = String(item).match(/^([^(（]+)[(（](.*)[)）]$/)
@@ -489,8 +503,31 @@ const allCredRows = [...credRows, ...generatedCredRows]
 // 账号数去重后计数：同一人挂多个岗位会在手工行里出现两次（演示「顶栏切岗位」），不能重复计
 const credAccountCount = new Set(allCredRows.flatMap((row) => row.accounts.map(accountOf))).size
 
-// 凭据关键词筛选（纯前端）：角色 / 科室 / 账号列（含姓名与登录名）/ 能做什么 模糊匹配，不查后端
+// 凭据关键词筛选（纯前端）：角色 / 科室 / 账号列（含姓名与登录名）/ 姓名首拼（xs=许霜）/ 能做什么 模糊匹配，不查后端
 const credKeyword = ref('')
+
+// 账号文案「账号 ( 姓名 )」→ 姓名；首拼与全拼都按姓名算，账号与姓名口径不一致时（手工演示行）也筛得到
+const nameOf = (item) => {
+  const matched = String(item).match(/^([^(（]+)[(（](.*)[)）]$/)
+  return matched ? matched[2].replace(/[\s　]+/g, '') : String(item).trim()
+}
+
+// 每行检索文本只拼一次：490 行 × 每次按键都过一遍，不重复算拼音
+const searchTextCache = new WeakMap()
+const searchOf = (row) => {
+  let cached = searchTextCache.get(row)
+  if (!cached) {
+    cached = {
+      text: [row.role, row.dept, row.ability, ...row.accounts].join(' ').toLowerCase(),
+      // 姓名首拼单独存：按首字母前缀命中（xs=许霜），不像正文那样 any-includes——
+      // 否则 xy 会顺带命中「…x…y…」的一切首拼串，一个演示弹框筛出二十多行
+      initials: row.accounts.map((item) => initialsOf(nameOf(item))),
+    }
+    searchTextCache.set(row, cached)
+  }
+  return cached
+}
+
 const filteredCredRows = computed(() => {
   const kw = credKeyword.value.trim().toLowerCase()
   if (!kw) {
@@ -499,8 +536,9 @@ const filteredCredRows = computed(() => {
   // 空格分词、逐词命中（「心内科 护士长」这类组合也能筛）：每个词都出现在同一行即算命中
   const tokens = kw.split(/\s+/).filter(Boolean)
   return allCredRows.filter((row) => {
-    const hay = [row.role, row.dept, row.ability, ...row.accounts].join(' ').toLowerCase()
-    return tokens.every((token) => hay.includes(token))
+    const hay = searchOf(row)
+    return tokens.every((token) => hay.text.includes(token)
+        || hay.initials.some((item) => item.startsWith(token)))
   })
 })
 
@@ -961,3 +999,4 @@ const handleLogin = async () => {
   letter-spacing: 1px;
 }
 </style>
+

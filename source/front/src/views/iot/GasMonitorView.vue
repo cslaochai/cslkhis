@@ -36,7 +36,7 @@
 
       <div class="flex items-center gap-2 text-[12px] text-gray-400">
         <span class="inline-block w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-        自动刷新 10s · {{ lastRefresh || '-' }}
+        自动刷新 10s · {{ lastRefresh || '' }}
       </div>
     </div>
 
@@ -70,7 +70,7 @@
                   <div class="text-[12px] text-gray-500">{{ gas.label }}</div>
                   <div class="mt-0.5">
                     <span class="text-[24px] font-bold leading-7" :class="gas.abnormal ? 'text-red-600' : 'text-[#1269B5]'">
-                      {{ gas.value == null ? '—' : gas.value }}
+                      {{ gas.value == null ? '' : gas.value }}
                     </span>
                     <span class="text-[11px] text-gray-500 ml-0.5">kPa</span>
                   </div>
@@ -82,11 +82,11 @@
 
               <div class="mt-2 text-[13px] text-gray-500 flex items-center gap-3 flex-wrap">
                 <span class="truncate">{{ box.location || '未填写安装位置' }}</span>
-                <span class="ml-auto text-gray-400">更新 {{ box.lastSeen || '—' }}</span>
+                <span class="ml-auto text-gray-400">更新 {{ box.lastSeen || '' }}</span>
               </div>
 
               <div class="mt-1 text-[13px] text-gray-500">
-                流量 <b class="text-gray-700">{{ box.flow == null ? '—' : box.flow }}</b> L/min
+                流量 <b class="text-gray-700">{{ box.flow == null ? '' : box.flow }}</b> L/min
                 <span v-if="!box.telemetry" class="text-gray-400 ml-2">未上报</span>
                 <span v-else-if="box.flow > 0" class="text-[#0E9488] ml-2">正在用气</span>
                 <span v-else class="text-gray-400 ml-2">未使用</span>
@@ -155,7 +155,7 @@
               <span class="text-gray-500 cursor-pointer" @click="handleEvent(row, 2)">忽略</span>
             </span>
             <span v-else class="text-[12px] text-gray-400">
-              {{ row.handleBy || '-' }}<template v-if="row.handleRemark"> · {{ row.handleRemark }}</template>
+              {{ row.handleBy || '' }}<template v-if="row.handleRemark"> · {{ row.handleRemark }}</template>
             </span>
           </template>
         </el-table-column>
@@ -288,7 +288,7 @@ const siteState = (row) => {
         ? {text: '压力尚未恢复', cls: 'text-red-600 font-semibold'}
         : {text: '压力已恢复', cls: 'text-green-600'};
   }
-  return {text: '—', cls: 'text-gray-400'};
+  return {text: '', cls: 'text-gray-400'};
 };
 
 const deviceNameMap = computed(() => {

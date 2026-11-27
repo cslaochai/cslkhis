@@ -5,7 +5,7 @@
         <el-descriptions :column="3" border size="small">
           <el-descriptions-item label="账单号">{{ detail.billNo }}</el-descriptions-item>
           <el-descriptions-item label="患者">{{ detail.patientName }}（{{
-              detail.patientNo || '—'
+              detail.patientNo || ''
             }}）
           </el-descriptions-item>
           <el-descriptions-item label="状态">{{ billStatusText(detail.billStatus) }}</el-descriptions-item>

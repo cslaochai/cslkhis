@@ -69,7 +69,7 @@ Page({
     }
     if (q.queueStatus === 2) {
       const called = q.currentCalledNo != null ? `，当前叫到 ${q.currentCalledNo} 号` : ''
-      return `您排在第 ${q.sequenceNo != null ? q.sequenceNo : '—'} 号，前方还有 ${q.aheadCount} 人候诊${called}`
+      return `您排在第 ${q.sequenceNo != null ? q.sequenceNo : ''} 号，前方还有 ${q.aheadCount} 人候诊${called}`
     }
     if (q.queueStatus === 3) return '轮到您了，请前往诊室就诊'
     return ''

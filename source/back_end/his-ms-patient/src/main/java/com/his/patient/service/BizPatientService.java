@@ -48,6 +48,15 @@ public interface BizPatientService extends IService<BizPatient> {
                                              List<Long> scopeDeptIds);
 
     /**
+     * 分页查询患者列表（唯一实现入口）：所有筛选条件都来自 {@link PatientPageQueryDTO}，
+     * 标签过滤、今日就诊置顶、档案视图科室收口由入参补充。
+     *
+     * <p>上面三个字符串重载是历史调用形状，内部全部委托到本方法；新增筛选条件只在这里加一处。
+     */
+    PageResult<BizPatient> selectPatientPage(PatientPageQueryDTO queryDTO, List<Long> tagPatientIds,
+                                             PatientSearchScopeDTO scope, List<Long> scopeDeptIds);
+
+    /**
      * 根据患者号查询患者
      */
     BizPatient selectByPatientNo(String patientNo);

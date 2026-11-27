@@ -241,7 +241,7 @@
           <template #default="{ row }">
             <el-button
                 v-if="row.canApprove"
-                v-perm="'medtech:transfusion:edit'"
+                v-perm="'medtech:transfusion:audit'"
                 data-testid="p4-tf-approve"
                 link
                 type="success"
@@ -251,7 +251,7 @@
             </el-button>
             <el-button
                 v-if="row.canCrossmatch"
-                v-perm="'medtech:transfusion:edit'"
+                v-perm="'medtech:transfusion:dispatch'"
                 data-testid="p4-tf-crossmatch"
                 link
                 type="warning"
@@ -261,7 +261,7 @@
             </el-button>
             <el-button
                 v-if="row.canIssue"
-                v-perm="'medtech:transfusion:edit'"
+                v-perm="'medtech:transfusion:dispatch'"
                 data-testid="p4-tf-issue"
                 link
                 type="primary"
@@ -271,7 +271,7 @@
             </el-button>
             <el-button
                 v-if="row.canStart"
-                v-perm="'medtech:transfusion:edit'"
+                v-perm="'medtech:transfusion:execute'"
                 data-testid="p4-tf-start"
                 link
                 type="primary"
@@ -281,7 +281,7 @@
             </el-button>
             <el-button
                 v-if="row.canFinish"
-                v-perm="'medtech:transfusion:edit'"
+                v-perm="'medtech:transfusion:execute'"
                 data-testid="p4-tf-finish"
                 link
                 type="success"
@@ -291,7 +291,7 @@
             </el-button>
             <el-button
                 v-if="row.canReportReaction"
-                v-perm="'medtech:transfusion:add'"
+                v-perm="'medtech:transfusion:execute'"
                 data-testid="p4-tf-reaction"
                 link
                 type="danger"
@@ -452,14 +452,14 @@ import TransfusionIssue from './TransfusionIssue.vue';
 import TransfusionReaction from './TransfusionReaction.vue';
 import TransfusionStart from './TransfusionStart.vue';
 
-const fmt = (v) => (v ? String(v).replace('T', ' ') : '—');
-const text = (v) => (v === null || v === undefined || v === '' ? '—' : String(v));
+const fmt = (v) => (v ? String(v).replace('T', ' ') : '');
+const text = (v) => (v === null || v === undefined || v === '' ? '' : String(v));
 const ABO_TYPES = ['A', 'B', 'O', 'AB'];
 const RH_TYPES = ['阳', '阴'];
 // ---------------- 基础数据 ----------------
 const admissions = ref([]);
 const components = ref([]);
-const admissionLabel = (a) => `${a.bedNo || '—'} ${a.patientName || '—'}（${a.deptName || a.wardName || '—'}）`;
+const admissionLabel = (a) => `${a.bedNo || ''} ${a.patientName || ''}（${a.deptName || a.wardName || ''}）`;
 const loadBaseData = async () => {
   try {
     const res = await getInpatientListPage({admitStatus: 1, pageNum: 1, pageSize: 200});

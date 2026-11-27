@@ -137,10 +137,10 @@
           <el-table v-loading="docLoading" :data="docRows" stripe>
             <el-table-column label="标题" prop="title" min-width="200" show-overflow-tooltip/>
             <el-table-column label="分类" prop="category" min-width="120" show-overflow-tooltip>
-              <template #default="{ row }">{{ row.category || '—' }}</template>
+              <template #default="{ row }">{{ row.category || '' }}</template>
             </el-table-column>
             <el-table-column label="内容来源" prop="sourceName" min-width="120" show-overflow-tooltip>
-              <template #default="{ row }">{{ row.sourceName || '—' }}</template>
+              <template #default="{ row }">{{ row.sourceName || '' }}</template>
             </el-table-column>
             <el-table-column label="版本" prop="version" min-width="70" align="center"/>
             <el-table-column label="来源" min-width="90" align="center">
@@ -243,7 +243,7 @@
               </template>
             </el-table-column>
             <el-table-column label="提问人" prop="operatorName" min-width="90">
-              <template #default="{ row }">{{ row.operatorName || '—' }}</template>
+              <template #default="{ row }">{{ row.operatorName || '' }}</template>
             </el-table-column>
             <el-table-column label="反馈" width="130" align="center">
               <template #default="{ row }">
@@ -284,7 +284,7 @@
               </el-tag>
               <span v-if="obsRow.degradeReason" class="obs-reason">{{ obsRow.degradeReason }}</span>
               <span>命中 {{ obsRow.hitCount }} 块 · {{ obsRow.latencyMs }} ms</span>
-              <span>提问人：{{ obsRow.operatorName || '—' }}</span>
+              <span>提问人：{{ obsRow.operatorName || '' }}</span>
             </div>
           </div>
         </el-dialog>
@@ -314,7 +314,7 @@
               </template>
             </el-table-column>
             <el-table-column label="说明" prop="remark" min-width="140" show-overflow-tooltip>
-              <template #default="{ row }">{{ row.remark || '—' }}</template>
+              <template #default="{ row }">{{ row.remark || '' }}</template>
             </el-table-column>
             <el-table-column label="创建时间" prop="createTime" min-width="150"/>
             <el-table-column label="操作" width="110" align="center">
@@ -391,7 +391,7 @@
               </template>
             </el-table-column>
             <el-table-column label="位次" width="70" align="center">
-              <template #default="{ row }">{{ row.hitRank > 0 ? '#' + row.hitRank : '—' }}</template>
+              <template #default="{ row }">{{ row.hitRank > 0 ? '#' + row.hitRank : '' }}</template>
             </el-table-column>
             <el-table-column label="问题" min-width="180" show-overflow-tooltip>
               <template #default="{ row }">{{ row.question }}</template>
@@ -467,7 +467,7 @@ const currentPromptContent = ref('')
 const editingPrompt = ref(false)
 const promptRemark = ref('')
 const promptSaving = ref(false)
-const formatT = (t) => t ? String(t).replace('T', ' ').slice(0, 19) : '—'
+const formatT = (t) => t ? String(t).replace('T', ' ').slice(0, 19) : ''
 onMounted(async () => {
   await loadPromptList()
 })

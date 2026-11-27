@@ -51,10 +51,10 @@
           </template>
         </el-table-column>
         <el-table-column label="科室" prop="deptName" width="130">
-          <template #default="{ row }">{{ row.deptName || '—' }}</template>
+          <template #default="{ row }">{{ row.deptName || '' }}</template>
         </el-table-column>
         <el-table-column label="诊断" min-width="160" prop="diagnosis" show-overflow-tooltip>
-          <template #default="{ row }">{{ row.diagnosis || '—' }}</template>
+          <template #default="{ row }">{{ row.diagnosis || '' }}</template>
         </el-table-column>
         <el-table-column label="入院时间" prop="admitTime" width="160">
           <template #default="{ row }">{{ (row.admitTime || '').slice(0, 16).replace('T', ' ') }}</template>

@@ -54,10 +54,8 @@
       <div class="query-grid-wrap">
         <el-form class="query-grid" label-width="70px" @submit.prevent>
           <el-form-item label="会诊科室">
-            <el-select v-model="filters.toDeptId" :fit-input-width="false" clearable data-testid="p4-filter-dept"
-                       filterable placeholder="全部科室" @change="handleSearch">
-              <el-option v-for="d in depts" :key="d.id" :label="d.deptName || d.id" :value="String(d.id)"/>
-            </el-select>
+            <DeptTreeSelect v-model="filters.toDeptId" mode="LEAF" scope="ALL" dept-type="1,2,4"
+                            node-type="2,3,7" width="200px" placeholder="全部科室" @change="handleSearch"/>
           </el-form-item>
           <el-form-item label="类别">
             <el-select v-model="filters.consultCategory" clearable data-testid="p4-filter-category"
@@ -205,7 +203,7 @@
     </el-card>
 
     <!-- 申请会诊 -->
-    <ConsultationApply v-model="applyVisible" :admission="currentAdmission" :depts="depts" @saved="reloadAll"/>
+    <ConsultationApply v-model="applyVisible" :admission="currentAdmission" @saved="reloadAll"/>
 
     <!-- 完成会诊 -->
     <ConsultationFinish v-model="finishVisible" :row="finishRow" @saved="reloadAll"/>
@@ -237,7 +235,7 @@ import {ElMessage, ElMessageBox} from 'element-plus';
 import {Plus, Refresh, Search} from '@element-plus/icons-vue';
 import {acceptConsultation, getConsultationListPage, getConsultationUnfinishedCount} from '@/api/inpatientConsultation';
 import {getInpatientListPage} from '@/api/inpatient';
-import {loadDeptOptions} from '@/lib/deptOptions';
+import DeptTreeSelect from '@/components/his/DeptTreeSelect.vue';
 import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination';
 import {useTableMaxHeight} from '@/lib/useTableMaxHeight';
 import {admissionLabel, CONSULT_CATEGORY_OPTIONS, fmt, text} from '@/lib/consultation';
@@ -247,7 +245,6 @@ import ConsultationCancel from './ConsultationCancel.vue';
 import ConsultationDetail from './ConsultationDetail.vue';
 // ---------------- 基础数据 ----------------
 const admissions = ref([]);
-const depts = ref([]);
 const admissionId = ref('');
 const currentAdmission = computed(() => admissions.value.find((a) => String(a.admissionId) === String(admissionId.value)));
 const admissionSearching = ref(false);
@@ -275,15 +272,6 @@ const searchAdmissions = async (keyword) => {
     await loadAdmissions(String(keyword || '').trim());
   } finally {
     admissionSearching.value = false;
-  }
-};
-const loadDepts = async () => {
-  try {
-    // 会诊科室候选 = 全院可被邀请的科室：临床/医技/其他专科的末级科室（营养科属医技类型，必须包含）。
-    // 参数全部由前端传入，后端 selectList 是唯一出口（scope=ALL 不受本人岗位限制）。
-    depts.value = await loadDeptOptions({scope: 'ALL', deptType: '1,2,4', nodeType: '2,3,7', leafOnly: true});
-  } catch (error) {
-    console.error('加载科室失败:', error);
   }
 };
 // ---------------- 列表 ----------------
@@ -374,7 +362,7 @@ const openApply = () => {
 // ---------------- 接诊 ----------------
 const handleAccept = async (row) => {
   try {
-    await ElMessageBox.confirm(`确认由你接诊会诊 ${row.consultationNo}（${row.toDeptName || '—'}）？接诊人将记为当前登录用户。`, '会诊接诊', {
+    await ElMessageBox.confirm(`确认由你接诊会诊 ${row.consultationNo}（${row.toDeptName || ''}）？接诊人将记为当前登录用户。`, '会诊接诊', {
       type: 'warning',
       confirmButtonText: '确认接诊',
       cancelButtonText: '取消'
@@ -425,8 +413,8 @@ const statusTagType = (s) => {
 };
 const waitText = (row) => {
   if (row.acceptTime)
-    return `已应答 ${row.responseMinutes ?? '—'} 分钟`;
-  return `等待 ${row.responseMinutes ?? '—'} 分钟`;
+    return `已应答 ${row.responseMinutes ?? ''} 分钟`;
+  return `等待 ${row.responseMinutes ?? ''} 分钟`;
 };
 const handleSizeChange = async (size) => {
   pagination.value.pageSize = size;
@@ -438,7 +426,7 @@ const handlePageChange = async (page) => {
   await loadList();
 };
 onMounted(async () => {
-  await Promise.all([loadAdmissions(), loadDepts()]);
+  await loadAdmissions();
   await reloadAll();
 });
 </script>

@@ -107,7 +107,7 @@ const mealTypeList = ref([])
 const admissions = ref([])
 const dietOptions = ref([])
 
-const admissionLabel = (a) => `${a.bedNo || '—'} ${a.patientName || '—'}（${a.wardName || a.deptName || '—'}）`
+const admissionLabel = (a) => `${a.bedNo || ''} ${a.patientName || ''}（${a.wardName || a.deptName || ''}）`
 
 async function loadOptions() {
   try {

@@ -25,6 +25,15 @@ export const alertMuted = ref(localStorage.getItem(MUTE_KEY) === '1')
 /** 浏览器是否已解锁发声（页面有过用户手势）。监护大屏用它提示「点击开启声音」 */
 export const alertAudioReady = ref(false)
 
+/**
+ * 最近一次真的发出声音的时间（毫秒）。页面上显示「上次发声 xx:xx:xx」，
+ * 用来回答「到底有没有调用浏览器声音」——没有值就说明一次都没播成。
+ */
+export const lastAlertAt = ref(0)
+
+/** AudioContext 当前状态（suspended/running），排查「点了还是没声」时直接看 */
+export const alertCtxState = ref('')
+
 export const setAlertMuted = (muted) => {
   alertMuted.value = !!muted
   try {
@@ -37,14 +46,22 @@ export const setAlertMuted = (muted) => {
 export const toggleAlertMuted = () => setAlertMuted(!alertMuted.value)
 
 /**
- * 音色表：info 单短音、warning 双音、critical 三连音（方波更刺耳，用于急会诊/严重告警）。
- * 频率取中低段（660~880Hz），护士站/病房环境里穿透力够，又不至于像消防报警。
+ * 音色表：按 IEC 60601-1-8 的分级思路做，波形与节奏对齐真实监护设备的听感。
+ * - critical：1000Hz 急促六连（≈0.83s）≈ 输液泵阻塞/体征越界的「急」；
+ * - warning：660Hz 三连（≈0.69s），设备离线等非致命告警；
+ * - info：780→620 柔和下行双音，站内消息/会诊邀请，刻意做得不像设备报警。
+ * 每个脉冲是「正弦 + 二次谐波」，比纯正弦更接近压电蜂鸣器，护士站里一听就知道是机器在叫。
+ * 持续告警的「成组重复」不在这里做，由调用方按级别重发（见 ALARM_REPEAT_MS）。
  */
+const pulses = (freq, dur, count) => Array.from({length: count}, () => [freq, dur])
 const TONES = {
-  info: {freq: 880, dur: 0.14, gain: 0.30, times: 1, gap: 0, wave: 'sine'},
-  warning: {freq: 740, dur: 0.16, gain: 0.35, times: 2, gap: 0.10, wave: 'sine'},
-  critical: {freq: 660, dur: 0.20, gain: 0.45, times: 3, gap: 0.12, wave: 'square'},
+  info: {pulses: [[780, 0.20], [620, 0.22]], gap: 0.10, gain: 0.32},
+  warning: {pulses: pulses(660, 0.15, 3), gap: 0.12, gain: 0.40},
+  critical: {pulses: pulses(1000, 0.09, 6), gap: 0.055, gain: 0.50},
 }
+
+/** 二次谐波占比：加一点泛音，听感从「电子音」变成「设备蜂鸣」 */
+const HARMONIC = 0.25
 
 let ctx = null
 
@@ -53,6 +70,12 @@ const ensureCtx = () => {
   const AC = window.AudioContext || window.webkitAudioContext
   if (!AC) return null
   ctx = new AC()
+  alertCtxState.value = ctx.state
+  // 状态变化（解锁/被系统挂起）同步到页面，别让「没声」只能靠猜
+  ctx.onstatechange = () => {
+    alertCtxState.value = ctx.state
+    if (ctx.state === 'running') alertAudioReady.value = true
+  }
   return ctx
 }
 
@@ -113,20 +136,32 @@ const claimedByOtherTab = () => {
   return false
 }
 
-const beep = (c, tone, offset) => {
+/**
+ * 单个脉冲：基波 + 二次谐波，8ms 起振、指数衰减，避免起停爆音。
+ * 两个振荡器汇到同一个 gain，gain 值按谐波总量归一，不同音色的响度才可比。
+ */
+const beep = (c, freq, dur, gainValue, offset) => {
   const t0 = c.currentTime + offset
   const osc = c.createOscillator()
+  const harm = c.createOscillator()
   const gain = c.createGain()
-  osc.type = tone.wave
-  osc.frequency.setValueAtTime(tone.freq, t0)
-  // 指数包络避免方波起停的爆音
+  const harmGain = c.createGain()
+  osc.type = 'sine'
+  harm.type = 'sine'
+  osc.frequency.setValueAtTime(freq, t0)
+  harm.frequency.setValueAtTime(freq * 2, t0)
+  harmGain.gain.setValueAtTime(HARMONIC, t0)
   gain.gain.setValueAtTime(0.0001, t0)
-  gain.gain.exponentialRampToValueAtTime(tone.gain, t0 + 0.02)
-  gain.gain.exponentialRampToValueAtTime(0.0001, t0 + tone.dur)
+  gain.gain.exponentialRampToValueAtTime(gainValue / (1 + HARMONIC), t0 + 0.008)
+  gain.gain.exponentialRampToValueAtTime(0.0001, t0 + dur)
   osc.connect(gain)
+  harm.connect(harmGain)
+  harmGain.connect(gain)
   gain.connect(c.destination)
   osc.start(t0)
-  osc.stop(t0 + tone.dur + 0.02)
+  harm.start(t0)
+  osc.stop(t0 + dur + 0.02)
+  harm.stop(t0 + dur + 0.02)
 }
 
 /**
@@ -145,12 +180,38 @@ export function playAlert(level = 'info') {
   if (claimedByOtherTab()) return false
   alertAudioReady.value = true
   const tone = TONES[level] || TONES.info
-  for (let i = 0; i < tone.times; i++) {
-    beep(c, tone, i * (tone.dur + tone.gap))
+  let offset = 0
+  for (const [freq, dur] of tone.pulses) {
+    beep(c, freq, dur, tone.gain, offset)
+    offset += dur + tone.gap
   }
+  lastAlertAt.value = Date.now()
   return true
 }
+
+/**
+ * 持续告警的重响间隔：严重 15 秒（护士没到场就继续叫，与真实设备一致），警告 60 秒。
+ * 设备大屏按告警键各自的级别取这个表，别再用统一常量。
+ */
+export const ALARM_REPEAT_MS = {critical: 15_000, warning: 60_000}
 
 /** 消息 severity → 音色级别（后端只发 urgent/warning/info 三档） */
 export const alertLevelOfSeverity = (severity) =>
     severity === 'urgent' ? 'critical' : severity === 'warning' ? 'warning' : 'info'
+
+/**
+ * 主动解锁（必须在点击回调里调用）。
+ * 用于页面上的「点此开启声音 / 测试声音」按钮：用户点一下，既解锁又立刻出一声，能直接判断有没有声音。
+ * @returns {boolean} 此刻是否已可发声（resume 是异步的，首次调用可能返回 false，紧接着 playAlert 会再试一次）
+ */
+export function resumeAlertAudio() {
+  const c = ensureCtx()
+  if (!c) return false
+  if (c.state !== 'running') c.resume().catch(() => {})
+  if (c.state === 'running') {
+    alertAudioReady.value = true
+    removeGestureListeners()
+    return true
+  }
+  return false
+}

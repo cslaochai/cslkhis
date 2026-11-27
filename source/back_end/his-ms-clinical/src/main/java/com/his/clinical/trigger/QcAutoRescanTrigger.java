@@ -28,6 +28,7 @@ public class QcAutoRescanTrigger {
             SystemOperatorContext.bindSystemTask();
             qualityControlService.autoRescanOutpatientQc(BATCH_LIMIT);
             qualityControlService.autoRescanInpatientQc(BATCH_LIMIT);
+            qualityControlService.remindOverdueOutpatientDrafts(BATCH_LIMIT);
         } catch (Exception e) {
             // 定时任务失败只记日志：补齐是兜底路径，不能拖住调度线程
             log.error("[质控补扫] 自动质控补扫失败：{}", e.getMessage(), e);

@@ -8,7 +8,7 @@
       </div>
       <el-timeline data-testid="cssd-trace-timeline">
         <el-timeline-item v-for="t in detail.traces || []" :key="t.id"
-                          :timestamp="`${fmtTime(t.nodeTime)} · ${t.operatorName || '—'}`"
+                          :timestamp="`${fmtTime(t.nodeTime)} · ${t.operatorName || ''}`"
                           :type="t.result === 2 ? 'danger' : 'primary'">
           <span class="font-bold">{{ t.nodeTypeText }}</span>
           <el-tag v-if="t.result === 2" class="ml-1" size="small" type="danger">不合格</el-tag>

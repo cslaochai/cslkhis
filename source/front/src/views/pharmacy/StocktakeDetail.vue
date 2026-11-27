@@ -44,14 +44,14 @@
         </el-descriptions-item>
         <el-descriptions-item label="净差数量">{{ diffText(detail.diffQuantity) }}</el-descriptions-item>
         <el-descriptions-item label="净差金额">{{ formatMoney(detail.diffAmount) }}</el-descriptions-item>
-        <el-descriptions-item label="制单人">{{ detail.createBy || '—' }}</el-descriptions-item>
-        <el-descriptions-item label="提交人">{{ detail.submitBy || '—' }}</el-descriptions-item>
-        <el-descriptions-item label="复核人">{{ detail.auditBy || '—' }}</el-descriptions-item>
+        <el-descriptions-item label="制单人">{{ detail.createBy || '' }}</el-descriptions-item>
+        <el-descriptions-item label="提交人">{{ detail.submitBy || '' }}</el-descriptions-item>
+        <el-descriptions-item label="复核人">{{ detail.auditBy || '' }}</el-descriptions-item>
         <el-descriptions-item :span="3" label="复核意见 / 退回原因">{{
-            detail.auditRemark || '—'
+            detail.auditRemark || ''
           }}
         </el-descriptions-item>
-        <el-descriptions-item :span="3" label="备注">{{ detail.remark || '—' }}</el-descriptions-item>
+        <el-descriptions-item :span="3" label="备注">{{ detail.remark || '' }}</el-descriptions-item>
       </el-descriptions>
 
       <el-table :data="pagedItems" border data-testid="stocktake-item-table" size="small">
@@ -69,7 +69,7 @@
         <el-table-column align="right" label="当前余额" width="85">
           <template #default="{ row }">
             <span :class="Number(row.currentQuantity) !== Number(row.bookQuantity) ? 'text-amber-600' : ''">
-              {{ row.currentQuantity ?? '—' }}
+              {{ row.currentQuantity ?? '' }}
             </span>
           </template>
         </el-table-column>
@@ -97,7 +97,7 @@
           </template>
         </el-table-column>
         <el-table-column align="right" label="差异金额" width="90">
-          <template #default="{ row }">{{ row.diffAmount === null ? '—' : formatMoney(row.diffAmount) }}</template>
+          <template #default="{ row }">{{ row.diffAmount === null ? '' : formatMoney(row.diffAmount) }}</template>
         </el-table-column>
         <el-table-column align="center" label="过账" width="80">
           <template #default="{ row }">{{ postedText(row.posted) }}</template>
@@ -105,7 +105,7 @@
         <el-table-column label="差异说明" min-width="150">
           <template #default="{ row }">
             <el-input v-if="editable" v-model="getEdit(row.id).remark" maxlength="500" placeholder="盈亏原因"/>
-            <span v-else>{{ row.remark || '—' }}</span>
+            <span v-else>{{ row.remark || '' }}</span>
           </template>
         </el-table-column>
       </el-table>
@@ -190,7 +190,7 @@ const getEdit = (id) => {
 const dirtyCount = computed(() => Object.values(editMap).filter((v) => v.countedQuantity !== null && v.countedQuantity !== undefined).length);
 const diffText = (v) => {
   if (v === null || v === undefined)
-    return '—';
+    return '';
   const n = Number(v);
   return (n > 0 ? '+' : '') + n;
 };

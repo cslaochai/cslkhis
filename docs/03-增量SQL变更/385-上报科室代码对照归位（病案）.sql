@@ -30,6 +30,8 @@ DELETE FROM sys_role_menu WHERE role_id = 33 AND menu_id = 29626;
 -- 6. 超管只读：撤掉保存/删除按钮
 DELETE FROM sys_role_menu WHERE role_id = 1 AND menu_id IN (29660, 29628);
 
+-- 7. 病案编码员的「保存/删除」按钮授权见 387（本库 id 段被并行会话占用，不在本文件写死）。
+
 -- 回滚（按序执行）：
 -- UPDATE sys_menu SET parent_id=800, sort_order=40 WHERE id=29626;
 -- UPDATE sys_menu SET menu_name='病案科室对应-保存' WHERE id=29660;

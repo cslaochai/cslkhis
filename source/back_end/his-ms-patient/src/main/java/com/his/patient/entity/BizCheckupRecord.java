@@ -25,6 +25,12 @@ public class BizCheckupRecord extends BaseEntity {
     private String recordNo;
 
     /**
+     * 归属科室ID（登记人当前岗位科室；列表按授权科室行级收口）
+     */
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long deptId;
+
+    /**
      * 体检人ID
      */
     @JsonSerialize(using = ToStringSerializer.class)

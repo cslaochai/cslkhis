@@ -4,11 +4,11 @@
     <div class="mb-3 rounded-lg border border-slate-200 bg-white px-4 py-3 shadow-sm">
       <div class="grid grid-cols-2 gap-3">
         <div class="text-center">
-          <p class="text-xl font-bold leading-tight text-red-600">{{ statsLoaded ? stats.totalCount : '—' }}</p>
+          <p class="text-xl font-bold leading-tight text-red-600">{{ statsLoaded ? stats.totalCount : '' }}</p>
           <p class="mt-0.5 text-xs text-slate-500">应报未报（当前筛选）</p>
         </div>
         <div class="text-center">
-          <p class="text-xl font-bold leading-tight text-orange-500">{{ statsLoaded ? stats.feverCount : '—' }}</p>
+          <p class="text-xl font-bold leading-tight text-orange-500">{{ statsLoaded ? stats.feverCount : '' }}</p>
           <p class="mt-0.5 text-xs text-slate-500">其中发热(≥37.3℃)</p>
         </div>
       </div>
@@ -48,19 +48,19 @@
           </template>
         </el-table-column>
         <el-table-column align="center" fixed="left" label="就诊日期" width="150">
-          <template #default="{ row }"><span class="text-slate-600">{{ row.visitDate || '-' }}</span></template>
+          <template #default="{ row }"><span class="text-slate-600">{{ row.visitDate || '' }}</span></template>
         </el-table-column>
         <el-table-column label="科室" prop="deptName" show-overflow-tooltip width="200"/>
         <el-table-column label="诊断" min-width="200">
           <template #default="{ row }">
-            <div class="text-slate-800">{{ row.diagnosisName || '-' }}</div>
+            <div class="text-slate-800">{{ row.diagnosisName || '' }}</div>
             <div v-if="row.diagnosisCode" class="font-mono text-slate-400">ICD {{ row.diagnosisCode }}</div>
           </template>
         </el-table-column>
         <el-table-column align="center" label="体温" width="82">
           <template #default="{ row }">
             <span :class="[row.fever ? 'font-bold text-red-600' : 'text-slate-600']">
-              {{ row.temperature ? row.temperature + '℃' : '-' }}
+              {{ row.temperature ? row.temperature + '℃' : '' }}
             </span>
           </template>
         </el-table-column>
@@ -116,23 +116,23 @@
         </div>
         <template v-if="detailRecord">
           <div><p class="text-slate-400">主诉</p>
-            <p class="whitespace-pre-wrap text-slate-700">{{ detailRecord.chiefComplaint || '-' }}</p></div>
+            <p class="whitespace-pre-wrap text-slate-700">{{ detailRecord.chiefComplaint || '' }}</p></div>
           <div><p class="text-slate-400">现病史</p>
-            <p class="whitespace-pre-wrap text-slate-700">{{ detailRecord.presentIllness || '-' }}</p></div>
+            <p class="whitespace-pre-wrap text-slate-700">{{ detailRecord.presentIllness || '' }}</p></div>
           <div><p class="text-slate-400">既往史</p>
-            <p class="whitespace-pre-wrap text-slate-700">{{ detailRecord.pastHistory || '-' }}</p></div>
+            <p class="whitespace-pre-wrap text-slate-700">{{ detailRecord.pastHistory || '' }}</p></div>
           <div><p class="text-slate-400">体格检查</p>
-            <p class="whitespace-pre-wrap text-slate-700">{{ detailRecord.physicalExamination || '-' }}</p></div>
+            <p class="whitespace-pre-wrap text-slate-700">{{ detailRecord.physicalExamination || '' }}</p></div>
           <div><p class="text-slate-400">诊断</p>
             <p class="whitespace-pre-wrap text-slate-700">
-              {{ detailRecord.diagnosisName || detailRecord.diagnosis || '-' }}
+              {{ detailRecord.diagnosisName || detailRecord.diagnosis || '' }}
               <span v-if="detailRecord.diagnosisCode"
                     class="font-mono text-xs text-slate-400">（ICD {{ detailRecord.diagnosisCode }}）</span>
             </p>
           </div>
           <div><p class="text-slate-400">处理意见</p>
             <p class="whitespace-pre-wrap text-slate-700">{{
-                detailRecord.treatmentPlan || detailRecord.advice || '-'
+                detailRecord.treatmentPlan || detailRecord.advice || ''
               }}</p></div>
         </template>
         <el-empty v-else-if="!detailLoading" :image-size="60" description="未取到病历内容"/>

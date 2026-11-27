@@ -7,6 +7,7 @@ import com.his.iot.vo.IotEventVO;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.time.LocalDateTime;
+import java.util.Map;
 
 /**
  * 物联网设备事件（告警）落库与处理闭环。
@@ -33,4 +34,11 @@ public interface IotEventService {
      * 处理/忽略一条告警，落处理人与说明。只能处理「未处理」的事件。
      */
     void handle(IotEventHandleDTO dto);
+
+    /**
+     * 活跃告警设备聚合：deviceNo → 最高告警级别（2-警告 3-严重）。
+     * 口径：未处理且级别≥2 的事件；提示级流水不计入。台账总览告警状态以此为准，
+     * 不在前端拿最新遥测快照二次推断。
+     */
+    Map<String, Integer> activeAlarmDeviceLevels();
 }

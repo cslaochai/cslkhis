@@ -44,12 +44,12 @@
         </el-table-column>
         <el-table-column label="报告医师" width="110">
           <template #default="{ row }">
-            <span class="text-xs">{{ row.writeBy || '—' }}</span>
+            <span class="text-xs">{{ row.writeBy || '' }}</span>
           </template>
         </el-table-column>
         <el-table-column label="阴阳性" width="100">
           <template #default="{ row }">
-            <span class="text-xs">{{ row.positiveFlagText || '—' }}</span>
+            <span class="text-xs">{{ row.positiveFlagText || '' }}</span>
           </template>
         </el-table-column>
         <el-table-column align="center" label="胶片" width="80">
@@ -104,15 +104,15 @@
             <span class="mx-2 text-slate-300">|</span>
             <span class="text-slate-400">项目：</span>{{ auditDetail.itemName }}
             <span class="mx-2 text-slate-300">|</span>
-            <span class="text-slate-400">报告医师：</span>{{ auditDetail.writeBy || '—' }}
+            <span class="text-slate-400">报告医师：</span>{{ auditDetail.writeBy || '' }}
           </div>
           <div class="rounded-lg border border-slate-200 p-3">
             <p class="mb-1 text-sm font-medium text-slate-700">影像所见</p>
-            <p class="whitespace-pre-wrap text-sm text-slate-600">{{ auditDetail.reportContent || '—' }}</p>
+            <p class="whitespace-pre-wrap text-sm text-slate-600">{{ auditDetail.reportContent || '' }}</p>
           </div>
           <div class="rounded-lg border border-slate-200 p-3">
             <p class="mb-1 text-sm font-medium text-slate-700">影像诊断/印象</p>
-            <p class="whitespace-pre-wrap text-sm text-slate-600">{{ auditDetail.conclusion || '—' }}</p>
+            <p class="whitespace-pre-wrap text-sm text-slate-600">{{ auditDetail.conclusion || '' }}</p>
           </div>
           <div v-if="auditDetail.suggestions" class="rounded-lg border border-slate-200 p-3">
             <p class="mb-1 text-sm font-medium text-slate-700">建议</p>

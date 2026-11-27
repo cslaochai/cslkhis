@@ -35,8 +35,8 @@
           <template v-if="card.signed">
             <div class="mt-1 text-[11px] leading-5 text-slate-600">{{ text(card.signed.itemsText) }}</div>
             <div class="mt-1 text-[11px] text-slate-600">
-              手术 {{ card.signed.surgeonName || '—' }} · 麻醉 {{ card.signed.anesthetistName || '—' }} ·
-              护士 {{ card.signed.nurseName || '—' }}
+              手术 {{ card.signed.surgeonName || '' }} · 麻醉 {{ card.signed.anesthetistName || '' }} ·
+              护士 {{ card.signed.nurseName || '' }}
             </div>
             <div class="text-[11px] text-slate-400">{{ card.signed.checkNo }} · {{ fmt(card.signed.checkTime) }}</div>
             <div v-if="card.signed.note" class="mt-1 text-[11px] text-amber-700">异常：{{ card.signed.note }}</div>
@@ -151,8 +151,8 @@ const visible = computed({
   set: (v) => emit('update:modelValue', v),
 });
 
-const fmt = (v) => (v ? String(v).replace('T', ' ') : '—');
-const text = (v) => (v === null || v === undefined || v === '' ? '—' : String(v));
+const fmt = (v) => (v ? String(v).replace('T', ' ') : '');
+const text = (v) => (v === null || v === undefined || v === '' ? '' : String(v));
 
 const safetyLoading = ref(false);
 const safetySubmitting = ref(false);

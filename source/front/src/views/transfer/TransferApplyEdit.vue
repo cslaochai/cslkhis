@@ -27,16 +27,14 @@
         <span class="ml-2 text-[11px] text-slate-400">转出科室以此为准，发起时不改动</span>
       </el-form-item>
       <el-form-item label="转入科室" required>
-        <el-select
+        <DeptTreeSelect
             v-model="applyForm.toDeptId"
+            mode="LEAF"
             class="!w-full"
             data-testid="p4-apply-dept"
-            filterable
             placeholder="选择转入科室（已排除原科室）"
             @change="handleApplyDeptChange"
-        >
-          <el-option v-for="d in applyDepts" :key="d.id" :label="d.deptName || d.id" :value="String(d.id)"/>
-        </el-select>
+        />
       </el-form-item>
       <el-form-item label="转入病区" required>
         <el-select
@@ -126,13 +124,12 @@ import {Warning} from '@element-plus/icons-vue';
 import {saveTransfer} from '@/api/inpatientTransfer';
 import {getInpatientBedList, getInpatientWardList} from '@/api/inpatient';
 import {admissionLabel, text} from '@/lib/transfer';
+import DeptTreeSelect from '@/components/his/DeptTreeSelect.vue';
 
 const props = defineProps({
   modelValue: {type: Boolean, default: false},
   // 在院患者名册（列表页顶部过滤共用同一份）
   admissions: {type: Array, default: () => []},
-  // 科室名册（列表页筛选共用同一份）
-  depts: {type: Array, default: () => []},
   // 页面顶部「按在院患者过滤」已选的患者：点发起时带进表单
   presetAdmissionId: {type: String, default: ''},
 });
@@ -166,8 +163,6 @@ const loadWards = async () => {
 };
 /** 目标病区：按目标科室过滤（后端也会校验"病区属于科室"，前端只是少让人点错） */
 const applyWards = computed(() => wards.value.filter((w) => String(w.deptId) === String(applyForm.toDeptId)));
-/** 目标科室：排除患者当前科室（同科室挪床请走换床） */
-const applyDepts = computed(() => props.depts.filter((d) => String(d.id) !== String(currentAdmission.value?.deptId || '')));
 /** 目标床位：只取空闲（bedStatus=1）—— "能不能用"以 sys_bed 为准，不看病区的演示计数 */
 const targetBeds = ref([]);
 const loadTargetBeds = async (wardId) => {
@@ -205,6 +200,11 @@ const handleApplyAdmissionChange = () => {
   targetBeds.value = [];
 };
 const handleApplyDeptChange = () => {
+  // 同科室挪床请走换床：转入科室不能是患者当前科室
+  if (String(applyForm.toDeptId) === String(currentAdmission.value?.deptId || '')) {
+    ElMessage.warning('转入科室不能与当前科室相同');
+    applyForm.toDeptId = '';
+  }
   applyForm.toWardId = '';
   applyForm.toBedId = '';
   targetBeds.value = [];

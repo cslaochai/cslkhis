@@ -22,7 +22,7 @@
       <el-descriptions :column="3" border class="mb-4" size="small">
         <el-descriptions-item label="退货单号">{{ detail.returnNo }}</el-descriptions-item>
         <el-descriptions-item label="供应商">{{ detail.supplierName }}</el-descriptions-item>
-        <el-descriptions-item label="原单据号">{{ detail.srcRefNo || '—' }}</el-descriptions-item>
+        <el-descriptions-item label="原单据号">{{ detail.srcRefNo || '' }}</el-descriptions-item>
         <el-descriptions-item :span="2" label="退货原因">{{ detail.returnReason }}</el-descriptions-item>
         <el-descriptions-item label="退款金额">{{ formatMoney(detail.totalAmount) }}</el-descriptions-item>
         <el-descriptions-item label="批次数">{{ detail.totalItems }}</el-descriptions-item>
@@ -31,12 +31,12 @@
             detail.createTime
           }}
         </el-descriptions-item>
-        <el-descriptions-item label="退货人">{{ detail.returnBy || '—' }}</el-descriptions-item>
-        <el-descriptions-item label="退货时间">{{ detail.returnTime || '—' }}</el-descriptions-item>
+        <el-descriptions-item label="退货人">{{ detail.returnBy || '' }}</el-descriptions-item>
+        <el-descriptions-item label="退货时间">{{ detail.returnTime || '' }}</el-descriptions-item>
         <el-descriptions-item :span="3" label="作废人 / 原因">
-          {{ detail.cancelBy || '—' }}{{ detail.cancelReason ? `（${detail.cancelReason}）` : '' }}
+          {{ detail.cancelBy || '' }}{{ detail.cancelReason ? `（${detail.cancelReason}）` : '' }}
         </el-descriptions-item>
-        <el-descriptions-item :span="3" label="备注">{{ detail.remark || '—' }}</el-descriptions-item>
+        <el-descriptions-item :span="3" label="备注">{{ detail.remark || '' }}</el-descriptions-item>
       </el-descriptions>
 
       <el-table :data="detail.items || []" border data-testid="sreturn-item-detail-table" size="small">

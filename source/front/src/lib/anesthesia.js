@@ -1,13 +1,13 @@
 // 手术麻醉链码值文案单点
 export const ALDRETE_DISCHARGE_MIN = 9
 
-export const fmt = (v) => (v ? String(v).replace('T', ' ') : '—')
-export const text = (v) => (v === null || v === undefined || v === '' ? '—' : String(v))
-export const applyLabel = (a) => `${a.applyNo || '—'} · ${a.patientName || '—'} · ${a.plannedOperationName || '—'}${a.isEmergency === 1 ? '（急诊）' : ''}`
+export const fmt = (v) => (v ? String(v).replace('T', ' ') : '')
+export const text = (v) => (v === null || v === undefined || v === '' ? '' : String(v))
+export const applyLabel = (a) => `${a.applyNo || ''} · ${a.patientName || ''} · ${a.plannedOperationName || ''}${a.isEmergency === 1 ? '（急诊）' : ''}`
 export const statusTagType = (s) => (s === 0 ? 'info' : s === 1 ? 'warning' : s === 2 ? 'success' : 'info')
 export const chargeTagType = (s) => (s === 1 ? 'success' : s === 2 ? 'danger' : 'info')
 
-export const asaText = (v) => ({ 1: 'Ⅰ级', 2: 'Ⅱ级', 3: 'Ⅲ级', 4: 'Ⅳ级', 5: 'Ⅴ级' }[v] ?? '—')
+export const asaText = (v) => ({ 1: 'Ⅰ级', 2: 'Ⅱ级', 3: 'Ⅲ级', 4: 'Ⅳ级', 5: 'Ⅴ级' }[v] ?? '')
 export const asaOptions = [
   { value: 1, label: 'Ⅰ级' },
   { value: 2, label: 'Ⅱ级' },
@@ -25,7 +25,7 @@ export const mallampatiText = (v) =>
     2: 'Ⅱ级（可见软腭/咽峡弓）',
     3: 'Ⅲ级（仅见软腭）',
     4: 'Ⅳ级（仅见硬腭）',
-  }[v] ?? '—')
+  }[v] ?? '')
 export const mallampatiOptions = [
   { value: 1, label: 'Ⅰ级' },
   { value: 2, label: 'Ⅱ级' },
@@ -33,7 +33,7 @@ export const mallampatiOptions = [
   { value: 4, label: 'Ⅳ级' },
 ]
 
-export const neckMobilityText = (v) => ({ 1: '正常', 2: '受限', 3: '强直' }[v] ?? '—')
+export const neckMobilityText = (v) => ({ 1: '正常', 2: '受限', 3: '强直' }[v] ?? '')
 export const neckMobilityOptions = [
   { value: 1, label: '正常' },
   { value: 2, label: '受限' },
@@ -41,7 +41,7 @@ export const neckMobilityOptions = [
 ]
 
 export const npoText = (v) =>
-  ({ 0: '未禁食', 1: '已按要求禁食', 2: '急诊饱胃（返流误吸高危）' }[v] ?? '—')
+  ({ 0: '未禁食', 1: '已按要求禁食', 2: '急诊饱胃（返流误吸高危）' }[v] ?? '')
 export const npoOptions = [
   { value: 0, label: '未禁食' },
   { value: 1, label: '已按要求禁食' },
@@ -49,14 +49,14 @@ export const npoOptions = [
 ]
 
 export const visitConclusionText = (v) =>
-  ({ 1: '可施行麻醉', 2: '暂缓手术', 3: '需会诊/进一步评估' }[v] ?? '—')
+  ({ 1: '可施行麻醉', 2: '暂缓手术', 3: '需会诊/进一步评估' }[v] ?? '')
 export const visitConclusionOptions = [
   { value: 1, label: '可施行麻醉' },
   { value: 2, label: '暂缓手术' },
   { value: 3, label: '需会诊/进一步评估' },
 ]
 
-export const recordStatusText = (v) => ({ 0: '记录中', 1: '已提交', 2: '已审核' }[v] ?? '—')
+export const recordStatusText = (v) => ({ 0: '记录中', 1: '已提交', 2: '已审核' }[v] ?? '')
 export const recordStatusOptions = [
   { value: 0, label: '记录中' },
   { value: 1, label: '已提交' },
@@ -64,7 +64,7 @@ export const recordStatusOptions = [
 ]
 
 export const airwayDeviceText = (v) =>
-  ({ 0: '无（保留自主呼吸）', 1: '气管插管', 2: '喉罩', 3: '面罩', 4: '其他' }[v] ?? '—')
+  ({ 0: '无（保留自主呼吸）', 1: '气管插管', 2: '喉罩', 3: '面罩', 4: '其他' }[v] ?? '')
 export const airwayDeviceOptions = [
   { value: 0, label: '无（保留自主呼吸）' },
   { value: 1, label: '气管插管' },
@@ -73,23 +73,23 @@ export const airwayDeviceOptions = [
   { value: 4, label: '其他' },
 ]
 
-export const ventilationText = (v) => ({ 1: '自主呼吸', 2: '辅助通气', 3: '控制通气' }[v] ?? '—')
+export const ventilationText = (v) => ({ 1: '自主呼吸', 2: '辅助通气', 3: '控制通气' }[v] ?? '')
 
-export const effectText = (v) => ({ 1: '满意', 2: '欠佳', 3: '失败改麻醉方式' }[v] ?? '—')
+export const effectText = (v) => ({ 1: '满意', 2: '欠佳', 3: '失败改麻醉方式' }[v] ?? '')
 export const effectOptions = [
   { value: 1, label: '满意' },
   { value: 2, label: '欠佳' },
   { value: 3, label: '失败改麻醉方式' },
 ]
 
-export const dispositionText = (v) => ({ 1: '回病房', 2: '入PACU', 3: '入ICU' }[v] ?? '—')
+export const dispositionText = (v) => ({ 1: '回病房', 2: '入PACU', 3: '入ICU' }[v] ?? '')
 export const dispositionOptions = [
   { value: 1, label: '回病房' },
   { value: 2, label: '入PACU' },
   { value: 3, label: '入ICU' },
 ]
 
-export const medPhaseText = (v) => ({ 1: '诱导', 2: '维持', 3: '苏醒' }[v] ?? '—')
+export const medPhaseText = (v) => ({ 1: '诱导', 2: '维持', 3: '苏醒' }[v] ?? '')
 export const medPhaseOptions = [
   { value: 1, label: '诱导' },
   { value: 2, label: '维持' },
@@ -106,7 +106,7 @@ export const medRouteText = (v) =>
     6: '椎管内',
     7: '局麻浸润',
     8: '其他',
-  }[v] ?? '—')
+  }[v] ?? '')
 export const medRouteOptions = [
   { value: 1, label: '静脉推注' },
   { value: 2, label: '静脉泵注' },
@@ -120,20 +120,20 @@ export const medRouteOptions = [
 
 // ---------------- PACU ----------------
 
-export const pacuStatusText = (v) => ({ 0: '在室观察', 1: '已出室' }[v] ?? '—')
+export const pacuStatusText = (v) => ({ 0: '在室观察', 1: '已出室' }[v] ?? '')
 export const pacuStatusOptions = [
   { value: 0, label: '在室观察' },
   { value: 1, label: '已出室' },
 ]
 
-export const awarenessText = (v) => ({ 1: '完全清醒', 2: '嗜睡可唤醒', 3: '未清醒' }[v] ?? '—')
+export const awarenessText = (v) => ({ 1: '完全清醒', 2: '嗜睡可唤醒', 3: '未清醒' }[v] ?? '')
 export const awarenessOptions = [
   { value: 1, label: '完全清醒' },
   { value: 2, label: '嗜睡可唤醒' },
   { value: 3, label: '未清醒' },
 ]
 
-export const pacuDispositionText = (v) => ({ 1: '回病房', 2: '转ICU', 3: '继续留观' }[v] ?? '—')
+export const pacuDispositionText = (v) => ({ 1: '回病房', 2: '转ICU', 3: '继续留观' }[v] ?? '')
 export const pacuDispositionOptions = [
   { value: 1, label: '回病房' },
   { value: 2, label: '转ICU' },
@@ -192,12 +192,12 @@ export const ALDRETE_ITEMS = [
 // ---------------- 器械清点 ----------------
 
 export const countPhaseText = (v) =>
-  ({ 0: '未开始', 1: '术前清点完成', 2: '关体前清点完成', 3: '关体后清点完成' }[v] ?? '—')
+  ({ 0: '未开始', 1: '术前清点完成', 2: '关体前清点完成', 3: '关体后清点完成' }[v] ?? '')
 export const countStatusText = (v) =>
-  ({ 0: '清点中', 1: '三轮一致，清点完成', 2: '存在清点差异', 3: '异常终止' }[v] ?? '—')
-export const countResultText = (v) => ({ 1: '一致', 2: '不一致' }[v] ?? '—')
+  ({ 0: '清点中', 1: '三轮一致，清点完成', 2: '存在清点差异', 3: '异常终止' }[v] ?? '')
+export const countResultText = (v) => ({ 1: '一致', 2: '不一致' }[v] ?? '')
 export const countCategoryText = (v) =>
-  ({ 1: '器械', 2: '敷料', 3: '缝针', 4: '刀片', 5: '其他' }[v] ?? '—')
+  ({ 1: '器械', 2: '敷料', 3: '缝针', 4: '刀片', 5: '其他' }[v] ?? '')
 export const countCategoryOptions = [
   { value: 1, label: '器械' },
   { value: 2, label: '敷料' },
@@ -210,14 +210,14 @@ export const countCategoryOptions = [
 // 同一条铁律：码值没有建 sys_dict，后端 FollowupAdverseItems 与本文件各一份单点；
 // 未知码一律渲染「—」/不回落。
 
-export const followupRecoveryText = (v) => ({ 1: '良好', 2: '一般', 3: '差' }[v] ?? '—')
+export const followupRecoveryText = (v) => ({ 1: '良好', 2: '一般', 3: '差' }[v] ?? '')
 export const followupRecoveryOptions = [
   { value: 1, label: '良好' },
   { value: 2, label: '一般' },
   { value: 3, label: '差' },
 ]
 
-export const followupStatusText = (v) => ({ 0: '草稿', 1: '已完成' }[v] ?? '—')
+export const followupStatusText = (v) => ({ 0: '草稿', 1: '已完成' }[v] ?? '')
 
 export const followupAdverseText = (v) =>
   ({
@@ -230,7 +230,7 @@ export const followupAdverseText = (v) =>
     7: '呼吸并发症',
     8: '低血压/心律失常',
     9: '其他',
-  }[v] ?? '—')
+  }[v] ?? '')
 export const followupAdverseOptions = [
   { value: 1, label: '恶心呕吐' },
   { value: 2, label: '咽痛' },
@@ -245,7 +245,7 @@ export const followupAdverseOptions = [
 
 /** 随访轮次文案与后端 FollowupAdverseItems.roundText 同口径 */
 export const followupRoundText = (roundNo) => {
-  if (roundNo === null || roundNo === undefined) return '—'
+  if (roundNo === null || roundNo === undefined) return ''
   if (roundNo === 1) return '第1轮·术后即刻'
   if (roundNo === 2) return '第2轮·术后24h'
   if (roundNo === 3) return '第3轮·术后48h'
@@ -254,10 +254,10 @@ export const followupRoundText = (roundNo) => {
 
 // ---------------- 计费 ----------------
 
-export const chargeStatusText = (v) => ({ 0: '未计费', 1: '已计费', 2: '计费失败' }[v] ?? '—')
-export const chargeSourceText = (v) => ({ 1: '麻醉记录', 2: 'PACU复苏', 3: '手术' }[v] ?? '—')
+export const chargeStatusText = (v) => ({ 0: '未计费', 1: '已计费', 2: '计费失败' }[v] ?? '')
+export const chargeSourceText = (v) => ({ 1: '麻醉记录', 2: 'PACU复苏', 3: '手术' }[v] ?? '')
 
-export const yesNoText = (v) => ({ 0: '否', 1: '是' }[v] ?? '—')
+export const yesNoText = (v) => ({ 0: '否', 1: '是' }[v] ?? '')
 
 /** Aldrete 总分展示（服务端算好的为准，这里只在缺项时给出提示） */
 export const aldreteHint = (total) => {

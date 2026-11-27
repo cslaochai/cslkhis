@@ -80,12 +80,12 @@
         </el-table-column>
         <el-table-column label="本地支付流水号" prop="localTxnNo" width="200">
           <template #default="{ row }">
-            {{ row.localTxnNo || '—' }}
+            {{ row.localTxnNo || '' }}
             <el-tag v-if="row.txnDirection === 2" type="warning" size="small" effect="plain">退款</el-tag>
           </template>
         </el-table-column>
         <el-table-column label="勾对人" width="110">
-          <template #default="{ row }">{{ row.matchedByName || '—' }}</template>
+          <template #default="{ row }">{{ row.matchedByName || '' }}</template>
         </el-table-column>
         <el-table-column label="操作" width="170" fixed="right">
           <template #default="{ row }">
@@ -95,7 +95,7 @@
               <el-button v-perm="'finance:payChannel:diff'" link type="warning"
                          :data-testid="'payc-diff-' + row.channelTradeNo" @click.stop="openDiff(row)">差额处理</el-button>
             </template>
-            <span v-else class="muted">{{ row.handleRemark || '—' }}</span>
+            <span v-else class="muted">{{ row.handleRemark || '' }}</span>
           </template>
         </el-table-column>
       </el-table>
@@ -131,7 +131,7 @@ const statusText = (v) => MATCH_STATUS.find(s => s.value === v)?.label ?? `未�
 const statusTag = (v) => ({ 0: 'info', 1: 'success', 2: 'danger', 3: 'warning' }[v] ?? 'info')
 
 const sumFlow = (row) => Number(row.matchedAmount ?? 0) + Number(row.unmatchedAmount ?? 0)
-const fmtTime = (t) => (t ? String(t).replace('T', ' ').slice(0, 19) : '—')
+const fmtTime = (t) => (t ? String(t).replace('T', ' ').slice(0, 19) : '')
 const unknown = (v) => `未知(${v})`
 
 const loading = ref(false)

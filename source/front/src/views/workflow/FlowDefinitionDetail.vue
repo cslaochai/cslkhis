@@ -23,13 +23,13 @@
         <el-table-column label="类型" prop="nodeTypeLabel" width="100"/>
         <el-table-column label="审批人/比例" width="180">
           <template #default="{ row }">
-            <span class="text-xs text-gray-600">{{ row.permissionFlag || '-' }} / {{ row.nodeRatio || '-' }}</span>
+            <span class="text-xs text-gray-600">{{ row.permissionFlag || '' }} / {{ row.nodeRatio || '' }}</span>
           </template>
         </el-table-column>
         <el-table-column label="AI 配置" min-width="220">
           <template #default="{ row }">
             <span class="text-xs text-gray-600">
-              {{ row.aiAction || '-' }} · {{ row.aiTemplateName || '-' }}
+              {{ row.aiAction || '' }} · {{ row.aiTemplateName || '' }}
             </span>
           </template>
         </el-table-column>

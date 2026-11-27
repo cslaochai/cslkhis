@@ -40,9 +40,7 @@
             </el-select>
           </el-form-item>
           <el-form-item label="接诊科室">
-            <el-select v-model="query.deptId" clearable filterable placeholder="接诊科室" style="width: 170px">
-              <el-option v-for="d in deptOptions" :key="d.id" :label="d.deptName || d.name" :value="d.id"/>
-            </el-select>
+            <DeptTreeSelect v-model="query.deptId" mode="LEAF" width="170px" placeholder="接诊科室"/>
           </el-form-item>
           <el-form-item>
             <el-checkbox v-model="query.waitingOnly">仅待接诊</el-checkbox>
@@ -112,7 +110,7 @@
     </el-card>
 
     <!-- 发起问诊 -->
-    <OnlineConsultAdd v-model="formVisible" :dept-options="deptOptions" :online-type-dict="onlineTypeDict"
+    <OnlineConsultAdd v-model="formVisible" :online-type-dict="onlineTypeDict"
                       @saved="reloadAfterChange"/>
 
     <!-- 回复 -->
@@ -154,7 +152,8 @@ import {
   getTeleConsultStat,
   listOnlineConsultPage,
 } from '@/api/teleconsult';
-import {getDepartmentSelectList, getDictDataMapList} from '@/api/system';
+import {getDictDataMapList} from '@/api/system';
+import DeptTreeSelect from '@/components/his/DeptTreeSelect.vue';
 import {DICT_TYPE} from '@/lib/dict-cache';
 import {dictLabelText} from '@/lib/utils';
 import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination';
@@ -169,7 +168,6 @@ const stats = reactive({
 });
 const onlineTypeDict = ref([]);
 const onlineStatusDict = ref([]);
-const deptOptions = ref([]);
 const onlineTypeText = (v) => dictLabelText(onlineTypeDict.value, v);
 const onlineStatusText = (v) => dictLabelText(onlineStatusDict.value, v);
 const onlineStatusTag = (v) => {
@@ -316,17 +314,8 @@ const loadDicts = async () => {
     console.error('加载字典失败', e);
   }
 };
-const loadDepts = async () => {
-  try {
-    const res = await getDepartmentSelectList({});
-    if (res.code === 200)
-      deptOptions.value = res.data || [];
-  } catch (e) {
-    console.error('加载科室失败', e);
-  }
-};
 onMounted(async () => {
-  await Promise.all([loadDicts(), loadDepts()]);
+  await loadDicts();
   await loadList();
   await loadStats();
 });

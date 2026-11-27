@@ -5,7 +5,7 @@
       width="720px"
   >
     <p class="diff-meta">
-      医生 {{ row?.doctorName || '—' }} · {{ (row?.createTime || '').replace('T', ' ').slice(0, 19) }}
+      医生 {{ row?.doctorName || '' }} · {{ (row?.createTime || '').replace('T', ' ').slice(0, 19) }}
     </p>
     <div class="diff-view">
       <template v-for="(seg, i) in diffSegments" :key="i">

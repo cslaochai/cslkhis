@@ -49,16 +49,16 @@
           <template #default="{ row }">{{ typeText(row.wasteType) }}</template>
         </el-table-column>
         <el-table-column align="right" label="重量(kg)" prop="weightKg" width="90">
-          <template #default="{ row }">{{ row.weightKg ?? '—' }}</template>
+          <template #default="{ row }">{{ row.weightKg ?? '' }}</template>
         </el-table-column>
         <el-table-column label="产生科室" prop="deptName" width="110">
-          <template #default="{ row }">{{ row.deptName || '—' }}</template>
+          <template #default="{ row }">{{ row.deptName || '' }}</template>
         </el-table-column>
         <el-table-column label="收集时间" width="160">
           <template #default="{ row }">{{ fmtTime(row.collectTime) }}</template>
         </el-table-column>
         <el-table-column label="收集人" prop="collectorName" width="90">
-          <template #default="{ row }">{{ row.collectorName || '—' }}</template>
+          <template #default="{ row }">{{ row.collectorName || '' }}</template>
         </el-table-column>
         <el-table-column align="center" label="状态" prop="status" width="90">
           <template #default="{ row }">
@@ -66,10 +66,10 @@
           </template>
         </el-table-column>
         <el-table-column label="交接人" prop="handoverName" width="90">
-          <template #default="{ row }">{{ row.handoverName || '—' }}</template>
+          <template #default="{ row }">{{ row.handoverName || '' }}</template>
         </el-table-column>
         <el-table-column label="处置公司" min-width="140" prop="disposalCompany" show-overflow-tooltip>
-          <template #default="{ row }">{{ row.disposalCompany || '—' }}</template>
+          <template #default="{ row }">{{ row.disposalCompany || '' }}</template>
         </el-table-column>
         <el-table-column fixed="right" label="操作" width="160">
           <template #default="{ row }">
@@ -211,7 +211,7 @@ const del = async (row) => {
     
   }
 };
-const fmtTime = (v) => (v ? String(v).slice(0, 19).replace('T', ' ') : '—');
+const fmtTime = (v) => (v ? String(v).slice(0, 19).replace('T', ' ') : '');
 onMounted(() => {
   loadDicts();
   loadList();

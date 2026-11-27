@@ -25,7 +25,8 @@ import {computed, ref, watch} from 'vue'
 import {ElMessage} from 'element-plus'
 import EmployeePostTable from '@/components/his/EmployeePostTable.vue'
 import {checkPosts, postsFromApi, postsToPayload} from '@/lib/employeePost'
-import {getDepartmentTree, getEmployeeDetail, getRoleList, saveEmployeePosts} from '@/api/system'
+import {getEmployeeDetail, getRoleList, saveEmployeePosts} from '@/api/system'
+import {loadDeptTreeOptions} from '@/lib/deptOptions'
 
 const props = defineProps({
   modelValue: {type: Boolean, default: false},
@@ -46,8 +47,8 @@ const submitLoading = ref(false)
 
 const loadRefs = async () => {
   try {
-    const [deptRes, roleRes] = await Promise.all([getDepartmentTree(), getRoleList({})])
-    if (deptRes.code === 200) deptList.value = deptRes.data || []
+    const [tree, roleRes] = await Promise.all([loadDeptTreeOptions({scope: 'ALL', mode: 'ORG'}), getRoleList({})])
+    deptList.value = tree
     if (roleRes.code === 200) roleList.value = roleRes.data || []
   } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
 

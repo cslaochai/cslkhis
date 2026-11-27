@@ -8,9 +8,7 @@
                       @keyup.enter="loadList"/>
           </el-form-item>
           <el-form-item label="适用科室">
-            <el-select v-model="query.deptId" clearable filterable placeholder="适用科室" style="width: 180px">
-              <el-option v-for="d in deptOptions" :key="d.id" :label="d.deptName || d.name" :value="d.id"/>
-            </el-select>
+            <DeptTreeSelect v-model="query.deptId" mode="LEAF" width="180px" placeholder="适用科室"/>
           </el-form-item>
           <el-form-item>
             <el-checkbox v-model="query.enabledOnly">仅启用</el-checkbox>
@@ -35,13 +33,13 @@
           <template #default="{ row }">{{ row.maxStayHours }}</template>
         </el-table-column>
         <el-table-column align="center" label="手术分级" width="90">
-          <template #default="{ row }">{{ operationLevelMap[Number(row.operationLevel)] || '—' }}</template>
+          <template #default="{ row }">{{ operationLevelMap[Number(row.operationLevel)] || '' }}</template>
         </el-table-column>
         <el-table-column label="麻醉方式" width="120">
           <template #default="{ row }">{{ anesText(row.anesthesiaType) }}</template>
         </el-table-column>
         <el-table-column align="right" label="标准费用(元)" width="120">
-          <template #default="{ row }">{{ row.standardFee ?? '—' }}</template>
+          <template #default="{ row }">{{ row.standardFee ?? '' }}</template>
         </el-table-column>
         <el-table-column label="状态" width="90">
           <template #default="{ row }">
@@ -74,7 +72,7 @@
     </el-card>
 
     <!-- 准入术式 -->
-    <DaySurgeryItemEdit v-model="editVisible" :row="editingRow" :dept-options="deptOptions" :anes-dict="anesDict"
+    <DaySurgeryItemEdit v-model="editVisible" :row="editingRow" :anes-dict="anesDict"
                         :operation-level-map="operationLevelMap" @saved="loadList"/>
   </div>
 </template>
@@ -99,7 +97,8 @@ import {onMounted, reactive, ref} from 'vue';
 import {ElMessage, ElMessageBox} from 'element-plus';
 import {Plus, Refresh, Search} from '@element-plus/icons-vue';
 import {listDaySurgeryItemPage, updateDaySurgeryItemStatus} from '@/api/daySurgery';
-import {getDepartmentSelectList, getDictDataMapList} from '@/api/system';
+import {getDictDataMapList} from '@/api/system';
+import DeptTreeSelect from '@/components/his/DeptTreeSelect.vue';
 import {DICT_TYPE} from '@/lib/dict-cache';
 import {dictLabelText} from '@/lib/utils';
 import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination';
@@ -109,7 +108,6 @@ import DaySurgeryItemEdit from './DaySurgeryItemEdit.vue';
 const operationLevelMap = {1: '一级', 2: '二级', 3: '三级', 4: '四级'};
 const anesDict = ref([]);
 const anesText = (v) => dictLabelText(anesDict.value, v);
-const deptOptions = ref([]);
 // ---------------- 目录列表 ----------------
 const loading = ref(false);
 const rows = ref([]);
@@ -175,12 +173,7 @@ const toggle = async (row) => {
 };
 onMounted(async () => {
   try {
-    const [deptRes, dictRes] = await Promise.all([
-      getDepartmentSelectList({}),
-      getDictDataMapList(DICT_TYPE.DAY_SURGERY_ANESTHESIA),
-    ]);
-    if (deptRes.code === 200)
-      deptOptions.value = deptRes.data || [];
+    const dictRes = await getDictDataMapList(DICT_TYPE.DAY_SURGERY_ANESTHESIA);
     anesDict.value = dictRes?.data?.[DICT_TYPE.DAY_SURGERY_ANESTHESIA] || [];
   } catch (e) {
     console.error('加载基础数据失败', e);

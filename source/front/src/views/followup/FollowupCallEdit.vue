@@ -6,10 +6,10 @@
       </div>
       <el-form label-width="90px">
         <el-form-item label="患者">
-          <el-input :model-value="`${callTask.patientName || ''}（${callTask.patientNo || '—'}）`" disabled/>
+          <el-input :model-value="`${callTask.patientName || ''}（${callTask.patientNo || ''}）`" disabled/>
         </el-form-item>
         <el-form-item label="联系电话">
-          <el-input :model-value="callTask.phone || '—'" disabled/>
+          <el-input :model-value="callTask.phone || ''" disabled/>
         </el-form-item>
         <el-form-item label="话术稿">
           <el-input v-model="callScript" :rows="5" placeholder="按随访内容通话，可修改" type="textarea"/>

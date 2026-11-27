@@ -6,7 +6,7 @@ import com.his.platform.dto.DepartmentQueryDTO;
 import com.his.platform.dto.DepartmentSelectDTO;
 import com.his.platform.dto.DepartmentUpsertDTO;
 import com.his.platform.service.SysDepartmentService;
-import com.his.platform.vo.DepartmentSelectListVO;
+import com.his.platform.vo.DepartmentTreeSelectVO;
 import com.his.platform.vo.DepartmentVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -60,12 +60,12 @@ public class DepartmentController {
     }
 
     /**
-     * 科室下拉统一入口。
+     * 科室树形下拉：按 mode 标注每个节点是否可选（disabled），不可选节点保留在树上做分组展示。
      */
-    @Operation(summary = "科室下拉（scope 控制是否按当前人过滤，默认按当前人）")
-    @GetMapping("/selectList")
-    public Result<List<DepartmentSelectListVO>> selectList(@Valid DepartmentSelectDTO selectDTO) {
-        return Result.success(sysDepartmentService.selectList(selectDTO));
+    @Operation(summary = "科室树形下拉（mode=LEAF/TREE/ORG，disabled 由服务端标注）")
+    @GetMapping("/selectTree")
+    public Result<List<DepartmentTreeSelectVO>> selectTree(@Valid DepartmentSelectDTO selectDTO) {
+        return Result.success(sysDepartmentService.selectTree(selectDTO));
     }
 
     /**

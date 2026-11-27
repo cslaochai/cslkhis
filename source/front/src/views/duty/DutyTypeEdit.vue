@@ -8,9 +8,8 @@
         <el-input v-model="formData.typeName" maxlength="64" placeholder="如 医疗总值班"/>
       </el-form-item>
       <el-form-item label="归口科室" prop="manageDeptId">
-        <el-select v-model="formData.manageDeptId" filterable placeholder="这条线由哪个部门排班" style="width: 100%">
-          <el-option v-for="d in deptOptions" :key="d.id" :label="d.deptName" :value="d.id"/>
-        </el-select>
+        <DeptTreeSelect v-model="formData.manageDeptId" mode="LEAF" width="100%" placeholder="这条线由哪个部门排班"/>
+
         <div class="mt-1 text-xs text-gray-500">只有该科室岗位的人能排这条线；其他部门切到本岗位才能排</div>
       </el-form-item>
       <el-form-item label="应到岗位类别">
@@ -59,7 +58,8 @@
 import {computed, onMounted, reactive, ref, watch} from 'vue'
 import {ElMessage} from 'element-plus'
 import {dutyTypeUpsert} from '@/api/dutyType'
-import {getDepartmentSelectList, getDictDataList} from '@/api/system'
+import {getDictDataList} from '@/api/system'
+import DeptTreeSelect from '@/components/his/DeptTreeSelect.vue'
 
 const props = defineProps({
   modelValue: {type: Boolean, default: false},
@@ -85,7 +85,6 @@ const STAFF_TYPES = [
 const submitLoading = ref(false)
 const dialogTitle = ref('新增值班类型')
 const formRef = ref(null)
-const deptOptions = ref([])
 const positionOptions = ref([])
 // 资质职务是逗号分隔的码值串，表单里用数组承接（多选）
 const positionCodes = ref([])
@@ -109,12 +108,6 @@ const rules = {
 }
 
 onMounted(async () => {
-  try {
-    const deptRes = await getDepartmentSelectList()
-    deptOptions.value = deptRes?.data || []
-  } catch {
-    deptOptions.value = []
-  }
   try {
     const dictRes = await getDictDataList(['hospital_position'])
     positionOptions.value = (dictRes?.data || []).map((d) => ({

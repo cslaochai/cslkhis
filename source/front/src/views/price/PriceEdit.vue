@@ -6,7 +6,7 @@
           <el-icon class="text-slate-400">
             <Tickets/>
           </el-icon>
-          <span class="font-medium text-slate-800">{{ form.itemName || '—' }}</span>
+          <span class="font-medium text-slate-800">{{ form.itemName || '' }}</span>
           <span class="font-mono text-xs text-slate-400">{{ form.itemCode }}</span>
         </div>
         <div class="mt-2 text-slate-500">

@@ -5,8 +5,8 @@
       <template v-if="detail">
         <div class="flex flex-wrap items-center gap-4 text-sm">
           <span>签名编号：<b>{{ detail.signNo }}</b></span>
-          <span>对象：<b>{{ detail.bizTypeText }}</b> · {{ detail.bizNo || '—' }}</span>
-          <span>患者：<b>{{ detail.patientName || '—' }}</b></span>
+          <span>对象：<b>{{ detail.bizTypeText }}</b> · {{ detail.bizNo || '' }}</span>
+          <span>患者：<b>{{ detail.patientName || '' }}</b></span>
           <span>场景：<b>{{ detail.signSceneText }}</b>（第 {{ detail.chainNo }} 次）</span>
         </div>
 

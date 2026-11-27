@@ -3,10 +3,8 @@
   <el-dialog v-model="visible" :title="formData.id ? '编辑医疗组' : '新增医疗组'" width="620px">
     <el-form ref="formRef" :model="formData" :rules="rules" label-width="100px">
       <el-form-item label="所属科室" prop="deptId">
-        <el-select v-model="formData.deptId" class="!w-full" data-testid="medgroup-dept" filterable
-                   placeholder="请选择科室">
-          <el-option v-for="d in deptOptions" :key="d.id" :label="d.deptName" :value="d.id"/>
-        </el-select>
+        <DeptTreeSelect v-model="formData.deptId" mode="LEAF" scope="ALL" class="!w-full"
+                        placeholder="请选择科室" @change="loadLeaders"/>
         <div class="mt-1 text-[12px] text-slate-500">
           医疗组挂在科室下，不挂病区：医生归属固定在科室与医疗组，查房时才到病区。
         </div>
@@ -48,11 +46,11 @@
 import {computed, reactive, ref, watch} from 'vue'
 import {ElMessage} from 'element-plus'
 import {getEmployeeList, getMedGroupDetail, saveMedGroup} from '@/api/system'
+import DeptTreeSelect from '@/components/his/DeptTreeSelect.vue'
 
 const props = defineProps({
   modelValue: {type: Boolean, default: false},
   row: {type: Object, default: null},
-  deptList: {type: Array, default: () => []},
 })
 const emit = defineEmits(['update:modelValue', 'saved'])
 
@@ -80,18 +78,6 @@ const rules = {
   deptId: [{required: true, message: '请选择所属科室', trigger: 'change'}],
   groupName: [{required: true, message: '请输入医疗组名称', trigger: 'blur'}],
 }
-
-const deptOptions = computed(() => {
-  const out = []
-  const walk = (list) => {
-    for (const d of list || []) {
-      out.push({id: d.id, deptName: d.deptName})
-      if (d.children && d.children.length) walk(d.children)
-    }
-  }
-  walk(props.deptList)
-  return out
-})
 
 const resetForm = () => {
   formData.id = null

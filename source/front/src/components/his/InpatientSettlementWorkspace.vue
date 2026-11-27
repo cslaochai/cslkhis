@@ -32,7 +32,7 @@
       <div class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
         <p class="text-xs text-slate-500">已发生费用</p>
         <p class="text-lg font-bold text-slate-900" data-testid="p3-total-value">{{ money(summary.totalAmount) }}</p>
-        <p class="text-[11px] text-slate-400">{{ summary.admissionNo || '—' }} {{ summary.patientName || '' }}</p>
+        <p class="text-[11px] text-slate-400">{{ summary.admissionNo || '' }} {{ summary.patientName || '' }}</p>
       </div>
       <div :class="arrears ? 'border-red-200 bg-red-50' : 'border-slate-200 bg-white'"
            class="rounded-lg border p-4 shadow-sm">
@@ -41,7 +41,7 @@
            data-testid="p3-arrears-value">
           {{ arrears ? money(summary.arrearsAmount) : '无欠费' }}
         </p>
-        <p class="text-[11px] text-slate-400">{{ arrears ? '仅提示，不阻断诊疗' : '—' }}</p>
+        <p class="text-[11px] text-slate-400">{{ arrears ? '仅提示，不阻断诊疗' : '' }}</p>
       </div>
       <div class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
         <p class="text-xs text-slate-500">结算状态</p>
@@ -183,8 +183,8 @@
             <div>欠费：<b :class="Number(settlement.arrearsAmount) > 0 ? 'text-red-600' : ''">{{
                 money(settlement.arrearsAmount)
               }}</b></div>
-            <div>结算方式：{{ settlement.settleModeText || '—' }}</div>
-            <div>结算人：{{ settlement.settleByName || '—' }}</div>
+            <div>结算方式：{{ settlement.settleModeText || '' }}</div>
+            <div>结算人：{{ settlement.settleByName || '' }}</div>
             <div>时间：{{ (settlement.settleTime || '').replace('T', ' ') }}</div>
           </div>
         </div>
@@ -295,13 +295,13 @@ import {
 } from '@/api/inpatientSettlement';
 import {DEFAULT_PAGE_SIZE} from '@/lib/pagination';
 
-const money = (v) => (v === null || v === undefined ? '—' : Number(v).toFixed(2));
+const money = (v) => (v === null || v === undefined ? '' : Number(v).toFixed(2));
 // ---------------- 基础数据 ----------------
 const admissions = ref([]);
 const admissionId = ref('');
 const activeTab = ref('prepay');
 const loading = ref(false);
-const patientLabel = (a) => `${a.bedNo || '—'} ${a.patientName || '—'}（${a.wardName || a.deptName || '—'}）`;
+const patientLabel = (a) => `${a.bedNo || ''} ${a.patientName || ''}（${a.wardName || a.deptName || ''}）`;
 const loadAdmissions = async () => {
   try {
     const res = await getInpatientListPage({admitStatus: 1, pageNum: 1, pageSize: 200});

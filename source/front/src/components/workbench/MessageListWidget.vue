@@ -31,7 +31,7 @@
             {{ item.title || messageLabel(item.bizType) }}
           </p>
           <p class="mt-0.5 truncate text-[13px] text-slate-500">
-            <span>{{ item.sendTime || '—' }}</span>
+            <span>{{ item.sendTime || '' }}</span>
             <span v-for="chip in messagePayloadChips(item.payload)" :key="chip.label" class="ml-3">
               {{ chip.label }}：{{ chip.text }}
             </span>

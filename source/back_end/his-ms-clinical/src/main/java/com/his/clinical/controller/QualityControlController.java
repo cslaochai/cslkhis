@@ -97,6 +97,16 @@ public class QualityControlController {
     }
 
     /**
+     * 超时草稿看板：质控侧按数据权限查看仍为草稿、就诊日已过的病历及其移交承接状态。
+     * 与面向责任医师的站内信催办互为双提示：医师收到催办，质控在本页盯住未闭环清单。
+     */
+    @Operation(summary = "超时草稿看板分页（含在途移交状态）")
+    @PostMapping("/overdueDraftPage")
+    public Result<PageResult<QcOverdueDraftVO>> overdueDraftPage(@Valid @RequestBody QcOverdueDraftPageQueryDTO queryDTO) {
+        return Result.success(qualityControlService.pageOverdueDrafts(queryDTO));
+    }
+
+    /**
      * 质控维度字典：完整性、规范性、逻辑性等维度的编码与名称。
      * 供按维度筛质控单、看规则清单的下拉取值口径。
      */

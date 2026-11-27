@@ -5,7 +5,7 @@
     <div v-if="row" class="text-sm text-gray-600 mb-3">
       <div><span class="text-gray-400">病案：</span>{{ row.recordNo }} / {{
           row.patientName
-        }}（{{ row.deptName || '—' }}）
+        }}（{{ row.deptName || '' }}）
       </div>
       <div v-if="row.diagnosis"><span class="text-gray-400">病历诊断：</span>{{ row.diagnosis }}</div>
     </div>

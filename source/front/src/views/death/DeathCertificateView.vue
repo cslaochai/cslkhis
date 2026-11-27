@@ -36,8 +36,8 @@
             <template #default="{ row }">{{ fmt(row.dischargeTime) }}</template>
           </el-table-column>
           <el-table-column label="科室/病区/床位" min-width="170">
-            <template #default="{ row }">{{ row.deptName || '—' }} / {{ row.wardName || '—' }} / {{
-                row.bedNo || '—'
+            <template #default="{ row }">{{ row.deptName || '' }} / {{ row.wardName || '' }} / {{
+                row.bedNo || ''
               }}
             </template>
           </el-table-column>
@@ -81,10 +81,8 @@
                      style="width:130px">
             <el-option v-for="d in dict.place" :key="d.dictValue" :label="d.dictLabel" :value="Number(d.dictValue)"/>
           </el-select>
-          <el-select v-model="cq.deathDeptId" :fit-input-width="false" clearable data-testid="cert-filter-dept" filterable
-                     placeholder="死亡科室" style="width:170px">
-            <el-option v-for="d in deptOptions" :key="d.id" :label="d.deptName" :value="d.id"/>
-          </el-select>
+          <DeptTreeSelect v-model="cq.deathDeptId" mode="LEAF" width="170px" placeholder="死亡科室"/>
+
           <el-date-picker v-model="cq.startDate" data-testid="cert-start" placeholder="死亡起" style="width:140px"
                           type="date" value-format="YYYY-MM-DD"/>
           <el-date-picker v-model="cq.endDate" data-testid="cert-end" placeholder="死亡止" style="width:140px"
@@ -105,7 +103,7 @@
           </el-table-column>
           <el-table-column label="死者" min-width="110">
             <template #default="{ row }">{{ row.patientName }} / {{ patientGenderText(row.gender) }} / {{
-                row.age ?? '—'
+                row.age ?? ''
               }}岁
             </template>
           </el-table-column>
@@ -331,7 +329,7 @@
             <template #default="{ row }">{{ fmt(row.reportTime) }} {{ row.reportNo || '' }}</template>
           </el-table-column>
           <el-table-column label="失败原因" min-width="160" show-overflow-tooltip>
-            <template #default="{ row }"><span class="text-red-500">{{ row.reportError || '—' }}</span></template>
+            <template #default="{ row }"><span class="text-red-500">{{ row.reportError || '' }}</span></template>
           </el-table-column>
           <el-table-column fixed="right" label="操作" width="180">
             <template #default="{ row }">
@@ -357,12 +355,12 @@
       <div class="space-y-4">
         <div class="rounded bg-slate-50 p-3 text-sm" data-testid="cert-form-snapshot">
           <span class="text-slate-500">死者（一般项目按住院快照，不由前端提交）：</span>
-          <b>{{ cfBase.patientName || '—' }}</b>
+          <b>{{ cfBase.patientName || '' }}</b>
           <span class="ml-2">{{ patientGenderText(cfBase.gender) }} · {{
-              cfBase.age ?? '—'
-            }}岁 · 民族 {{ cfBase.nation || '—' }} · {{ cfBase.occupation || '—' }}</span>
-          <span class="ml-2">住院号 {{ cfBase.admissionNo || '—' }}</span>
-          <span class="ml-2">身份证 {{ cfBase.idCard || '—' }}</span>
+              cfBase.age ?? ''
+            }}岁 · 民族 {{ cfBase.nation || '' }} · {{ cfBase.occupation || '' }}</span>
+          <span class="ml-2">住院号 {{ cfBase.admissionNo || '' }}</span>
+          <span class="ml-2">身份证 {{ cfBase.idCard || '' }}</span>
           <div v-if="cfBase.dischargeTime" class="mt-1 text-xs text-slate-500">
             死亡离院时间：{{ fmt(cfBase.dischargeTime) }}（签发时证明的死亡时间必须与它同一时点）
           </div>
@@ -388,10 +386,8 @@
           </div>
           <div v-if="cf.deathPlace === PLACE_IN_HOSPITAL">
             <div class="mb-1 text-xs text-slate-500">死亡科室 *</div>
-            <el-select v-model="cf.deathDeptId" :fit-input-width="false" data-testid="cf-death-dept" filterable
-                       placeholder="死亡所在科室" style="width:100%">
-              <el-option v-for="d in deptOptions" :key="d.id" :label="d.deptName" :value="d.id"/>
-            </el-select>
+            <DeptTreeSelect v-model="cf.deathDeptId" mode="LEAF" width="100%" placeholder="死亡所在科室"/>
+
           </div>
           <div>
             <div class="mb-1 text-xs text-slate-500">是否尸检</div>
@@ -533,8 +529,8 @@
         </div>
         <div v-if="rfBase.patientName" class="rounded bg-slate-50 p-3 text-xs text-slate-600"
              data-testid="reg-form-snapshot">
-          {{ rfBase.patientName }} · 死亡时间 {{ fmt(rfBase.deathTime) }} · {{ rfBase.deathDeptName || '—' }} 床号
-          {{ rfBase.deathBedNo || '—' }}
+          {{ rfBase.patientName }} · 死亡时间 {{ fmt(rfBase.deathTime) }} · {{ rfBase.deathDeptName || '' }} 床号
+          {{ rfBase.deathBedNo || '' }}
         </div>
 
         <div class="grid grid-cols-3 gap-3">
@@ -673,7 +669,7 @@ import {DICT_TYPE, loadDictDataMap} from '@/lib/dict-cache'
 import {dictLabelText} from '@/lib/utils'
 import {patientGenderText} from '@/lib/patientGender'
 import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination'
-import {getDepartmentSelectList} from '@/api/system'
+import DeptTreeSelect from '@/components/his/DeptTreeSelect.vue'
 import IcdDiagnosisSelect from '@/components/his/IcdDiagnosisSelect.vue'
 import {
   certAudit,
@@ -708,8 +704,8 @@ const esc = (v) => String(v ?? '').replace(/[&<>"]/g, (c) => ({
   '>': '&gt;',
   '"': '&quot;'
 }[c]))
-const fmt = (t) => (t ? String(t).slice(0, 19) : '—')
-const fmtDay = (t) => (t ? String(t).slice(0, 10) : '—')
+const fmt = (t) => (t ? String(t).slice(0, 19) : '')
+const fmtDay = (t) => (t ? String(t).slice(0, 10) : '')
 
 // ---------------- 字典 ----------------
 const dict = reactive({
@@ -741,21 +737,10 @@ const placeText = (v) => dictLabelText(dict.place, v)
 const deathTypeText = (v) => dictLabelText(dict.deathType, v)
 const disposalText = (v) => dictLabelText(dict.disposal, v)
 const registerStatusText = (v) => dictLabelText(dict.registerStatus, v)
-const copiesText = (v) => (v ? String(v).split(',').map((x) => dictLabelText(dict.copies, x)).join('、') : '—')
+const copiesText = (v) => (v ? String(v).split(',').map((x) => dictLabelText(dict.copies, x)).join('、') : '')
 const certTag = (s) => (s === CS.DRAFT ? 'warning' : s === CS.AUDITED ? 'primary' : s === CS.ISSUED ? 'success' : 'info')
 const reportTag = (s) => (s === 2 ? 'success' : s === 3 ? 'danger' : 'info')
 const registerTag = (s) => (s === RS.DRAFT ? 'warning' : s === RS.DONE ? 'success' : 'info')
-
-// ---------------- 科室下拉（参照数据，不挂权限码） ----------------
-const deptOptions = ref([])
-const loadDepts = async () => {
-  try {
-    const res = await getDepartmentSelectList()
-    if (res.code === 200) deptOptions.value = res.data || []
-  } catch (e) {
-    console.error('加载科室下拉失败', e)
-  }
-}
 
 // ---------------- 统计卡 ----------------
 const stats = ref({})
@@ -952,7 +937,7 @@ const filledChain = computed(() => cf.chain.filter((r) => (r.icdName || '').trim
 const chainTail = computed(() => filledChain.value[filledChain.value.length - 1] || null)
 const underlyingView = computed(() => {
   if (chainTail.value) return `${chainTail.value.icdCode || '待补编码'} ${chainTail.value.icdName || ''}`.trim()
-  return cf.underlyingIcdCode ? `${cf.underlyingIcdCode} ${cf.underlyingIcdName || ''}`.trim() : '—'
+  return cf.underlyingIcdCode ? `${cf.underlyingIcdCode} ${cf.underlyingIcdName || ''}`.trim() : ''
 })
 
 const openCertFormByAdmission = async (admissionId) => {
@@ -1184,18 +1169,18 @@ const certBodyHtml = (d) => `
     <div class="row"><span>身份证号：${esc(d.idCard)}</span><span>出生日期：${esc(fmtDay(d.birthDate))}</span></div>
     <div class="row"><span>职业：${esc(d.occupation)}</span><span>死亡时间：${esc(fmt(d.deathTime))}</span>
       <span>死亡地点：${esc(placeText(d.deathPlace))}</span></div>
-    <div class="row"><span>死亡科室：${esc(d.deathDeptName || '—')}</span><span>病区/床号：${esc(d.deathWardName || '—')} / ${esc(d.deathBedNo || '—')}</span>
+    <div class="row"><span>死亡科室：${esc(d.deathDeptName || '')}</span><span>病区/床号：${esc(d.deathWardName || '')} / ${esc(d.deathBedNo || '')}</span>
       <span>是否尸检：${Number(d.autopsyFlag) === 1 ? '是' : '否'}</span></div>
     <div class="row"><span>死亡诊断：${esc(d.clinicalDiagnosis)}</span></div>
-    <div class="row"><span>既往主要疾病史：${esc(d.pastHistory || '—')}</span></div>
+    <div class="row"><span>既往主要疾病史：${esc(d.pastHistory || '')}</span></div>
     ${causeTableHtml(d.causes)}
     <div class="row"><span>根本死因：${esc(d.underlyingIcdCode)} ${esc(d.underlyingIcdName)}</span></div>
-    <div class="row"><span>近亲属姓名：${esc(d.relativeName || '—')}</span><span>与死者关系：${esc(d.relativeRelation || '—')}</span>
-      <span>联系电话：${esc(d.relativePhone || '—')}</span></div>
+    <div class="row"><span>近亲属姓名：${esc(d.relativeName || '')}</span><span>与死者关系：${esc(d.relativeRelation || '')}</span>
+      <span>联系电话：${esc(d.relativePhone || '')}</span></div>
     <div class="sign">
       <span>填表医师（签名）：${esc(d.physicianName)}</span>
       <span>填表日期：${esc(fmt(d.fillTime))}</span>
-      <span>审核：${esc(d.reviewerName || '—')} ${esc(fmt(d.reviewTime))}</span>
+      <span>审核：${esc(d.reviewerName || '')} ${esc(fmt(d.reviewTime))}</span>
     </div>
     <div class="sign"><span>签发：${esc(fmt(d.issueTime))}</span><span>（医疗卫生机构盖章）</span>
       <span>第 ${esc(d.printCount || 1)} 次打印 · ${esc(d.printerName || '')}</span></div>`
@@ -1395,7 +1380,7 @@ const showRegisterDetail = (row) => {
 const certEditable = (row) => [CS.DRAFT, CS.AUDITED].includes(Number(row.certStatus))
 
 onMounted(async () => {
-  await Promise.all([loadDicts(), loadDepts()])
+  await loadDicts()
   await reloadAll()
 })
 </script>

@@ -35,7 +35,7 @@
           <el-input v-model="detail.contactPhone"/>
         </el-form-item>
         <el-form-item label="科室负责人">
-          <el-input :value="detail.deptLeaderName || '-'"/>
+          <el-input :value="detail.deptLeaderName || ''"/>
         </el-form-item>
       </div>
       <div class="grid grid-cols-2 gap-4">

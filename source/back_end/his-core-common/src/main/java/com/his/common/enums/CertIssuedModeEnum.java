@@ -33,7 +33,7 @@ public enum CertIssuedModeEnum {
 
     public static String getLabel(Integer code) {
         if (null == code) {
-            return "—";
+            return StringUtils.EMPTY;
         }
         CertIssuedModeEnum item = fromCode(code);
         return item == null ? StringUtils.EMPTY : item.label;

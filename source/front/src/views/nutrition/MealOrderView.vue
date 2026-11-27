@@ -3,14 +3,14 @@
     <el-card shadow="never" class="stat-card">
       <div class="stat-items">
         <div class="stat-item">
-          <div class="stat-value" data-testid="ov-meal-count">{{ overview.todayMealCount ?? '-' }}</div>
+          <div class="stat-value" data-testid="ov-meal-count">{{ overview.todayMealCount ?? '' }}</div>
           <div class="stat-label">今日订餐总条数</div>
           <div class="stat-sub">含已取消，签收率另算</div>
         </div>
         <div class="stat-item">
           <div class="stat-value" :class="{ 'stat-value-danger': (overview.todayMealPendingCount ?? 0) > 0 }"
                data-testid="ov-meal-pending">
-            {{ overview.todayMealPendingCount ?? '-' }}
+            {{ overview.todayMealPendingCount ?? '' }}
           </div>
           <div class="stat-label">今日未签收到位</div>
           <div class="stat-sub">已签收 {{ overview.todayMealSignedCount ?? 0 }} 条</div>
@@ -89,13 +89,13 @@
         <el-table-column type="selection" width="42"/>
         <el-table-column label="患者" min-width="130">
           <template #default="{ row }">
-            <div>{{ row.patientName || '-' }}</div>
+            <div>{{ row.patientName || '' }}</div>
             <div class="muted">{{ row.admissionNo || row.patientNo || '' }}</div>
           </template>
         </el-table-column>
         <el-table-column label="病区 / 床" min-width="130">
           <template #default="{ row }">
-            <div>{{ row.wardName || '-' }}</div>
+            <div>{{ row.wardName || '' }}</div>
             <div class="muted">{{ row.bedNo ? row.bedNo + '床' : '' }}{{
                 row.deptName ? ' · ' + row.deptName : ''
               }}
@@ -104,18 +104,18 @@
         </el-table-column>
         <el-table-column label="饮食" min-width="150">
           <template #default="{ row }">
-            <div>{{ row.dietName || '-' }}</div>
+            <div>{{ row.dietName || '' }}</div>
             <div class="muted">{{ row.dietCode || '' }}</div>
           </template>
         </el-table-column>
         <el-table-column label="日期 / 餐次" width="130">
           <template #default="{ row }">
-            <div>{{ row.mealDate || '-' }}</div>
-            <div data-testid="cell-meal-type">{{ row.mealTypeText || '-' }} × {{ row.quantity ?? 1 }}</div>
+            <div>{{ row.mealDate || '' }}</div>
+            <div data-testid="cell-meal-type">{{ row.mealTypeText || '' }} × {{ row.quantity ?? 1 }}</div>
           </template>
         </el-table-column>
         <el-table-column label="配餐内容" min-width="170" show-overflow-tooltip>
-          <template #default="{ row }">{{ row.dishContent || '—' }}</template>
+          <template #default="{ row }">{{ row.dishContent || '' }}</template>
         </el-table-column>
         <el-table-column label="状态" width="110">
           <template #default="{ row }">
@@ -127,13 +127,13 @@
         </el-table-column>
         <el-table-column label="配送 / 签收" width="165">
           <template #default="{ row }">
-            <div class="muted">{{ row.deliverTime || '—' }}</div>
-            <div class="muted">{{ row.signTime || '—' }}{{ row.signBy ? ' · ' + row.signBy : '' }}</div>
+            <div class="muted">{{ row.deliverTime || '' }}</div>
+            <div class="muted">{{ row.signTime || '' }}{{ row.signBy ? ' · ' + row.signBy : '' }}</div>
           </template>
         </el-table-column>
         <el-table-column label="来源" width="120">
           <template #default="{ row }">
-            <div>{{ row.sourceText || '-' }}</div>
+            <div>{{ row.sourceText || '' }}</div>
             <div class="muted">{{ row.mealNo || '' }}</div>
           </template>
         </el-table-column>

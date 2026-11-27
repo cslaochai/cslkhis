@@ -23,21 +23,21 @@
       </div>
       <el-table :data="rows" v-loading="loading" border stripe empty-text="当日暂无已发布的急诊值班排班">
         <el-table-column label="科室" width="140">
-          <template #default="{ row }">{{ row.deptName || row.orgName || '-' }}</template>
+          <template #default="{ row }">{{ row.deptName || row.orgName || '' }}</template>
         </el-table-column>
         <el-table-column label="班次" width="130">
           <template #default="{ row }">
-            <el-tag size="small" :type="shiftTagType(row)">{{ row.shiftName || '-' }}</el-tag>
+            <el-tag size="small" :type="shiftTagType(row)">{{ row.shiftName || '' }}</el-tag>
           </template>
         </el-table-column>
         <el-table-column label="起止时间" width="150">
           <template #default="{ row }">{{ row.startTime }} – {{ row.endTime }}</template>
         </el-table-column>
         <el-table-column label="值班医生" min-width="140">
-          <template #default="{ row }">{{ row.employeeName || '-' }}</template>
+          <template #default="{ row }">{{ row.employeeName || '' }}</template>
         </el-table-column>
         <el-table-column label="响应形态" width="110">
-          <template #default="{ row }">{{ row.attendModeText || '-' }}</template>
+          <template #default="{ row }">{{ row.attendModeText || '' }}</template>
         </el-table-column>
       </el-table>
     </el-card>

@@ -47,7 +47,7 @@
       </div>
       <div class="flex items-center gap-2 text-[12px] text-gray-400">
         <span class="inline-block w-2 h-2 rounded-full bg-green-500"></span>
-        自动刷新 15s · {{ lastRefresh || '—' }}
+        自动刷新 15s · {{ lastRefresh || '' }}
       </div>
     </div>
 
@@ -77,7 +77,7 @@
               <div class="text-[12px] text-gray-500 flex items-center gap-2">
                 <span class="font-mono">{{ box.equipmentCode || '台账未建档' }}</span>
                 <span class="text-gray-400">标签 {{ box.deviceNo }}</span>
-                <span class="ml-auto text-gray-400">更新 {{ box.lastSeen || '—' }}</span>
+                <span class="ml-auto text-gray-400">更新 {{ box.lastSeen || '' }}</span>
               </div>
               <div v-if="box.equipmentDept || box.equipmentStatus" class="mt-0.5 text-[12px] text-gray-500">
                 <span v-if="box.equipmentDept">使用科室 {{ box.equipmentDept }}</span>
@@ -90,7 +90,7 @@
                 <div class="rounded bg-gray-50 px-2 py-2">
                   <div class="text-[11px] text-gray-400">信标电量</div>
                   <div class="text-[19px] font-semibold leading-6" :class="box.battery != null && box.battery < 20 ? 'text-red-600' : 'text-gray-800'">
-                    {{ box.battery == null ? '—' : box.battery + '%' }}
+                    {{ box.battery == null ? '' : box.battery + '%' }}
                   </div>
                 </div>
                 <div class="rounded bg-gray-50 px-2 py-2">
@@ -112,7 +112,7 @@
               <div v-else-if="!box.online" class="mt-1 text-[13px] text-red-500">超过 2 分钟未上报，先查网关/信标电量</div>
 
               <div class="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] text-gray-500">
-                <span>上次保养 {{ box.lastMaintainDate || '—' }}</span>
+                <span>上次保养 {{ box.lastMaintainDate || '' }}</span>
                 <span v-if="box.meteringValidUntil" :class="box.meteringExpired ? 'text-red-600' : 'text-gray-500'">
                   计量至 {{ box.meteringValidUntil }}{{ box.meteringExpired ? '（已过期）' : '' }}
                 </span>
@@ -174,7 +174,7 @@
               <el-button link type="primary" @click="handleEvent(row, 1)">处理</el-button>
               <el-button link type="info" @click="handleEvent(row, 2)">忽略</el-button>
             </template>
-            <span v-else class="text-[12px] text-gray-400">{{ row.handleBy || '—' }}</span>
+            <span v-else class="text-[12px] text-gray-400">{{ row.handleBy || '' }}</span>
           </template>
         </el-table-column>
       </el-table>
@@ -280,7 +280,7 @@ const boxes = computed(() => devices.value.map(dev => {
     areaKnown,
     statusText: !t ? '未上报' : !online ? '离线' : !areaKnown ? '位置未知' : out ? '离位' : '在区',
     badgeType: !online ? 'info' : !areaKnown ? 'warning' : out ? 'danger' : battery != null && battery < LOW_BATTERY ? 'warning' : 'success',
-    signalText: rssi == null ? '—' : (rssi > -60 ? '强' : rssi > -75 ? '中' : '弱'),
+    signalText: rssi == null ? '' : (rssi > -60 ? '强' : rssi > -75 ? '中' : '弱'),
     maintain,
     lastSeen: t?.ts ? String(t.ts).replace('T', ' ').slice(11, 19) : '',
   };
@@ -334,7 +334,7 @@ const siteState = (row) => {
     return box.out ? {text: `仍在区外：${box.area}`, cls: 'text-red-600 font-semibold'}
         : {text: `已归还 ${box.area}`, cls: 'text-green-600'};
   }
-  return {text: '—', cls: 'text-gray-400'};
+  return {text: '', cls: 'text-gray-400'};
 };
 
 /** 到期日优先用台账算出的 nextMaintainDate；没有下次日期时按最近一次+周期兜底 */

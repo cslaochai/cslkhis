@@ -90,6 +90,8 @@ const props = defineProps({
   deptTree: {type: Array, default: () => []},
   // 科目树按一级分组后的下拉数据
   groups: {type: Array, default: () => []},
+  // 已配过上报科目的科室ID：管理片区里的精神心理科/感染疾病科/健康管理中心靠它识别为可维护
+  mappedDeptIds: {type: Array, default: () => []},
 })
 const emit = defineEmits(['update:modelValue', 'saved'])
 
@@ -110,10 +112,22 @@ const rules = {
   subjectCode: [{required: true, message: '请选择诊疗科目', trigger: 'change'}],
 }
 
+// 可维护节点口径与主页面一致：临床(2)/其他(7)，或本身就配过上报科目的管理片区(1)
+const isSubjectDept = (data) => {
+  if (!data) return false
+  const nodeType = String(data.nodeType ?? '')
+  if (nodeType === '2' || nodeType === '7') return true
+  if (!nodeType) {
+    const types = String(data.deptType ?? '').split(',').map(s => s.trim())
+    if (types.some(t => ['1', '4', '6'].includes(t))) return true
+  }
+  return props.mappedDeptIds.map(id => String(id)).includes(String(data.id))
+}
+
 const treeProps = {
   label: 'deptName',
   children: 'children',
-  disabled: (data) => (data.children || []).length > 0,
+  disabled: (data) => !isSubjectDept(data),
 }
 
 const findDept = (nodes, id) => {

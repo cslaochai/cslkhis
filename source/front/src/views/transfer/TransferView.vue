@@ -70,17 +70,7 @@
           </el-select>
         </el-form-item>
         <el-form-item label="转入科室">
-          <el-select
-              v-model="filters.toDeptId"
-              class="!w-44"
-              clearable
-              data-testid="p4-transfer-filter-dept"
-              filterable
-              placeholder="转入科室"
-              @change="handleSearch"
-          >
-            <el-option v-for="d in depts" :key="d.id" :label="d.deptName || d.id" :value="String(d.id)"/>
-          </el-select>
+          <DeptTreeSelect v-model="filters.toDeptId" mode="LEAF" width="176px" placeholder="转入科室" @change="handleSearch"/>
         </el-form-item>
         <el-form-item label="转科类型">
           <el-select
@@ -217,7 +207,7 @@
     </el-card>
 
     <!-- 发起转科：表单与提交在 TransferApplyEdit（只新增，无修改语义） -->
-    <TransferApplyEdit v-model="applyVisible" :admissions="admissions" :depts="depts"
+    <TransferApplyEdit v-model="applyVisible" :admissions="admissions"
                        :preset-admission-id="filters.admissionId" @saved="afterApplySaved"/>
 
     <!-- 接收转科：表单与提交在 TransferReceiveEdit -->
@@ -238,7 +228,7 @@ import {
   getTransferPendingCount,
 } from '@/api/inpatientTransfer';
 import {getInpatientListPage} from '@/api/inpatient';
-import {getDepartmentSelectList} from '@/api/system';
+import DeptTreeSelect from '@/components/his/DeptTreeSelect.vue';
 import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination';
 import {admissionLabel, fmt, statusTagType, text} from '@/lib/transfer';
 import {useTableMaxHeight} from '@/lib/useTableMaxHeight';
@@ -249,23 +239,12 @@ import TransferReceiveEdit from './TransferReceiveEdit.vue';
 
 // ---------------- 基础数据 ----------------
 const admissions = ref([]);
-const depts = ref([]);
 const loadAdmissions = async () => {
   try {
     const res = await getInpatientListPage({admitStatus: 1, pageNum: 1, pageSize: 200});
     admissions.value = (res.data?.records || []);
   } catch (error) {
     console.error('加载在院患者失败:', error);
-  }
-};
-const loadDepts = async () => {
-  try {
-    // 转科申请：目标科室 = 转出科室之外的范围，但**不能越过自己的授权范围**。
-    // 不传 scope → 默认按当前人过滤。
-    const res = await getDepartmentSelectList({});
-    depts.value = (res.data || []);
-  } catch (error) {
-    console.error('加载科室失败:', error);
   }
 };
 // ---------------- 列表 ----------------
@@ -373,7 +352,7 @@ const afterAcceptSaved = async () => {
   await Promise.all([loadList(), loadPendingCount(), loadAdmissions()]);
 };
 onMounted(async () => {
-  await Promise.all([loadAdmissions(), loadDepts()]);
+  await loadAdmissions();
   await Promise.all([loadList(), loadPendingCount()]);
 });
 </script>

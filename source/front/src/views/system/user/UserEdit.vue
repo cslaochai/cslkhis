@@ -165,12 +165,12 @@ import {computed, reactive, ref, watch} from 'vue'
 import {ElMessage} from 'element-plus'
 import {
   createUser,
-  getDepartmentTree,
   getDictDataMapList,
   getRoleList,
   getUserDetail,
   updateUser
 } from '@/api/system'
+import {loadDeptTreeOptions} from '@/lib/deptOptions'
 import {USER_STATUS} from '@/lib/dict'
 import EmployeePostTable from '@/components/his/EmployeePostTable.vue'
 import {checkPosts, postsFromApi, postsToPayload} from '@/lib/employeePost'
@@ -208,12 +208,12 @@ const loadRefs = async () => {
   if (refLoaded) return
   refLoaded = true
   try {
-    const [deptRes, roleRes, dictRes] = await Promise.all([
-      getDepartmentTree(),
+    const [tree, roleRes, dictRes] = await Promise.all([
+      loadDeptTreeOptions({scope: 'ALL', mode: 'ORG'}),
       getRoleList({}),
       getDictDataMapList('sys_hospital_title,hospital_position,his_education'),
     ])
-    if (deptRes.code === 200) deptList.value = deptRes.data || []
+    deptList.value = tree
     if (roleRes.code === 200) roleList.value = roleRes.data || []
     if (dictRes.code === 200 && dictRes.data) {
       titleOptions.value = dictRes.data['sys_hospital_title'] || []

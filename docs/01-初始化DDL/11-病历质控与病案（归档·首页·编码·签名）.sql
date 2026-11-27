@@ -1,5 +1,5 @@
 -- 领域：11-病历质控与病案（归档·首页·编码·签名）
--- 库：hn_biz_his    表数：16
+-- 库：hn_biz_his    表数：18
 -- 说明：DDL 快照（dev 库 SHOW CREATE TABLE 于 2026-11-20 导出，无 DROP / 无数据）。建表语句彼此独立，不含外键约束。
 -- 口径：姓名/名称快照列与操作人列（create_by·update_by·*_by·*_name·name）不留 DEFAULT，漏填直接报错；其余 NOT NULL 列保留库上的 DEFAULT。
 
@@ -640,3 +640,87 @@ CREATE TABLE `biz_stat_report` (
   KEY `idx_stat_report_dept` (`dept_id`),
   KEY `idx_stat_report_create_time` (`create_time`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='病案统计上报台账';
+
+-- ----------------------------
+-- biz_emr_draft_handover  病历草稿移交代补记录
+-- ----------------------------
+CREATE TABLE `biz_emr_draft_handover` (
+  `id` bigint NOT NULL COMMENT '主键ID（雪花）',
+  `handover_no` varchar(32) NOT NULL COMMENT '单号 HD+yyyyMMdd+4位',
+  `record_id` bigint NOT NULL COMMENT '病历ID biz_medical_record.id',
+  `record_no` varchar(64) COMMENT '病历号（快照）',
+  `patient_id` bigint COMMENT '患者ID（快照）',
+  `patient_name` varchar(64) COMMENT '患者姓名（快照）',
+  `dept_id` bigint COMMENT '病历所属科室ID（快照）',
+  `dept_name` varchar(64) COMMENT '病历所属科室名称（快照）',
+  `original_doctor_id` bigint COMMENT '原经治医生ID（快照）',
+  `original_doctor_name` varchar(64) COMMENT '原经治医生姓名（快照）',
+  `receiver_id` bigint NOT NULL COMMENT '承接人员工ID',
+  `receiver_name` varchar(64) COMMENT '承接人姓名（快照）',
+  `reason` tinyint NOT NULL COMMENT '移交原因（1-离职 2-长期休假 3-调离临床岗位 4-其他）',
+  `status` tinyint NOT NULL DEFAULT '1' COMMENT '状态（1-待代补 2-已完成 3-已撤销）',
+  `operator_id` bigint COMMENT '移交发起人员工ID',
+  `operator_name` varchar(64) COMMENT '移交发起人姓名（快照）',
+  `complete_time` datetime COMMENT '代补完成时间',
+  `complete_by_id` bigint COMMENT '代补完成人员工ID',
+  `complete_by_name` varchar(64) COMMENT '代补完成人姓名（快照）',
+  `remark` varchar(500) COMMENT '备注/移交说明',
+  `del_flag` tinyint NOT NULL DEFAULT '0' COMMENT '删除标志（0-正常 1-删除）',
+  `create_time` datetime NOT NULL DEFAULT (now()) COMMENT '创建时间',
+  `update_time` datetime NOT NULL DEFAULT (now()) COMMENT '更新时间',
+  `create_by` varchar(64) NOT NULL COMMENT '创建人',
+  `update_by` varchar(64) NOT NULL COMMENT '更新人',
+  `create_by_id` bigint NOT NULL COMMENT '创建人ID',
+  `update_by_id` bigint NOT NULL COMMENT '更新人ID',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_handover_no` (`handover_no`),
+  KEY `idx_record` (`record_id`),
+  KEY `idx_receiver_status` (`receiver_id`, `status`),
+  KEY `idx_status` (`status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='病历草稿移交代补记录';
+
+-- ----------------------------
+-- biz_emr_correction_request  病历更正申请单
+-- ----------------------------
+CREATE TABLE `biz_emr_correction_request` (
+  `id` bigint NOT NULL COMMENT '主键ID（雪花）',
+  `request_no` varchar(32) NOT NULL COMMENT '单号 CR+yyyyMMdd+4位',
+  `record_id` bigint NOT NULL COMMENT '病历ID biz_medical_record.id',
+  `record_no` varchar(64) COMMENT '病历号（快照）',
+  `patient_id` bigint COMMENT '患者ID（快照）',
+  `patient_name` varchar(64) COMMENT '患者姓名（快照）',
+  `dept_id` bigint COMMENT '病历所属科室ID（快照）',
+  `dept_name` varchar(64) COMMENT '病历所属科室名称（快照）',
+  `original_doctor_id` bigint COMMENT '原经治医生ID（快照）',
+  `original_doctor_name` varchar(64) COMMENT '原经治医生姓名（快照）',
+  `applicant_id` bigint NOT NULL COMMENT '申请人员工ID',
+  `applicant_name` varchar(64) COMMENT '申请人姓名（快照）',
+  `correction_type` tinyint NOT NULL COMMENT '更正类型（1-经治医生更正 2-上级代改）',
+  `reason` varchar(500) NOT NULL COMMENT '更正原因/事由',
+  `planned_content` varchar(2000) COMMENT '拟更正内容说明',
+  `status` tinyint NOT NULL DEFAULT '1' COMMENT '状态（1-待科室审核 2-待医务审批 3-已批准待修改 4-已驳回 5-已完成 6-已撤回）',
+  `dept_approver_id` bigint COMMENT '科室审核人ID',
+  `dept_approver_name` varchar(64) COMMENT '科室审核人姓名（快照）',
+  `dept_approve_time` datetime COMMENT '科室审核时间',
+  `dept_comment` varchar(500) COMMENT '科室审核意见',
+  `medical_approver_id` bigint COMMENT '医务审批人ID',
+  `medical_approver_name` varchar(64) COMMENT '医务审批人姓名（快照）',
+  `medical_approve_time` datetime COMMENT '医务审批时间',
+  `medical_comment` varchar(500) COMMENT '医务审批意见',
+  `modifier_id` bigint COMMENT '实际修改人员工ID',
+  `modifier_name` varchar(64) COMMENT '实际修改人姓名（快照）',
+  `modify_time` datetime COMMENT '病历回写完成时间',
+  `remark` varchar(500) COMMENT '备注',
+  `del_flag` tinyint NOT NULL DEFAULT '0' COMMENT '删除标志（0-正常 1-删除）',
+  `create_time` datetime NOT NULL DEFAULT (now()) COMMENT '创建时间',
+  `update_time` datetime NOT NULL DEFAULT (now()) COMMENT '更新时间',
+  `create_by` varchar(64) NOT NULL COMMENT '创建人',
+  `update_by` varchar(64) NOT NULL COMMENT '更新人',
+  `create_by_id` bigint NOT NULL COMMENT '创建人ID',
+  `update_by_id` bigint NOT NULL COMMENT '更新人ID',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_request_no` (`request_no`),
+  KEY `idx_record` (`record_id`),
+  KEY `idx_status` (`status`),
+  KEY `idx_dept_status` (`dept_id`, `status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='病历更正申请单';

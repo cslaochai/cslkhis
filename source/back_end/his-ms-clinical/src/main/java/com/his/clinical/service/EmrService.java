@@ -36,6 +36,13 @@ public interface EmrService extends IService<BizMedicalRecord> {
     PageResult<BizMedicalRecordVO> listPage(MedicalRecordPageQueryDTO queryDTO);
 
     /**
+     * 医生本人未完成病历（草稿）列表。
+     *
+     * <p>按经治医生本人聚合，不限当前科室、不限就诊日期：转科/跨日后，昨天未提交的草稿仍能回流续写。
+     */
+    List<BizMedicalRecordVO> listMyDrafts();
+
+    /**
      * 获取病历详情（含处方、检查申请、检验申请）
      */
     EmrRecordDetailVO getRecordDetail(Long recordId);

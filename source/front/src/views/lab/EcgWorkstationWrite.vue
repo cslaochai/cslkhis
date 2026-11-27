@@ -158,10 +158,10 @@
             <span class="mx-2 text-slate-300">|</span>
             <span class="text-slate-400">记录号：</span>{{ detail.recordNo }}
             <span class="mx-2 text-slate-300">|</span>
-            <span class="text-slate-400">申请：</span>{{ detail.applyDeptName || '—' }}
+            <span class="text-slate-400">申请：</span>{{ detail.applyDeptName || '' }}
             {{ detail.applyDoctorName || '' }}
             <span class="mx-2 text-slate-300">|</span>
-            <span class="text-slate-400">临床诊断：</span>{{ detail.clinicalDiagnosis || '—' }}
+            <span class="text-slate-400">临床诊断：</span>{{ detail.clinicalDiagnosis || '' }}
           </div>
 
           <div class="flex items-center gap-2">

@@ -35,7 +35,7 @@ export const INVOICE_TYPE_OPTIONS = [
  * @returns {string} 已开具 / 已打印 / 已作废 / 未知(n) / —
  */
 export function invoiceStatusText(value) {
-  if (value === null || value === undefined || value === '') return '—'
+  if (value === null || value === undefined || value === '') return ''
   const hit = INVOICE_STATUS_OPTIONS.find(o => o.value === Number(value))
   return hit ? hit.label : `未知(${value})`
 }
@@ -46,7 +46,7 @@ export function invoiceStatusText(value) {
  * @returns {string} 普通发票 / 电子发票 / 数电发票 / 未知(n) / —
  */
 export function invoiceTypeText(value) {
-  if (value === null || value === undefined || value === '') return '—'
+  if (value === null || value === undefined || value === '') return ''
   const hit = INVOICE_TYPE_OPTIONS.find(o => o.value === Number(value))
   return hit ? hit.label : `未知(${value})`
 }

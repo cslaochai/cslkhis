@@ -103,17 +103,17 @@ export function loadOrderUsageOptions() {
 
 /** 频次缩写 → 展示文案。命中不到渲染「未知(code)」，不回落成看似合法的值 */
 export function frequencyText(v) {
-  if (!v) return '—'
+  if (!v) return ''
   const hit = (frequencyOptions.value || []).find((o) => (typeof o === 'string' ? o === v : o.value === v))
   return hit ? v : `未知(${v})`
 }
 
 /** 途径展示文案（值本身就是中文，兜底防空） */
 export function routeText(v) {
-  return v || '—'
+  return v || ''
 }
 
 /** 剂量单位展示文案 */
 export function dosageUnitText(v) {
-  return v || '—'
+  return v || ''
 }

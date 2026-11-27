@@ -15,7 +15,7 @@
           <el-table-column prop="deptName" label="科室" width="130" show-overflow-tooltip />
           <el-table-column prop="operationName" label="手术名称" min-width="200" show-overflow-tooltip />
           <el-table-column label="手术时间" width="170">
-            <template #default="{ row }">{{ row.operationTime || '—' }}</template>
+            <template #default="{ row }">{{ row.operationTime || '' }}</template>
           </el-table-column>
           <el-table-column prop="surgeonName" label="主刀" width="100" />
           <el-table-column label="围手术期抗菌药证据" min-width="260">
@@ -82,7 +82,7 @@
           </el-table-column>
           <el-table-column label="疗程（h）" width="90" align="right">
             <template #default="{ row }">
-              <span :class="{ 'over-target': (row.courseHours || 0) > 24 }">{{ row.courseHours ?? '—' }}</span>
+              <span :class="{ 'over-target': (row.courseHours || 0) > 24 }">{{ row.courseHours ?? '' }}</span>
             </template>
           </el-table-column>
           <el-table-column label="结论" width="100">
@@ -157,7 +157,7 @@ async function loadCandidates() {
 }
 
 function timingDeltaText(minutes) {
-  if (minutes === null || minutes === undefined) return '—'
+  if (minutes === null || minutes === undefined) return ''
   const abs = Math.abs(minutes)
   const h = Math.floor(abs / 60)
   const m = abs % 60

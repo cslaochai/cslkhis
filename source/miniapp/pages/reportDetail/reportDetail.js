@@ -47,7 +47,7 @@ Page({
         }))
         // 检验结果明细：逐项的结果值/参考区间/异常判定本来就在库里，只是此前没带出来
         const labItems = (r.labItems || []).map(it => ({
-          itemName: it.laboratoryItemName || '-',
+          itemName: it.laboratoryItemName || '',
           resultValue: it.resultValue || '',
           resultUnit: it.resultUnit || '',
           referenceRange: it.referenceRange || '',

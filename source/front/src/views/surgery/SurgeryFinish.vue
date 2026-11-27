@@ -121,7 +121,7 @@ const visible = computed({
   set: (v) => emit('update:modelValue', v),
 });
 
-const text = (v) => (v === null || v === undefined || v === '' ? '—' : String(v));
+const text = (v) => (v === null || v === undefined || v === '' ? '' : String(v));
 
 const finishSubmitting = ref(false);
 const finishTarget = computed(() => props.row);

@@ -74,4 +74,4 @@ export const balanceOf = (intake, output) => {
 }
 
 /** 血压展示合并，避免表格两列窄列 */
-export const bpText = (row) => (row.sbp == null && row.dbp == null ? '—' : `${row.sbp ?? '—'}/${row.dbp ?? '—'}`)
+export const bpText = (row) => (row.sbp == null && row.dbp == null ? '' : `${row.sbp ?? ''}/${row.dbp ?? ''}`)

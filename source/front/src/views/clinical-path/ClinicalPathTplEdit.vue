@@ -12,10 +12,8 @@
           <el-input v-model="tplForm.pathwayName" data-testid="cp-tpl-name" placeholder="如 人工全髋关节置换术路径"/>
         </el-form-item>
         <el-form-item label="适用科室">
-          <el-select v-model="tplForm.deptId" :fit-input-width="false" class="w-full" clearable filterable
-                     placeholder="科室（可不选）">
-            <el-option v-for="d in depts" :key="d.id" :label="d.deptName" :value="Number(d.id)"/>
-          </el-select>
+          <DeptTreeSelect v-model="tplForm.deptId" mode="LEAF" width="100%" placeholder="科室（可不选）"/>
+
         </el-form-item>
         <el-form-item label="版本号">
           <el-input v-model="tplForm.version" placeholder="V1"/>
@@ -87,7 +85,7 @@ import {computed, reactive, ref, watch} from 'vue';
 import {ElMessage} from 'element-plus';
 import {Delete, Plus} from '@element-plus/icons-vue';
 import {getPathwayDetail, pathwayUpsert} from '@/api/pathway';
-import {getDepartmentSelectList} from '@/api/system';
+import DeptTreeSelect from '@/components/his/DeptTreeSelect.vue';
 import {getTreatmentItemSelectList} from '@/api/treatment';
 
 const props = defineProps({
@@ -114,16 +112,6 @@ const tplForm = reactive({
   remark: '',
   steps: [],
 });
-
-const depts = ref([]);
-const loadDepts = async () => {
-  try {
-    const res = await getDepartmentSelectList({pageSize: 200});
-    depts.value = res?.data?.records || res?.data || [];
-  } catch (e) {
-    console.error('加载科室失败', e);
-  }
-};
 
 const resetForm = () => {
   tplForm.id = null;
@@ -156,8 +144,6 @@ const loadDetail = async () => {
 watch(visible, async (open) => {
   if (!open) return;
   resetForm();
-  if (!depts.value.length)
-    await loadDepts();
   if (!props.row?.id)
     return;
   try {

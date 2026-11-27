@@ -44,7 +44,7 @@ export const FLOW_GRADE_TEXT = { 1: '甲级', 2: '乙级', 3: '丙级' }
 export const flowStatusText = (v) => FLOW_STATUS_TEXT[Number(v)] ?? `未知(${v})`
 export const flowLevelText = (v) => FLOW_LEVEL_TEXT[Number(v)] ?? `未知(${v})`
 export const flowActionText = (v) => FLOW_ACTION_TEXT[Number(v)] ?? `未知(${v})`
-export const flowGradeText = (v) => (v === null || v === undefined ? '—' : FLOW_GRADE_TEXT[Number(v)] ?? `未知(${v})`)
+export const flowGradeText = (v) => (v === null || v === undefined ? '' : FLOW_GRADE_TEXT[Number(v)] ?? `未知(${v})`)
 
 /** 状态标签色：待审=蓝，终审通过=绿，整改中=橙 */
 export const flowStatusTag = (v) => {

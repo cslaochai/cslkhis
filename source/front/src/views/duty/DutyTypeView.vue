@@ -24,7 +24,7 @@
         </el-table-column>
         <el-table-column label="归口科室（谁排这条线）" prop="manageDeptName" min-width="150">
           <template #default="{ row }">
-            <span>{{ row.manageDeptName || '—' }}</span>
+            <span>{{ row.manageDeptName || '' }}</span>
             <el-tag v-if="row.manageable" size="small" style="margin-left: 6px" type="success">当前岗位可排</el-tag>
             <el-tag v-else size="small" style="margin-left: 6px" type="info">需切到该科室岗位</el-tag>
           </template>

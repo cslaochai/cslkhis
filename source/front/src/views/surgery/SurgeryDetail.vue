@@ -110,8 +110,8 @@ const visible = computed({
   set: (v) => emit('update:modelValue', v),
 });
 
-const fmt = (v) => (v ? String(v).replace('T', ' ') : '—');
-const text = (v) => (v === null || v === undefined || v === '' ? '—' : String(v));
+const fmt = (v) => (v ? String(v).replace('T', ' ') : '');
+const text = (v) => (v === null || v === undefined || v === '' ? '' : String(v));
 /** 每台手术的进行位置（列表里一眼看出卡在哪一步）——纯后端文案拼装，前端不加业务判断 */
 const stageText = (row) => {
   if (row.operationStatus === 0)

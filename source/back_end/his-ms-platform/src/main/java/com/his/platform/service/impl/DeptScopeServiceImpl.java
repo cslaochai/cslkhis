@@ -102,6 +102,14 @@ public class DeptScopeServiceImpl implements DeptScopeService {
         return deptId != null && allowed.contains(deptId);
     }
 
+    @Override
+    public Set<Long> descendantDeptIds(Long deptId) {
+        if (deptId == null) {
+            return Set.of();
+        }
+        return expandWithDescendants(Set.of(deptId));
+    }
+
     /**
      * 取当前登录用户被授权的科室集合（政策层内部使用）。
      *

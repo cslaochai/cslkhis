@@ -68,7 +68,7 @@ public class TransfusionApplyController {
         return Result.success("输血申请已提交（等待用血审批）", transfusionApplyService.save(dto));
     }
 
-    @PreAuthorize("hasAuthority('medtech:transfusion:edit')")
+    @PreAuthorize("hasAuthority('medtech:transfusion:audit')")
     /**
      * 对输血申请作出通过或驳回结论，驳回必带原因；急诊先输血后补审也走此口。
      * 用于输血管理页审批弹框由审批人逐级签批。
@@ -101,7 +101,7 @@ public class TransfusionApplyController {
         return Result.success(transfusionApplyService.approveStats());
     }
 
-    @PreAuthorize("hasAuthority('medtech:transfusion:edit')")
+    @PreAuthorize("hasAuthority('medtech:transfusion:dispatch')")
     /**
      * 分批提交逐袋交叉配血结果，累计不超过申请袋数；致死性不相容整批拒绝，配血结论随响应文本回显。
      * 用于输血管理页配血弹框按血站到货批次录入配血。
@@ -116,7 +116,7 @@ public class TransfusionApplyController {
         return Result.success(transfusionApplyService.crossmatch(dto), null);
     }
 
-    @PreAuthorize("hasAuthority('medtech:transfusion:edit')")
+    @PreAuthorize("hasAuthority('medtech:transfusion:dispatch')")
     /**
      * 将配血全部相合的申请置为已发血，血液出库交接病区。
      * 用于输血管理页发血弹框确认发血。
@@ -128,7 +128,7 @@ public class TransfusionApplyController {
         return Result.success("已发血，请病区双人核对后输注", null);
     }
 
-    @PreAuthorize("hasAuthority('medtech:transfusion:edit')")
+    @PreAuthorize("hasAuthority('medtech:transfusion:execute')")
     /**
      * 双人核对全部必核项通过后开始输注，两名核对护士不得为同一人。
      * 用于输血管理页输注启动弹框在床旁核对后执行。
@@ -140,7 +140,7 @@ public class TransfusionApplyController {
         return Result.success("已开始输注（双人核对完成）", null);
     }
 
-    @PreAuthorize("hasAuthority('medtech:transfusion:edit')")
+    @PreAuthorize("hasAuthority('medtech:transfusion:execute')")
     /**
      * 结束一次输血，并在同一事务回写输血记录病历与病案首页输血标志。
      * 用于输血管理页完成弹框登记输注结束。
@@ -152,7 +152,7 @@ public class TransfusionApplyController {
         return Result.success("输血已完成（已回写输血记录病历）", null);
     }
 
-    @PreAuthorize("hasAuthority('medtech:transfusion:edit')")
+    @PreAuthorize("hasAuthority('medtech:transfusion:execute')")
     /**
      * 为已完成的输血补登不良反应，不改动历史流程状态。
      * 用于输血管理页反应上报弹框登记输血反应。

@@ -38,13 +38,13 @@
             <el-input :model-value="detail.createTime"/>
           </el-form-item>
           <el-form-item label="煎药时间">
-            <el-input :model-value="detail.decoctTime || '—'"/>
+            <el-input :model-value="detail.decoctTime || ''"/>
           </el-form-item>
           <el-form-item label="取走时间">
-            <el-input :model-value="detail.pickupTime || '—'"/>
+            <el-input :model-value="detail.pickupTime || ''"/>
           </el-form-item>
           <el-form-item label="经办人">
-            <el-input :model-value="detail.operatorName || '—'"/>
+            <el-input :model-value="detail.operatorName || ''"/>
           </el-form-item>
         </div>
         <el-form-item label="煎法脚注">

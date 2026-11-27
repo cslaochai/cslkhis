@@ -26,7 +26,7 @@ export const PATIENT_GENDER_OPTIONS = [
  * @returns {string} 男 / 女 / 未知 / 未知(n) / —
  */
 export function patientGenderText(gender) {
-  if (gender === null || gender === undefined || gender === '') return '—'
+  if (gender === null || gender === undefined || gender === '') return ''
   const n = Number(gender)
   if (n === 1) return '男'
   if (n === 2) return '女'
@@ -86,7 +86,7 @@ export function patientAvatarTone(gender) {
  * @returns {string} 例：32岁 / —
  */
 export function patientAgeText(age) {
-  if (age === null || age === undefined || age === '') return '—'
+  if (age === null || age === undefined || age === '') return ''
   return `${age}岁`
 }
 

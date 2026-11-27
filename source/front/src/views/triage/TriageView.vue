@@ -10,9 +10,8 @@
           value-format="YYYY-MM-DD"
           @change="pagination.pageNum = 1; reload()"
       />
-      <el-select v-model="deptId" filterable placeholder="诊区" style="width: 150px" @change="onDeptChange">
-        <el-option v-for="d in depts" :key="d.id" :label="d.deptName" :value="String(d.id)"/>
-      </el-select>
+      <DeptTreeSelect v-model="deptId" mode="LEAF" width="150px" placeholder="诊区" @change="onDeptChange"/>
+
       <el-select v-model="doctorId" clearable filterable placeholder="医生" style="width: 140px"
                  @change="pagination.pageNum = 1; loadList()">
         <el-option v-for="e in doctors" :key="e.id" :label="e.empName" :value="String(e.id)"/>
@@ -210,7 +209,7 @@
             <template #default="{ row }">
               <div class="text-sm font-medium text-slate-900">{{ row.patientName }}</div>
               <div class="text-xs text-slate-400">
-                {{ genderText(row.gender) }}/{{ row.age ?? '-' }} · {{ row.patientNo }}
+                {{ genderText(row.gender) }}/{{ row.age ?? '' }} · {{ row.patientNo }}
               </div>
             </template>
           </el-table-column>
@@ -230,7 +229,7 @@
           </el-table-column>
           <el-table-column label="诊室" show-overflow-tooltip width="86">
             <template #default="{ row }">
-              <span :class="row.roomName ? 'text-slate-700' : 'text-slate-300'">{{ row.roomName || '-' }}</span>
+              <span :class="row.roomName ? 'text-slate-700' : 'text-slate-300'">{{ row.roomName || '' }}</span>
             </template>
           </el-table-column>
           <el-table-column align="right" label="等候" width="86">
@@ -314,7 +313,7 @@
                 <div class="flex items-center justify-between">
                   <span class="text-slate-400">患者</span>
                   <span class="font-medium text-slate-800">
-                    {{ genderText(selected.gender) }}/{{ selected.age ?? '-' }}
+                    {{ genderText(selected.gender) }}/{{ selected.age ?? '' }}
                   </span>
                 </div>
                 <div class="flex items-center justify-between">
@@ -539,7 +538,9 @@ import {
   rejoinQueue,
   saveTriage,
 } from '@/api/appoint';
-import {getClinicRoomListAll, getDepartmentSelectList, getEmployeeList, getUserInfo} from '@/api/system';
+import {getClinicRoomListAll, getEmployeeList, getUserInfo} from '@/api/system';
+import {loadDeptTreeOptions, flattenDeptTree} from '@/lib/deptOptions';
+import DeptTreeSelect from '@/components/his/DeptTreeSelect.vue';
 import {QUEUE_STATUS, REGIST_TYPE, statusOf} from '@/lib/statusColor';
 import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination';
 import {shortQueueNo} from '@/lib/utils';
@@ -690,8 +691,8 @@ const loadDoctors = async () => {
 };
 const loadDepts = async () => {
   try {
-    const res = await getDepartmentSelectList({});
-    depts.value = res.data || [];
+    const tree = await loadDeptTreeOptions({mode: 'LEAF'});
+    depts.value = flattenDeptTree(tree);
     if (deptId.value)
       return;
     // 默认诊区 = 登录人所属科室（先看 localStorage，再看 /auth/info 的 UserLoginVO.deptId）

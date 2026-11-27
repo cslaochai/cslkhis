@@ -30,25 +30,40 @@ public class BiServiceImpl implements BiService {
     public BiOverviewVO overview() {
         BiOverviewVO vo = new BiOverviewVO();
         vo.setTodayAppointments(NumUtil.orZero(biMapper.countTodayAppointments()));
+        vo.setTodayAdmissions(NumUtil.orZero(biMapper.countTodayAdmissions()));
         vo.setInHospitalCount(NumUtil.orZero(biMapper.countInHospital()));
         vo.setTodayDischargeCount(NumUtil.orZero(biMapper.countTodayDischarge()));
+        vo.setTodayOperations(NumUtil.orZero(biMapper.countTodayOperations()));
 
         BigDecimal revenue = NumUtil.orZero(biMapper.sumTodayRevenue());
         BigDecimal drug = NumUtil.orZero(biMapper.sumTodayDrugRevenue());
         vo.setTodayRevenue(revenue);
-        vo.setTodayDrugRevenue(drug);
         vo.setDrugRatio(revenue.signum() > 0
                 ? drug.divide(revenue, 4, RoundingMode.HALF_UP) : BigDecimal.ZERO);
+
+        // 昨日对照（环比用）；昨日药占比与今日同口径现算
+        vo.setYesterdayAppointments(NumUtil.orZero(biMapper.countYesterdayAppointments()));
+        vo.setYesterdayAdmissions(NumUtil.orZero(biMapper.countYesterdayAdmissions()));
+        vo.setYesterdayDischargeCount(NumUtil.orZero(biMapper.countYesterdayDischarge()));
+        vo.setYesterdayOperations(NumUtil.orZero(biMapper.countYesterdayOperations()));
+        BigDecimal yesterdayRevenue = NumUtil.orZero(biMapper.sumYesterdayRevenue());
+        BigDecimal yesterdayDrug = NumUtil.orZero(biMapper.sumYesterdayDrugRevenue());
+        vo.setYesterdayRevenue(yesterdayRevenue);
+        vo.setYesterdayDrugRatio(yesterdayRevenue.signum() > 0
+                ? yesterdayDrug.divide(yesterdayRevenue, 4, RoundingMode.HALF_UP) : BigDecimal.ZERO);
 
         BiBedStatRowVO bed = biMapper.bedStat();
         long occupied = NumUtil.orZero(bed.getOccupied());
         long total = NumUtil.orZero(bed.getTotal());
-        long usable = total - NumUtil.orZero(bed.getRepair());
+        long repair = NumUtil.orZero(bed.getRepair());
+        long usable = total - repair;
         vo.setBedTotal(total);
         vo.setBedOccupied(occupied);
         vo.setBedOccupancy(usable > 0
                 ? BigDecimal.valueOf(occupied).divide(BigDecimal.valueOf(usable), 4, RoundingMode.HALF_UP)
                 : BigDecimal.ZERO);
+        vo.setEmptyBeds(Math.max(total - occupied - repair, 0));
+        vo.setPendingAdmissionCount(NumUtil.orZero(biMapper.countPendingAdmission()));
 
         vo.setAppointmentTrend(toCountTrend(biMapper.appointmentTrend()));
         vo.setRevenueTrend(toAmountTrend(biMapper.revenueTrend()));
@@ -60,6 +75,7 @@ public class BiServiceImpl implements BiService {
             top.add(d);
         }
         vo.setDeptTop(top);
+        vo.setRevenueStructure(biMapper.revenueStructure30d());
         return vo;
     }
 
@@ -136,6 +152,19 @@ public class BiServiceImpl implements BiService {
         // 把缺的按 0 加进分子会得到一个「看着正常但偏低」的 CMI，比空着更坏（同 §7 不把统筹塞进优惠列）
         vo.setCmi(samples.isEmpty() || weightMissing > 0 ? null
                 : weightSum.divide(BigDecimal.valueOf(samples.size()), 4, RoundingMode.HALF_UP));
+
+        // 次均费用：门诊=门诊收入/门诊人次；住院=住院收入/窗口出院人次；分母为 0 置 0
+        BiWindowRevenueRowVO window = biMapper.windowRevenue30d();
+        BigDecimal outRevenue = NumUtil.orZero(window.getOutpatient());
+        BigDecimal inRevenue = NumUtil.orZero(window.getInpatient());
+        long outVisits = NumUtil.orZero(biMapper.countOutpatientVisits30d());
+        vo.setOutpatientRevenue(outRevenue);
+        vo.setOutpatientVisits(outVisits);
+        vo.setOutpatientAvgCost(outVisits > 0
+                ? outRevenue.divide(BigDecimal.valueOf(outVisits), 2, RoundingMode.HALF_UP) : BigDecimal.ZERO);
+        vo.setInpatientRevenue(inRevenue);
+        vo.setInpatientAvgCost(dischargeCount > 0
+                ? inRevenue.divide(BigDecimal.valueOf(dischargeCount), 2, RoundingMode.HALF_UP) : BigDecimal.ZERO);
         return vo;
     }
 

@@ -72,13 +72,13 @@
           </el-table-column>
           <el-table-column label="标题 / 主诉" min-width="220">
             <template #default="{ row }">
-              <div class="text-sm font-medium text-slate-800">{{ row.recordTitle || row.recordTypeText || '—' }}</div>
-              <div class="truncate text-xs text-slate-400">{{ row.chiefComplaint || '—' }}</div>
+              <div class="text-sm font-medium text-slate-800">{{ row.recordTitle || row.recordTypeText || '' }}</div>
+              <div class="truncate text-xs text-slate-400">{{ row.chiefComplaint || '' }}</div>
             </template>
           </el-table-column>
           <el-table-column label="诊断" min-width="160">
             <template #default="{ row }">
-              <span class="text-xs text-slate-600">{{ row.diagnosisName || '—' }}</span>
+              <span class="text-xs text-slate-600">{{ row.diagnosisName || '' }}</span>
             </template>
           </el-table-column>
           <el-table-column label="结构化率" width="150">
@@ -127,7 +127,7 @@
           </el-table-column>
           <el-table-column label="书写 / 时间" width="150">
             <template #default="{ row }">
-              <div class="text-xs text-slate-600">{{ row.doctorName || '—' }}</div>
+              <div class="text-xs text-slate-600">{{ row.doctorName || '' }}</div>
               <div class="text-xs text-slate-400">{{ fmtTime(row.recordTime) }}</div>
             </template>
           </el-table-column>
@@ -179,12 +179,12 @@
           <el-table-column label="字段" prop="fieldLabel" width="140"/>
           <el-table-column label="变更前" min-width="200">
             <template #default="{ row }">
-              <span class="text-xs text-slate-500">{{ row.oldValue || '—' }}</span>
+              <span class="text-xs text-slate-500">{{ row.oldValue || '' }}</span>
             </template>
           </el-table-column>
           <el-table-column label="变更后" min-width="200">
             <template #default="{ row }">
-              <span class="text-xs text-slate-800">{{ row.newValue || '—' }}</span>
+              <span class="text-xs text-slate-800">{{ row.newValue || '' }}</span>
             </template>
           </el-table-column>
           <el-table-column label="操作人" prop="userName" width="120"/>
@@ -482,9 +482,9 @@
     <!-- ============== 要素明细 ============== -->
     <el-dialog v-model="detailDialog" title="结构化要素明细" width="60%">
       <div class="mb-3 text-sm text-slate-600">
-        {{ detail.patientName || '—' }} · {{ detail.recordTypeText || '—' }} · {{ detail.recordNo || '—' }}
+        {{ detail.patientName || '' }} · {{ detail.recordTypeText || '' }} · {{ detail.recordNo || '' }}
         <span :style="{ color: rateColor(detail.structuredRate) }" class="ml-3 font-semibold">
-          结构化率 {{ detail.structuredRateText || '—' }}（{{
+          结构化率 {{ detail.structuredRateText || '' }}（{{
             detail.structuredFilled ?? 0
           }}/{{ detail.structuredTotal ?? 0 }}）
         </span>
@@ -552,10 +552,10 @@ const admissions = ref([]);
 const admissionId = ref('');
 const typeOptions = ref([]);
 const statusOptions = ref([]);
-const fmtTime = (v) => (v ? String(v).replace('T', ' ').slice(0, 16) : '—');
+const fmtTime = (v) => (v ? String(v).replace('T', ' ').slice(0, 16) : '');
 /** 数值 0 必须显示成 0，不能当空 */
-const num = (v) => (v === null || v === undefined || v === '' ? '—' : String(v));
-const patientLabel = (a) => `${a.bedNo || '—'} ${a.patientName || '—'}（${a.wardName || a.deptName || '—'}）`;
+const num = (v) => (v === null || v === undefined || v === '' ? '' : String(v));
+const patientLabel = (a) => `${a.bedNo || ''} ${a.patientName || ''}（${a.wardName || a.deptName || ''}）`;
 const loadAdmissions = async () => {
   try {
     const res = await getInpatientListPage({admitStatus: 1, pageNum: 1, pageSize: 200});
@@ -626,7 +626,7 @@ const loadLogs = async () => {
 const statCards = computed(() => [
   {
     label: '结构化率',
-    value: stat.value.structuredRateText || '—',
+    value: stat.value.structuredRateText || '',
     hint: `${stat.value.elementFilled ?? 0}/${stat.value.elementTotal ?? 0} 个要素`,
     color: 'text-emerald-600',
     bg: 'bg-emerald-50',

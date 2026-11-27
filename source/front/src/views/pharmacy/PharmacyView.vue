@@ -97,7 +97,7 @@
         <el-table-column label="供货商" min-width="150" prop="supplier" show-overflow-tooltip>
           <template #default="{ row }">
             <span :class="row.supplierId ? '' : 'text-amber-600'">
-              {{ row.supplier || '—' }}
+              {{ row.supplier || '' }}
               <span v-if="!row.supplierId" class="text-xs">（未挂档案，不能退供应商）</span>
             </span>
           </template>

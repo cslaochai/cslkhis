@@ -6,7 +6,7 @@
         ['已完成', board?.finished], ['已取消', board?.cancelled]]" :key="kv[0]" :span="4">
         <el-card data-testid="ir-stat-card" shadow="never">
           <div class="stat-label">{{ kv[0] }}</div>
-          <div :data-testid="'ir-stat-' + kv[0]" class="stat-value">{{ kv[1] ?? '—' }}</div>
+          <div :data-testid="'ir-stat-' + kv[0]" class="stat-value">{{ kv[1] ?? '' }}</div>
         </el-card>
       </el-col>
     </el-row>

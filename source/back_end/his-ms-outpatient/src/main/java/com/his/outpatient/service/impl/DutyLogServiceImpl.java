@@ -290,14 +290,14 @@ public class DutyLogServiceImpl extends ServiceImpl<BizDutyLogMapper, BizDutyLog
 
     private String logTypeText(Integer t) {
         if (t == null) {
-            return "-";
+            return "";
         }
         return dictCacheService.getDicDataLabel(DictTypeConst.DUTY_LOG_TYPE, t);
     }
 
     private String statusText(Integer s) {
         if (s == null) {
-            return "-";
+            return "";
         }
         return DutyLogStatusEnum.getLabel(s);
     }

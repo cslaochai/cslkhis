@@ -18,7 +18,7 @@
       <div class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm" data-testid="fin-card-pending">
         <div class="text-sm text-slate-500">待日结交班单</div>
         <div class="mt-1 text-2xl font-bold text-amber-600">
-          {{ countLoading ? '—' : (counts.cashierPending ?? 0) }}
+          {{ countLoading ? '' : (counts.cashierPending ?? 0) }}
         </div>
         <div class="mt-1 text-xs text-slate-400">
           涉及金额 ¥{{ formatMoney(counts.cashierPendingAmount) }}
@@ -27,9 +27,9 @@
       <div class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm" data-testid="fin-card-settled">
         <div class="text-sm text-slate-500">已日结 / 已审核交班单</div>
         <div class="mt-1 text-2xl font-bold text-blue-600">
-          {{ countLoading ? '—' : (counts.cashierSettled ?? 0) }}
+          {{ countLoading ? '' : (counts.cashierSettled ?? 0) }}
           <span class="text-lg text-slate-400">
-            / {{ countLoading ? '—' : (counts.cashierAudited ?? 0) }}
+            / {{ countLoading ? '' : (counts.cashierAudited ?? 0) }}
           </span>
         </div>
         <div class="mt-1 text-xs text-slate-400">按收费员班级统计</div>
@@ -37,10 +37,10 @@
       <div class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm" data-testid="fin-card-day-pending">
         <div class="text-sm text-slate-500">待审核日结单</div>
         <div class="mt-1 text-2xl font-bold text-amber-600">
-          {{ countLoading ? '—' : (counts.dayPendingAudit ?? 0) }}
+          {{ countLoading ? '' : (counts.dayPendingAudit ?? 0) }}
         </div>
         <div class="mt-1 text-xs text-slate-400">
-          已审核 {{ countLoading ? '—' : (counts.dayAudited ?? 0) }} 张
+          已审核 {{ countLoading ? '' : (counts.dayAudited ?? 0) }} 张
         </div>
       </div>
       <div class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm" data-testid="fin-card-diff">
@@ -49,7 +49,7 @@
             :class="Number(counts.dayWithDiff || 0) > 0 ? 'text-rose-600' : 'text-emerald-600'"
             class="mt-1 text-2xl font-bold"
         >
-          {{ countLoading ? '—' : (counts.dayWithDiff ?? 0) }}
+          {{ countLoading ? '' : (counts.dayWithDiff ?? 0) }}
         </div>
         <div class="mt-1 text-xs text-slate-400">
           {{ Number(counts.dayWithDiff || 0) > 0 ? '需人工核查差异原因' : '当前无差异单据' }}
@@ -90,14 +90,14 @@
           <el-button :icon="Search" type="primary" @click="searchCashier">查询</el-button>
           <el-button :icon="Refresh" @click="resetCashier">重置</el-button>
           <span class="ml-auto text-sm text-slate-500">
-            共 <span class="font-semibold text-slate-700">{{ cashierLoading ? '—' : cashierPage.total }}</span> 张交班单
+            共 <span class="font-semibold text-slate-700">{{ cashierLoading ? '' : cashierPage.total }}</span> 张交班单
           </span>
         </div>
 
         <el-table v-loading="cashierLoading" :data="cashierRows" data-testid="fin-cashier-table" style="width: 100%">
           <el-table-column class-name="font-mono text-xs" label="交班单号" min-width="150" prop="settlementNo"/>
           <el-table-column label="收费员" width="100">
-            <template #default="{ row }">{{ row.cashierName || '—' }}</template>
+            <template #default="{ row }">{{ row.cashierName || '' }}</template>
           </el-table-column>
           <el-table-column label="班次" width="80">
             <template #default="{ row }">{{ shiftTypeText(row.shiftType) }}</template>
@@ -105,7 +105,7 @@
           <el-table-column label="统计区间" min-width="290">
             <template #default="{ row }">
               <span class="font-mono text-xs text-slate-600">
-                {{ row.periodBegin || '—' }} ~ {{ row.periodEnd || '—' }}
+                {{ row.periodBegin || '' }} ~ {{ row.periodEnd || '' }}
               </span>
             </template>
           </el-table-column>
@@ -211,14 +211,14 @@
           <el-button :icon="Search" type="primary" @click="searchDay">查询</el-button>
           <el-button :icon="Refresh" @click="resetDay">重置</el-button>
           <span class="ml-auto text-sm text-slate-500">
-            共 <span class="font-semibold text-slate-700">{{ dayLoading ? '—' : dayPage.total }}</span> 张日结单
+            共 <span class="font-semibold text-slate-700">{{ dayLoading ? '' : dayPage.total }}</span> 张日结单
           </span>
         </div>
 
         <el-table v-loading="dayLoading" :data="dayRows" data-testid="fin-day-table" style="width: 100%">
           <el-table-column class-name="font-mono text-xs" label="日结单号" min-width="140" prop="settlementNo"/>
           <el-table-column label="日期" prop="settleDate" width="110">
-            <template #default="{ row }">{{ row.settleDate || '—' }}</template>
+            <template #default="{ row }">{{ row.settleDate || '' }}</template>
           </el-table-column>
           <el-table-column align="right" label="班结单" width="84">
             <template #default="{ row }">{{ row.shiftCount ?? 0 }} 张</template>

@@ -7,7 +7,7 @@
         <el-descriptions-item label="患者">{{ row.patientName }}</el-descriptions-item>
         <el-descriptions-item label="医生 / 科室">{{ row.doctorName }} / {{ row.deptName }}</el-descriptions-item>
         <el-descriptions-item label="就诊日期">{{ row.visitDate }}</el-descriptions-item>
-        <el-descriptions-item label="诊断" :span="2">{{ row.diagnosis || '—' }}</el-descriptions-item>
+        <el-descriptions-item label="诊断" :span="2">{{ row.diagnosis || '' }}</el-descriptions-item>
       </el-descriptions>
       <div class="drug-list">
         <div class="drug-list-title">处方药品（{{ (row.drugDetails || []).length }} 种）</div>

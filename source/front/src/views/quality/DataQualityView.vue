@@ -237,19 +237,19 @@
                 <span class="text-slate-400">#</span>
                 <span>{{ row.recordId }}</span>
               </div>
-              <div class="text-slate-400">{{ row.recordNo || '—' }}</div>
+              <div class="text-slate-400">{{ row.recordNo || '' }}</div>
             </template>
           </el-table-column>
           <el-table-column label="患者" width="130">
             <template #default="{ row }">
-              <div>{{ row.patientName || '—' }}</div>
-              <div class="text-slate-400">{{ row.patientNo || '—' }}</div>
+              <div>{{ row.patientName || '' }}</div>
+              <div class="text-slate-400">{{ row.patientNo || '' }}</div>
             </template>
           </el-table-column>
           <el-table-column label="科室 / 医师" width="120">
             <template #default="{ row }">
-              <div>{{ row.deptName || '—' }}</div>
-              <div class="text-slate-400">{{ row.doctorName || '—' }}</div>
+              <div>{{ row.deptName || '' }}</div>
+              <div class="text-slate-400">{{ row.doctorName || '' }}</div>
             </template>
           </el-table-column>
           <el-table-column label="问题描述" min-width="280">
@@ -264,7 +264,7 @@
           </el-table-column>
           <el-table-column label="时间" width="140">
             <template #default="{ row }">
-              <span class="text-slate-500">{{ row.occurredTime || '—' }}</span>
+              <span class="text-slate-500">{{ row.occurredTime || '' }}</span>
             </template>
           </el-table-column>
           <template #empty>

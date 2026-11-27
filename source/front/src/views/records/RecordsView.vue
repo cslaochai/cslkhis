@@ -60,7 +60,7 @@
         </el-table-column>
         <el-table-column label="诊断" min-width="150" show-overflow-tooltip>
           <template #default="{ row }">
-            <span class="text-sm text-slate-700">{{ row.diagnosisName || row.diagnosis || '-' }}</span>
+            <span class="text-sm text-slate-700">{{ row.diagnosisName || row.diagnosis || '' }}</span>
           </template>
         </el-table-column>
         <el-table-column align="center" label="状态" width="90">
@@ -140,7 +140,7 @@
                 </span>
               </div>
               <div class="flex items-center justify-between"><span class="text-slate-400">就诊号</span><span
-                  class="font-mono text-xs text-slate-700">{{ detailData.record.registNo || '-' }}</span></div>
+                  class="font-mono text-xs text-slate-700">{{ detailData.record.registNo || '' }}</span></div>
               <div class="flex items-center justify-between"><span class="text-slate-400">科室</span><span
                   class="font-medium text-slate-700">{{ detailData.record.deptName }}</span></div>
               <div class="flex items-center justify-between"><span class="text-slate-400">医生</span><span
@@ -167,7 +167,7 @@
                 <div class="min-w-0 flex-1">
                   <div class="text-xs text-slate-400">{{ r.visitDate }}</div>
                   <div class="text-xs font-medium text-slate-700">{{ r.deptName }} · {{ r.doctorName }}</div>
-                  <div class="mt-0.5 truncate text-xs text-slate-500">{{ r.diagnosisName || r.diagnosis || '-' }}</div>
+                  <div class="mt-0.5 truncate text-xs text-slate-500">{{ r.diagnosisName || r.diagnosis || '' }}</div>
                 </div>
               </div>
             </div>
@@ -182,13 +182,13 @@
                    class="flex items-center gap-2 rounded border border-slate-100 p-2 text-xs">
                 <el-tag effect="plain" size="small" type="info">检查</el-tag>
                 <span class="flex-1 font-medium text-slate-700">{{ ins.inspectionItemName }}</span>
-                <span class="text-slate-400">{{ ins.bodyPart || '-' }}</span>
+                <span class="text-slate-400">{{ ins.bodyPart || '' }}</span>
               </div>
               <div v-for="lab in (detailData.laboratories || [])" :key="lab.id"
                    class="flex items-center gap-2 rounded border border-slate-100 p-2 text-xs">
                 <el-tag effect="plain" size="small" type="info">检验</el-tag>
                 <span class="flex-1 font-medium text-slate-700">{{ lab.laboratoryItemName }}</span>
-                <span class="text-slate-400">{{ lab.specimenType || '-' }}</span>
+                <span class="text-slate-400">{{ lab.specimenType || '' }}</span>
               </div>
             </div>
             <div v-else class="py-4 text-center text-xs text-slate-400">暂无检查报告</div>
@@ -207,15 +207,15 @@
                       <h4 class="text-sm font-bold text-slate-700">主诉</h4>
                       <span class="text-xs text-slate-400">{{ detailData.record.visitDate }}</span>
                     </div>
-                    <p class="text-sm text-slate-600">{{ detailData.record.chiefComplaint || '-' }}</p>
+                    <p class="text-sm text-slate-600">{{ detailData.record.chiefComplaint || '' }}</p>
                   </div>
                   <div class="rounded-lg border border-slate-200 p-4">
                     <h4 class="mb-2 text-sm font-bold text-slate-700">现病史</h4>
-                    <p class="text-sm text-slate-600">{{ detailData.record.presentIllness || '-' }}</p>
+                    <p class="text-sm text-slate-600">{{ detailData.record.presentIllness || '' }}</p>
                   </div>
                   <div class="rounded-lg border border-slate-200 p-4">
                     <h4 class="mb-2 text-sm font-bold text-slate-700">治疗方案</h4>
-                    <p class="text-sm text-slate-600">{{ detailData.record.treatmentPlan || '-' }}</p>
+                    <p class="text-sm text-slate-600">{{ detailData.record.treatmentPlan || '' }}</p>
                   </div>
                 </div>
                 <div v-else class="py-12 text-center text-sm text-slate-400">暂无病程记录</div>
@@ -229,21 +229,21 @@
                   <div class="rounded-lg border border-slate-200 p-4">
                     <h4 class="mb-2 text-sm font-bold text-slate-700">入院诊断</h4>
                     <p class="text-sm font-medium text-blue-700">
-                      {{ detailData.record.diagnosisName || detailData.record.diagnosis || '-' }}</p>
+                      {{ detailData.record.diagnosisName || detailData.record.diagnosis || '' }}</p>
                     <p v-if="detailData.record.diagnosisCode" class="mt-1 font-mono text-xs text-slate-400">ICD-10:
                       {{ detailData.record.diagnosisCode }}</p>
                   </div>
                   <div class="rounded-lg border border-slate-200 p-4">
                     <h4 class="mb-2 text-sm font-bold text-slate-700">既往史</h4>
-                    <p class="text-sm text-slate-600">{{ detailData.record.pastHistory || '-' }}</p>
+                    <p class="text-sm text-slate-600">{{ detailData.record.pastHistory || '' }}</p>
                   </div>
                   <div class="rounded-lg border border-slate-200 p-4">
                     <h4 class="mb-2 text-sm font-bold text-slate-700">个人史</h4>
-                    <p class="text-sm text-slate-600">{{ detailData.record.personalHistory || '-' }}</p>
+                    <p class="text-sm text-slate-600">{{ detailData.record.personalHistory || '' }}</p>
                   </div>
                   <div class="rounded-lg border border-slate-200 p-4">
                     <h4 class="mb-2 text-sm font-bold text-slate-700">家族史</h4>
-                    <p class="text-sm text-slate-600">{{ detailData.record.familyHistory || '-' }}</p>
+                    <p class="text-sm text-slate-600">{{ detailData.record.familyHistory || '' }}</p>
                   </div>
                 </div>
                 <div v-else class="py-12 text-center text-sm text-slate-400">暂无入院记录</div>
@@ -256,12 +256,12 @@
                 <div v-if="detailData?.record" class="space-y-4">
                   <div class="rounded-lg border border-slate-200 p-4">
                     <h4 class="mb-2 text-sm font-bold text-slate-700">病例特点</h4>
-                    <p class="text-sm text-slate-600">{{ detailData.record.presentIllness || '-' }}</p>
+                    <p class="text-sm text-slate-600">{{ detailData.record.presentIllness || '' }}</p>
                   </div>
                   <div class="rounded-lg border border-slate-200 p-4">
                     <h4 class="mb-2 text-sm font-bold text-slate-700">诊断依据</h4>
                     <p class="text-sm text-slate-600">
-                      {{ detailData.record.diagnosisName || detailData.record.diagnosis || '-' }}</p>
+                      {{ detailData.record.diagnosisName || detailData.record.diagnosis || '' }}</p>
                   </div>
                   <div class="rounded-lg border border-slate-200 p-4">
                     <h4 class="mb-2 text-sm font-bold text-slate-700">鉴别诊断</h4>
@@ -269,7 +269,7 @@
                   </div>
                   <div class="rounded-lg border border-slate-200 p-4">
                     <h4 class="mb-2 text-sm font-bold text-slate-700">诊疗计划</h4>
-                    <p class="text-sm text-slate-600">{{ detailData.record.treatmentPlan || '-' }}</p>
+                    <p class="text-sm text-slate-600">{{ detailData.record.treatmentPlan || '' }}</p>
                   </div>
                 </div>
                 <div v-else class="py-12 text-center text-sm text-slate-400">暂无首次病程记录</div>
@@ -283,11 +283,11 @@
                   <div class="rounded-lg border border-slate-200 p-4">
                     <h4 class="mb-2 text-sm font-bold text-slate-700">出院诊断</h4>
                     <p class="text-sm font-medium text-blue-700">
-                      {{ detailData.record.diagnosisName || detailData.record.diagnosis || '-' }}</p>
+                      {{ detailData.record.diagnosisName || detailData.record.diagnosis || '' }}</p>
                   </div>
                   <div class="rounded-lg border border-slate-200 p-4">
                     <h4 class="mb-2 text-sm font-bold text-slate-700">出院医嘱</h4>
-                    <p class="text-sm text-slate-600">{{ detailData.record.treatmentPlan || '-' }}</p>
+                    <p class="text-sm text-slate-600">{{ detailData.record.treatmentPlan || '' }}</p>
                   </div>
                   <div class="rounded-lg border border-slate-200 p-4">
                     <h4 class="mb-2 text-sm font-bold text-slate-700">注意事项</h4>
@@ -306,7 +306,7 @@
                        class="rounded-lg border border-slate-200 p-4">
                     <div class="flex items-center justify-between">
                       <h4 class="text-sm font-bold text-slate-700">{{ s.surgeryName }}</h4>
-                      <span class="text-xs text-slate-400">{{ s.surgeryDate || '-' }}</span>
+                      <span class="text-xs text-slate-400">{{ s.surgeryDate || '' }}</span>
                     </div>
                     <p v-if="s.outcome" class="mt-1 text-xs text-slate-500">结局：{{ s.outcome }}</p>
                   </div>
@@ -440,14 +440,14 @@ const openDrawer = async (row) => {
 };
 const calcAge = (birthDate) => {
   if (!birthDate)
-    return '-';
+    return '';
   const birth = new Date(birthDate);
   const now = new Date();
   let age = now.getFullYear() - birth.getFullYear();
   const m = now.getMonth() - birth.getMonth();
   if (m < 0 || (m === 0 && now.getDate() < birth.getDate()))
     age--;
-  return age >= 0 ? String(age) : '-';
+  return age >= 0 ? String(age) : '';
 };
 const getAgeTag = (age) => {
   if (age <= 14)

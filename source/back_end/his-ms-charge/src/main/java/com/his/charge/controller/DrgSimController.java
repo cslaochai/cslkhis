@@ -24,25 +24,27 @@ import java.util.List;
 @RestController
 @RequestMapping("/report/drg")
 @RequiredArgsConstructor
-@PreAuthorize("hasAuthority('report:drg:list')")
 public class DrgSimController {
 
     private final DrgSimService drgSimService;
 
     private final DrgSchemeConfig drgSchemeConfig;
 
+    @PreAuthorize("hasAuthority('report:drg:list')")
     @Operation(summary = "单条模拟（首页主诊断为空时补传 icdCode）")
     @PostMapping("/simulate")
     public Result<DrgSimVO.SimResult> simulate(@Valid @RequestBody DrgSimDTO.Simulate dto) {
         return Result.success("模拟完成", drgSimService.simulate(dto));
     }
 
+    @PreAuthorize("hasAuthority('report:drg:list')")
     @Operation(summary = "批量模拟（不传 ids 默认最近 50 条）")
     @PostMapping("/simulateBatch")
     public Result<DrgSimVO.SummaryListVO> simulateBatch(@Valid @RequestBody DrgSimDTO.SimulateBatch dto) {
         return Result.success("批量模拟完成", drgSimService.simulateBatch(dto));
     }
 
+    @PreAuthorize("hasAuthority('report:drg:list')")
     @Operation(summary = "模拟结果分页")
     @PostMapping("/result/listPage")
     public Result<PageResult<DrgSimVO.ResultRow>> resultPage(@Valid @RequestBody DrgSimDTO.ResultQuery dto) {
@@ -51,6 +53,7 @@ public class DrgSimController {
                 page.getRecords()));
     }
 
+    @PreAuthorize("hasAuthority('report:drg:list')")
     @Operation(summary = "可模拟首页列表 + 入组/盈亏统计")
     @GetMapping("/summary/list")
     public Result<DrgSimVO.SummaryListVO> summaryList(@RequestParam(required = false) Integer limit,
@@ -58,12 +61,14 @@ public class DrgSimController {
         return Result.success(drgSimService.summaryList(limit, version, null));
     }
 
+    @PreAuthorize("hasAuthority('report:drg:list')")
     @Operation(summary = "组表（biz_drg_group）")
     @GetMapping("/group/list")
     public Result<List<DrgSimVO.GroupRow>> groupList(@RequestParam(required = false) String version) {
         return Result.success(drgSimService.groupList(version));
     }
 
+    @PreAuthorize("hasAuthority('report:drg:list')")
     @Operation(summary = "分组方案健康检查（完整度/规则来源/复核状态/缺失集合）")
     @GetMapping("/scheme/health")
     public Result<DrgSimVO.SchemeHealth> schemeHealth(@RequestParam(required = false) String version) {
@@ -85,6 +90,7 @@ public class DrgSimController {
      *
      * <p>MDCA 先期分组无 DI 集合时返回空列表。
      */
+    @PreAuthorize("hasAuthority('report:drg:list')")
     @Operation(summary = "MDC 主诊断 ICD 前缀分布（仅展示提示用，不得用于业务）")
     @GetMapping("/mdc/diag-prefixes")
     public Result<List<DrgDiagPrefixVO>> mdcDiagPrefixes(@RequestParam String version,
@@ -92,7 +98,7 @@ public class DrgSimController {
         return Result.success(drgSimService.mdcDiagPrefixes(version, mdcCode));
     }
 
-    @PreAuthorize("hasAnyAuthority('system:config:add')")
+    @PreAuthorize("isAuthenticated()")
     @Operation(summary = "当前 DRG 结算默认版本")
     @GetMapping("/version")
     public Result<DrgVersionVO> drgVersion() {

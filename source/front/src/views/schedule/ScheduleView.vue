@@ -42,7 +42,7 @@
     <div class="mb-3 rounded-lg border border-slate-200 bg-white px-4 py-3 shadow-sm" data-testid="on-duty-panel">
       <div class="mb-2 flex flex-wrap items-center gap-3">
         <span class="text-base font-medium text-slate-700">今日在岗</span>
-        <el-tag effect="plain" size="small" type="info">{{ onDutyMoment || '—' }}</el-tag>
+        <el-tag effect="plain" size="small" type="info">{{ onDutyMoment || '' }}</el-tag>
         <span class="text-xs text-slate-400" data-testid="on-duty-count">
           {{ onDutyDeptName || '未选科室' }} ·
           共 {{ onDutyList.length }} 人在岗
@@ -84,12 +84,8 @@
              class="flex flex-col rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
           <div class="filter-row flex flex-wrap items-center gap-3">
             <span class="text-base font-medium text-slate-700">科室</span>
-            <el-select v-model="panelDeptId" :fit-input-width="false" :clearable="false" class="!w-48" data-testid="panel-dept"
-                       filterable placeholder="全部科室"
-                       popper-class="schedule-filter-popper"
-                       @change="handlePanelDeptChange">
-              <el-option v-for="d in departments" :key="d.id" :label="d.deptName" :value="d.id"/>
-            </el-select>
+            <DeptTreeSelect v-model="panelDeptId" mode="LEAF" dept-type="1" :clearable="false" class="!w-48"
+                            data-testid="panel-dept" placeholder="全部科室" @change="handlePanelDeptChange"/>
             <span class="text-base font-medium text-slate-700">人员</span>
             <el-select v-model="panelDoctorKey" :fit-input-width="false" class="!w-52" clearable
                        data-testid="panel-doctor"
@@ -387,10 +383,8 @@
             <el-input v-model="tplSearchForm.keyword" :prefix-icon="Search" class="!w-56"
                       clearable data-testid="tpl-keyword" placeholder="搜索医生 / 科室 / 诊室"
                       @clear="handleTplSearch" @keyup.enter="handleTplSearch"/>
-            <el-select v-model="tplSearchForm.deptId" class="!w-44" clearable data-testid="tpl-dept" filterable
-                       placeholder="全部科室" @change="handleTplSearch">
-              <el-option v-for="d in departments" :key="d.id" :label="d.deptName" :value="d.id"/>
-            </el-select>
+            <DeptTreeSelect v-model="tplSearchForm.deptId" mode="LEAF" dept-type="1" class="!w-44"
+                            data-testid="tpl-dept" placeholder="全部科室" @change="handleTplSearch"/>
             <el-select v-model="tplSearchForm.weekDay" class="!w-36" clearable data-testid="tpl-weekday"
                        placeholder="全部星期" @change="handleTplSearch">
               <el-option v-for="(label, day) in weekDayMap" :key="day" :label="label" :value="Number(day)"/>
@@ -419,7 +413,7 @@
               <el-table-column align="center" label="星期几" min-width="90">
                 <template #default="{ row }">
                   <el-tag :type="row.weekDay === 6 || row.weekDay === 7 ? 'warning' : 'info'" size="small">
-                    {{ weekDayMap[row.weekDay] || '-' }}
+                    {{ weekDayMap[row.weekDay] || '' }}
                   </el-tag>
                   <p v-if="(row.weekParity || 0) > 0" class="mt-0.5 text-[10px] text-slate-400">
                     {{ weekParityMap[row.weekParity] }}</p>
@@ -476,7 +470,7 @@
               </el-table-column>
               <el-table-column align="center" label="状态" min-width="80">
                 <template #default="{ row }">
-                  <el-tag :type="statusColors[row.status]" size="small">{{ statusMap[row.status] || '-' }}</el-tag>
+                  <el-tag :type="statusColors[row.status]" size="small">{{ statusMap[row.status] || '' }}</el-tag>
                 </template>
               </el-table-column>
               <el-table-column class-name="tpl-op-col" fixed="right" label="操作" width="180">
@@ -524,10 +518,8 @@
         <div class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
           <div class="filter-row mb-3 flex flex-wrap items-center gap-3">
             <span class="text-base font-medium text-slate-700">科室</span>
-            <el-select v-model="logSearchForm.deptId" :fit-input-width="false" class="!w-48" clearable
-                       data-testid="log-dept" filterable placeholder="全部科室" popper-class="schedule-filter-popper">
-              <el-option v-for="d in departments" :key="d.id" :label="d.deptName" :value="d.id"/>
-            </el-select>
+            <DeptTreeSelect v-model="logSearchForm.deptId" mode="LEAF" dept-type="1" class="!w-48"
+                            data-testid="log-dept" placeholder="全部科室"/>
             <span class="text-base font-medium text-slate-700">排班日期</span>
             <el-date-picker v-model="logDateRange" data-testid="log-date-range" :value-format="'YYYY-MM-DD'"
                             end-placeholder="结束日期" range-separator="~" start-placeholder="开始日期"
@@ -542,7 +534,7 @@
           </div>
           <el-table v-loading="logLoading" :data="logList" border data-testid="log-table" size="default">
             <el-table-column label="排班日期" min-width="110">
-              <template #default="{row}">{{ row.scheduleDate || '—' }}</template>
+              <template #default="{row}">{{ row.scheduleDate || '' }}</template>
             </el-table-column>
             <el-table-column label="科室" min-width="130" prop="deptName"/>
             <el-table-column label="医生" min-width="100" prop="doctorName"/>
@@ -552,7 +544,7 @@
               </template>
             </el-table-column>
             <el-table-column label="数量" min-width="70" align="right">
-              <template #default="{row}">{{ row.amount ?? '—' }}</template>
+              <template #default="{row}">{{ row.amount ?? '' }}</template>
             </el-table-column>
             <el-table-column label="原因" min-width="200" prop="reason" show-overflow-tooltip/>
             <el-table-column label="操作人" min-width="90" prop="createBy"/>
@@ -573,7 +565,6 @@
          以前一个弹窗靠 v-if="isEdit" 分叉，两套排版挤在一起，改一边就碰坏另一边。 -->
     <ScheduleAdd
         v-model="dialogVisible"
-        :departments="departments"
         :seed="addSeed"
         :title-map="titleMap"
         @saved="loadPanel"
@@ -595,7 +586,6 @@
     <!-- 新增/编辑排班模板弹窗 -->
     <ScheduleTplEdit
         v-model="tplDialogVisible"
-        :departments="departments"
         :row="editingTpl"
         :title-map="titleMap"
         :week-day-map="weekDayMap"
@@ -615,7 +605,7 @@
             <template #default="{ row }">{{ row.patientName }}</template>
           </el-table-column>
           <el-table-column label="联系电话" min-width="120">
-            <template #default="{ row }">{{ row.phone || '-' }}</template>
+            <template #default="{ row }">{{ row.phone || '' }}</template>
           </el-table-column>
           <el-table-column align="center" label="渠道" width="80">
             <template #default="{ row }">
@@ -628,7 +618,7 @@
             <template #default="{ row }">{{ registStatusMap[row.registStatus] || row.registStatus }}</template>
           </el-table-column>
           <el-table-column align="center" label="时段" width="70">
-            <template #default="{ row }">{{ row.slotTime || '-' }}</template>
+            <template #default="{ row }">{{ row.slotTime || '' }}</template>
           </el-table-column>
         </el-table>
         <p v-else class="py-6 text-center text-sm text-slate-400">该班次暂无在挂患者，可直接停诊</p>
@@ -762,7 +752,9 @@ import {
   updateScheduleTemplateStatus
 } from '@/api/appoint';
 import {getShiftSelectList} from '@/api/appoint';
-import {getDepartmentSelectList, getEmployeeList, getUserInfo} from '@/api/system';
+import {getEmployeeList, getUserInfo} from '@/api/system';
+import {loadDeptTreeOptions, flattenDeptTree} from '@/lib/deptOptions';
+import DeptTreeSelect from '@/components/his/DeptTreeSelect.vue';
 import {DICT_TYPE, loadDictDataList} from '@/lib/dict-cache';
 import {
   SCHEDULE_TYPE_TEXT,
@@ -1645,8 +1637,8 @@ const loadDepartments = async () => {
     // 不传 scope → 默认按当前人过滤：排班员只能给自己的授权科室排班。
     // 这一处同时喂面板筛选（1091）与排班/模板表单（1317/1521/1612），
     // 四处共用一份列表 —— 只要能选的科室就是能排的科室，不会出现"能选不能排"。
-    const res = await getDepartmentSelectList({deptType: 1});
-    departments.value = res.data || [];
+    const tree = await loadDeptTreeOptions({deptType: '1', mode: 'LEAF'});
+    departments.value = flattenDeptTree(tree);
   } catch (error) {
     console.error('加载科室列表失败:', error);
   }

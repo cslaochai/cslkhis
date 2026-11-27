@@ -24,7 +24,7 @@
                 specimen.applyDoctorName
               }}</span></div>
             <div><span class="text-slate-500">申请科室：</span><span class="font-medium">{{
-                specimen.applyDeptName || '-'
+                specimen.applyDeptName || ''
               }}</span></div>
             <div><span class="text-slate-500">记录号：</span>
               <span class="font-mono text-xs">{{ specimen.recordNo }}</span>

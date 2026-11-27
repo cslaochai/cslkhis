@@ -130,10 +130,9 @@
       </div>
 
       <el-form-item label="接诊科室">
-        <el-select v-model="addForm.deptId" class="w-full" clearable filterable placeholder="选择科室"
-                   @change="handleDeptChange">
-          <el-option v-for="d in departments" :key="d.id" :label="d.deptName" :value="d.id"/>
-        </el-select>
+        <DeptTreeSelect v-model="addForm.deptId" mode="LEAF" dept-type="1" node-type="2,7" width="100%"
+                        placeholder="选择科室" @change="handleDeptChange"/>
+
       </el-form-item>
 
       <!-- AI 分诊建议 -->
@@ -277,7 +276,8 @@
 import {computed, ref, watch} from 'vue';
 import {ElMessage} from 'element-plus';
 import {getEmergencyDutySelectList, getEmergencyMewsScore, registerEmergency} from '@/api/emergency';
-import {getDepartmentSelectList} from '@/api/system';
+import {loadDeptTreeOptions, flattenDeptTree} from '@/lib/deptOptions';
+import DeptTreeSelect from '@/components/his/DeptTreeSelect.vue';
 import {suggestEmergencyTriage} from '@/api/ai';
 import PatientSelect from '@/components/his/PatientSelect.vue';
 import {
@@ -343,8 +343,8 @@ const employeeList = ref([]);
 const loadDepartments = async () => {
   try {
     // 不传 scope → 默认按当前人过滤
-    const res = await getDepartmentSelectList({deptType: 1, nodeType: '2,7'});
-    departments.value = res.data || [];
+    const tree = await loadDeptTreeOptions({deptType: '1', nodeType: '2,7', mode: 'LEAF'});
+    departments.value = flattenDeptTree(tree);
   } catch (error) {
     console.error('加载科室失败:', error);
   }
@@ -505,7 +505,7 @@ const levelBasisText = (basis) => {
     return '维持人工分级';
   if (basis === 'MODEL')
     return '大模型判断';
-  return basis || '—';
+  return basis || '';
 };
 const levelBasisTag = (basis) => {
   if (basis === 'HARD_RULE')
@@ -569,7 +569,7 @@ const handleAddSubmit = async () => {
     return;
   }
   try {
-    const dept = departments.value.find((d) => d.id === addForm.value.deptId);
+    const dept = departments.value.find((d) => String(d.id) === String(addForm.value.deptId));
     const doc = employeeList.value.find((e) => e.id === addForm.value.doctorId);
     const data = {...addForm.value};
     if (!data)

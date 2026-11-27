@@ -33,7 +33,7 @@
         </el-table-column>
         <el-table-column align="right" label="价格(元)" prop="price" width="100"/>
         <el-table-column label="说明" min-width="180" prop="description" show-overflow-tooltip>
-          <template #default="{ row }">{{ row.description || '—' }}</template>
+          <template #default="{ row }">{{ row.description || '' }}</template>
         </el-table-column>
         <el-table-column align="center" label="项目数" width="80">
           <template #default="{ row }">{{ (row.items || []).length }}</template>
@@ -46,7 +46,7 @@
           </template>
         </el-table-column>
         <el-table-column label="备注" min-width="140" prop="remark" show-overflow-tooltip>
-          <template #default="{ row }">{{ row.remark || '—' }}</template>
+          <template #default="{ row }">{{ row.remark || '' }}</template>
         </el-table-column>
         <el-table-column fixed="right" label="操作" width="130">
           <template #default="{ row }">

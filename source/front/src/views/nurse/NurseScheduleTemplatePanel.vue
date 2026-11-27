@@ -403,8 +403,8 @@ const weekDayOptions = [
 ]
 const unitTypeOptions = [{label: '病区', value: 1}, {label: '门诊科室', value: 2}]
 const parityOptions = [{label: '每周', value: 0}, {label: '单周', value: 1}, {label: '双周', value: 2}]
-const statusText = (v) => (statusOptions.find(s => s.value === v) || {}).label || '—'
-const weekDayText = (v) => (weekDayOptions.find(d => d.value === v) || {}).label || '—'
+const statusText = (v) => (statusOptions.find(s => s.value === v) || {}).label || ''
+const weekDayText = (v) => (weekDayOptions.find(d => d.value === v) || {}).label || ''
 const parityText = (v) => (parityOptions.find(p => p.value === v) || {}).label || '每周'
 
 // 下拉数据

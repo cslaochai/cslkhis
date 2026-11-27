@@ -7,29 +7,29 @@
           row.drugName
         }}{{ row.specification ? `（${row.specification}）` : '' }}
       </el-descriptions-item>
-      <el-descriptions-item label="批准文号">{{ row.approvalNumber || '-' }}</el-descriptions-item>
-      <el-descriptions-item label="生产厂家">{{ row.manufacturer || '-' }}</el-descriptions-item>
-      <el-descriptions-item label="批号">{{ row.stockBatchNo || '-' }}</el-descriptions-item>
+      <el-descriptions-item label="批准文号">{{ row.approvalNumber || '' }}</el-descriptions-item>
+      <el-descriptions-item label="生产厂家">{{ row.manufacturer || '' }}</el-descriptions-item>
+      <el-descriptions-item label="批号">{{ row.stockBatchNo || '' }}</el-descriptions-item>
       <el-descriptions-item label="码制">{{ codeTypeText(row.codeType) }}</el-descriptions-item>
-      <el-descriptions-item label="产品标识">{{ row.drugDi || '-' }}</el-descriptions-item>
-      <el-descriptions-item label="序列号">{{ row.serialNo || '-' }}</el-descriptions-item>
+      <el-descriptions-item label="产品标识">{{ row.drugDi || '' }}</el-descriptions-item>
+      <el-descriptions-item label="序列号">{{ row.serialNo || '' }}</el-descriptions-item>
       <el-descriptions-item label="采集来源">{{ sourceText(row.sourceType) }}</el-descriptions-item>
       <el-descriptions-item label="状态">{{ statusText(row.status) }}</el-descriptions-item>
       <el-descriptions-item label="上传状态">{{ uploadText(row.uploadStatus) }}</el-descriptions-item>
-      <el-descriptions-item label="采集人">{{ row.operatorName || '-' }}</el-descriptions-item>
-      <el-descriptions-item label="采集时间">{{ row.scanTime || '-' }}</el-descriptions-item>
-      <el-descriptions-item label="发药单">{{ row.dispensingNo || '-' }}</el-descriptions-item>
-      <el-descriptions-item label="患者">{{ row.patientName || '-' }}</el-descriptions-item>
-      <el-descriptions-item label="核销时间">{{ row.dispenseTime || '-' }}</el-descriptions-item>
-      <el-descriptions-item label="核销人">{{ row.dispenseOperator || '-' }}</el-descriptions-item>
-      <el-descriptions-item label="上传批次">{{ row.uploadBatchNo || '-' }}</el-descriptions-item>
-      <el-descriptions-item label="上传时间">{{ row.uploadTime || '-' }}</el-descriptions-item>
-      <el-descriptions-item :span="2" label="上传失败原因">{{ row.uploadFailReason || '-' }}</el-descriptions-item>
+      <el-descriptions-item label="采集人">{{ row.operatorName || '' }}</el-descriptions-item>
+      <el-descriptions-item label="采集时间">{{ row.scanTime || '' }}</el-descriptions-item>
+      <el-descriptions-item label="发药单">{{ row.dispensingNo || '' }}</el-descriptions-item>
+      <el-descriptions-item label="患者">{{ row.patientName || '' }}</el-descriptions-item>
+      <el-descriptions-item label="核销时间">{{ row.dispenseTime || '' }}</el-descriptions-item>
+      <el-descriptions-item label="核销人">{{ row.dispenseOperator || '' }}</el-descriptions-item>
+      <el-descriptions-item label="上传批次">{{ row.uploadBatchNo || '' }}</el-descriptions-item>
+      <el-descriptions-item label="上传时间">{{ row.uploadTime || '' }}</el-descriptions-item>
+      <el-descriptions-item :span="2" label="上传失败原因">{{ row.uploadFailReason || '' }}</el-descriptions-item>
       <el-descriptions-item label="作废类型">{{
-          row.voidType ? voidText(row.voidType) : '-'
+          row.voidType ? voidText(row.voidType) : ''
         }}
       </el-descriptions-item>
-      <el-descriptions-item label="作废原因">{{ row.voidReason || '-' }}</el-descriptions-item>
+      <el-descriptions-item label="作废原因">{{ row.voidReason || '' }}</el-descriptions-item>
     </el-descriptions>
     <template #footer>
       <el-button @click="visible = false">关闭</el-button>

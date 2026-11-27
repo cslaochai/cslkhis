@@ -5,8 +5,8 @@
       <template v-if="isCritical && criticalDetail">
         <div class="space-y-3 text-sm">
           <div class="flex flex-wrap items-center gap-2 rounded-lg border border-red-200 bg-red-50 p-3">
-            <span class="font-semibold text-red-700">{{ criticalDetail.itemName || '-' }}</span>
-            <span class="text-slate-600">{{ criticalDetail.patientName || '-' }}
+            <span class="font-semibold text-red-700">{{ criticalDetail.itemName || '' }}</span>
+            <span class="text-slate-600">{{ criticalDetail.patientName || '' }}
               {{ criticalDetail.genderText || '' }} {{
                 criticalDetail.age != null ? criticalDetail.age + '岁' : ''
               }}</span>
@@ -21,16 +21,16 @@
           </div>
 
           <div class="grid grid-cols-2 gap-2">
-            <p><strong>危急值号：</strong>{{ criticalDetail.criticalNo || '-' }}</p>
+            <p><strong>危急值号：</strong>{{ criticalDetail.criticalNo || '' }}</p>
             <p><strong>结果：</strong>
-              <span class="font-semibold text-red-600">{{ criticalDetail.resultValue || '-' }}</span>
+              <span class="font-semibold text-red-600">{{ criticalDetail.resultValue || '' }}</span>
               {{ criticalDetail.resultUnit || '' }}
-              <span class="text-slate-400">（参考 {{ criticalDetail.referenceRange || '-' }}）</span>
+              <span class="text-slate-400">（参考 {{ criticalDetail.referenceRange || '' }}）</span>
             </p>
-            <p><strong>异常类型：</strong>{{ criticalDetail.criticalTypeText || '-' }}</p>
-            <p><strong>危急描述：</strong>{{ criticalDetail.criticalDesc || '-' }}</p>
-            <p><strong>报告科室：</strong>{{ criticalDetail.reportDeptName || '-' }}</p>
-            <p><strong>报告人：</strong>{{ criticalDetail.reportBy || '-' }}（{{ fmtTime(criticalDetail.reportTime) }}）
+            <p><strong>异常类型：</strong>{{ criticalDetail.criticalTypeText || '' }}</p>
+            <p><strong>危急描述：</strong>{{ criticalDetail.criticalDesc || '' }}</p>
+            <p><strong>报告科室：</strong>{{ criticalDetail.reportDeptName || '' }}</p>
+            <p><strong>报告人：</strong>{{ criticalDetail.reportBy || '' }}（{{ fmtTime(criticalDetail.reportTime) }}）
             </p>
             <p><strong>处置时限：</strong>{{ fmtTime(criticalDetail.deadlineTime) }}</p>
             <p v-if="criticalDetail.receiveBy"><strong>接收：</strong>{{
@@ -76,8 +76,8 @@
           </div>
           <div class="grid grid-cols-2 gap-2">
             <p><strong>转入医院/科室：</strong>{{ payloadObj.toHospital || '院内' }}</p>
-            <p><strong>诊断：</strong>{{ payloadObj.diagnosis || '-' }}</p>
-            <p class="col-span-2"><strong>联系电话：</strong>{{ payloadObj.contactPhone || '-' }}</p>
+            <p><strong>诊断：</strong>{{ payloadObj.diagnosis || '' }}</p>
+            <p class="col-span-2"><strong>联系电话：</strong>{{ payloadObj.contactPhone || '' }}</p>
           </div>
         </div>
         <div class="mt-3 space-y-2 border-t pt-3">
@@ -95,12 +95,12 @@
           <div class="flex flex-wrap items-center gap-2 rounded-lg border border-red-200 bg-red-50 p-3">
             <span class="font-semibold text-red-700">已候诊 {{ payloadObj.waitMinutes || 0 }} 分钟</span>
             <el-tag size="small" type="danger">{{ payloadObj.triageLevelText || '未定级' }}</el-tag>
-            <el-tag size="small" type="info">应接诊时限 {{ payloadObj.targetSeeMinutes || '-' }} 分钟</el-tag>
+            <el-tag size="small" type="info">应接诊时限 {{ payloadObj.targetSeeMinutes || '' }} 分钟</el-tag>
           </div>
           <div class="grid grid-cols-2 gap-2">
-            <p><strong>患者：</strong>{{ payloadObj.patientName || '-' }}</p>
-            <p><strong>急诊号：</strong>{{ payloadObj.emergencyNo || '-' }}</p>
-            <p><strong>就诊科室：</strong>{{ payloadObj.deptName || '-' }}</p>
+            <p><strong>患者：</strong>{{ payloadObj.patientName || '' }}</p>
+            <p><strong>急诊号：</strong>{{ payloadObj.emergencyNo || '' }}</p>
+            <p><strong>就诊科室：</strong>{{ payloadObj.deptName || '' }}</p>
             <p><strong>超出时限：</strong>{{ overdueMinutes }}</p>
           </div>
         </div>
@@ -120,7 +120,7 @@
       <template v-else-if="isDutyCall && dutyCallDetail">
         <div class="space-y-3 text-sm">
           <div class="flex flex-wrap items-center gap-2 rounded-lg border border-orange-200 bg-orange-50 p-3">
-            <span class="font-semibold text-orange-700">{{ dutyCallDetail.callNo || '-' }}</span>
+            <span class="font-semibold text-orange-700">{{ dutyCallDetail.callNo || '' }}</span>
             <el-tag :type="dutyCallStatusTagType(dutyCallDetail.status)" size="small">
               {{ dutyCallDetail.statusText || '未知状态' }}
             </el-tag>
@@ -133,16 +133,16 @@
             </el-tag>
           </div>
           <div class="grid grid-cols-2 gap-2">
-            <p><strong>值班：</strong>{{ dutyCallDetail.dutyDate || '-' }} {{ dutyCallDetail.shiftTypeText || '' }}</p>
-            <p><strong>呼叫科室：</strong>{{ dutyCallDetail.deptName || '-' }}</p>
+            <p><strong>值班：</strong>{{ dutyCallDetail.dutyDate || '' }} {{ dutyCallDetail.shiftTypeText || '' }}</p>
+            <p><strong>呼叫科室：</strong>{{ dutyCallDetail.deptName || '' }}</p>
             <p><strong>呼叫时间：</strong>{{ fmtTime(dutyCallDetail.callTime) }}</p>
             <p><strong>到岗时间：</strong>{{ dutyCallDetail.arriveTime ? fmtTime(dutyCallDetail.arriveTime) : '未到岗' }}</p>
             <p v-if="dutyCallDetail.escalateTime" class="col-span-2 text-red-600">
               <strong>升级记录：</strong>{{ fmtTime(dutyCallDetail.escalateTime) }}
-              （原 {{ dutyCallDetail.escalateFromLevelText || '-' }} 未到岗，已升级）
+              （原 {{ dutyCallDetail.escalateFromLevelText || '' }} 未到岗，已升级）
             </p>
           </div>
-          <p><strong>呼叫事由：</strong>{{ dutyCallDetail.callReason || '-' }}</p>
+          <p><strong>呼叫事由：</strong>{{ dutyCallDetail.callReason || '' }}</p>
           <p v-if="dutyCallDetail.targetPhone"><strong>值班电话：</strong>{{ dutyCallDetail.targetPhone }}</p>
         </div>
         <div v-if="dutyCallDetail.canArrive" class="space-y-2 border-t pt-3">
@@ -236,7 +236,7 @@ const emgAccepting = ref(false);
 const overdueMinutes = computed(() => {
   const wait = Number(payloadObj.value.waitMinutes || 0);
   const target = Number(payloadObj.value.targetSeeMinutes || 0);
-  return wait > 0 && target > 0 && wait > target ? `${wait - target} 分钟` : '—';
+  return wait > 0 && target > 0 && wait > target ? `${wait - target} 分钟` : '';
 });
 const acceptEmergency = async () => {
   if (!props.message?.bizId) {
@@ -289,7 +289,7 @@ const CATALOG_PREFIX = {
   'duty-call': '听班呼叫',
   'duty-call-esc': '听班呼叫超时升级',
 };
-const fmtTime = (v) => (v ? String(v).replace('T', ' ').slice(0, 16) : '—');
+const fmtTime = (v) => (v ? String(v).replace('T', ' ').slice(0, 16) : '');
 const loadDetail = async () => {
   if (!props.message)
     return;
@@ -366,11 +366,11 @@ const renderInspection = async (recordId) => {
   return `
     <div class="space-y-3 text-sm">
       <div class="grid grid-cols-2 gap-2">
-        <p><strong>患者姓名：</strong>${record.patientName || '-'}</p>
-        <p><strong>检查项目：</strong>${record.inspectionItemName || '-'}</p>
-        <p><strong>检查部位：</strong>${record.bodyPart || '-'}</p>
-        <p><strong>检查目的：</strong>${record.inspectionPurpose || '-'}</p>
-        <p><strong>临床诊断：</strong>${record.clinicalDiagnosis || '-'}</p>
+        <p><strong>患者姓名：</strong>${record.patientName || ''}</p>
+        <p><strong>检查项目：</strong>${record.inspectionItemName || ''}</p>
+        <p><strong>检查部位：</strong>${record.bodyPart || ''}</p>
+        <p><strong>检查目的：</strong>${record.inspectionPurpose || ''}</p>
+        <p><strong>临床诊断：</strong>${record.clinicalDiagnosis || ''}</p>
       </div>
       ${record.resultDescription ? `
       <div class="border-t pt-3">
@@ -412,11 +412,11 @@ const renderLaboratory = async (recordId) => {
           <tbody>
             ${results.map((r) => `
               <tr>
-                <td class="border border-slate-300 px-3 py-2">${r.itemName || '-'}</td>
-                <td class="border border-slate-300 px-3 py-2 ${r.abnormalFlag === 1 ? 'text-red-600 font-bold' : ''}">${r.resultValue || '-'}</td>
-                <td class="border border-slate-300 px-3 py-2">${r.resultUnit || '-'}</td>
-                <td class="border border-slate-300 px-3 py-2">${r.referenceRange || '-'}</td>
-                <td class="border border-slate-300 px-3 py-2">${r.abnormalFlagText || '—'}</td>
+                <td class="border border-slate-300 px-3 py-2">${r.itemName || ''}</td>
+                <td class="border border-slate-300 px-3 py-2 ${r.abnormalFlag === 1 ? 'text-red-600 font-bold' : ''}">${r.resultValue || ''}</td>
+                <td class="border border-slate-300 px-3 py-2">${r.resultUnit || ''}</td>
+                <td class="border border-slate-300 px-3 py-2">${r.referenceRange || ''}</td>
+                <td class="border border-slate-300 px-3 py-2">${r.abnormalFlagText || ''}</td>
               </tr>`).join('')}
           </tbody>
         </table>
@@ -425,8 +425,8 @@ const renderLaboratory = async (recordId) => {
   return `
     <div class="space-y-3 text-sm">
       <div class="grid grid-cols-2 gap-2">
-        <p><strong>患者姓名：</strong>${record.patientName || '-'}</p>
-        <p><strong>检验项目：</strong>${record.laboratoryItemName || '-'}</p>
+        <p><strong>患者姓名：</strong>${record.patientName || ''}</p>
+        <p><strong>检验项目：</strong>${record.laboratoryItemName || ''}</p>
       </div>
       ${resultsHtml}
     </div>`;

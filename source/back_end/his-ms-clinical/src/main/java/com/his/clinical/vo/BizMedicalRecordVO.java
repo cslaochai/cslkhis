@@ -302,4 +302,19 @@ public class BizMedicalRecordVO {
      * 检查检验数量（列表查询时带出的统计值，非病历表字段）
      */
     private Integer inspectionCount;
+
+    /**
+     * 是否为「移交我代补」的草稿（非病历表字段）
+     */
+    private Boolean handoverFlag;
+
+    /**
+     * 移交承接人姓名（代补草稿标记用，非病历表字段）
+     */
+    private String handoverReceiverName;
+
+    /**
+     * 移交原因文案（代补草稿标记用，非病历表字段）
+     */
+    private String handoverReasonText;
 }

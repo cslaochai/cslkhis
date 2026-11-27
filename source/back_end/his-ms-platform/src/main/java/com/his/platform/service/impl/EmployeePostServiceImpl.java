@@ -274,10 +274,7 @@ public class EmployeePostServiceImpl extends ServiceImpl<SysEmployeePostMapper, 
     }
 
     private void checkNoDuplicate(List<EmployeePostDTO> rows) {
-        // 唯一键 uk_emp_role_dept(employee_id, role_id, dept_id) 不含日期：
-        // 同一角色在同一科室只能配一条。「A 科 → B 科 → 再回 A 科」这种同科室多段
-        // 要等唯一键加上 effective_date 之后才开放，此处先按库约束挡住，避免落到 500 Duplicate entry
-        Set<String> seen = new HashSet<>();
+        // 必填 + 日期倒挂
         for (EmployeePostDTO row : rows) {
             if (!TextUtil.hasText(row.getRoleCode()) || row.getDeptId() == null) {
                 throw new BusinessException(400, "岗位必须同时选定角色和科室");
@@ -286,10 +283,56 @@ public class EmployeePostServiceImpl extends ServiceImpl<SysEmployeePostMapper, 
                     && row.getExpireDate().isBefore(row.getEffectiveDate())) {
                 throw new BusinessException(400, "岗位失效日期不能早于生效日期：" + row.getRoleCode());
             }
-            if (!seen.add(row.getRoleCode() + "#" + row.getDeptId())) {
-                throw new BusinessException(400, "有重复的岗位（同一角色在同一科室只能配一条）");
+        }
+        // 同角色同科允许多段（A→B→回 A）：按生效日区分，完全相同的行才拦。时段是否重叠由下面的互斥校验兜底。
+        Set<String> seen = new HashSet<>();
+        for (EmployeePostDTO row : rows) {
+            String key = row.getRoleCode() + "#" + row.getDeptId() + "#"
+                    + (row.getEffectiveDate() == null ? "∅" : row.getEffectiveDate());
+            if (!seen.add(key)) {
+                throw new BusinessException(400, "有重复的岗位（同一角色在同一科室同一生效日只能配一条）");
             }
         }
+        // 同角色时段互斥：同一角色不允许在两个科室的有效期重叠——同一时间只能在一个岗位执业。
+        // 衔接段要求旧段失效日早于新段生效日（首尾相接同一天仍算重叠）。
+        Map<String, List<EmployeePostDTO>> byRole = rows.stream()
+                .collect(Collectors.groupingBy(EmployeePostDTO::getRoleCode));
+        for (List<EmployeePostDTO> group : byRole.values()) {
+            for (int i = 0; i < group.size(); i++) {
+                for (int j = i + 1; j < group.size(); j++) {
+                    if (overlapPeriod(group.get(i), group.get(j))) {
+                        throw new BusinessException(400, "同一角色的岗位有效期不能重叠：" + group.get(i).getRoleCode());
+                    }
+                }
+            }
+        }
+        // 主岗同时段唯一：勾了两条主岗且时段相交即拒绝（归一化只认第一条主岗，不交叠是硬前提）
+        List<EmployeePostDTO> primaries = rows.stream()
+                .filter(r -> Objects.equals(YesOrNoEnum.YES.getCode(), r.getIsPrimary())).toList();
+        for (int i = 0; i < primaries.size(); i++) {
+            for (int j = i + 1; j < primaries.size(); j++) {
+                if (overlapPeriod(primaries.get(i), primaries.get(j))) {
+                    throw new BusinessException(400, "同一时间只能有一条主岗位");
+                }
+            }
+        }
+    }
+
+    /**
+     * 两段有效期是否相交。NULL 生效日 = 保存即生效（无下界），NULL 失效日 = 长期有效（无上界）。
+     */
+    private static boolean overlapPeriod(EmployeePostDTO a, EmployeePostDTO b) {
+        LocalDate aStart = a.getEffectiveDate();
+        LocalDate aEnd = a.getExpireDate();
+        LocalDate bStart = b.getEffectiveDate();
+        LocalDate bEnd = b.getExpireDate();
+        if (aEnd != null && bStart != null && aEnd.isBefore(bStart)) {
+            return false;
+        }
+        if (bEnd != null && aStart != null && bEnd.isBefore(aStart)) {
+            return false;
+        }
+        return true;
     }
 
     private Map<String, SysRole> loadRoles(List<EmployeePostDTO> rows) {

@@ -75,7 +75,7 @@
       </el-table-column>
       <el-table-column label="主诉/诊断" min-width="150" show-overflow-tooltip>
         <template #default="{ row }">
-          <div class="text-xs text-slate-700">{{ row.chiefComplaint || '—' }}</div>
+          <div class="text-xs text-slate-700">{{ row.chiefComplaint || '' }}</div>
           <div class="text-xs text-slate-400">{{ row.diagnosis || '' }}</div>
         </template>
       </el-table-column>
@@ -152,9 +152,9 @@ const dispositionOptions = ['继续留观，等待结果', '已收诊治，需�
 /** 清单里"计时"一列两口径：留观看已占床小时数，候诊/诊治看等候分钟（后端 NOW() 现算） */
 const hoTimeText = (row) => {
   if (row.emergencyStatus === 3)
-    return row.obsHours == null ? '-' : `${row.obsHours}小时`;
+    return row.obsHours == null ? '' : `${row.obsHours}小时`;
   if (row.waitMinutes == null)
-    return '-';
+    return '';
   const m = Number(row.waitMinutes);
   if (m < 60)
     return `${m}分钟`;

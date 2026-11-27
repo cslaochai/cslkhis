@@ -35,6 +35,6 @@ const maxCnt = computed(() => Math.max(1, ...items.value.map(x => Number(x.cnt |
 const totalCount = computed(() => items.value.reduce((s, x) => s + Number(x.cnt || 0), 0));
 
 function dayLabel(date) {
-  return (date || '').slice(5) || '—';
+  return (date || '').slice(5) || '';
 }
 </script>

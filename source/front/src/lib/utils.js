@@ -20,7 +20,7 @@ export function localDateStr(date = new Date()) {
  * 空值给「—」，不要给 ¥0.00 —— 那会把"没这行数据"洗成"金额为零"。
  */
 export function formatMoney(value) {
-    if (value === null || value === undefined || value === '') return '—';
+    if (value === null || value === undefined || value === '') return '';
     const num = Number(value);
     return Number.isNaN(num) ? String(value) : num.toFixed(2);
 }
@@ -42,7 +42,7 @@ export function shortQueueNo(queueNo) {
  * 回落会把"码值没录对"洗成"某个正常状态"（patient_type / emp_type 都踩过这个坑）。
  */
 export function dictLabelText(options, value) {
-    if (value === null || value === undefined || value === '') return '—';
+    if (value === null || value === undefined || value === '') return '';
     const list = Array.isArray(options) ? options : [];
     const hit = list.find(o => String(o.dictValue) === String(value) || String(o.value) === String(value));
     if (!hit) return `未知(${value})`;

@@ -21,7 +21,7 @@
             <div class="min-w-0 flex-1 pb-1">
               <div class="truncate text-lg font-bold leading-tight text-slate-900">{{ current.patientName }}</div>
               <div class="mt-0.5 flex items-center gap-1 text-xs text-slate-500">
-                <span>{{ genderText(current.gender) }} {{ current.age ?? '—' }}岁</span>
+                <span>{{ genderText(current.gender) }} {{ current.age ?? '' }}岁</span>
                 <span v-if="current.mewsScore != null && current.mewsScore >= 5"
                       class="rounded bg-red-500 px-1 text-[10px] font-bold text-white">MEWS {{
                     current.mewsScore
@@ -124,7 +124,7 @@
             <div class="flex items-center gap-1.5">
               <span class="min-w-0 flex-1 truncate text-sm font-bold text-slate-800"
                     :title="row.patientName">{{ row.patientName }}</span>
-              <span class="shrink-0 text-xs text-slate-400">{{ genderText(row.gender) }} / {{ row.age ?? '—' }}岁</span>
+              <span class="shrink-0 text-xs text-slate-400">{{ genderText(row.gender) }} / {{ row.age ?? '' }}岁</span>
               <el-tag size="small" :class="levelOf(row).color" class="!border shrink-0">{{
                   levelOf(row).label
                 }}
@@ -230,7 +230,7 @@
           <span v-for="v in vitalChips" :key="v.label" class="rounded bg-slate-100 px-1.5 py-0.5 text-slate-600">
                 {{ v.label }} {{ v.value }}
               </span>
-          <span class="text-slate-400">意识：{{ current.consciousnessText || '—' }}</span>
+          <span class="text-slate-400">意识：{{ current.consciousnessText || '' }}</span>
           <span class="rounded bg-blue-50 px-1.5 py-0.5 text-blue-600">停留 {{ stayText }}</span>
         </div>
 
@@ -423,7 +423,7 @@
                       </el-table-column>
                       <el-table-column label="规格" min-width="110">
                         <template #default="{row}"><span class="text-xs text-slate-500">{{
-                            row.specification || '—'
+                            row.specification || ''
                           }}</span></template>
                       </el-table-column>
                       <el-table-column :label="currentRxType === 3 ? '每剂克数' : '单次用量'" width="120">
@@ -577,11 +577,11 @@
                   <tbody>
                   <tr v-for="(p, i) in vitalTrendRows" :key="i" class="border-t border-slate-100">
                     <td class="text-slate-500">{{ p.t }}</td>
-                    <td class="text-right">{{ p.temperature ?? '—' }}</td>
-                    <td class="text-right">{{ p.pulse ?? '—' }}</td>
-                    <td class="text-right">{{ p.respiratory ?? '—' }}</td>
-                    <td class="text-right">{{ p.bp ?? '—' }}</td>
-                    <td class="text-right">{{ p.spo2 ?? '—' }}</td>
+                    <td class="text-right">{{ p.temperature ?? '' }}</td>
+                    <td class="text-right">{{ p.pulse ?? '' }}</td>
+                    <td class="text-right">{{ p.respiratory ?? '' }}</td>
+                    <td class="text-right">{{ p.bp ?? '' }}</td>
+                    <td class="text-right">{{ p.spo2 ?? '' }}</td>
                   </tr>
                   </tbody>
                 </table>
@@ -623,7 +623,7 @@
                 data-testid="emg-doc-pkg-table">
         <el-table-column label="套餐名称" prop="packageName" min-width="200" show-overflow-tooltip/>
         <el-table-column label="明细数" width="90" align="center">
-          <template #default="{row}">{{ row.detailCount ?? row.details?.length ?? '—' }}</template>
+          <template #default="{row}">{{ row.detailCount ?? row.details?.length ?? '' }}</template>
         </el-table-column>
         <el-table-column label="操作" width="90" align="center">
           <template #default="{row}">
@@ -823,7 +823,7 @@ let pollTimer = null;
 const currentPatientStore = useCurrentPatientStore();
 
 const levelOf = (row) => triageLevelMap[row?.triageLevel] || triageLevelMap[4];
-const statusText = (s) => (statusMap[s] || {label: '—'}).label;
+const statusText = (s) => (statusMap[s] || {label: ''}).label;
 const statusTagType = (s) => (statusMap[s] || {type: 'info'}).type;
 const genderText = (g) => (PATIENT_GENDER_OPTIONS.find((o) => o.value === g) || {}).label || '未知';
 
@@ -832,7 +832,7 @@ const genderText = (g) => (PATIENT_GENDER_OPTIONS.find((o) => o.value === g) || 
 // 全量 JZ 单号留在登记表/队列卡上，不丢）
 const shortNo = (no) => {
   const s = String(no || '');
-  return s ? '急' + s.slice(-5) : '—';
+  return s ? '急' + s.slice(-5) : '';
 };
 const zoneTone = (row) => (row?.triageLevel <= 2 ? 'text-red-600' : row?.triageLevel === 3 ? 'text-amber-600' : 'text-emerald-600');
 const zoneBgTone = (row) => (row?.triageLevel <= 2 ? 'bg-red-500' : row?.triageLevel === 3 ? 'bg-amber-500' : 'bg-emerald-500');
@@ -1361,13 +1361,13 @@ const handleRemoveTag = async (tagId) => {
 // 停留时间：从入急诊（admissionTime 优先，否则登记 createTime）算到现在
 const stayText = computed(() => {
   const r = current.value;
-  if (!r) return '—';
+  if (!r) return '';
   const t = r.admissionTime || r.createTime;
-  if (!t) return '—';
+  if (!t) return '';
   const start = new Date(String(t).replace(/-/g, '/').replace('T', ' '));
-  if (isNaN(start.getTime())) return '—';
+  if (isNaN(start.getTime())) return '';
   const mins = Math.floor((Date.now() - start.getTime()) / 60000);
-  if (mins < 0) return '—';
+  if (mins < 0) return '';
   if (mins < 60) return mins + ' 分';
   return `${Math.floor(mins / 60)} 小时 ${mins % 60} 分`;
 });

@@ -65,6 +65,16 @@ public interface DeptScopeService {
     boolean canAccessDept(Long deptId);
 
     /**
+     * 按科室层级展开「自身 + 全部后代」科室 ID 集合。纯树形 BFS，<b>不做数据权限收口</b>：
+     * 用于看板/大屏选中一个父科室后按子树聚合查询，调用方仍需先过 {@link #resolveDeptId(Long)}
+     * / {@link #assertDeptAccessible(Long)} 门禁。
+     *
+     * @param deptId 根科室ID，可为 null
+     * @return 自身 + 后代科室ID 集合；入参为 null 时返回空集合，永不返回 null
+     */
+    Set<Long> descendantDeptIds(Long deptId);
+
+    /**
      * 列表/统计的科室收口：把前端传入的科室过滤参数归一成「进 SQL 的科室集合」。
      *
      * <p>判定链 = resolveDeptId（越权直接抛）→ allowedDeptIds（全院=全集，受限=授权集合）。

@@ -7,7 +7,7 @@
                 size="small">
         <el-table-column label="生效日" prop="startDate" width="110"/>
         <el-table-column label="停用日" prop="endDate" width="110">
-          <template #default="{ row }">{{ row.endDate || '—' }}</template>
+          <template #default="{ row }">{{ row.endDate || '' }}</template>
         </el-table-column>
         <el-table-column label="状态" width="90">
           <template #default="{ row }">
@@ -26,7 +26,7 @@
           <template #default="{ row }">{{ dictText('anticoag', row.anticoagulant) }}</template>
         </el-table-column>
         <el-table-column label="剂量" min-width="140" prop="anticoagDose">
-          <template #default="{ row }">{{ row.anticoagDose || '—' }}</template>
+          <template #default="{ row }">{{ row.anticoagDose || '' }}</template>
         </el-table-column>
         <el-table-column label="开立人" prop="doctorName" width="90"/>
         <el-table-column fixed="right" label="操作" width="130">

@@ -51,4 +51,21 @@ public class BiNationalVO {
 
     /** CMI（Σ权重/样本数，4 位小数；样本为 0 时置 0 并如实返回样本数） */
     private BigDecimal cmi;
+
+    // 次均费用（近 30 日）
+
+    /** 窗口内门诊收入净额（元） */
+    private BigDecimal outpatientRevenue;
+
+    /** 窗口内门诊人次 */
+    private Long outpatientVisits;
+
+    /** 门诊次均费用（元/人次，2 位小数；人次为 0 时置 0） */
+    private BigDecimal outpatientAvgCost;
+
+    /** 窗口内住院收入净额（元） */
+    private BigDecimal inpatientRevenue;
+
+    /** 住院次均费用（元/出院人次，2 位小数；出院人数为 0 时置 0） */
+    private BigDecimal inpatientAvgCost;
 }

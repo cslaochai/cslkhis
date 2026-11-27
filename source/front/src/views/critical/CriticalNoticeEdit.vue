@@ -9,13 +9,13 @@
                    data-testid="cn-form-admission" filterable placeholder="搜索姓名/住院号选择在院患者"
                    @change="onAdmissionPick">
           <el-option v-for="p in inpatients" :key="p.admissionId"
-                     :label="`${p.bedNo || '—'}床 ${p.patientName}（${p.deptName || '—'}）`" :value="p.admissionId"/>
+                     :label="`${p.bedNo || ''}床 ${p.patientName}（${p.deptName || ''}）`" :value="p.admissionId"/>
         </el-select>
       </el-form-item>
       <el-form-item label="患者快照">
         <span class="text-sm text-slate-600" data-testid="cn-form-snapshot">
-          {{ form.patientName || '—' }} / {{ form.admissionNo || '—' }} / {{
-            form.wardName || '—'
+          {{ form.patientName || '' }} / {{ form.admissionNo || '' }} / {{
+            form.wardName || ''
           }} {{ form.bedNo ? form.bedNo + '床' : '' }}
         </span>
       </el-form-item>
@@ -56,7 +56,7 @@
         <el-select v-model="form.witnessDoctorId" :fit-input-width="false" class="!w-full"
                    clearable data-testid="cn-form-witness"
                    filterable placeholder="抢救场景第二医师（可空，不得与告知医师同人）">
-          <el-option v-for="d in doctors" :key="d.employeeId" :label="`${d.empName}（${d.deptName || '—'}）`"
+          <el-option v-for="d in doctors" :key="d.employeeId" :label="`${d.empName}（${d.deptName || ''}）`"
                      :value="d.employeeId"/>
         </el-select>
       </el-form-item>

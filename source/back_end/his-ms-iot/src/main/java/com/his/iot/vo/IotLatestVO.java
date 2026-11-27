@@ -28,4 +28,10 @@ public class IotLatestVO implements Serializable {
 
     @Schema(description = "指标清单")
     private List<IotMetricVO> metrics;
+
+    @Schema(description = "活跃告警级别（2-警告 3-严重）；null 表示无未处理告警")
+    private Integer alarmLevel;
+
+    @Schema(description = "告警级别文案")
+    private String alarmLevelText;
 }

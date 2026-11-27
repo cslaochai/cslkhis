@@ -197,7 +197,7 @@
             <p class="text-base font-semibold text-slate-900">
               {{ patient.patientNo }} {{ patient.patientName }}
               <span class="ml-2 text-sm font-normal text-slate-500">
-                {{ patient.genderText }} / {{ patient.age ?? '—' }}岁
+                {{ patient.genderText }} / {{ patient.age ?? '' }}岁
               </span>
               <el-tag
                   v-if="Number(patient.mergeStatus) === 1"
@@ -297,9 +297,9 @@
         <div class="rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
           <p class="text-xs text-slate-500">就诊时间跨度</p>
           <p class="text-sm font-semibold text-slate-900">
-            {{ (summary.firstVisitTime || '—').substring(0, 10) }}
+            {{ (summary.firstVisitTime || '').substring(0, 10) }}
           </p>
-          <p class="text-[11px] text-slate-400">至 {{ (summary.lastVisitTime || '—').substring(0, 10) }}</p>
+          <p class="text-[11px] text-slate-400">至 {{ (summary.lastVisitTime || '').substring(0, 10) }}</p>
         </div>
       </div>
 
@@ -379,7 +379,7 @@
               <div class="flex flex-wrap items-center gap-x-4 gap-y-1 px-4 py-2 text-xs text-slate-500">
                 <span class="flex items-center gap-1">
                   <el-icon><Clock/></el-icon>
-                  {{ v.startTime || '—' }}
+                  {{ v.startTime || '' }}
                   <template v-if="v.endTime"> ~ {{ v.endTime }}</template>
                 </span>
                 <span v-if="v.deptName">科室：{{ v.deptName }}</span>
@@ -600,7 +600,7 @@ const eventTag = (t) => {
     return 'success';
   return 'info';
 };
-const money = (v) => (v === null || v === undefined ? '—' : `¥${Number(v).toFixed(2)}`);
+const money = (v) => (v === null || v === undefined ? '' : `¥${Number(v).toFixed(2)}`);
 const visits = computed(() => data.value?.visits || []);
 const patient = computed(() => data.value?.patient || null);
 const summary = computed(() => data.value?.summary || null);
@@ -615,8 +615,8 @@ const visits30d = computed(() => clinical.value?.visits30d || {});
 const repeatExams = computed(() => clinical.value?.repeatExams || []);
 const clinicalWarnings = computed(() => clinical.value?.warnings || []);
 const allergySourceText = (s) => s === 'STRUCTURED' ? '结构化档案' : s === 'TEXT' ? '档案自述' : '未知(' + s + ')';
-const eventTime = (t) => (t ? t.substring(0, 16) : '—');
-const eventDay = (t) => (t ? t.substring(0, 10) : '—');
+const eventTime = (t) => (t ? t.substring(0, 16) : '');
+const eventDay = (t) => (t ? t.substring(0, 10) : '');
 onMounted(async () => {
   await loadDict();
   // 支持 /cdr?patientId=xxx 直接带入患者（患者详情弹框的「打开完整时间轴」入口走这里）

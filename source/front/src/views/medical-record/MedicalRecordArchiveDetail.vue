@@ -2,33 +2,33 @@
   <!-- 详情（只读；组件自己按 id 取数，状态文案走页面传入的列表字典） -->
   <el-dialog v-model="visible" destroy-on-close title="归档详情" width="720px">
     <el-descriptions v-if="detail" :column="2" border>
-      <el-descriptions-item label="归档单号">{{ detail.archiveNo || '—' }}</el-descriptions-item>
-      <el-descriptions-item label="病历号">{{ detail.recordNo || '—' }}</el-descriptions-item>
-      <el-descriptions-item label="患者">{{ detail.patientName || '—' }}（{{
-          detail.patientNo || '—'
+      <el-descriptions-item label="归档单号">{{ detail.archiveNo || '' }}</el-descriptions-item>
+      <el-descriptions-item label="病历号">{{ detail.recordNo || '' }}</el-descriptions-item>
+      <el-descriptions-item label="患者">{{ detail.patientName || '' }}（{{
+          detail.patientNo || ''
         }}）
       </el-descriptions-item>
-      <el-descriptions-item label="就诊日期">{{ detail.visitDate || '—' }}</el-descriptions-item>
-      <el-descriptions-item label="科室">{{ detail.deptName || '—' }}</el-descriptions-item>
-      <el-descriptions-item label="医生">{{ detail.doctorName || '—' }}</el-descriptions-item>
-      <el-descriptions-item :span="2" label="诊断">{{ detail.diagnosis || '—' }}</el-descriptions-item>
+      <el-descriptions-item label="就诊日期">{{ detail.visitDate || '' }}</el-descriptions-item>
+      <el-descriptions-item label="科室">{{ detail.deptName || '' }}</el-descriptions-item>
+      <el-descriptions-item label="医生">{{ detail.doctorName || '' }}</el-descriptions-item>
+      <el-descriptions-item :span="2" label="诊断">{{ detail.diagnosis || '' }}</el-descriptions-item>
       <el-descriptions-item label="状态">
         <el-tag :type="statusTagType(detail.archiveStatus)" effect="plain" size="small">
           {{ statusText(detail.archiveStatus) }}
         </el-tag>
       </el-descriptions-item>
-      <el-descriptions-item label="归档时间">{{ detail.archiveTime || '—' }}</el-descriptions-item>
-      <el-descriptions-item label="封存时间">{{ detail.sealTime || '—' }}</el-descriptions-item>
+      <el-descriptions-item label="归档时间">{{ detail.archiveTime || '' }}</el-descriptions-item>
+      <el-descriptions-item label="封存时间">{{ detail.sealTime || '' }}</el-descriptions-item>
       <el-descriptions-item label="签名方式">
         <el-tag v-if="detail.signStatus === 1" effect="plain" size="small" type="success">电子签名</el-tag>
         <el-tag v-else-if="detail.paperVerifyStatus === 1" effect="plain" size="small" type="info">纸质签名核验</el-tag>
         <el-tag v-else effect="plain" size="small" type="danger">待补签</el-tag>
       </el-descriptions-item>
-      <el-descriptions-item label="纸质件编号">{{ detail.paperCertNo || '—' }}</el-descriptions-item>
-      <el-descriptions-item label="纸质核验人">{{ detail.paperVerifyByName || '—' }}</el-descriptions-item>
-      <el-descriptions-item label="纸质核验时间">{{ detail.paperVerifyTime || '—' }}</el-descriptions-item>
-      <el-descriptions-item :span="2" label="纸质核验说明">{{ detail.paperVerifyRemark || '—' }}</el-descriptions-item>
-      <el-descriptions-item label="备注">{{ detail.remark || '—' }}</el-descriptions-item>
+      <el-descriptions-item label="纸质件编号">{{ detail.paperCertNo || '' }}</el-descriptions-item>
+      <el-descriptions-item label="纸质核验人">{{ detail.paperVerifyByName || '' }}</el-descriptions-item>
+      <el-descriptions-item label="纸质核验时间">{{ detail.paperVerifyTime || '' }}</el-descriptions-item>
+      <el-descriptions-item :span="2" label="纸质核验说明">{{ detail.paperVerifyRemark || '' }}</el-descriptions-item>
+      <el-descriptions-item label="备注">{{ detail.remark || '' }}</el-descriptions-item>
     </el-descriptions>
   </el-dialog>
 </template>
@@ -55,7 +55,7 @@ const visible = computed({
 /** 状态文案：命中字典用字典，命中不了暴露「未知(n)」 */
 const statusText = (v) => {
   if (v === null || v === undefined)
-    return '—';
+    return '';
   const hit = props.statusOptions.find(o => o.value === Number(v));
   return hit ? hit.label : `未知(${v})`;
 };

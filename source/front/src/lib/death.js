@@ -23,5 +23,5 @@ export const gate = async (promise, fallback) => {
   }
 }
 
-export const fmt = (t) => (t ? String(t).slice(0, 19) : '—')
-export const fmtDay = (t) => (t ? String(t).slice(0, 10) : '—')
+export const fmt = (t) => (t ? String(t).slice(0, 19) : '')
+export const fmtDay = (t) => (t ? String(t).slice(0, 10) : '')

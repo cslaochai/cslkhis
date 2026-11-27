@@ -363,7 +363,7 @@ public class InpatientNursingServiceImpl implements InpatientNursingService {
             p.setSystolicPressure(r.getSystolicPressure());
             p.setDiastolicPressure(r.getDiastolicPressure());
             p.setBloodPressureText(r.getSystolicPressure() == null || r.getDiastolicPressure() == null
-                    ? "—" : r.getSystolicPressure() + "/" + r.getDiastolicPressure());
+                    ? "" : r.getSystolicPressure() + "/" + r.getDiastolicPressure());
             p.setStoolCount(r.getStoolCount());
             p.setUrineVolume(r.getUrineVolume());
             p.setNurseName(r.getNurseName());
@@ -849,7 +849,7 @@ public class InpatientNursingServiceImpl implements InpatientNursingService {
         vo.setSystolicPressure(r.getSystolicPressure());
         vo.setDiastolicPressure(r.getDiastolicPressure());
         vo.setBloodPressureText(r.getSystolicPressure() == null || r.getDiastolicPressure() == null
-                ? "—" : r.getSystolicPressure() + "/" + r.getDiastolicPressure());
+                ? "" : r.getSystolicPressure() + "/" + r.getDiastolicPressure());
         vo.setSpo2(r.getSpo2());
         vo.setStoolCount(r.getStoolCount());
         vo.setUrineVolume(r.getUrineVolume());

@@ -41,7 +41,7 @@
         </el-table-column>
         <el-table-column align="right" label="原值(元)" prop="purchasePrice" width="90">
           <template #default="{ row }">{{
-              row.purchasePrice != null ? Number(row.purchasePrice).toLocaleString() : '—'
+              row.purchasePrice != null ? Number(row.purchasePrice).toLocaleString() : ''
             }}
           </template>
         </el-table-column>

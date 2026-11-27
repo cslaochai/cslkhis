@@ -1,6 +1,6 @@
 <template>
-  <!-- ---------------- 证书申请进度（流程图） ---------------- -->
-  <el-dialog v-model="visible" :title="`证书申请进度 · ${certNo}`" width="780px" @closed="onClosed">
+  <!-- ---------------- 申请进度（流程图） ---------------- -->
+  <el-dialog v-model="visible" :title="`申请进度 · ${certNo}`" width="780px" @closed="onClosed">
     <div v-loading="loading" class="text-sm">
       <p v-if="!certDetail" class="text-xs text-slate-400">加载中…</p>
 

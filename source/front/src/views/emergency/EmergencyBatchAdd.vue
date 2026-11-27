@@ -8,14 +8,9 @@
       @open="onOpen">
     <div class="mb-3 flex flex-wrap items-center gap-3">
       <span class="text-sm text-slate-600">接诊科室</span>
-      <el-select
-          v-model="defaultDeptId"
-          filterable
-          placeholder="必选：群伤统一接诊科室"
-          class="!w-56"
-          @change="applyDefaultDept">
-        <el-option v-for="d in departments" :key="d.id" :label="d.deptName" :value="d.id"/>
-      </el-select>
+      <DeptTreeSelect v-model="defaultDeptId" mode="LEAF" dept-type="1" node-type="2,7" width="224px"
+                      placeholder="必选：群伤统一接诊科室" @change="applyDefaultDept"/>
+
       <span class="text-sm text-slate-600">默认分诊级别</span>
       <el-select v-model="defaultLevel" class="!w-40" @change="applyDefaultLevel">
         <el-option v-for="(v, k) in triageLevelMap" :key="k" :label="v.label" :value="Number(k)"/>
@@ -100,7 +95,7 @@ import {computed, ref} from 'vue'
 import {Check, Delete, Plus} from '@element-plus/icons-vue'
 import {ElMessage} from 'element-plus'
 import {registerEmergency} from '@/api/emergency'
-import {getDepartmentSelectList} from '@/api/system'
+import DeptTreeSelect from '@/components/his/DeptTreeSelect.vue'
 import {PATIENT_GENDER_OPTIONS} from '@/lib/patientGender'
 
 const props = defineProps({
@@ -129,7 +124,6 @@ const consciousnessOptions = [
   {value: 4, label: '无反应'},
 ]
 
-const departments = ref([])
 const defaultDeptId = ref(null)
 const defaultLevel = ref(3) // 群伤多为轻症，默认 III 级，行可覆盖
 const defaultConsciousness = ref(1) // 群伤伤员多清醒，默认「清楚」，顶部可改
@@ -174,14 +168,6 @@ const onOpen = async () => {
   rows.value = [blankRow(), blankRow(), blankRow(), blankRow(), blankRow()]
   defaultDeptId.value = null
   submitting.value = false
-  if (departments.value.length === 0) {
-    try {
-      const res = await getDepartmentSelectList({deptType: 1, nodeType: '2,7'})
-      departments.value = res.data || []
-    } catch (e) {
-      console.error('加载科室失败:', e)
-    }
-  }
 }
 
 const submitAll = async () => {

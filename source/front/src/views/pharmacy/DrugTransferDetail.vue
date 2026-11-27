@@ -34,16 +34,16 @@
           {{ detail.outQuantity }} / {{ detail.inQuantity }}
         </el-descriptions-item>
         <el-descriptions-item label="金额合计">{{ formatMoney(detail.totalAmount) }}</el-descriptions-item>
-        <el-descriptions-item label="制单人">{{ detail.createBy || '—' }}</el-descriptions-item>
+        <el-descriptions-item label="制单人">{{ detail.createBy || '' }}</el-descriptions-item>
         <el-descriptions-item label="制单时间">{{ detail.createTime }}</el-descriptions-item>
-        <el-descriptions-item label="发出人">{{ detail.outBy || '—' }}</el-descriptions-item>
-        <el-descriptions-item label="发出时间">{{ detail.outTime || '—' }}</el-descriptions-item>
-        <el-descriptions-item label="接收人">{{ detail.inBy || '—' }}</el-descriptions-item>
-        <el-descriptions-item label="接收时间">{{ detail.inTime || '—' }}</el-descriptions-item>
+        <el-descriptions-item label="发出人">{{ detail.outBy || '' }}</el-descriptions-item>
+        <el-descriptions-item label="发出时间">{{ detail.outTime || '' }}</el-descriptions-item>
+        <el-descriptions-item label="接收人">{{ detail.inBy || '' }}</el-descriptions-item>
+        <el-descriptions-item label="接收时间">{{ detail.inTime || '' }}</el-descriptions-item>
         <el-descriptions-item :span="3" label="作废人 / 原因">
-          {{ detail.cancelBy || '—' }}{{ detail.cancelReason ? `（${detail.cancelReason}）` : '' }}
+          {{ detail.cancelBy || '' }}{{ detail.cancelReason ? `（${detail.cancelReason}）` : '' }}
         </el-descriptions-item>
-        <el-descriptions-item :span="3" label="备注">{{ detail.remark || '—' }}</el-descriptions-item>
+        <el-descriptions-item :span="3" label="备注">{{ detail.remark || '' }}</el-descriptions-item>
       </el-descriptions>
 
       <el-table :data="detail.items || []" border data-testid="transfer-item-detail-table" size="small">
@@ -65,7 +65,7 @@
           <template #default="{ row }">{{ row.fromQuantity }}</template>
         </el-table-column>
         <el-table-column align="right" label="接收方余额" width="95">
-          <template #default="{ row }">{{ row.toQuantity === null ? '—' : row.toQuantity }}</template>
+          <template #default="{ row }">{{ row.toQuantity === null ? '' : row.toQuantity }}</template>
         </el-table-column>
         <el-table-column align="center" label="进度" width="110">
           <template #default="{ row }">
@@ -150,7 +150,7 @@ const detail = ref(null);
 const balanced = computed(() => isTransferBalanced(detail.value?.logs));
 const signedQuantity = (v) => {
   if (v === null || v === undefined)
-    return '—';
+    return '';
   const n = Number(v);
   return (n > 0 ? '+' : '') + n;
 };

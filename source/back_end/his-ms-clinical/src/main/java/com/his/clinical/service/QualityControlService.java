@@ -3,6 +3,7 @@ package com.his.clinical.service;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.his.clinical.dto.QcCandidatePageQueryDTO;
 import com.his.clinical.dto.QcExecuteDTO;
+import com.his.clinical.dto.QcOverdueDraftPageQueryDTO;
 import com.his.clinical.dto.QcPageQueryDTO;
 import com.his.clinical.dto.QcSystemExecuteDTO;
 import com.his.clinical.entity.BizQualityControl;
@@ -68,6 +69,23 @@ public interface QualityControlService extends IService<BizQualityControl> {
      * @param limit 单次补扫的文书数上限
      */
     int autoRescanInpatientQc(int limit);
+
+    /**
+     * 扫描超时未提交的门诊草稿病历，向责任医生催办。
+     *
+     * <p>门诊病历就诊当日应完成；就诊日次日仍为草稿即判超期。同一份病历 24 小时内只催一次，
+     * 病历提交后由结诊收尾把待办闭环。
+     *
+     * @param limit 单次扫描的草稿数上限
+     * @return 本轮实际催办份数
+     */
+    int remindOverdueOutpatientDrafts(int limit);
+
+    /**
+     * 质控侧超时草稿看板：按数据权限收口科室，列出草稿态且就诊日已过的病历，
+     * 并带出在途移交状态与承接人。规范口径：责任医师与质控人员双提示。
+     */
+    PageResult<QcOverdueDraftVO> pageOverdueDrafts(QcOverdueDraftPageQueryDTO query);
 
     /**
      * 病案质量指标看板：通过率、甲级率、时限达标率、首页完整率与科室排名。

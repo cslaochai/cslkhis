@@ -116,14 +116,14 @@
               </el-table-column>
               <el-table-column label="来源" width="90">
                 <template #default="{ row }">
-                  <div class="text-xs">{{ row.recordSourceText || '—' }}</div>
+                  <div class="text-xs">{{ row.recordSourceText || '' }}</div>
                   <div class="text-xs text-slate-400">{{ row.recordTypeText || '' }}</div>
                 </template>
               </el-table-column>
               <el-table-column label="病历 / 患者" width="180">
                 <template #default="{ row }">
-                  <div class="text-xs">{{ row.recordNo || '—' }}</div>
-                  <div class="text-xs text-slate-400">{{ row.patientName || '—' }} <span
+                  <div class="text-xs">{{ row.recordNo || '' }}</div>
+                  <div class="text-xs text-slate-400">{{ row.patientName || '' }} <span
                       v-if="row.deptName">· {{ row.deptName }}</span></div>
                 </template>
               </el-table-column>
@@ -134,7 +134,7 @@
               </el-table-column>
               <el-table-column label="触发来源" width="100">
                 <template #default="{ row }">
-                  <span class="text-xs">{{ row.triggerSourceText || '—' }}</span>
+                  <span class="text-xs">{{ row.triggerSourceText || '' }}</span>
                 </template>
               </el-table-column>
               <el-table-column label="得分" width="80">
@@ -176,8 +176,8 @@
               </el-table-column>
               <el-table-column label="质控人 / 时间" width="150">
                 <template #default="{ row }">
-                  <div class="text-xs">{{ row.qcBy || '—' }}</div>
-                  <div class="text-xs text-slate-400">{{ row.qcTime || '—' }}</div>
+                  <div class="text-xs">{{ row.qcBy || '' }}</div>
+                  <div class="text-xs text-slate-400">{{ row.qcTime || '' }}</div>
                 </template>
               </el-table-column>
               <el-table-column fixed="right" label="操作" width="130">
@@ -332,24 +332,24 @@
               </el-table-column>
               <el-table-column label="患者" width="140">
                 <template #default="{ row }">
-                  <div class="text-xs">{{ row.patientName || '—' }}</div>
-                  <div class="text-xs text-slate-400">{{ row.genderText || '—' }} · {{ row.age ?? '—' }}岁</div>
+                  <div class="text-xs">{{ row.patientName || '' }}</div>
+                  <div class="text-xs text-slate-400">{{ row.genderText || '' }} · {{ row.age ?? '' }}岁</div>
                 </template>
               </el-table-column>
               <el-table-column label="科室 / 医师" width="140">
                 <template #default="{ row }">
-                  <div class="text-xs">{{ row.deptName || '—' }}</div>
-                  <div class="text-xs text-slate-400">{{ row.doctorName || '—' }}</div>
+                  <div class="text-xs">{{ row.deptName || '' }}</div>
+                  <div class="text-xs text-slate-400">{{ row.doctorName || '' }}</div>
                 </template>
               </el-table-column>
               <el-table-column label="状态" width="80">
                 <template #default="{ row }">
-                  <span class="text-xs">{{ row.recordStatusText || '—' }}</span>
+                  <span class="text-xs">{{ row.recordStatusText || '' }}</span>
                 </template>
               </el-table-column>
               <el-table-column label="记录时间" width="150">
                 <template #default="{ row }">
-                  <span class="text-xs text-slate-500">{{ row.recordTime || '—' }}</span>
+                  <span class="text-xs text-slate-500">{{ row.recordTime || '' }}</span>
                 </template>
               </el-table-column>
               <el-table-column label="最近质控" width="220">
@@ -357,7 +357,7 @@
                   <template v-if="row.qced">
                     <span :data-testid="`p5-qc-cand-lastqc-${row.recordNo}`" class="text-xs">
                       {{ scoreText(row.lastScore) }} 分 / {{
-                        row.lastGrade || '—'
+                        row.lastGrade || ''
                       }}级 / {{ row.lastResult === 1 ? '通过' : '不通过' }}
                     </span>
                     <div class="text-xs text-slate-400">{{ row.lastQcTime || '' }}</div>
@@ -407,18 +407,18 @@
                读 pass / vetoCount / summary 会取到 undefined ——
                `!undefined` 为 true，满分级别的病历会被显示成「不通过」，是最容易被放过的假 bug。 -->
           <div class="mt-2 flex flex-wrap items-center gap-4 text-sm">
-            <span>病历：<b>{{ lastResult.recordNo || '—' }}</b>（{{
+            <span>病历：<b>{{ lastResult.recordNo || '' }}</b>（{{
                 lastResult.recordSourceText
               }}{{ lastResult.recordTypeText ? ' · ' + lastResult.recordTypeText : '' }}）</span>
-            <span>患者：<b>{{ lastResult.patientName || '—' }}</b></span>
+            <span>患者：<b>{{ lastResult.patientName || '' }}</b></span>
             <span>得分：<b data-testid="p5-qc-last-score">{{ scoreText(lastResult.score) }}</b></span>
-            <span>等级：<b>{{ lastResult.gradeText || '—' }}</b></span>
+            <span>等级：<b>{{ lastResult.gradeText || '' }}</b></span>
             <span>结论：<b :class="lastResult.qcResult === 1 ? 'text-emerald-600' : 'text-red-600'"
                           :data-testid="'p5-qc-last-result'">{{
                 lastResult.qcResultText
               }}</b></span>
             <span>问题：<b data-testid="p5-qc-last-issuecount">{{ num(lastResult.errorCount) }}</b> 条</span>
-            <span>最高严重度：<b>{{ lastResult.severityMaxText || '—' }}</b></span>
+            <span>最高严重度：<b>{{ lastResult.severityMaxText || '' }}</b></span>
           </div>
           <p class="mt-2 text-xs text-slate-500" data-testid="p5-qc-last-summary">
             {{
@@ -462,6 +462,72 @@
               </template>
             </el-table-column>
           </el-table>
+        </div>
+      </el-tab-pane>
+
+      <!-- ---------------- 超时草稿看板 ---------------- -->
+      <el-tab-pane label="超时草稿" name="overdue">
+        <div class="rounded-lg border border-slate-200 bg-white shadow-sm">
+          <div class="flex flex-wrap items-center gap-2 border-b border-slate-100 px-4 py-3">
+            <el-select v-model="overdueQuery.handoverStatus" clearable placeholder="移交状态" style="width: 140px"
+                       @change="() => { overdueQuery.pageNum = 1; loadOverdue() }">
+              <el-option v-for="o in handoverStatusOptions" :key="o.value" :label="o.label" :value="o.value"/>
+            </el-select>
+            <el-input v-model="overdueQuery.keyword" clearable placeholder="病历号 / 患者姓名"
+                      style="width: 200px"
+                      @keyup.enter="() => { overdueQuery.pageNum = 1; loadOverdue() }">
+              <template #prefix>
+                <el-icon>
+                  <Search/>
+                </el-icon>
+              </template>
+            </el-input>
+            <el-button type="primary" @click="() => { overdueQuery.pageNum = 1; loadOverdue() }">查询</el-button>
+          </div>
+
+          <div v-loading="overdueLoading" class="p-4">
+            <el-table :data="overdueList" border data-testid="p5-qc-overdue-table" size="small">
+              <el-table-column label="病历号" width="160" prop="recordNo"/>
+              <el-table-column label="患者" width="140">
+                <template #default="{ row }">
+                  <div class="text-xs">{{ row.patientName || '' }}</div>
+                  <div class="text-xs text-slate-400">{{ overdueGenderText(row.gender) }} · {{ row.age ?? '' }}岁</div>
+                </template>
+              </el-table-column>
+              <el-table-column label="科室" min-width="120" prop="deptName"/>
+              <el-table-column label="经治医师" width="110" prop="doctorName"/>
+              <el-table-column label="就诊日期" width="110" prop="visitDate"/>
+              <el-table-column label="超期天数" width="90">
+                <template #default="{ row }">
+                  <span :class="row.overdueDays > 3 ? 'text-red-600' : 'text-amber-600'" class="text-xs font-medium">
+                    {{ row.overdueDays ?? 0 }} 天
+                  </span>
+                </template>
+              </el-table-column>
+              <el-table-column label="移交状态" width="100">
+                <template #default="{ row }">
+                  <span class="text-xs">{{ row.handoverStatusText || '' }}</span>
+                </template>
+              </el-table-column>
+              <el-table-column label="承接人" width="110" prop="receiverName"/>
+              <el-table-column label="移交原因" min-width="120" prop="reasonText"/>
+              <template #empty>
+                <div class="py-6 text-sm text-slate-400">没有超时未提交的草稿</div>
+              </template>
+            </el-table>
+
+            <div class="mt-3 flex items-center justify-between">
+              <p class="text-xs text-slate-500" data-testid="p5-qc-overdue-total">共 {{ overdueTotal }} 份</p>
+              <el-pagination
+                  v-model:current-page="overdueQuery.pageNum"
+                  v-model:page-size="overdueQuery.pageSize"
+                  :page-sizes="PAGE_SIZES"
+                  :total="overdueTotal"
+                  layout="sizes, prev, pager, next"
+                  @current-change="loadOverdue"
+                  @size-change="() => { overdueQuery.pageNum = 1; loadOverdue() }"/>
+            </div>
+          </div>
         </div>
       </el-tab-pane>
 
@@ -636,7 +702,7 @@
 </template>
 
 <script setup>
-import {computed, onMounted, reactive, ref} from 'vue';
+import {computed, onMounted, reactive, ref, watch} from 'vue';
 import {Refresh, Search, WarningFilled} from '@element-plus/icons-vue';
 import {ElMessage} from 'element-plus';
 import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination';
@@ -651,6 +717,7 @@ import {
   executeQualityControl,
   executeQualityControlBatch,
   getQcFlowListPage,
+  getQcOverdueDraftPage,
   getQcTypeDict,
   getQualityControlList,
   getQualityControlOverview,
@@ -694,6 +761,20 @@ const candQuery = reactive({
   pageNum: 1,
   pageSize: DEFAULT_PAGE_SIZE,
 });
+// ---------------- 超时草稿看板 ----------------
+const overdueLoading = ref(false);
+const overdueList = ref([]);
+const overdueTotal = ref(0);
+const overdueQuery = reactive({
+  handoverStatus: undefined,
+  keyword: '',
+  pageNum: 1,
+  pageSize: DEFAULT_PAGE_SIZE,
+});
+const handoverStatusOptions = [
+  {value: 0, label: '未移交'},
+  {value: 1, label: '待代补'},
+];
 const qcRunning = ref(false);
 const lastResult = ref(null);
 // ---------------- 规则清单 ----------------
@@ -782,6 +863,31 @@ const loadCandidates = async () => {
     candLoading.value = false;
   }
 };
+const loadOverdue = async () => {
+  overdueLoading.value = true;
+  try {
+    const params = {
+      pageNum: overdueQuery.pageNum,
+      pageSize: overdueQuery.pageSize,
+    };
+    if (overdueQuery.handoverStatus !== undefined && overdueQuery.handoverStatus !== null)
+      params.handoverStatus = overdueQuery.handoverStatus;
+    if (overdueQuery.keyword)
+      params.keyword = overdueQuery.keyword.trim();
+    const res = await getQcOverdueDraftPage(params);
+    overdueList.value = res.data?.records || [];
+    overdueTotal.value = Number(res.data?.total ?? 0);
+  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */ {
+
+  } finally {
+    overdueLoading.value = false;
+  }
+};
+const overdueGenderText = (g) => (g === 1 ? '男' : g === 2 ? '女' : '');
+watch(activeTab, (v) => {
+  if (v === 'overdue')
+    loadOverdue();
+});
 const loadRules = async () => {
   ruleLoading.value = true;
   try {
@@ -846,7 +952,7 @@ const runQc = async (row) => {
       qcType: 0,
     });
     lastResult.value = res.data;
-    ElMessage.success(`${row.recordNo}：${res.data?.score ?? '—'} 分 / ${res.data?.gradeText ?? '—'}级 / ${res.data?.qcResultText ?? ''}`);
+    ElMessage.success(`${row.recordNo}：${res.data?.score ?? ''} 分 / ${res.data?.gradeText ?? ''}级 / ${res.data?.qcResultText ?? ''}`);
     await Promise.all([loadQcList(), loadCandidates(), loadOverview(), loadRules()]);
   } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */ {
 

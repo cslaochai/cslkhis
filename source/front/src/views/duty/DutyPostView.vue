@@ -43,7 +43,7 @@
           <el-table-column label="点位名称" min-width="160" prop="postName"/>
           <el-table-column label="责任范围" prop="dutyScopeText" width="110"/>
           <el-table-column label="所属单元" min-width="150">
-            <template #default="{ row }">{{ row.orgName || '—' }}（{{ row.orgTypeText }}）</template>
+            <template #default="{ row }">{{ row.orgName || '' }}（{{ row.orgTypeText }}）</template>
           </el-table-column>
           <el-table-column label="班次" min-width="200">
             <template #default="{ row }">

@@ -72,7 +72,7 @@
               <el-tag size="small">{{ current.bedNo || '无床' }}床</el-tag>
               <span class="text-xs text-slate-400">{{ current.admissionNo }} · {{ current.deptName }}</span>
             </div>
-            <div class="mt-1 text-xs text-slate-500">诊断：{{ current.diagnosis || '—' }} · 入院：{{
+            <div class="mt-1 text-xs text-slate-500">诊断：{{ current.diagnosis || '' }} · 入院：{{
                 (current.admitTime || '').replace('T', ' ').slice(0, 16)
               }}
             </div>

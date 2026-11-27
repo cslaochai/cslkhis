@@ -39,10 +39,8 @@
         </el-col>
         <el-col :span="12">
           <el-form-item label="被审科室">
-            <el-select v-model="noticeForm.deptId" clearable data-testid="deduct-form-dept" filterable style="width: 100%"
-                       @change="onNoticeDept">
-              <el-option v-for="d in deptOptions" :key="d.id" :label="d.deptName" :value="String(d.id)"/>
-            </el-select>
+            <DeptTreeSelect v-model="noticeForm.deptId" mode="LEAF" scope="ALL" clearable data-testid="deduct-form-dept"
+                            class="!w-full" @change="onNoticeDept"/>
           </el-form-item>
         </el-col>
         <el-col :span="12">
@@ -100,12 +98,13 @@ import {ElMessage} from 'element-plus';
 import PatientSelect from '@/components/his/PatientSelect.vue';
 import {DICT_TYPE} from '@/lib/dict-cache';
 import {getDeductDetail, upsertDeduct} from '@/api/insuranceDeduct';
+import {loadDeptTreeOptions, flattenDeptTree} from '@/lib/deptOptions';
+import DeptTreeSelect from '@/components/his/DeptTreeSelect.vue';
 
 const props = defineProps({
   modelValue: {type: Boolean, default: false},
   row: {type: Object, default: null},
   dicts: {type: Object, default: () => ({})},
-  deptOptions: {type: Array, default: () => []},
   inspectionOptions: {type: Array, default: () => []},
 });
 const emit = defineEmits(['update:modelValue', 'saved']);
@@ -116,7 +115,19 @@ const visible = computed({
 });
 
 const dictOptions = (type) => props.dicts[type] || [];
-const deptNameOf = (id) => props.deptOptions.find((d) => String(d.id) === String(id))?.deptName || '';
+// 科室名册仅用于提交时回填科室名快照，下拉树由 DeptTreeSelect 自取
+const deptOptions = ref([]);
+const loadDeptOptions = async () => {
+  if (deptOptions.value.length)
+    return;
+  try {
+    const tree = await loadDeptTreeOptions({scope: 'ALL', mode: 'LEAF'});
+    deptOptions.value = flattenDeptTree(tree);
+  } catch (e) {
+    console.error('加载科室失败', e);
+  }
+};
+const deptNameOf = (id) => deptOptions.value.find((d) => String(d.id) === String(id))?.deptName || '';
 
 const noticeSubmitting = ref(false);
 const detailLoading = ref(false);
@@ -130,6 +141,7 @@ const noticeForm = ref(emptyNotice());
 
 watch(visible, async (open) => {
   if (!open) return;
+  loadDeptOptions();
   noticeForm.value = emptyNotice();
   if (!props.row?.id) return;
   detailLoading.value = true;

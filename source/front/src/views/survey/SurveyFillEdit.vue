@@ -101,7 +101,7 @@ const visible = computed({
   set: (v) => emit('update:modelValue', v),
 });
 
-const fmtTime = (v) => (v ? String(v).slice(0, 16).replace('T', ' ') : '—');
+const fmtTime = (v) => (v ? String(v).slice(0, 16).replace('T', ' ') : '');
 const dimensionText = (v) => dictLabelText(props.dicts.dimension, v);
 const questionTypeText = (v) => dictLabelText(props.dicts.questionType, v);
 

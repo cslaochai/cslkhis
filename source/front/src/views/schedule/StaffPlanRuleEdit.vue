@@ -7,9 +7,8 @@
         </el-radio-group>
       </el-form-item>
       <el-form-item v-if="orgIdRequired" label="所属科室">
-        <el-select v-model="formData.orgId" filterable placeholder="选择科室" style="width: 100%">
-          <el-option v-for="o in deptOptions" :key="o.id" :label="o.name" :value="o.id"/>
-        </el-select>
+        <DeptTreeSelect v-model="formData.orgId" mode="LEAF" width="100%" placeholder="选择科室"/>
+
       </el-form-item>
       <el-form-item label="班次">
         <el-select v-model="formData.shiftId" clearable placeholder="留空 = 该单元全部班次共用" style="width: 100%">
@@ -62,8 +61,8 @@
 import {computed, reactive, ref, watch} from 'vue'
 import {ElMessage} from 'element-plus'
 import {staffPlanRuleUpsert} from '@/api/staffPlanRule'
-import {getDepartmentSelectList} from '@/api/system'
 import {getShiftSelectList} from '@/api/appoint'
+import DeptTreeSelect from '@/components/his/DeptTreeSelect.vue'
 import {ORG_UNIT_TYPE_HOSPITAL, ORG_UNIT_TYPE_OPTIONS} from '@/lib/staffSchedule'
 import {shiftOptionLabel, STAFF_TYPE_OPTIONS} from '@/lib/scheduleShift'
 
@@ -87,7 +86,6 @@ const visible = computed({
 
 const submitLoading = ref(false)
 const formRef = ref(null)
-const deptOptions = ref([])
 const shiftOptions = ref([])
 const formData = reactive({
   id: null, orgType: ORG_UNIT_TYPE_HOSPITAL, orgId: null, shiftId: null, staffType: 2,
@@ -121,11 +119,7 @@ let optionsLoaded = false
 const ensureOptions = async () => {
   if (optionsLoaded) return
   try {
-    const [dRes, sRes] = await Promise.all([
-      getDepartmentSelectList({}),
-      getShiftSelectList({status: 1, useScope: SHIFT_USE_SCOPE_GENERAL}),
-    ])
-    deptOptions.value = (dRes?.data || []).map((d) => ({id: d.id ?? d.deptId, name: d.deptName ?? d.name}))
+    const sRes = await getShiftSelectList({status: 1, useScope: SHIFT_USE_SCOPE_GENERAL})
     shiftOptions.value = (sRes?.data || []).map((s) => ({id: s.id, shiftName: s.shiftName, useScope: s.useScope}))
     optionsLoaded = true
   } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{

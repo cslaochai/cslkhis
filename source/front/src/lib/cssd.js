@@ -8,4 +8,4 @@ export const cssdStatusTag = (v) => ({
   6: 'info'
 }[v] || 'info');
 /** CSSD 流转时间文本（空值出 —） */
-export const fmtTime = (v) => (v ? String(v).slice(0, 19).replace('T', ' ') : '—');
+export const fmtTime = (v) => (v ? String(v).slice(0, 19).replace('T', ' ') : '');

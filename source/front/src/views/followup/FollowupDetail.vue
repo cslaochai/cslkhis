@@ -9,10 +9,10 @@
         <el-input :model-value="`${detail.patientName || ''} ${detail.patientNo || ''}`"/>
       </el-form-item>
       <el-form-item label="联系电话">
-        <el-input :model-value="detail.phoneMasked || '—'"/>
+        <el-input :model-value="detail.phoneMasked || ''"/>
       </el-form-item>
       <el-form-item label="出院科室">
-        <el-input :model-value="detail.deptName || '—'"/>
+        <el-input :model-value="detail.deptName || ''"/>
       </el-form-item>
       <el-form-item label="随访类型">
         <el-input :model-value="typeText(detail.followupType)"/>
@@ -24,7 +24,7 @@
         <el-input :model-value="statusText(detail.followupStatus)"/>
       </el-form-item>
       <el-form-item label="诊断">
-        <el-input :model-value="detail.diagnosis || '—'"/>
+        <el-input :model-value="detail.diagnosis || ''"/>
       </el-form-item>
       <el-form-item label="随访内容">
         <el-input :model-value="detail.followupContent" :rows="3" type="textarea"/>

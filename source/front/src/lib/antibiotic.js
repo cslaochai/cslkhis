@@ -46,18 +46,18 @@ export const INCISION_PROBLEM = {
 }
 
 export function antibioticLevelText(level) {
-  return ANTIBIOTIC_LEVEL[level] ?? (level === null || level === undefined ? '—' : `未知(${level})`)
+  return ANTIBIOTIC_LEVEL[level] ?? (level === null || level === undefined ? '' : `未知(${level})`)
 }
 
 export function authStatusText(status) {
-  return ANTIBIOTIC_AUTH_STATUS[status] ?? (status === null || status === undefined ? '—' : `未知(${status})`)
+  return ANTIBIOTIC_AUTH_STATUS[status] ?? (status === null || status === undefined ? '' : `未知(${status})`)
 }
 
 export function timingText(timing) {
-  return ANTIBIOTIC_TIMING[timing] ?? (timing === null || timing === undefined ? '—' : `未知(${timing})`)
+  return ANTIBIOTIC_TIMING[timing] ?? (timing === null || timing === undefined ? '' : `未知(${timing})`)
 }
 
 export function incisionProblemText(codes) {
-  if (!codes) return '—'
+  if (!codes) return ''
   return String(codes).split(',').map(c => INCISION_PROBLEM[c.trim()] || c.trim()).join('、')
 }

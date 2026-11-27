@@ -787,22 +787,24 @@ public class InpatientServiceImpl extends ServiceImpl<BizInpatientSummaryMapper,
             throw new BusinessException("当前账号未绑定科室，请在系统管理中维护所属科室或直接指定科室后查看床位图");
         }
         result.setDeptId(deptId);
+        // 选中父科室时按子树聚合：床位/病区都落在「自身 + 后代」科室集合内
+        Set<Long> deptIds = deptScopeService.descendantDeptIds(deptId);
 
-        // 2) 病区收口：病区必须属于已定科室，否则视为越界（跨科窥探）
+        // 2) 病区收口：病区必须落在已确定科室的子树内，否则视为越界（跨科窥探）
         Long wardId = query.getWardId();
         if (wardId != null) {
             BedMapVO.WardOption owner = bedMapMapper.selectWardOwner(wardId);
             if (owner == null) {
                 throw new BusinessException("病区不存在");
             }
-            if (!deptId.equals(owner.getDeptId())) {
+            if (!deptIds.contains(owner.getDeptId())) {
                 throw new BusinessException("该病区不属于当前科室，无法查看");
             }
             result.setWardId(wardId);
             result.setWardName(owner.getWardName());
         }
 
-        List<BedMapVO.BedCard> beds = bedMapMapper.selectBedCards(deptId, wardId);
+        List<BedMapVO.BedCard> beds = bedMapMapper.selectBedCards(deptIds, wardId);
         for (BedMapVO.BedCard bed : beds) {
             bed.setBedStatusText(BedStatusEnum.getLabel(bed.getBedStatus()));
             bed.setNursingLevelText(bed.getNursingLevel() == null
@@ -814,7 +816,7 @@ public class InpatientServiceImpl extends ServiceImpl<BizInpatientSummaryMapper,
         }
         result.setSummary(summarize(beds));
         result.setDeptOptions(resolveDeptOptions(deptId, result.getDeptName()));
-        result.setWardOptions(bedMapMapper.selectWardOptions(deptId));
+        result.setWardOptions(bedMapMapper.selectWardOptions(deptIds));
         return result;
     }
 

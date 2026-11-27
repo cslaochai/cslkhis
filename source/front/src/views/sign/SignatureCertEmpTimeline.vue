@@ -1,5 +1,5 @@
 <template>
-  <el-dialog v-model="visible" :title="`证书操作履历 · ${empName || ''}`" width="740px" @open="load">
+  <el-dialog v-model="visible" :title="`该员工证书记录 · ${empName || ''}`" width="740px" @open="load">
     <div v-loading="loading" class="max-h-[60vh] overflow-auto pr-1">
       <el-empty v-if="!loading && items.length === 0" description="该员工暂无证书申请、回填或吊销记录"/>
       <el-timeline v-else>

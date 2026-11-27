@@ -12,15 +12,7 @@
           />
         </el-form-item>
         <el-form-item label="所属科室">
-          <el-tree-select
-              v-model="searchForm.deptId"
-              :data="deptList"
-              :props="{ label: 'deptName', value: 'id', children: 'children' }"
-              check-strictly
-              class="!w-48"
-              clearable
-              placeholder="请选择科室"
-          />
+          <DeptTreeSelect v-model="searchForm.deptId" mode="ORG" class="!w-48" placeholder="请选择科室"/>
         </el-form-item>
         <el-form-item>
           <el-button :icon="Search" type="primary" @click="handleSearch">搜索</el-button>
@@ -108,7 +100,8 @@
 import {onMounted, ref} from 'vue'
 import {ElMessage, ElMessageBox} from 'element-plus'
 import {Edit, Refresh, Search, Switch, View} from '@element-plus/icons-vue'
-import {getDepartmentTree, getDictDataMapList, getEmployeeList, updateEmployee} from '@/api/system'
+import {getDictDataMapList, getEmployeeList, updateEmployee} from '@/api/system'
+import DeptTreeSelect from '@/components/his/DeptTreeSelect.vue'
 import DoctorsDetail from './DoctorsDetail.vue'
 import DoctorsEdit from './DoctorsEdit.vue'
 import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination'
@@ -131,9 +124,6 @@ const pagination = ref({
 // 两卡式列表页：表格只设最大高度，超高内部滚动（口径参照 views/system/user/UserView.vue）
 const {queryCardRef, footerRef, tableMaxHeight} = useTableMaxHeight()
 
-// 部门列表
-const deptList = ref([])
-
 // 字典数据
 const titleOptions = ref([])
 const positionOptions = ref([])
@@ -145,20 +135,8 @@ const detailId = ref('')
 
 onMounted(() => {
   loadData()
-  loadDeptList()
   loadDictData()
 })
-
-const loadDeptList = async () => {
-  try {
-    const res = await getDepartmentTree()
-    if (res.code === 200) {
-      deptList.value = res.data || []
-    }
-  } catch (error) {
-    console.error('加载部门列表失败', error)
-  }
-}
 
 const loadDictData = async () => {
   try {

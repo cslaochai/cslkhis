@@ -63,7 +63,7 @@ watch(visible, (open) => {
   if (!open) return;
   const row = props.row || {};
   Object.assign(form, {
-    packId: Number(row.id), packNo: row.packNo, nextNodeName: NEXT_NODE[row.status] || '—',
+    packId: Number(row.id), packNo: row.packNo, nextNodeName: NEXT_NODE[row.status] || '',
     operatorName: '', sterilizerNo: '', batchNo: '', result: 1, remark: '',
   });
 });

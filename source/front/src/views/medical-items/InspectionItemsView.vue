@@ -31,7 +31,7 @@
           <template #default="{row}">{{ typeMap[row.itemType] || '其他' }}</template>
         </el-table-column>
         <el-table-column label="检查部位" prop="bodyPart" width="120">
-          <template #default="{row}">{{ row.bodyPart || '-' }}</template>
+          <template #default="{row}">{{ row.bodyPart || '' }}</template>
         </el-table-column>
         <el-table-column align="right" label="价格" prop="price" width="90">
           <template #default="{row}">¥{{ row.price || 0 }}</template>

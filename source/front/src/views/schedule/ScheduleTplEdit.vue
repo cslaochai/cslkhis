@@ -4,10 +4,8 @@
     <el-form :model="tplFormData" label-position="left">
       <div class="grid grid-cols-4 gap-4">
         <el-form-item label="科室" required>
-          <el-select v-model="tplFormData.deptId" class="w-full" filterable placeholder="输入科室名称搜索"
-                     @change="handleTplDeptChange">
-            <el-option v-for="d in departments" :key="d.id" :label="d.deptName" :value="d.id"/>
-          </el-select>
+          <DeptTreeSelect v-model="tplFormData.deptId" mode="LEAF" dept-type="1" class="w-full"
+                          placeholder="输入科室名称搜索" @change="handleTplDeptChange"/>
         </el-form-item>
         <el-form-item label="岗位类别" required>
           <el-select v-model="tplFormData.staffType" class="w-full" data-testid="tpl-form-staff-type"
@@ -169,6 +167,8 @@ import {getClinicRoomListAll, getEmployeeList} from '@/api/system';
 import {shiftOptionLabel, SHIFT_SCOPE_OUTPATIENT, STAFF_TYPE_DOCTOR, STAFF_TYPE_DOCTOR_OPTIONS, staffTypeHasSource, staffTypeText} from '@/lib/scheduleShift';
 import {getTitleLabel} from '@/lib/scheduleTitle';
 import {DIAGNOSIS_TIER_LIST, tierAmount, tierDefaultOf} from '@/lib/diagnosisTier';
+import {loadDeptTreeOptions, flattenDeptTree} from '@/lib/deptOptions';
+import DeptTreeSelect from '@/components/his/DeptTreeSelect.vue';
 
 /**
  * 排班模板「新增 / 编辑」共用一个组件：后端是同一个 saveScheduleTemplate 入口，
@@ -178,7 +178,6 @@ import {DIAGNOSIS_TIER_LIST, tierAmount, tierDefaultOf} from '@/lib/diagnosisTie
 const props = defineProps({
   modelValue: {type: Boolean, default: false},
   row: {type: Object, default: null},
-  departments: {type: Array, default: () => []},
   titleMap: {type: Object, default: () => ({})},
   weekDayMap: {type: Object, default: () => ({})},
 });
@@ -193,6 +192,18 @@ const isEdit = computed(() => !!props.row?.id);
 const tplDialogTitle = computed(() => isEdit.value ? '修改模板' : '新增模板');
 
 const employees = ref([]);
+// 科室名册仅用于提交时回填科室名快照，下拉树由 DeptTreeSelect 自取
+const deptList = ref([]);
+const loadDeptList = async () => {
+  if (deptList.value.length)
+    return;
+  try {
+    const tree = await loadDeptTreeOptions({deptType: '1', mode: 'LEAF'});
+    deptList.value = flattenDeptTree(tree);
+  } catch (e) {
+    console.error('加载科室列表失败:', e);
+  }
+};
 const clinicRooms = ref([]);
 const tplSubmitLoading = ref(false);
 
@@ -454,6 +465,7 @@ const fillForm = (row) => {
 watch(visible, (open) => {
   if (!open)
     return;
+  loadDeptList();
   const row = props.row;
   if (!row) {
     resetTplForm();
@@ -494,7 +506,7 @@ const handleTplSubmit = async () => {
     ElMessage.warning('各段号源/预约池合计与总数不一致，请调整后再保存');
     return;
   }
-  const dept = props.departments.find((d) => d.id === tplFormData.value.deptId);
+  const dept = deptList.value.find((d) => String(d.id) === String(tplFormData.value.deptId));
   const room = clinicRooms.value.find((r) => r.id === tplFormData.value.roomId);
   const emp = employees.value.find((e) => e.id === tplFormData.value.doctorId);
   if (dept)

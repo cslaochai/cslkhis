@@ -38,7 +38,7 @@
 
       <div class="flex items-center gap-2 text-[12px] text-gray-400">
         <span class="inline-block w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-        自动刷新 10s · {{ lastRefresh || '-' }}
+        自动刷新 10s · {{ lastRefresh || '' }}
       </div>
       <el-button size="small" plain type="primary" @click="exportVisible = true">导出 GSP 记录</el-button>
     </div>
@@ -70,13 +70,13 @@
               <div class="flex items-end gap-3">
                 <div>
                   <span class="text-[34px] font-bold leading-9"
-                        :class="box.alarm ? 'text-red-600' : 'text-[#1269B5]'">{{ box.temp == null ? '—' : box.temp }}</span>
+                        :class="box.alarm ? 'text-red-600' : 'text-[#1269B5]'">{{ box.temp == null ? '' : box.temp }}</span>
                   <span class="text-[13px] text-gray-500 ml-0.5">℃</span>
                 </div>
                 <div class="text-[12px] text-gray-400 pb-1">冷藏药品 2~8℃</div>
                 <div class="ml-auto text-right pb-1">
                   <div class="text-[13px] text-gray-500">湿度
-                    <b :class="box.humidityAlarm ? 'text-red-600' : 'text-gray-700'">{{ box.humidity == null ? '—' : box.humidity + '%' }}</b>
+                    <b :class="box.humidityAlarm ? 'text-red-600' : 'text-gray-700'">{{ box.humidity == null ? '' : box.humidity + '%' }}</b>
                   </div>
                   <div class="text-[11px] text-gray-400 mt-0.5">参考 35~75%</div>
                   <div class="text-[13px] mt-0.5"
@@ -88,7 +88,7 @@
 
               <div class="mt-1 text-[12px] text-gray-500 flex items-center gap-3 flex-wrap">
                 <span class="truncate">{{ box.location || '未填写安装位置' }}</span>
-                <span class="text-gray-400 ml-auto">更新 {{ box.lastSeen || '—' }}</span>
+                <span class="text-gray-400 ml-auto">更新 {{ box.lastSeen || '' }}</span>
               </div>
 
               <div class="mt-1 text-[12px]" :class="box.summaryAlarm ? 'text-orange-600' : 'text-gray-500'">
@@ -159,7 +159,7 @@
               <span class="text-gray-500 cursor-pointer" @click="handleEvent(row, 2)">忽略</span>
             </span>
             <span v-else class="text-[12px] text-gray-400">
-              {{ row.handleBy || '-' }}<template v-if="row.handleRemark"> · {{ row.handleRemark }}</template>
+              {{ row.handleBy || '' }}<template v-if="row.handleRemark"> · {{ row.handleRemark }}</template>
             </span>
           </template>
         </el-table-column>
@@ -315,7 +315,7 @@ const siteState = (row) => {
         ? {text: '温度上冲中', cls: 'text-red-600 font-semibold'}
         : {text: '温度已回落', cls: 'text-green-600'};
   }
-  return {text: '—', cls: 'text-gray-400'};
+  return {text: '', cls: 'text-gray-400'};
 };
 
 const stats = computed(() => {
@@ -346,7 +346,7 @@ const num = (v) => {
 };
 const fmtNum = (v) => {
   const n = num(v);
-  return n == null ? '—' : n.toFixed(1);
+  return n == null ? '' : n.toFixed(1);
 };
 /** 时序库布尔列统一翻成"是/否"，电源这个指标直接显示成"正常/断电"更像设备面板 */
 const powerText = (box) => (box.power === '是' ? '正常' : box.power === '否' ? '断电' : '未上报');

@@ -38,7 +38,7 @@
                 class="absolute right-1 top-1 rounded bg-amber-500/90 px-1.5 py-0.5 text-[11px] text-white"
                 data-testid="exam-mock-tag">模拟</span>
           <span class="absolute inset-x-0 bottom-0 truncate bg-black/60 px-1.5 py-1 text-[11px] text-slate-100">
-            {{ img.modalityText || '未标模态' }} · {{ img.createBy || '-' }}
+            {{ img.modalityText || '未标模态' }} · {{ img.createBy || '' }}
           </span>
           <el-button v-if="canDelete" :icon="Delete" circle class="invisible absolute right-1 top-6 group-hover:visible" data-testid="exam-delete"
                      size="small" type="danger"
@@ -63,14 +63,14 @@
         <div class="w-full shrink-0 space-y-3 lg:w-80">
           <div class="rounded border border-slate-200 p-3">
             <p class="mb-2 text-sm font-bold text-slate-700">帧信息</p>
-            <p class="text-xs text-slate-600">患者：{{ current.patientName || '-' }}</p>
-            <p class="text-xs text-slate-600">项目：{{ current.itemName || '-' }}</p>
-            <p class="text-xs text-slate-600">部位/标本：{{ current.bodyPart || '-' }}</p>
+            <p class="text-xs text-slate-600">患者：{{ current.patientName || '' }}</p>
+            <p class="text-xs text-slate-600">项目：{{ current.itemName || '' }}</p>
+            <p class="text-xs text-slate-600">部位/标本：{{ current.bodyPart || '' }}</p>
             <p class="text-xs text-slate-600">模态：{{ current.modalityText || '未标' }}</p>
             <p class="text-xs text-slate-600" data-testid="exam-cur-seq">序号：第 {{ current.seq }} 帧（本单共
               {{ images.length }} 帧）</p>
             <p class="text-xs text-slate-600">来源：{{ current.sourceText }}</p>
-            <p class="text-xs text-slate-600">上传：{{ current.createBy || '-' }} {{ current.createTime || '' }}</p>
+            <p class="text-xs text-slate-600">上传：{{ current.createBy || '' }} {{ current.createTime || '' }}</p>
             <p v-if="current.source === 2" class="mt-1 text-xs text-amber-600">
               本帧由系统生成，属演示夹具，不代表真实检查结果</p>
           </div>

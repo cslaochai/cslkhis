@@ -22,10 +22,10 @@
             <el-table-column label="路径编码" prop="pathwayCode" width="130"/>
             <el-table-column label="路径名称" min-width="180" prop="pathwayName"/>
             <el-table-column label="适用科室" width="130">
-              <template #default="{ row }">{{ row.deptName || '—' }}</template>
+              <template #default="{ row }">{{ row.deptName || '' }}</template>
             </el-table-column>
             <el-table-column label="适用病种" min-width="160" prop="diagnosis">
-              <template #default="{ row }">{{ row.diagnosis || '—' }}</template>
+              <template #default="{ row }">{{ row.diagnosis || '' }}</template>
             </el-table-column>
             <el-table-column label="版本" prop="version" width="70"/>
             <el-table-column align="right" label="总日数" prop="totalDays" width="80"/>
@@ -35,7 +35,7 @@
               </template>
             </el-table-column>
             <el-table-column label="发布人" prop="publishBy" width="90">
-              <template #default="{ row }">{{ row.publishBy || '—' }}</template>
+              <template #default="{ row }">{{ row.publishBy || '' }}</template>
             </el-table-column>
             <el-table-column fixed="right" label="操作" width="220">
               <template #default="{ row }">
@@ -134,12 +134,12 @@
                   }}</span></template>
               </el-table-column>
               <el-table-column label="科室" prop="deptName" width="120">
-                <template #default="{ row }">{{ row.deptName || '—' }}</template>
+                <template #default="{ row }">{{ row.deptName || '' }}</template>
               </el-table-column>
               <el-table-column label="入径日期" prop="enrollDate" width="105"/>
               <el-table-column align="center" label="路径日" width="90">
                 <template #default="{ row }">
-                  <span class="font-semibold text-sky-700">{{ row.currentDay ?? '—' }}</span>
+                  <span class="font-semibold text-sky-700">{{ row.currentDay ?? '' }}</span>
                   <span class="text-xs text-slate-400">/{{ row.totalDays }}</span>
                 </template>
               </el-table-column>
@@ -197,7 +197,7 @@
               <el-table-column align="right" label="退径" prop="abortCount" width="80"/>
               <el-table-column align="right" label="变异条数" prop="varianceCount" width="90"/>
               <el-table-column align="right" label="完成率" width="90">
-                <template #default="{ row }">{{ row.finishRate != null ? row.finishRate + '%' : '—' }}</template>
+                <template #default="{ row }">{{ row.finishRate != null ? row.finishRate + '%' : '' }}</template>
               </el-table-column>
             </el-table>
           </div>
@@ -526,7 +526,7 @@ const anaCards = computed(() => [
   {label: '完成', value: ana.value?.finishCount ?? 0, tone: 'text-emerald-700'},
   {label: '退径', value: ana.value?.abortCount ?? 0, tone: 'text-slate-500'},
   {label: '变异条数', value: ana.value?.varianceCount ?? 0, tone: 'text-amber-600'},
-  {label: '完成率(%)', value: ana.value?.finishRate ?? '—', tone: 'text-emerald-700'},
+  {label: '完成率(%)', value: ana.value?.finishRate ?? '', tone: 'text-emerald-700'},
 ]);
 const onTabChange = (name) => {
   if (name === 'enroll') {

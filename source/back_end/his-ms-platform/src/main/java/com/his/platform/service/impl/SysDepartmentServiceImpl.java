@@ -5,8 +5,10 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
 import com.his.common.enums.DeptNodeTypeEnum;
+import com.his.common.enums.DeptSelectModeEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.TextUtil;
+import org.apache.commons.lang3.StringUtils;
 import com.his.platform.dto.DepartmentQueryDTO;
 import com.his.platform.dto.DepartmentSelectDTO;
 import com.his.platform.dto.DepartmentUpsertDTO;
@@ -16,7 +18,7 @@ import com.his.platform.mapper.SysDepartmentMapper;
 import com.his.platform.mapper.SysEmployeeMapper;
 import com.his.platform.service.DeptScopeService;
 import com.his.platform.service.SysDepartmentService;
-import com.his.platform.vo.DepartmentSelectListVO;
+import com.his.platform.vo.DepartmentTreeSelectVO;
 import com.his.platform.vo.DepartmentVO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
@@ -58,14 +60,26 @@ public class SysDepartmentServiceImpl extends ServiceImpl<SysDepartmentMapper, S
     }
 
     @Override
-    public List<DepartmentSelectListVO> selectList(DepartmentSelectDTO selectDTO) {
-        LambdaQueryWrapper<SysDepartment> wrapper = new LambdaQueryWrapper<>();
-        wrapper.like(TextUtil.hasText(selectDTO.getDeptName()), SysDepartment::getDeptName, selectDTO.getDeptName())
-                .orderByAsc(SysDepartment::getSortOrder)
-                // 唯一二级键：排序字段大量并列，缺主键兜底时列表顺序在不同请求间会漂
-                .orderByAsc(SysDepartment::getId);
-        applyDeptTypeFilter(wrapper, selectDTO.getDeptType());
-        applyNodeTypeFilter(wrapper, selectDTO.getNodeType());
+    public List<DepartmentTreeSelectVO> selectTree(DepartmentSelectDTO selectDTO) {
+        DeptSelectModeEnum mode = DeptSelectModeEnum.fromCode(selectDTO.getMode());
+        List<SysDepartment> all = sysDepartmentMapper.selectList(
+                new LambdaQueryWrapper<SysDepartment>().eq(SysDepartment::getDelFlag, 0));
+        if (all.isEmpty()) {
+            return new ArrayList<>();
+        }
+        Map<Long, SysDepartment> byId = all.stream()
+                .collect(Collectors.toMap(SysDepartment::getId, d -> d, (a, b) -> a));
+
+        // 叶子判定必须基于全量父子关系，不受本次类型/权限过滤影响（与 retainLeaf 同一口径）
+        Set<Long> parentIds = all.stream().map(SysDepartment::getParentId)
+                .filter(Objects::nonNull).collect(Collectors.toSet());
+
+        // 类型过滤命中的业务候选；祖先链补全时不受这层过滤剔除
+        Set<Long> seedIds = all.stream()
+                .filter(d -> matchDeptType(d, selectDTO.getDeptType()))
+                .filter(d -> matchNodeType(d, selectDTO.getNodeType()))
+                .map(SysDepartment::getId)
+                .collect(Collectors.toSet());
 
         if (!isAllScope(selectDTO.getScope())) {
             Set<Long> allowed = deptScopeService.allowedDeptIds();
@@ -73,70 +87,122 @@ public class SysDepartmentServiceImpl extends ServiceImpl<SysDepartmentMapper, S
                 if (allowed.isEmpty()) {
                     return new ArrayList<>();
                 }
-                wrapper.in(SysDepartment::getId, allowed);
+                seedIds.retainAll(allowed);
             }
         }
-
-        List<SysDepartment> depts = sysDepartmentMapper.selectList(wrapper);
-        if (Boolean.TRUE.equals(selectDTO.getLeafOnly())) {
-            depts = retainLeaf(depts);
+        if (seedIds.isEmpty()) {
+            return new ArrayList<>();
         }
-        Map<Long, String> parentNameMap = buildParentNameMap(depts);
-        return depts.stream().map(d -> toSelectVO(d, parentNameMap)).collect(Collectors.toList());
+
+        // 回溯补全授权/命中节点的祖先链：祖先可见、仅作分组，不因此放开可选
+        Set<Long> visibleIds = new LinkedHashSet<>();
+        for (Long id : seedIds) {
+            collectSelfAndAncestors(id, byId, visibleIds);
+        }
+
+        Map<Long, List<SysDepartment>> childrenByParent = all.stream()
+                .filter(d -> visibleIds.contains(d.getId()))
+                .collect(Collectors.groupingBy(d -> d.getParentId() == null ? 0L : d.getParentId()));
+        childrenByParent.values().forEach(this::sortDepts);
+
+        List<SysDepartment> rootDepts = all.stream()
+                .filter(d -> visibleIds.contains(d.getId()))
+                .filter(d -> {
+                    Long pid = d.getParentId();
+                    return pid == null || pid == 0L || !visibleIds.contains(pid);
+                })
+                .collect(Collectors.toList());
+        sortDepts(rootDepts);
+        return rootDepts.stream()
+                .map(d -> toTreeVO(d, mode, parentIds, childrenByParent))
+                .collect(Collectors.toList());
+    }
+
+    private DepartmentTreeSelectVO toTreeVO(SysDepartment dept, DeptSelectModeEnum mode, Set<Long> parentIds,
+                                            Map<Long, List<SysDepartment>> childrenByParent) {
+        DepartmentTreeSelectVO vo = new DepartmentTreeSelectVO();
+        vo.setId(dept.getId());
+        vo.setDeptCode(dept.getDeptCode());
+        vo.setDeptName(dept.getDeptName());
+        vo.setDeptType(dept.getDeptType());
+        vo.setNodeType(dept.getNodeType());
+        vo.setNodeTypeText(DeptNodeTypeEnum.getLabel(dept.getNodeType()));
+        vo.setParentId(dept.getParentId());
+
+        String disabledReason = resolveDisabledReason(dept, mode, parentIds);
+        vo.setDisabled(disabledReason != null);
+        vo.setDisabledReason(disabledReason);
+
+        List<DepartmentTreeSelectVO> children = childrenByParent.getOrDefault(dept.getId(), List.of()).stream()
+                .map(c -> toTreeVO(c, mode, parentIds, childrenByParent))
+                .collect(Collectors.toList());
+        vo.setChildren(children);
+        return vo;
     }
 
     /**
-     * 科室类型过滤：{@code dept_type} 是多值列（如 {@code "1,4"}），一个值直接 FIND_IN_SET 命中；
-     * 多个值必须展开成 OR —— 把 {@code "1,2,4"} 整串喂给 FIND_IN_SET 匹配的是「这一整串」，
-     * 任何真实行都不会命中，下拉会静默变空。
+     * 返回不可选原因；返回 {@code null} 表示可选。判定顺序即提示优先级：根 → 停用 → 片区/行政 → 非业务 → 模式收窄。
      */
-    private void applyDeptTypeFilter(LambdaQueryWrapper<SysDepartment> wrapper, String deptType) {
+    private String resolveDisabledReason(SysDepartment dept, DeptSelectModeEnum mode, Set<Long> parentIds) {
+        if (dept.getParentId() == null || dept.getParentId() == 0L) {
+            return "医疗机构根节点不可选";
+        }
+        if (dept.getStatus() != null && dept.getStatus() == 0) {
+            return "科室已停用";
+        }
+        if (mode != DeptSelectModeEnum.ORG) {
+            if (DeptNodeTypeEnum.isArea(dept.getNodeType())) {
+                return "管理片区不是服务科室";
+            }
+            if (DeptNodeTypeEnum.ADMIN.getCode().equals(dept.getNodeType())) {
+                return "行政后勤科室不可选";
+            }
+            if (!DeptNodeTypeEnum.isBusinessDept(dept.getNodeType())) {
+                return "该节点不可作为业务科室";
+            }
+            if (mode == DeptSelectModeEnum.LEAF && parentIds.contains(dept.getId())) {
+                return "请选择末级科室";
+            }
+        }
+        return null;
+    }
+
+    private void collectSelfAndAncestors(Long id, Map<Long, SysDepartment> byId, Set<Long> acc) {
+        Long current = id;
+        int guard = 0;
+        while (current != null && current > 0 && acc.add(current) && guard++ < 32) {
+            SysDepartment dept = byId.get(current);
+            if (dept == null) {
+                break;
+            }
+            current = dept.getParentId();
+        }
+    }
+
+    private boolean matchDeptType(SysDepartment dept, String deptType) {
         if (!TextUtil.hasText(deptType)) {
-            return;
+            return true;
         }
-        List<String> types = Arrays.stream(deptType.split(","))
-                .map(String::trim).filter(TextUtil::hasText).distinct().collect(Collectors.toList());
-        if (types.isEmpty()) {
-            return;
-        }
-        wrapper.and(w -> {
-            for (int i = 0; i < types.size(); i++) {
-                if (i > 0) {
-                    w.or();
-                }
-                w.apply("FIND_IN_SET({0}, dept_type) > 0", types.get(i));
-            }
-        });
+        Set<String> own = Arrays.stream(StringUtils.defaultString(dept.getDeptType()).split(","))
+                .map(String::trim).filter(TextUtil::hasText).collect(Collectors.toSet());
+        return splitCsv(deptType).stream().anyMatch(own::contains);
     }
 
-    /**
-     * 节点类型过滤：单值列，但允许传逗号分隔的多个值（如排班单元要 {@code "2,3,4,6,7"}）。
-     * 与 dept_type 不同，这里不需要 FIND_IN_SET —— node_type 一个节点只有一个角色。
-     */
-    private void applyNodeTypeFilter(LambdaQueryWrapper<SysDepartment> wrapper, String nodeType) {
+    private boolean matchNodeType(SysDepartment dept, String nodeType) {
         if (!TextUtil.hasText(nodeType)) {
-            return;
+            return true;
         }
-        List<String> types = Arrays.stream(nodeType.split(","))
-                .map(String::trim).filter(TextUtil::hasText).distinct().collect(Collectors.toList());
-        if (types.isEmpty()) {
-            return;
-        }
-        wrapper.in(SysDepartment::getNodeType, types);
+        return splitCsv(nodeType).contains(StringUtils.trimToEmpty(dept.getNodeType()));
     }
 
-    /**
-     * 只留末级科室：本级不能是任何其他科室的上级。
-     * <p>父节点判断必须看全量科室（不受本次过滤条件影响），否则筛了类型后
-     * 「有下级但下级没命中类型」的节点会被误当成末级。
-     */
-    private List<SysDepartment> retainLeaf(List<SysDepartment> depts) {
-        Set<Long> parentIds = sysDepartmentMapper.selectList(new LambdaQueryWrapper<SysDepartment>()
-                        .select(SysDepartment::getParentId)).stream()
-                .map(SysDepartment::getParentId)
-                .filter(Objects::nonNull)
-                .collect(Collectors.toSet());
-        return depts.stream().filter(d -> !parentIds.contains(d.getId())).collect(Collectors.toList());
+    private List<String> splitCsv(String csv) {
+        return Arrays.stream(csv.split(",")).map(String::trim)
+                .filter(TextUtil::hasText).distinct().collect(Collectors.toList());
+    }
+
+    private void sortDepts(List<SysDepartment> depts) {
+        depts.sort(Comparator.comparing(SysDepartment::getSortOrder, Comparator.nullsLast(Comparator.naturalOrder()))
+                .thenComparing(SysDepartment::getId, Comparator.nullsLast(Comparator.naturalOrder())));
     }
 
     @Override
@@ -204,32 +270,6 @@ public class SysDepartmentServiceImpl extends ServiceImpl<SysDepartmentMapper, S
      */
     private boolean isAllScope(String scope) {
         return "ALL".equalsIgnoreCase(scope);
-    }
-
-    private DepartmentSelectListVO toSelectVO(SysDepartment dept, Map<Long, String> parentNameMap) {
-        if (dept == null) {
-            return null;
-        }
-        DepartmentSelectListVO vo = new DepartmentSelectListVO();
-        BeanUtils.copyProperties(dept, vo);
-        vo.setParentDeptName(parentNameMap.get(dept.getParentId()));
-        vo.setNodeTypeText(DeptNodeTypeEnum.getLabel(dept.getNodeType()));
-        return vo;
-    }
-
-    /**
-     * 一次性查出所有涉及的父级科室名称，避免 N+1。
-     */
-    private Map<Long, String> buildParentNameMap(List<SysDepartment> depts) {
-        Set<Long> parentIds = depts.stream()
-                .map(SysDepartment::getParentId)
-                .filter(id -> id != null && id != 0L)
-                .collect(Collectors.toSet());
-        if (parentIds.isEmpty()) {
-            return new HashMap<>();
-        }
-        List<SysDepartment> parents = sysDepartmentMapper.selectBatchIds(parentIds);
-        return parents.stream().collect(Collectors.toMap(SysDepartment::getId, SysDepartment::getDeptName, (a, b) -> a));
     }
 
     private DepartmentVO toVO(SysDepartment dept) {

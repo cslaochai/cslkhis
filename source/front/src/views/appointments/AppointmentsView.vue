@@ -237,7 +237,7 @@
                                 data-testid="desk-expert-badge"
                                 title="专家号">专家</span>
                         </p>
-                        <p class="text-xs text-slate-400">{{ col.sub || '—' }}</p>
+                        <p class="text-xs text-slate-400">{{ col.sub || '' }}</p>
                         <p :class="deskAvailClass(dayDoctorSchedules(col.doctorId))"
                            class="text-xs font-medium" data-testid="desk-doctor-avail">
                           总 {{ deskTotal(dayDoctorSchedules(col.doctorId)) }} ·
@@ -260,7 +260,7 @@
                                 data-testid="desk-expert-badge"
                                 title="专家号">专家</span>
                         </p>
-                        <p class="text-[11px] text-slate-400">{{ row.deptName || '—' }}</p>
+                        <p class="text-[11px] text-slate-400">{{ row.deptName || '' }}</p>
                         <p class="mt-0.5 text-[11px] leading-4" data-testid="desk-row-stat">
                           <span class="text-blue-600">已挂 {{ weekRowStat(row.doctorId).regs }}</span>
                           <span class="text-slate-300"> / </span>
@@ -495,14 +495,14 @@
             <el-table v-loading="loading" :data="appointments" style="width: 100%">
               <el-table-column label="就诊号" width="200">
                 <template #default="{ row }">
-                  <span class="font-mono text-sm text-slate-600">{{ row.registNo || '-' }}</span>
+                  <span class="font-mono text-sm text-slate-600">{{ row.registNo || '' }}</span>
                 </template>
               </el-table-column>
               <el-table-column label="患者姓名" prop="patientName" width="120"/>
               <el-table-column label="患者编号" prop="patientNo" width="200"/>
               <el-table-column label="就诊日期" width="110">
                 <template #default="{ row }">
-                  <span class="font-mono text-xs text-slate-600">{{ row.visitDate || '-' }}</span>
+                  <span class="font-mono text-xs text-slate-600">{{ row.visitDate || '' }}</span>
                 </template>
               </el-table-column>
               <el-table-column label="科室" prop="deptName" width="120"/>
@@ -652,7 +652,8 @@ import {getBillDetailById} from '@/api/settlementBill';
 import {patientAgeText, patientGenderText} from '@/lib/patientGender';
 import PatientSelect from '@/components/his/PatientSelect.vue';
 import QrPayDialog from '@/components/his/QrPayDialog.vue';
-import {getDepartmentSelectList, getDictDataList, getEmployeeList} from '@/api/system';
+import {getDictDataList, getEmployeeList} from '@/api/system';
+import {loadDeptTreeOptions, flattenDeptTree} from '@/lib/deptOptions';
 import {DICT_TYPE} from '@/lib/dict-cache';
 import {VISIT_TYPE} from '@/lib/dict';
 import {REGIST_TYPE, revisitTypeOf, statusOf} from '@/lib/statusColor';
@@ -1021,8 +1022,8 @@ const loadDepartments = async () => {
     // 不传 scope → 默认按当前人过滤：挂号员只看到被授权的挂号科室。
     // 门诊部 / 管理员这类不限权用户天然拿到全部科室，不需要在这里做角色判断。
     // nodeType=2,7：临床科室 + 体检类「其他」节点；片区/医技/药剂/行政后勤不是挂号科室，靠它挡死。
-    const res = await getDepartmentSelectList({deptType: 1, nodeType: '2,7'});
-    departments.value = res.data || [];
+    const tree = await loadDeptTreeOptions({deptType: '1', nodeType: '2,7', mode: 'LEAF'});
+    departments.value = flattenDeptTree(tree);
   } catch (error) {
     console.error('加载科室列表失败:', error);
   }
@@ -1983,10 +1984,10 @@ const sourceLockReason = (r) => {
 const deskPatientMeta = (r) => {
   const parts = [];
   const g = patientGenderText(r?.gender);
-  if (g !== '—')
+  if (g)
     parts.push(g);
   const a = patientAgeText(r?.age);
-  if (a !== '—')
+  if (a)
     parts.push(a);
   return parts.join(' ');
 };

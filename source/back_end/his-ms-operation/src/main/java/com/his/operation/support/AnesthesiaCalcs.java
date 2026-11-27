@@ -75,7 +75,7 @@ public final class AnesthesiaCalcs {
     /** 时长文案（分钟 → "1 小时 20 分钟"） */
     public static String durationText(Long minutes) {
         if (minutes == null) {
-            return "—";
+            return "";
         }
         if (minutes < 60) {
             return minutes + " 分钟";

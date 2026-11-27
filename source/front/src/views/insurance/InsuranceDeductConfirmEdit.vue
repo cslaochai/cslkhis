@@ -6,10 +6,8 @@
               type="info"/>
     <el-form :model="confirmForm" label-width="110px">
       <el-form-item label="责任科室" required>
-        <el-select v-model="confirmForm.liableDeptId" data-testid="deduct-confirm-dept" filterable style="width: 100%"
-                   @change="onConfirmDept">
-          <el-option v-for="d in deptOptions" :key="d.id" :label="d.deptName" :value="String(d.id)"/>
-        </el-select>
+        <DeptTreeSelect v-model="confirmForm.liableDeptId" mode="LEAF" scope="ALL" data-testid="deduct-confirm-dept"
+                        class="!w-full" @change="onConfirmDept"/>
       </el-form-item>
       <el-form-item label="责任人">
         <el-input v-model="confirmForm.liableEmpName" placeholder="个人承担或共担时要写到人"/>
@@ -52,12 +50,13 @@ import {computed, reactive, ref, watch} from 'vue';
 import {ElMessage} from 'element-plus';
 import {DICT_TYPE} from '@/lib/dict-cache';
 import {confirmDeduct} from '@/api/insuranceDeduct';
+import {loadDeptTreeOptions, flattenDeptTree} from '@/lib/deptOptions';
+import DeptTreeSelect from '@/components/his/DeptTreeSelect.vue';
 
 const props = defineProps({
   modelValue: {type: Boolean, default: false},
   row: {type: Object, default: null},
   dicts: {type: Object, default: () => ({})},
-  deptOptions: {type: Array, default: () => []},
   money: {type: Function, required: true},
 });
 const emit = defineEmits(['update:modelValue', 'saved']);
@@ -68,7 +67,19 @@ const visible = computed({
 });
 
 const dictOptions = (type) => props.dicts[type] || [];
-const deptNameOf = (id) => props.deptOptions.find((d) => String(d.id) === String(id))?.deptName || '';
+// 科室名册仅用于提交时回填科室名快照，下拉树由 DeptTreeSelect 自取
+const deptOptions = ref([]);
+const loadDeptOptions = async () => {
+  if (deptOptions.value.length)
+    return;
+  try {
+    const tree = await loadDeptTreeOptions({scope: 'ALL', mode: 'LEAF'});
+    deptOptions.value = flattenDeptTree(tree);
+  } catch (e) {
+    console.error('加载科室失败', e);
+  }
+};
+const deptNameOf = (id) => deptOptions.value.find((d) => String(d.id) === String(id))?.deptName || '';
 
 const confirmSubmitting = ref(false);
 const confirmForm = reactive({
@@ -78,6 +89,7 @@ const confirmForm = reactive({
 
 watch(visible, (open) => {
   if (!open) return;
+  loadDeptOptions();
   const row = props.row || {};
   Object.assign(confirmForm, {
     id: row.id, deductNo: row.deductNo, deductAmount: Number(row.deductAmount || 0),

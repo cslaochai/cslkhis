@@ -17,22 +17,22 @@
             <div><p class="text-slate-400">患者</p>
               <p class="font-medium text-slate-800">{{ drawerRow.patientName }}（{{ drawerRow.patientNo }}）</p></div>
             <div><p class="text-slate-400">性别 / 年龄</p>
-              <p class="text-slate-700">{{ patientGenderText(drawerRow.gender) }} / {{ drawerRow.age ?? '-' }} 岁</p>
+              <p class="text-slate-700">{{ patientGenderText(drawerRow.gender) }} / {{ drawerRow.age ?? '' }} 岁</p>
             </div>
             <div><p class="text-slate-400">号别</p>
               <p class="text-slate-700">
-                {{ drawerRow.registType != null ? statusOf(REGIST_TYPE, drawerRow.registType).label : '-' }}</p></div>
+                {{ drawerRow.registType != null ? statusOf(REGIST_TYPE, drawerRow.registType).label : '' }}</p></div>
             <div><p class="text-slate-400">就诊日期</p>
-              <p class="text-slate-700">{{ drawerRow.visitDate || '-' }}</p></div>
+              <p class="text-slate-700">{{ drawerRow.visitDate || '' }}</p></div>
             <div><p class="text-slate-400">挂号时间</p>
               <p class="text-slate-700">{{ fmt(drawerRow.registTime) }}</p></div>
             <div><p class="text-slate-400">科室 / 医生</p>
               <p class="text-slate-700">{{ drawerRow.deptName }} / {{ drawerRow.doctorName }}</p></div>
             <div><p class="text-slate-400">来源 / 结算</p>
               <p class="text-slate-700">
-                {{ drawerRow.registSource != null ? statusOf(REGIST_SOURCE, drawerRow.registSource).label : '-' }} /
+                {{ drawerRow.registSource != null ? statusOf(REGIST_SOURCE, drawerRow.registSource).label : '' }} /
                 {{
-                  drawerRow.settlementType != null ? statusOf(SETTLEMENT_TYPE, drawerRow.settlementType).label : '-'
+                  drawerRow.settlementType != null ? statusOf(SETTLEMENT_TYPE, drawerRow.settlementType).label : ''
                 }}
               </p></div>
             <div><p class="text-slate-400">就诊类型</p>
@@ -53,7 +53,7 @@
           <div v-if="drawerRow.queueId" class="grid grid-cols-4 gap-x-4 gap-y-2 text-xs">
             <div><p class="text-slate-400">排队号 / 序号</p>
               <p class="font-mono text-slate-800">{{ shortQueueNo(drawerRow.queueNo) }} /
-                {{ drawerRow.sequenceNo ?? '-' }}</p></div>
+                {{ drawerRow.sequenceNo ?? '' }}</p></div>
             <div><p class="text-slate-400">签到到达</p>
               <p class="text-slate-700">{{ fmt(drawerRow.arriveTime) }}</p></div>
             <div><p class="text-slate-400">叫号</p>
@@ -82,23 +82,23 @@
           <div v-if="record()" class="space-y-2 text-xs">
             <div class="grid grid-cols-3 gap-x-4 gap-y-2">
               <div><p class="text-slate-400">主诉</p>
-                <p class="whitespace-pre-wrap text-slate-700">{{ record().chiefComplaint || '-' }}</p></div>
+                <p class="whitespace-pre-wrap text-slate-700">{{ record().chiefComplaint || '' }}</p></div>
               <div><p class="text-slate-400">现病史</p>
-                <p class="whitespace-pre-wrap text-slate-700">{{ record().presentIllness || '-' }}</p></div>
+                <p class="whitespace-pre-wrap text-slate-700">{{ record().presentIllness || '' }}</p></div>
               <div><p class="text-slate-400">既往史</p>
-                <p class="whitespace-pre-wrap text-slate-700">{{ record().pastHistory || '-' }}</p></div>
+                <p class="whitespace-pre-wrap text-slate-700">{{ record().pastHistory || '' }}</p></div>
               <div><p class="text-slate-400">体格检查</p>
-                <p class="whitespace-pre-wrap text-slate-700">{{ record().physicalExamination || '-' }}</p></div>
+                <p class="whitespace-pre-wrap text-slate-700">{{ record().physicalExamination || '' }}</p></div>
               <div><p class="text-slate-400">初步诊断</p>
-                <p class="whitespace-pre-wrap text-slate-700">{{ record().diagnosis || '-' }}</p></div>
+                <p class="whitespace-pre-wrap text-slate-700">{{ record().diagnosis || '' }}</p></div>
               <div><p class="text-slate-400">处理意见</p>
                 <p class="whitespace-pre-wrap text-slate-700">{{
-                    record().treatmentPlan || record().advice || '-'
+                    record().treatmentPlan || record().advice || ''
                   }}</p></div>
             </div>
             <div class="flex flex-wrap gap-x-4 gap-y-1 border-t border-slate-100 pt-2 text-slate-500">
-              <span>病历号 <b class="font-mono text-slate-700">{{ record().recordNo || '-' }}</b></span>
-              <span>状态 <b class="text-slate-700">{{ record().recordStatus ?? '-' }}</b></span>
+              <span>病历号 <b class="font-mono text-slate-700">{{ record().recordNo || '' }}</b></span>
+              <span>状态 <b class="text-slate-700">{{ record().recordStatus ?? '' }}</b></span>
               <span>书写 <b class="text-slate-700">{{ fmt(record().createTime) }}</b></span>
               <span>提交 <b class="text-slate-700">{{ fmt(record().submitTime) }}</b></span>
             </div>

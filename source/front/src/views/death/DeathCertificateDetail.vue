@@ -7,14 +7,14 @@
         }}
       </el-form-item>
       <el-form-item label="住院号">{{ dv.admissionNo }}（{{ dv.patientName }} / {{ patientGenderText(dv.gender) }} /
-        {{ dv.age ?? '—' }}岁）
+        {{ dv.age ?? '' }}岁）
       </el-form-item>
-      <el-form-item label="一般项目">{{ dv.nation || '—' }} · {{ dv.occupation || '—' }} · 出生
-        {{ fmtDay(dv.birthDate) }} · 身份证 {{ dv.idCard || '—' }}
+      <el-form-item label="一般项目">{{ dv.nation || '' }} · {{ dv.occupation || '' }} · 出生
+        {{ fmtDay(dv.birthDate) }} · 身份证 {{ dv.idCard || '' }}
       </el-form-item>
       <el-form-item label="死亡时间">{{ fmt(dv.deathTime) }}</el-form-item>
       <el-form-item label="死亡地点">{{ placeText(dv.deathPlace) }} {{ dv.deathDeptName || '' }}
-        {{ dv.deathWardName || '' }} 床号 {{ dv.deathBedNo || '—' }}
+        {{ dv.deathWardName || '' }} 床号 {{ dv.deathBedNo || '' }}
       </el-form-item>
       <el-form-item label="死亡诊断">{{ dv.clinicalDiagnosis }}</el-form-item>
       <el-form-item label="根本死因">{{ dv.underlyingIcdCode }} {{ dv.underlyingIcdName }}</el-form-item>
@@ -33,15 +33,15 @@
           <div v-if="!dvOther.length" class="text-slate-400">无</div>
         </div>
       </el-form-item>
-      <el-form-item label="近亲属">{{ dv.relativeName || '—' }} {{ dv.relativeRelation || '' }}
+      <el-form-item label="近亲属">{{ dv.relativeName || '' }} {{ dv.relativeRelation || '' }}
         {{ dv.relativePhone || '' }}
       </el-form-item>
-      <el-form-item label="填表/审核">{{ dv.physicianName }} {{ fmt(dv.fillTime) }} ／ {{ dv.reviewerName || '—' }}
+      <el-form-item label="填表/审核">{{ dv.physicianName }} {{ fmt(dv.fillTime) }} ／ {{ dv.reviewerName || '' }}
         {{ fmt(dv.reviewTime) }}
       </el-form-item>
       <el-form-item v-if="dv.reviewOpinion" label="审核意见">{{ dv.reviewOpinion }}</el-form-item>
       <el-form-item label="签发/打印">{{ fmt(dv.issueTime) }} ／ {{ dv.printCount ?? 0 }} 次（{{
-          dv.printerName || '—'
+          dv.printerName || ''
         }}）
       </el-form-item>
       <el-form-item label="上报时限">{{ fmt(dv.reportDeadline) }} · 上报于 {{ fmt(dv.reportTime) }}</el-form-item>

@@ -9,7 +9,7 @@
         <el-descriptions-item label="麻醉">{{ detail.anesthesiaMethodText }}</el-descriptions-item>
         <el-descriptions-item label="状态">{{ detail.statusText }}</el-descriptions-item>
         <el-descriptions-item label="Hp">{{ detail.hpResultText }}</el-descriptions-item>
-        <el-descriptions-item label="Boston 评分">{{ detail.bowelPrepScore ?? '-' }}</el-descriptions-item>
+        <el-descriptions-item label="Boston 评分">{{ detail.bowelPrepScore ?? '' }}</el-descriptions-item>
         <el-descriptions-item label="活检">
           {{ Number(detail.biopsyFlag) === 1 ? `${detail.biopsyPart}（${detail.biopsyCount} 块）` : '无' }}
         </el-descriptions-item>
@@ -17,11 +17,11 @@
             detail.pathologyOrderNo
           }}
         </el-descriptions-item>
-        <el-descriptions-item :span="2" label="内镜所见">{{ detail.findings || '-' }}</el-descriptions-item>
+        <el-descriptions-item :span="2" label="内镜所见">{{ detail.findings || '' }}</el-descriptions-item>
         <el-descriptions-item :span="2" label="内镜诊断">{{ detail.diagnosis || '未出' }}</el-descriptions-item>
-        <el-descriptions-item :span="2" label="建议">{{ detail.suggestion || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="报告医师">{{ detail.reportBy || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="审核医师">{{ detail.auditBy || '-' }}</el-descriptions-item>
+        <el-descriptions-item :span="2" label="建议">{{ detail.suggestion || '' }}</el-descriptions-item>
+        <el-descriptions-item label="报告医师">{{ detail.reportBy || '' }}</el-descriptions-item>
+        <el-descriptions-item label="审核医师">{{ detail.auditBy || '' }}</el-descriptions-item>
       </el-descriptions>
     </div>
   </el-dialog>

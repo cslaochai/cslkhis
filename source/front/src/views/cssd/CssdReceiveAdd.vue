@@ -15,7 +15,7 @@
         <el-table :data="packItemsPreview" border max-height="260" size="small" style="width: 420px">
           <el-table-column label="名称" min-width="150" prop="itemName"/>
           <el-table-column label="规格" prop="spec" width="120">
-            <template #default="{ row }">{{ row.spec || '—' }}</template>
+            <template #default="{ row }">{{ row.spec || '' }}</template>
           </el-table-column>
           <el-table-column align="right" label="基数" width="90">
             <template #default="{ row }">{{ row.quantity }}{{ row.unit }}</template>
@@ -23,10 +23,9 @@
         </el-table>
       </el-form-item>
       <el-form-item label="申领科室">
-        <el-select v-model="form.deptId" :fit-input-width="false" clearable filterable
-                   placeholder="请选择科室" style="width: 280px" @change="onReceiveDeptChange">
-          <el-option v-for="d in deptOptions" :key="d.id" :label="d.deptName" :value="d.id"/>
-        </el-select>
+        <DeptTreeSelect v-model="form.deptId" mode="LEAF" width="280px" placeholder="请选择科室"
+                        @change="onReceiveDeptChange"/>
+
       </el-form-item>
       <el-form-item label="灭菌方式" required>
         <el-select v-model="form.sterilizeMethod" :fit-input-width="false" style="width: 280px">
@@ -48,7 +47,8 @@
 import {computed, reactive, ref, watch} from 'vue';
 import {ElMessage} from 'element-plus';
 import {cssdReceive, cssdTemplateSelectList, getCssdTemplateDetail} from '@/api/cssd';
-import {getDepartmentSelectList} from '@/api/system';
+import {loadDeptTreeOptions, flattenDeptTree} from '@/lib/deptOptions';
+import DeptTreeSelect from '@/components/his/DeptTreeSelect.vue';
 
 const props = defineProps({
   modelValue: {type: Boolean, default: false},
@@ -72,9 +72,8 @@ const loadDepts = async () => {
   if (deptOptions.value.length)
     return;
   try {
-    const res = await getDepartmentSelectList({});
-    if (res.code === 200)
-      deptOptions.value = res.data || [];
+    const tree = await loadDeptTreeOptions({mode: 'LEAF'});
+    deptOptions.value = flattenDeptTree(tree);
   } catch (e) {
     console.error('加载科室失败', e);
   }

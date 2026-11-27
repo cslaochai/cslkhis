@@ -424,7 +424,7 @@ const isRevisit = computed(() => Number(newAppointment.value.visitType) === 2);
  * 所以科室 / 日期 / 号源 / 时段整块都不填 —— 强行让人选号源，等于把一次就诊拆成两个号重复收费。
  */
 const isSameDayReturn = computed(() => isRevisit.value && revisitNeedsNoSchedule(newAppointment.value.revisitSource));
-const revisitRecordLabel = (r) => `${r.visitDate || '日期未知'} ${r.deptName || '-'} / ${r.doctorName || '-'}${r.diagnosisName ? ` | ${r.diagnosisName}` : ''}`;
+const revisitRecordLabel = (r) => `${r.visitDate || '日期未知'} ${r.deptName || ''} / ${r.doctorName || ''}${r.diagnosisName ? ` | ${r.diagnosisName}` : ''}`;
 const loadRevisitRecords = async () => {
   const patientId = newAppointment.value.patientId;
   if (!patientId)

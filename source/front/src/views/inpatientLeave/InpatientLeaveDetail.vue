@@ -18,7 +18,7 @@
           fmt(dv.expectedReturnTime)
         }}
       </el-form-item>
-      <el-form-item label="申请人">{{ dv.applyBy || '—' }} · {{ fmt(dv.applyTime) }}</el-form-item>
+      <el-form-item label="申请人">{{ dv.applyBy || '' }} · {{ fmt(dv.applyTime) }}</el-form-item>
       <el-form-item v-if="dv.doctorAdvice" label="医师意见"><span data-testid="lv-detail-advice">{{
           dv.doctorAdvice
         }}</span></el-form-item>
@@ -39,7 +39,7 @@
       </el-form-item>
       <el-form-item v-if="dv.overdueContactResult" label="超期处置">
         <div data-testid="lv-detail-contact">{{ contactText(dv.overdueContactResult) }} ·
-          上报：{{ reportText(dv.reportTo) }} · {{ dv.overdueContactBy || '—' }} {{ fmt(dv.overdueContactTime) }}
+          上报：{{ reportText(dv.reportTo) }} · {{ dv.overdueContactBy || '' }} {{ fmt(dv.overdueContactTime) }}
           <div class="text-xs text-slate-500">{{ dv.overdueContactNote || '' }}</div>
         </div>
       </el-form-item>
@@ -84,7 +84,7 @@ const visible = computed({
   set: (v) => emit('update:modelValue', v),
 })
 
-const fmt = (t) => (t ? String(t).slice(0, 19) : '—')
+const fmt = (t) => (t ? String(t).slice(0, 19) : '')
 const typeText = (v) => dictLabelText(props.dictType, v)
 const statusText = (v) => dictLabelText(props.dictStatus, v)
 const relationText = (v) => dictLabelText(props.dictRelation, v)

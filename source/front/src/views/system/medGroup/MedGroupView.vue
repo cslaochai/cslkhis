@@ -13,9 +13,7 @@
             />
           </el-form-item>
           <el-form-item label="所属科室">
-            <el-select v-model="searchForm.deptId" clearable filterable placeholder="请选择科室">
-              <el-option v-for="d in deptOptions" :key="d.id" :label="d.deptName" :value="d.id"/>
-            </el-select>
+            <DeptTreeSelect v-model="searchForm.deptId" mode="LEAF" scope="ALL" placeholder="请选择科室"/>
           </el-form-item>
           <el-form-item label="状态">
             <el-select v-model="searchForm.status" clearable placeholder="请选择状态">
@@ -41,7 +39,7 @@
         <el-table-column label="医疗组编码" prop="groupCode" width="120"/>
         <el-table-column label="医疗组名称" min-width="170" prop="groupName"/>
         <el-table-column label="所属科室" min-width="130">
-          <template #default="{ row }">{{ row.deptName || '—' }}</template>
+          <template #default="{ row }">{{ row.deptName || '' }}</template>
         </el-table-column>
         <el-table-column label="主诊医师" min-width="120">
           <template #default="{ row }">
@@ -85,15 +83,16 @@
       </div>
     </el-card>
 
-    <MedGroupEdit v-model="dialogVisible" :dept-list="deptList" :row="dialogRow" @saved="loadData"/>
+    <MedGroupEdit v-model="dialogVisible" :row="dialogRow" @saved="loadData"/>
   </div>
 </template>
 
 <script lang="js" setup>
-import {computed, onMounted, ref} from 'vue'
+import {onMounted, ref} from 'vue'
 import {ElMessage, ElMessageBox} from 'element-plus'
 import {Delete, Edit, Plus, Refresh, Search} from '@element-plus/icons-vue'
-import {deleteMedGroup, getDepartmentTree, getMedGroupListPage} from '@/api/system'
+import {deleteMedGroup, getMedGroupListPage} from '@/api/system'
+import DeptTreeSelect from '@/components/his/DeptTreeSelect.vue'
 import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination'
 import {useTableMaxHeight} from '@/lib/useTableMaxHeight'
 import MedGroupEdit from '@/views/system/medGroup/MedGroupEdit.vue'
@@ -113,37 +112,12 @@ const pagination = ref({
 
 const {queryCardRef, footerRef, tableMaxHeight} = useTableMaxHeight()
 
-const deptList = ref([])
 const dialogVisible = ref(false)
 const dialogRow = ref(null)
 
-const deptOptions = computed(() => {
-  const out = []
-  const walk = (list) => {
-    for (const d of list || []) {
-      out.push({id: d.id, deptName: d.deptName})
-      if (d.children && d.children.length) walk(d.children)
-    }
-  }
-  walk(deptList.value)
-  return out
-})
-
 onMounted(() => {
   loadData()
-  loadDeptList()
 })
-
-const loadDeptList = async () => {
-  try {
-    const res = await getDepartmentTree()
-    if (res.code === 200) {
-      deptList.value = res.data || []
-    }
-  } catch (error) {
-    console.error('加载科室列表失败', error)
-  }
-}
 
 const loadData = async () => {
   loading.value = true

@@ -313,8 +313,8 @@ const dialogTitle = computed(() => (props.allowCash ? '收费' : '扫码收款')
 const cashAmount = computed(() => Number(summary.value.unpaidAmount ?? props.amount) || 0);
 const feeItems = computed(() => billDetail.value?.items || []);
 const summary = computed(() => billDetail.value || {});
-const displayBillNo = computed(() => billing.value?.billNo || props.billNo || '—');
-const displayPatientName = computed(() => billing.value?.patientName || props.patientName || '—');
+const displayBillNo = computed(() => billing.value?.billNo || props.billNo || '');
+const displayPatientName = computed(() => billing.value?.patientName || props.patientName || '');
 const displayAmount = computed(() => billing.value?.amount ?? props.amount ?? 0);
 const remainMs = computed(() => Math.max(0, countdownDeadline.value - nowTick.value));
 const qrExpired = computed(() => !isPaid.value && !!qrImage.value

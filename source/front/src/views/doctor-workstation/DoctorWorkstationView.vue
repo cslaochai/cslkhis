@@ -19,7 +19,7 @@
         <div v-if="currentCalledPatient" class="mt-2">
           <div class="flex items-end gap-2">
             <div class="call-no leading-none text-[#1269B5]">{{
-                shortQueueNo(currentCalledPatient.queueNo) || '—'
+                shortQueueNo(currentCalledPatient.queueNo) || ''
               }}
             </div>
             <div class="min-w-0 flex-1 pb-1">
@@ -1603,7 +1603,7 @@
         <div class="space-y-3">
           <div class="rounded-lg bg-blue-50 p-3">
             <div class="text-xs text-slate-500">医保类型</div>
-            <div class="text-sm font-medium text-slate-900">{{ insuranceInfo?.medicalInsuranceType || '-' }}</div>
+            <div class="text-sm font-medium text-slate-900">{{ insuranceInfo?.medicalInsuranceType || '' }}</div>
           </div>
           <div class="grid grid-cols-2 gap-2">
             <div class="rounded-lg bg-emerald-50 p-3">
@@ -2133,7 +2133,7 @@
           </el-table-column>
           <el-table-column label="原文依据" min-width="200">
             <template #default="{ row }">
-              <div class="whitespace-pre-wrap text-xs text-slate-400">{{ row.evidence || '—' }}</div>
+              <div class="whitespace-pre-wrap text-xs text-slate-400">{{ row.evidence || '' }}</div>
             </template>
           </el-table-column>
           <el-table-column fixed="right" label="操作" width="90">
@@ -2283,7 +2283,7 @@
   <el-dialog v-model="makeupReasonVisible" append-to-body destroy-on-close title="补签原因" width="520px">
     <div v-if="makeupTarget" class="mb-3 rounded bg-slate-50 px-3 py-2 text-xs text-slate-600">
       <p>对象：{{ makeupTarget.bizTypeText }} · {{ makeupTarget.bizNo }}</p>
-      <p class="mt-0.5">患者：{{ makeupTarget.patientName || '—' }} · 科室：{{ makeupTarget.deptName || '—' }}</p>
+      <p class="mt-0.5">患者：{{ makeupTarget.patientName || '' }} · 科室：{{ makeupTarget.deptName || '' }}</p>
     </div>
     <el-input v-model="makeupReason" maxlength="200" placeholder="请写明补签原因（如：结诊时证书未签发、网络中断等），将写入签名备注与审计日志"
               rows="3" show-word-limit type="textarea"/>
@@ -2536,6 +2536,8 @@ let handledSwitchAt = 0;
 let pendingSwitch = null;
 let enteredWithTarget = false;
 let urlIntent = false;
+// 从病历列表「继续书写」直达：带 registId 打开历史草稿续写，不要求患者在今日队列
+let resumeRegistId = null;
 const QUEUE_STATUS_ORDER = {3: 0, 2: 1, 4: 2, 5: 3, 6: 4};
 /** 队列行比较器：先状态优先级，同状态按到达时间，再按序号（保证排序稳定） */
 const compareQueueRow = (a, b) => {
@@ -5757,7 +5759,7 @@ const handleViewInspectionReport = async (item) => {
   }
   const record = data.record || {};
   const report = data.report || {};
-  const escapeHtml = (v) => String(v ?? '-').replace(/[&<>"]/g, (c) => ({
+  const escapeHtml = (v) => String(v ?? '').replace(/[&<>"]/g, (c) => ({
     '&': '&amp;',
     '<': '&lt;',
     '>': '&gt;',
@@ -5835,7 +5837,7 @@ const handleViewLaboratoryReport = async (item) => {
         // 一律用后端算好的 abnormalFlagText。
         // 不要用 abnormalFlag 写三目判断：未判定时它也是 0，与「正常」同值，
         // 非 1/2/3 就显示「正常」会把「不知道」当成「正常」给医生看。
-        const flagText = r.abnormalFlagText || '—';
+        const flagText = r.abnormalFlagText || '';
         const isAbnormal = flagText === '偏高' || flagText === '偏低' || flagText === '异常';
         const isUnjudged = flagText === '未判定';
         const tagClass = isAbnormal
@@ -5846,9 +5848,9 @@ const handleViewLaboratoryReport = async (item) => {
         return `
                 <tr class="${isAbnormal ? 'bg-red-50' : isUnjudged ? 'bg-amber-50' : ''}">
                   <td class="border border-slate-300 px-3 py-2">${r.laboratoryItemName}</td>
-                  <td class="border border-slate-300 px-3 py-2 ${isAbnormal ? 'text-red-600 font-bold' : ''}">${r.resultValue || '-'}</td>
-                  <td class="border border-slate-300 px-3 py-2">${r.resultUnit || '-'}</td>
-                  <td class="border border-slate-300 px-3 py-2">${r.referenceRange || '-'}</td>
+                  <td class="border border-slate-300 px-3 py-2 ${isAbnormal ? 'text-red-600 font-bold' : ''}">${r.resultValue || ''}</td>
+                  <td class="border border-slate-300 px-3 py-2">${r.resultUnit || ''}</td>
+                  <td class="border border-slate-300 px-3 py-2">${r.referenceRange || ''}</td>
                   <td class="border border-slate-300 px-3 py-2">
                     <span class="inline-block px-2 py-0.5 rounded text-xs font-medium ${tagClass}">${flagText}</span>
                     ${isUnjudged && r.judgeNote ? `<div class="mt-0.5 text-[11px] text-slate-500">${r.judgeNote}</div>` : ''}
@@ -5878,9 +5880,9 @@ const handleViewLaboratoryReport = async (item) => {
     ElMessageBox.alert(`<div class="space-y-3">
         <div class="grid grid-cols-2 gap-2 text-sm">
           <p><strong>检验项目：</strong>${detailRecord.laboratoryItemName || item.laboratoryItemName}</p>
-          <p><strong>标本类型：</strong>${detailRecord.specimenType || item.specimenType || '-'}</p>
-          <p><strong>检验目的：</strong>${detailRecord.laboratoryPurpose || item.laboratoryPurpose || '-'}</p>
-          <p><strong>临床诊断：</strong>${detailRecord.clinicalDiagnosis || item.clinicalDiagnosis || '-'}</p>
+          <p><strong>标本类型：</strong>${detailRecord.specimenType || item.specimenType || ''}</p>
+          <p><strong>检验目的：</strong>${detailRecord.laboratoryPurpose || item.laboratoryPurpose || ''}</p>
+          <p><strong>临床诊断：</strong>${detailRecord.clinicalDiagnosis || item.clinicalDiagnosis || ''}</p>
         </div>
         ${resultsHtml}
         ${diagnosisHtml}
@@ -6038,12 +6040,12 @@ const printPrescriptions = () => {
       html += `<table><thead><tr><th>药品名称</th><th>规格</th><th>数量</th><th>用法</th><th>频次</th><th>天数</th></tr></thead><tbody>`;
       p.details.forEach((d) => {
         html += `<tr>
-          <td>${d.drugName || '-'}</td>
-          <td>${d.specification || '-'}</td>
-          <td>${d.quantity || '-'} ${d.unit || ''}</td>
-          <td>${d.route || '-'}</td>
-          <td>${d.frequency || '-'}</td>
-          <td>${d.duration || '-'}</td>
+          <td>${d.drugName || ''}</td>
+          <td>${d.specification || ''}</td>
+          <td>${d.quantity || ''} ${d.unit || ''}</td>
+          <td>${d.route || ''}</td>
+          <td>${d.frequency || ''}</td>
+          <td>${d.duration || ''}</td>
         </tr>`;
       });
       html += '</tbody></table>';
@@ -6062,12 +6064,12 @@ const printPrescriptions = () => {
         html += `<table><thead><tr><th>药品名称</th><th>规格</th><th>数量</th><th>用法</th><th>频次</th><th>天数</th></tr></thead><tbody>`;
         p.details.forEach((d) => {
           html += `<tr>
-            <td>${d.drugName || '-'}</td>
-            <td>${d.specification || '-'}</td>
-            <td>${d.quantity || '-'} ${d.unit || ''}</td>
-            <td>${d.route || '-'}</td>
-            <td>${d.frequency || '-'}</td>
-            <td>${d.duration || '-'}</td>
+            <td>${d.drugName || ''}</td>
+            <td>${d.specification || ''}</td>
+            <td>${d.quantity || ''} ${d.unit || ''}</td>
+            <td>${d.route || ''}</td>
+            <td>${d.frequency || ''}</td>
+            <td>${d.duration || ''}</td>
           </tr>`;
         });
         html += '</tbody></table>';
@@ -6154,6 +6156,40 @@ const openOrderDialog = () => {
     return ElMessage.warning('请先呼叫患者');
   orderDialogVisible.value = true;
 };
+// 草稿续写直达：按 registId 取病历，用病历快照信息拼一条患者行选中并载入编辑器；
+// 历史就诊患者不在今日队列，这里不走队列匹配与「不在队列」提示。
+const maybeResumeDraft = async () => {
+  const registId = resumeRegistId;
+  if (!registId)
+    return;
+  resumeRegistId = null;
+  try {
+    const res = await getByRegistId({registId});
+    const record = res.data;
+    if (!record || !record.patientId) {
+      ElMessage.warning('未找到可续写的病历');
+      return;
+    }
+    if (Number(record.recordStatus) !== 1) {
+      ElMessage.info('该病历已提交，不能再续写；如需更正请走病历修改流程');
+      return;
+    }
+    const row = {
+      patientId: record.patientId, patientNo: record.patientNo, patientName: record.patientName,
+      registId, registNo: record.registNo || '',
+      deptId: record.deptId, deptName: record.deptName,
+      doctorId: record.doctorId, doctorName: record.doctorName,
+      gender: record.gender, age: record.age,
+      // 历史草稿不在今日队列：合成「已就诊未结诊」状态，让结诊前置闸门放行；
+      // 队列 id 为空，后端 completeVisit 对 queueId 空值已做容忍。
+      queueStatus: 4,
+    };
+    await selectPatient(row);
+    ElMessage.success('已打开待续写病历，请核对后完成提交');
+  } catch (error) {
+    console.error('续写病历加载失败:', error);
+  }
+};
 onMounted(() => {
   // 统一「带着目标患者进入」的入口。此前分成两条路（store 有患者→consumeSwitch()，
   // URL 有 patientId→直接挂起），但两者语义完全相同——这次进来是为了接某个人——
@@ -6162,6 +6198,11 @@ onMounted(() => {
   //   ② 刷新 / 直达 URL：store 从 sessionStorage 恢复，或只剩 URL 上的 patientId
   const restored = currentPatientStore.patient;
   const targetId = restored?.id || route.query.patientId;
+  if (route.query.registId) {
+    // 草稿续写直达：标记「为特定病历而来」，首屏不要自动选中队列里正在就诊的别人
+    resumeRegistId = String(route.query.registId);
+    enteredWithTarget = true;
+  }
   if (targetId) {
     pendingSwitch = {id: String(targetId), patientName: restored?.patientName || ''};
     // 标记「为某个特定患者而来」：首屏不得自动选中队列里正在就诊的别人
@@ -6178,6 +6219,7 @@ onMounted(() => {
   loadTcmDicts();
   loadDoctorStatus();
   loadData();
+  maybeResumeDraft();
   loadDiagTemplates();
   loadRxTemplates();
   loadDrugPackages();

@@ -39,8 +39,8 @@ const visible = computed({
   set: (v) => emit('update:modelValue', v),
 })
 
-const fmtTime = (t) => (t ? String(t).replace('T', ' ').slice(0, 16) : '—')
-const fmtDate = (d) => (d ? String(d).slice(0, 10) : '—')
+const fmtTime = (t) => (t ? String(t).replace('T', ' ').slice(0, 16) : '')
+const fmtDate = (d) => (d ? String(d).slice(0, 10) : '')
 
 const dailyRows = ref([])
 

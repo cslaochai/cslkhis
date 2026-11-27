@@ -22,12 +22,12 @@
           </el-tag>
         </p>
         <p v-if="simResult.simStatus === 1" class="mt-1">
-          {{ diseaseTypeText(simResult.diseaseType) }}｜基准分值 {{ simResult.baseScore ?? '—' }}｜系数
-          {{ simResult.coeff ?? '—' }}｜分值 {{ simResult.score ?? '—' }}
+          {{ diseaseTypeText(simResult.diseaseType) }}｜基准分值 {{ simResult.baseScore ?? '' }}｜系数
+          {{ simResult.coeff ?? '' }}｜分值 {{ simResult.score ?? '' }}
         </p>
         <p v-if="simResult.simStatus === 1" class="mt-1">
           点值 {{ simResult.pointValue == null ? '未下发' : simResult.pointValue }}｜预测结算金额
-          {{ simResult.settleAmount == null ? '—' : '¥' + simResult.settleAmount }}｜实际费用
+          {{ simResult.settleAmount == null ? '' : '¥' + simResult.settleAmount }}｜实际费用
           ¥{{ simResult.actualAmount }}
           ｜<span v-if="simResult.profitAmount != null" :class="profitColor(simResult.profitAmount)">
             {{ Number(simResult.profitAmount) >= 0 ? '结余 +' : '超支 ' }}{{ simResult.profitAmount }}</span>

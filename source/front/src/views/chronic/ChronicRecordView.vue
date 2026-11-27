@@ -108,7 +108,7 @@ import {cancelChronicRecord, getChronicRecordList} from '@/api/chronic'
 import {useTableMaxHeight} from '@/lib/useTableMaxHeight'
 import ChronicRecordAdd from './ChronicRecordAdd.vue'
 
-const fmtTime = (t) => (t ? String(t).replace('T', ' ').slice(0, 16) : '—')
+const fmtTime = (t) => (t ? String(t).replace('T', ' ').slice(0, 16) : '')
 
 // ---------------- 字典（建档病种字典已随弹框拆到 ChronicRecordAdd.vue 自加载） ----------------
 const confirmStatusDict = ref([])

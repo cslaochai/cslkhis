@@ -29,9 +29,7 @@
 
       <div class="grid grid-cols-2 gap-4">
         <el-form-item label="复诊科室" required>
-          <el-select v-model="form.deptId" class="w-full" filterable placeholder="选择科室" @change="loadSchedules">
-            <el-option v-for="d in deptOptions" :key="d.id" :label="d.deptName" :value="d.id"/>
-          </el-select>
+          <DeptTreeSelect v-model="form.deptId" class="w-full" dept-type="1" node-type="2,7" mode="LEAF" placeholder="选择科室" @change="loadSchedules"/>
         </el-form-item>
         <el-form-item label="复诊日期" required>
           <el-date-picker
@@ -104,7 +102,7 @@
 import {computed, onMounted, ref, watch} from 'vue';
 import {ElMessage} from 'element-plus';
 import {getAvailableSchedule, getRevisitRecordSelectList, getScheduleSlots, previewRevisitFee,} from '@/api/appoint';
-import {getDepartmentSelectList} from '@/api/system';
+import DeptTreeSelect from '@/components/his/DeptTreeSelect.vue';
 import {DICT_TYPE, loadDictDataList} from '@/lib/dict-cache';
 import {revisitNeedsNoSchedule} from '@/lib/revisitPolicy';
 
@@ -123,7 +121,6 @@ const props = defineProps({
 const emit = defineEmits();
 const recordOptions = ref([]);
 const recordLoading = ref(false);
-const deptOptions = ref([]);
 const scheduleOptions = ref([]);
 const scheduleLoading = ref(false);
 const slotRows = ref([]);
@@ -147,7 +144,7 @@ const sourceLabel = computed(() => {
   const hit = sourceDict.value.find((o) => Number(o.dictValue) === Number(props.revisitSource));
   return hit?.dictLabel || `复诊来源${props.revisitSource}`;
 });
-const recordLabel = (r) => `${r.visitDate || '日期未知'} ${r.deptName || '-'} / ${r.doctorName || '-'}${r.diagnosisName ? ` | ${r.diagnosisName}` : ''}`;
+const recordLabel = (r) => `${r.visitDate || '日期未知'} ${r.deptName || ''} / ${r.doctorName || ''}${r.diagnosisName ? ` | ${r.diagnosisName}` : ''}`;
 const slotLabel = (s) => `${s.startTime} ~ ${s.endTime}（余 ${s.availableSource}/${s.totalSource}）`;
 /** 当日回诊走的是另一条路（不占号源），本组件只服务要占号源的那两种 */
 const needsSchedule = computed(() => !revisitNeedsNoSchedule(props.revisitSource));
@@ -261,14 +258,6 @@ const runPreview = async () => {
  */
 onMounted(async () => {
   sourceDict.value = await loadDictDataList(DICT_TYPE.REVISIT_SOURCE);
-  try {
-    // deptType=1 门诊科室：复诊号挂的是门诊排班，住院科室没有号源可选
-    // 不传 scope → 后端按当前人收口：医生只看到自己被授权的科室
-    const res = await getDepartmentSelectList({deptType: 1, nodeType: '2,7'});
-    deptOptions.value = res.data || [];
-  } catch (e) {
-    console.error('加载科室列表失败:', e);
-  }
 });
 watch(() => props.modelValue, async (open) => {
   if (!open)

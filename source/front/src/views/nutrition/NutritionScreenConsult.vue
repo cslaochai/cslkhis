@@ -7,9 +7,7 @@
       </el-form-item>
       <el-form-item label="会诊科室" required>
         <div data-testid="sel-consult-dept" style="width: 100%">
-          <el-select v-model="consultForm.toDeptId" filterable placeholder="选择营养科" style="width: 100%">
-            <el-option v-for="d in depts" :key="d.id" :label="d.deptName" :value="d.id"/>
-          </el-select>
+          <DeptTreeSelect v-model="consultForm.toDeptId" mode="LEAF" width="100%" placeholder="选择营养科"/>
         </div>
       </el-form-item>
       <el-form-item label="会诊范围" required>
@@ -41,8 +39,8 @@
 <script setup>
 import { computed, reactive, ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
-import { getDepartmentSelectList } from '@/api/system'
 import { applyNutritionConsult } from '@/api/nutrition'
+import DeptTreeSelect from '@/components/his/DeptTreeSelect.vue'
 
 const props = defineProps({
   modelValue: { type: Boolean, default: false },
@@ -57,18 +55,6 @@ const visible = computed({
   set: (v) => emit('update:modelValue', v),
 })
 
-// 科室下拉只在本弹框使用，弹框打开时现取
-const depts = ref([])
-
-async function loadDepts() {
-  try {
-    const res = await getDepartmentSelectList({})
-    depts.value = res?.data || []
-  } catch (e) {
-    depts.value = []
-  }
-}
-
 const savingConsult = ref(false)
 const consultRow = ref({})
 const consultForm = reactive({toDeptId: null, consultType: 2, isUrgent: 0, reason: ''})
@@ -77,7 +63,6 @@ watch(
   () => props.modelValue,
   (v) => {
     if (!v) return
-    loadDepts()
     const row = props.row || {}
     consultRow.value = row
     Object.assign(consultForm, {

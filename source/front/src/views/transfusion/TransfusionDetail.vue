@@ -24,7 +24,7 @@
         </el-descriptions-item>
         <el-descriptions-item label="申请袋数 / 总量">
           {{ text(detail.bagCount) }} 袋 /
-          {{ detail.plannedAmount ? detail.plannedAmount + (detail.amountUnit || '') : '—' }}
+          {{ detail.plannedAmount ? detail.plannedAmount + (detail.amountUnit || '') : '' }}
           <span class="ml-2 text-slate-400">{{ text(detail.bagProgressText) }}</span>
         </el-descriptions-item>
         <el-descriptions-item label="紧急用血">{{ text(detail.isEmergencyText) }}</el-descriptions-item>
@@ -158,8 +158,8 @@ const visible = computed({
   set: (v) => emit('update:modelValue', v),
 });
 
-const fmt = (v) => (v ? String(v).replace('T', ' ') : '—');
-const text = (v) => (v === null || v === undefined || v === '' ? '—' : String(v));
+const fmt = (v) => (v ? String(v).replace('T', ' ') : '');
+const text = (v) => (v === null || v === undefined || v === '' ? '' : String(v));
 
 const loading = ref(false);
 const detail = ref(null);

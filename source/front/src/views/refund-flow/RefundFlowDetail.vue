@@ -4,14 +4,14 @@
     <div v-loading="detailLoading" class="space-y-4 text-sm">
       <div class="grid grid-cols-2 gap-3 rounded-lg border border-slate-200 p-4">
         <div><span class="text-slate-400">退费单号：</span><span
-            class="font-mono text-slate-700">{{ detail?.refundNo || '—' }}</span></div>
+            class="font-mono text-slate-700">{{ detail?.refundNo || '' }}</span></div>
         <div><span class="text-slate-400">原收费单号：</span><span
-            class="font-mono text-slate-700">{{ detail?.chargeNo || '—' }}</span></div>
+            class="font-mono text-slate-700">{{ detail?.chargeNo || '' }}</span></div>
         <div><span class="text-slate-400">患者：</span><span class="text-slate-700">{{
-            detail?.patientName || '—'
+            detail?.patientName || ''
           }}</span></div>
         <div><span class="text-slate-400">患者号：</span><span class="text-slate-700">{{
-            detail?.patientNo || '—'
+            detail?.patientNo || ''
           }}</span></div>
         <div><span class="text-slate-400">实退金额：</span><span
             class="font-semibold text-slate-800">¥{{ formatMoney(detail?.totalAmount) }}</span></div>
@@ -20,26 +20,26 @@
         <div><span class="text-slate-400">流水来源：</span><span
             class="text-slate-700">{{ dictLabelText(flowSourceOptions, detail?.flowSource) }}</span></div>
         <div><span class="text-slate-400">来源申请号：</span><span
-            class="font-mono text-slate-700">{{ detail?.applyNo || '—' }}</span></div>
+            class="font-mono text-slate-700">{{ detail?.applyNo || '' }}</span></div>
         <div><span class="text-slate-400">退费方式：</span><span
             class="text-slate-700">{{ dictLabelText(refundMethodOptions, detail?.refundMethod) }}</span></div>
         <div><span class="text-slate-400">原支付方式：</span><span
             class="text-slate-700">{{ dictLabelText(payMethodOptions, detail?.payMethod) }}</span></div>
         <div><span class="text-slate-400">渠道退费流水号：</span><span
-            class="font-mono text-slate-700">{{ detail?.channelRefundNo || '—' }}</span></div>
+            class="font-mono text-slate-700">{{ detail?.channelRefundNo || '' }}</span></div>
         <div><span class="text-slate-400">医保报盘：</span><span
             class="text-slate-700">{{ detail?.insuranceCancelled === 1 ? '已随本次退费撤销（2305）' : '不涉及' }}</span>
         </div>
         <div><span class="text-slate-400">退费人：</span><span class="text-slate-700">{{
-            detail?.refundBy || '—'
+            detail?.refundBy || ''
           }}</span></div>
         <div><span class="text-slate-400">退费时间：</span><span class="text-slate-700">{{
-            detail?.refundTime || '—'
+            detail?.refundTime || ''
           }}</span></div>
       </div>
       <div class="rounded-lg border border-slate-200 p-3">
         <span class="text-slate-400">退费原因：</span><span class="text-slate-700">{{
-          detail?.refundReason || '—'
+          detail?.refundReason || ''
         }}</span>
       </div>
       <div class="rounded-lg border border-slate-200 p-3">
@@ -47,11 +47,11 @@
         <el-table :data="detail?.details || []" border data-testid="refund-flow-detail-table" size="small">
           <el-table-column label="项目名称" min-width="180" prop="itemName" show-overflow-tooltip/>
           <el-table-column label="规格" min-width="110" prop="specification">
-            <template #default="{ row }">{{ row.specification || '—' }}</template>
+            <template #default="{ row }">{{ row.specification || '' }}</template>
           </el-table-column>
           <el-table-column align="right" label="退费数量" prop="refundQuantity" width="100"/>
           <el-table-column label="单位" prop="unit" width="70">
-            <template #default="{ row }">{{ row.unit || '—' }}</template>
+            <template #default="{ row }">{{ row.unit || '' }}</template>
           </el-table-column>
           <el-table-column align="right" label="单价" width="90">
             <template #default="{ row }">¥{{ formatMoney(row.price) }}</template>
@@ -60,7 +60,7 @@
             <template #default="{ row }">¥{{ formatMoney(row.refundAmount) }}</template>
           </el-table-column>
           <el-table-column class-name="font-mono text-xs" label="来源单号" min-width="150" prop="sourceNo">
-            <template #default="{ row }">{{ row.sourceNo || '—' }}</template>
+            <template #default="{ row }">{{ row.sourceNo || '' }}</template>
           </el-table-column>
         </el-table>
       </div>

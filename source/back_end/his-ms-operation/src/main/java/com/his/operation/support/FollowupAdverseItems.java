@@ -20,7 +20,7 @@ public final class FollowupAdverseItems {
      */
     public static String recoveryText(Integer recovery) {
         if (recovery == null) {
-            return "—";
+            return "";
         }
         AnesthesiaFollowupRecoveryEnum e = AnesthesiaFollowupRecoveryEnum.fromCode(recovery);
         return e != null ? e.getLabel() : "";

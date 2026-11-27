@@ -33,9 +33,9 @@
         <el-descriptions-item label="耗时">{{ detail.costTime }} ms</el-descriptions-item>
         <el-descriptions-item :span="2" label="URL">{{ detail.operUrl }}</el-descriptions-item>
         <el-descriptions-item :span="2" label="请求参数">
-          <pre class="log-pre">{{ detail.operParam || '-' }}</pre>
+          <pre class="log-pre">{{ detail.operParam || '' }}</pre>
         </el-descriptions-item>
-        <el-descriptions-item :span="2" label="失败原因">{{ detail.errorMsg || '-' }}</el-descriptions-item>
+        <el-descriptions-item :span="2" label="失败原因">{{ detail.errorMsg || '' }}</el-descriptions-item>
       </template>
     </el-descriptions>
   </el-dialog>

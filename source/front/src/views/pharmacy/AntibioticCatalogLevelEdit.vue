@@ -2,7 +2,7 @@
   <el-dialog v-model="visible" title="维护抗菌药物分级" width="520px">
     <el-form :model="levelForm" label-width="140px">
       <el-form-item label="药品">
-        <span>{{ levelForm.drugName }}<span class="muted">（{{ levelForm.specification || '—' }} / 发药单位：{{ levelForm.unit || '—' }}）</span></span>
+        <span>{{ levelForm.drugName }}<span class="muted">（{{ levelForm.specification || '' }} / 发药单位：{{ levelForm.unit || '' }}）</span></span>
       </el-form-item>
       <el-form-item label="抗菌药物分级" required>
         <div data-testid="level-select" style="width: 100%">

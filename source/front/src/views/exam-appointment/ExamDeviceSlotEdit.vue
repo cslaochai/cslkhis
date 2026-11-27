@@ -16,10 +16,7 @@
           </el-select>
         </el-form-item>
         <el-form-item label="所属科室">
-          <el-select v-model="form.deptId" :fit-input-width="false" clearable filterable placeholder="可空"
-                     style="width: 100%">
-            <el-option v-for="d in deptOptions" :key="d.id" :label="d.deptName" :value="Number(d.id)"/>
-          </el-select>
+          <DeptTreeSelect v-model="form.deptId" mode="LEAF" clearable placeholder="可空" style="width: 100%"/>
         </el-form-item>
         <el-form-item label="设备台账">
           <el-select v-model="form.equipmentId" :fit-input-width="false" clearable filterable
@@ -83,6 +80,8 @@ import {computed, reactive, ref, watch} from 'vue';
 import {ElMessage} from 'element-plus';
 import {examDeviceUpsert, getExamEquipmentOptions} from '@/api/examAppointment';
 import {DEVICE_STATUS} from '@/lib/examAppointment';
+import {loadDeptTreeOptions, flattenDeptTree} from '@/lib/deptOptions';
+import DeptTreeSelect from '@/components/his/DeptTreeSelect.vue';
 
 const props = defineProps({
   // v-model 控制显隐
@@ -92,7 +91,6 @@ const props = defineProps({
   // 字典与科室同时用于列表列展示，由父级加载一次后传入
   deviceTypeDict: {type: Array, default: () => []},
   deviceStatusDict: {type: Array, default: () => []},
-  deptOptions: {type: Array, default: () => []},
 });
 
 const emit = defineEmits(['update:modelValue', 'saved']);
@@ -105,6 +103,18 @@ const visible = computed({
 const saving = ref(false);
 // 设备台账是表单专用下拉，本组件自行懒加载
 const equipOptions = ref([]);
+// 科室名册仅用于提交时回填 deptName 快照，下拉树由 DeptTreeSelect 自取
+const deptOptions = ref([]);
+const loadDeptOptions = async () => {
+  if (deptOptions.value.length)
+    return;
+  try {
+    const tree = await loadDeptTreeOptions({mode: 'LEAF'});
+    deptOptions.value = flattenDeptTree(tree);
+  } catch (e) {
+    console.error('加载科室失败', e);
+  }
+};
 const form = reactive({
   id: null, deviceCode: '', deviceName: '', deviceType: 1, equipmentId: null,
   deptId: null, roomName: '', amStart: '08:00', amEnd: '12:00', pmStart: '14:30', pmEnd: '17:30',
@@ -124,6 +134,7 @@ const openDevice = async () => {
       console.error(e);
     }
   }
+  loadDeptOptions();
   const row = props.row;
   Object.assign(form, {
     id: row?.id || null, deviceCode: row?.deviceCode || '', deviceName: row?.deviceName || '',
@@ -147,7 +158,7 @@ const saveDevice = async () => {
   }
   saving.value = true;
   try {
-    const deptName = form.deptId ? (props.deptOptions.find((d) => String(d.id) === String(form.deptId))?.deptName || '') : '';
+    const deptName = form.deptId ? (deptOptions.value.find((d) => String(d.id) === String(form.deptId))?.deptName || '') : '';
     const res = await examDeviceUpsert({
       id: form.id || undefined, deviceCode: form.deviceCode.trim(), deviceName: form.deviceName.trim(),
       deviceType: form.deviceType, equipmentId: form.equipmentId || undefined,

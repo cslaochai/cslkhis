@@ -48,7 +48,7 @@
       <div v-if="form.id" class="mb-2 flex flex-wrap items-center justify-end gap-2">
         <el-tag :data-testid="`ns-cell-publish-tag-${form.id}`" :type="publishStatusTagType(form.publishStatus)"
                 effect="plain" size="small">
-          {{ form.publishStatusText || '—' }}
+          {{ form.publishStatusText || '' }}
         </el-tag>
         <p v-if="form.publishStatus === PUBLISH_ADJUSTING" class="mb-1 w-full text-xs text-amber-600">
           调班中：直接修改后点「保存」，将自动转为「已变更」并生效，无需再次审核。

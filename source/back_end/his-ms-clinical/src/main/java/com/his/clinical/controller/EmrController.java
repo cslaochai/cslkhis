@@ -60,6 +60,15 @@ public class EmrController {
     }
 
     /**
+     * 医生本人未完成病历（草稿）列表：转科/跨日后从这里回流续写昨天的草稿。
+     */
+    @Operation(summary = "本人未完成病历（草稿）列表")
+    @GetMapping("/myDrafts")
+    public Result<List<BizMedicalRecordVO>> myDrafts() {
+        return Result.success(emrService.listMyDrafts());
+    }
+
+    /**
      * 按病历主键取病历正文及其关联的处方、检查申请、检验申请。
      * 用于病历详情弹框，病历管理、病历审核、门诊日志与今日就诊均从这里展开全套内容。
      */

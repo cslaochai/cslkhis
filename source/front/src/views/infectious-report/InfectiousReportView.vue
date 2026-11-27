@@ -207,7 +207,7 @@ const ST = {PENDING: 1, AUDITED: 2, DIRECT: 3, RETURNED: 4}
 const statusTag = (s) => (Number(s) === ST.PENDING ? 'warning' : Number(s) === ST.AUDITED ? 'primary'
     : Number(s) === ST.DIRECT ? 'success' : Number(s) === ST.RETURNED ? 'danger' : 'info')
 const classTag = (c) => (Number(c) === 1 ? 'danger' : Number(c) === 2 ? 'warning' : 'info')
-const fmtTime = (t) => (t ? String(t).replace('T', ' ').slice(0, 16) : '—')
+const fmtTime = (t) => (t ? String(t).replace('T', ' ').slice(0, 16) : '')
 
 // ---------------- 字典（筛选用；列表文案取后端 *Text） ----------------
 const classDict = ref([])

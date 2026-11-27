@@ -109,7 +109,7 @@
     </div>
     <template #footer>
       <el-button
-          v-perm="'medtech:transfusion:edit'"
+          v-perm="'medtech:transfusion:execute'"
           :loading="startSubmitting"
           data-testid="p4-tf-start-submit"
           type="primary"
@@ -140,8 +140,8 @@ const visible = computed({
   set: (v) => emit('update:modelValue', v),
 });
 
-const fmt = (v) => (v ? String(v).replace('T', ' ') : '—');
-const text = (v) => (v === null || v === undefined || v === '' ? '—' : String(v));
+const fmt = (v) => (v ? String(v).replace('T', ' ') : '');
+const text = (v) => (v === null || v === undefined || v === '' ? '' : String(v));
 
 const employees = ref([]);
 const checkItemOptions = ref([]);

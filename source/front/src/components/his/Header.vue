@@ -163,7 +163,9 @@
           <el-dropdown-menu>
             <el-dropdown-item :icon="UserFilled" command="profile">用户信息</el-dropdown-item>
             <el-dropdown-item :icon="Switch" command="switchPost">切换岗位</el-dropdown-item>
-            <el-dropdown-item :icon="Lock" command="password">修改密码</el-dropdown-item>
+            <!-- 修改密码：本环境账号口令统一固定（HIS 侧 /auth/changePassword 也已临时关闭），入口先隐藏；
+                 恢复时放开这一行并把后端 LoginController.changePassword 的 return 换回 authService.updatePassword -->
+            <!-- <el-dropdown-item :icon="Lock" command="password">修改密码</el-dropdown-item> -->
             <el-dropdown-item :icon="SwitchButton" command="logout" divided>退出登录</el-dropdown-item>
           </el-dropdown-menu>
         </template>
@@ -197,8 +199,8 @@
               </span>
             </div>
             <div class="mt-1.5 flex flex-wrap items-center gap-4 text-sm text-slate-500">
-              <span>账号：{{ profileData.userName || '-' }}</span>
-              <span>工号：{{ profileData.empNo || '-' }}</span>
+              <span>账号：{{ profileData.userName || '' }}</span>
+              <span>工号：{{ profileData.empNo || '' }}</span>
             </div>
           </div>
         </div>
@@ -212,7 +214,7 @@
             <div class="grid grid-cols-2 gap-x-3 gap-y-1.5 rounded-lg border border-slate-200 p-2.5 text-sm">
               <div v-for="item in group.items" :key="item[0]" class="flex min-w-0 items-start gap-1">
                 <span class="shrink-0 text-slate-400">{{ item[0] }}：</span>
-                <span class="break-all font-medium text-slate-700">{{ item[1] || '-' }}</span>
+                <span class="break-all font-medium text-slate-700">{{ item[1] || '' }}</span>
               </div>
             </div>
           </section>
@@ -368,7 +370,8 @@ import {
   Expand,
   Fold,
   HomeFilled,
-  Lock,
+  // 改密入口隐藏期间不用；恢复「修改密码」菜单项时一并放开
+  // Lock,
   Setting,
   Switch,
   SwitchButton,
@@ -385,7 +388,7 @@ import {
 } from '@/api/system'
 import {openMessageStream} from '@/api/messageStream'
 // 站内提示音：Web Audio 合成，不引音频文件；开关状态存在 localStorage（见 lib/alertSound）
-import {alertLevelOfSeverity, alertMuted, playAlert, toggleAlertMuted} from '@/lib/alertSound'
+import {alertAudioReady, alertLevelOfSeverity, alertMuted, playAlert, toggleAlertMuted} from '@/lib/alertSound'
 import {getMyToday, myCheckIn, myCheckOut} from '@/api/staffAttendance'
 import {encryptPassword} from '@/lib/password'
 import {loadDictDataMap} from '@/lib/dict-cache'
@@ -490,6 +493,8 @@ const currentWeekday = ref('')
 const dayNames = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
 let clockTimer = null
 let messagePollTimer = null
+// 音频未解锁提示每会话只弹一次（反复弹会盖住消息内容）
+let audioHintShown = false
 
 // ========== 自助打卡胶囊按钮（顶栏右侧）==========
 // 状态机：none(未签到) → checkedIn(已签到未签退) → checkedOut(已签退)
@@ -830,6 +835,11 @@ const connectMessageStream = () => {
       unreadCount.value = typeof data.unread === 'number' && data.unread >= 0 ? data.unread : unreadCount.value + 1
       // 消息到达先出声再弹通知：急会诊(urgent)三连音、重要提醒(warning)双音、普通通知单短音
       playAlert(alertLevelOfSeverity(data.severity))
+      // 浏览器还没解锁（页面没被点过）时，声音一定不会响：只提示一次，别让用户以为功能坏了
+      if (!alertAudioReady.value && !audioHintShown) {
+        audioHintShown = true
+        ElMessage.warning('浏览器要求先点击页面才能播放提示音，点击页面任意位置即可开启')
+      }
       ElNotification({
         title: messageLabel(data.bizType) || '新消息',
         message: data.title || '您有一条新消息',
@@ -1026,7 +1036,7 @@ const profileDicts = ref({empType: [], title: [], position: [], gender: [], user
 
 // 码值 -> 文案：字典里没有就渲染「未知(n)」，不回落成某个看起来合法的值
 const dictLabel = (list, value) => {
-  if (value === null || value === undefined || value === '') return '-'
+  if (value === null || value === undefined || value === '') return ''
   const hit = (list || []).find(item => String(item.dictValue) === String(value))
   return hit ? hit.dictLabel : `未知(${value})`
 }
@@ -1059,7 +1069,7 @@ const profileGroups = computed(() => {
     {
       title: '登录信息',
       items: [
-        ['登录次数', d.loginCount === null || d.loginCount === undefined ? '-' : `${d.loginCount} 次`],
+        ['登录次数', d.loginCount === null || d.loginCount === undefined ? '' : `${d.loginCount} 次`],
         ['最后登录', d.lastLoginTime],
         ['登录 IP', d.lastLoginIp],
       ]

@@ -4,7 +4,7 @@
     <template v-if="detail">
       <el-descriptions :column="2" border class="mb-4" size="small">
         <el-descriptions-item label="订单号">{{ detail.orderNo }}</el-descriptions-item>
-        <el-descriptions-item label="供应商">{{ detail.supplierName || '—' }}</el-descriptions-item>
+        <el-descriptions-item label="供应商">{{ detail.supplierName || '' }}</el-descriptions-item>
         <el-descriptions-item label="下单时间">{{ detail.orderTime }}</el-descriptions-item>
         <el-descriptions-item label="总额">{{ formatMoney(detail.totalAmount) }}</el-descriptions-item>
         <el-descriptions-item label="审批状态">
@@ -13,8 +13,8 @@
         <el-descriptions-item label="收货状态">
           <el-tag :type="orderInboundTagType(detail)">{{ orderInboundText(detail) }}</el-tag>
         </el-descriptions-item>
-        <el-descriptions-item label="创建人">{{ detail.createBy || '—' }}</el-descriptions-item>
-        <el-descriptions-item label="备注">{{ detail.remark || '—' }}</el-descriptions-item>
+        <el-descriptions-item label="创建人">{{ detail.createBy || '' }}</el-descriptions-item>
+        <el-descriptions-item label="备注">{{ detail.remark || '' }}</el-descriptions-item>
       </el-descriptions>
 
       <el-table :data="detail.items || []" border size="small">

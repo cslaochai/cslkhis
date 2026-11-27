@@ -23,7 +23,7 @@
         </el-table-column>
         <el-table-column align="center" label="术前基线" width="110">
           <template #default="{ row }">{{
-              row.beforeQty === null || row.beforeQty === undefined ? '—' : row.beforeQty
+              row.beforeQty === null || row.beforeQty === undefined ? '' : row.beforeQty
             }}
           </template>
         </el-table-column>

@@ -512,6 +512,12 @@ const routes = [
                 component: () => import('@/views/quality/MedicalRecordQcView.vue')
             },
             {
+                path: 'medical-record-correction',
+                name: 'EmrCorrection',
+                component: () => import('@/views/medical-record/EmrCorrectionView.vue'),
+                meta: {title: '病历更正审批'}
+            },
+            {
                 path: 'medical-record-archive',
                 name: 'MedicalRecordArchive',
                 component: () => import('@/views/medical-record/MedicalRecordArchiveView.vue')

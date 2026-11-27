@@ -72,7 +72,7 @@
             <!-- 第二行：联系方式 + 就诊足迹（挂号员确认身份、判断初复诊就靠这两样） -->
             <div class="ps-line ps-meta">
             <span class="ps-meta-item">
-              <span class="ps-meta-key">手机</span>{{ p.phoneMasked || '-' }}
+              <span class="ps-meta-key">手机</span>{{ p.phoneMasked || '' }}
             </span>
               <span class="ps-meta-sep">|</span>
               <span class="ps-meta-item">

@@ -2,16 +2,14 @@
   <el-dialog v-model="visible" title="发起听班呼叫" width="600px">
     <el-form ref="formRef" :model="formData" :rules="rules" label-width="110px">
       <el-form-item label="呼叫科室" prop="deptId">
-        <el-select
+        <DeptTreeSelect
             v-model="formData.deptId"
+            mode="LEAF"
             data-testid="duty-call-dept"
-            filterable
             placeholder="选择要呼叫的科室"
-            style="width: 100%"
+            class="w-full"
             @change="onDeptChange"
-        >
-          <el-option v-for="d in deptOptions" :key="d.id" :label="d.name" :value="d.id"/>
-        </el-select>
+        />
       </el-form-item>
       <el-form-item label="值班日期" prop="dutyDate">
         <el-date-picker
@@ -86,13 +84,12 @@
 import {computed, ref, watch} from 'vue'
 import {ElMessage} from 'element-plus'
 import {dutyCallCreate, getDutyCallTargets} from '@/api/dutyCall'
+import DeptTreeSelect from '@/components/his/DeptTreeSelect.vue'
 
 const props = defineProps({
   modelValue: {type: Boolean, default: false},
   /** 默认科室（从页面上下文带进来） */
   defaultDeptId: {type: [String, Number], default: null},
-  /** 科室下拉（父页面加载一次下传，避免两处各拉一遍） */
-  deptOptions: {type: Array, default: () => []},
 })
 const emit = defineEmits(['update:modelValue', 'saved'])
 
@@ -196,7 +193,6 @@ watch(visible, async (open) => {
     callReason: '',
     timeoutMinutes: 10,
   }
-  // 科室下拉由父页面加载一次下传（AGENTS.md §2：列表列也用的下拉页面加载一次，禁止两处各拉一遍）
-  await loadTargets()
+  loadTargets()
 })
 </script>

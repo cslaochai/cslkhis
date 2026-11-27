@@ -57,7 +57,7 @@
                        placeholder="运动">
               <el-option v-for="v in [6,5,4,3,2,1]" :key="v" :label="String(v)" :value="v"/>
             </el-select>
-            <span class="text-sm text-slate-600" data-testid="icu-mon-gcs-total">总分 {{ monGcsTotal ?? '—' }}</span>
+            <span class="text-sm text-slate-600" data-testid="icu-mon-gcs-total">总分 {{ monGcsTotal ?? '' }}</span>
           </div>
         </el-form-item>
         <el-form-item label="瞳孔">
@@ -99,7 +99,7 @@
         <el-form-item label="平衡">
           <span :class="Number(monBalance) > 0 ? 'text-red-600' : 'text-slate-700'" class="text-sm"
                 data-testid="icu-mon-balance">
-            {{ monBalance ?? '—' }} ml
+            {{ monBalance ?? '' }} ml
           </span>
         </el-form-item>
       </div>

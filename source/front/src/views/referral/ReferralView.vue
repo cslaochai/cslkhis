@@ -57,7 +57,7 @@
         </el-table-column>
         <el-table-column label="转诊原因" min-width="180" prop="reason" show-overflow-tooltip/>
         <el-table-column label="诊断" min-width="140" prop="diagnosis" show-overflow-tooltip>
-          <template #default="{ row }">{{ row.diagnosis || '—' }}</template>
+          <template #default="{ row }">{{ row.diagnosis || '' }}</template>
         </el-table-column>
         <el-table-column label="状态" prop="referralStatus" width="90">
           <template #default="{ row }">
@@ -65,7 +65,7 @@
           </template>
         </el-table-column>
         <el-table-column label="确认人" prop="auditName" width="90">
-          <template #default="{ row }">{{ row.auditName || '—' }}</template>
+          <template #default="{ row }">{{ row.auditName || '' }}</template>
         </el-table-column>
         <el-table-column fixed="right" label="操作" width="190">
           <template #default="{ row }">
@@ -88,10 +88,10 @@
     </el-card>
 
     <!-- 登记（表单与提交已拆至 ReferralAdd.vue） -->
-    <ReferralAdd v-model="createVisible" :depts="depts" :dir-dict="dirDict" @saved="loadList"/>
+    <ReferralAdd v-model="createVisible" :dir-dict="dirDict" @saved="loadList"/>
 
     <!-- 确认（已拆至 ReferralAudit.vue） -->
-    <ReferralAudit v-model="auditVisible" :depts="depts" :row="auditRow" @saved="loadList"/>
+    <ReferralAudit v-model="auditVisible" :row="auditRow" @saved="loadList"/>
 
     <!-- 完成 -->
     <el-dialog v-model="finishVisible" :close-on-click-modal="false" title="完成转诊" width="480px">
@@ -116,7 +116,8 @@ import {onMounted, reactive, ref} from 'vue';
 import {ElMessage} from 'element-plus';
 import {Refresh, Search} from '@element-plus/icons-vue';
 import {referralCancel, referralFinish, referralListPage,} from '@/api/referral';
-import {getDepartmentSelectList, getDictDataMapList} from '@/api/system';
+import {getDictDataMapList} from '@/api/system';
+import {loadDeptTreeOptions, flattenDeptTree} from '@/lib/deptOptions';
 import {DICT_TYPE} from '@/lib/dict-cache';
 import {dictLabelText} from '@/lib/utils';
 import {DEFAULT_PAGE_SIZE} from '@/lib/pagination';
@@ -144,13 +145,13 @@ const loadDicts = async () => {
 const depts = ref([]);
 const loadDepts = async () => {
   try {
-    const res = await getDepartmentSelectList({});
-    depts.value = res.data || [];
+    const tree = await loadDeptTreeOptions({mode: 'LEAF'});
+    depts.value = flattenDeptTree(tree);
   } catch (e) {
     console.error('加载科室失败', e);
   }
 };
-const deptName = (id) => depts.value.find(d => String(d.id) === String(id))?.deptName || '—';
+const deptName = (id) => depts.value.find(d => String(d.id) === String(id))?.deptName || '';
 // ---------------- 列表 ----------------
 const loading = ref(false);
 const rows = ref([]);

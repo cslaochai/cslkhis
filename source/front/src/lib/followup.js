@@ -6,4 +6,4 @@
  */
 
 /** 时间文本 → 「yyyy-MM-dd HH:mm」，空值显示为破折号（接口出参可能是 ISO 带 T 分隔） */
-export const fmtTime = (v) => (v ? String(v).slice(0, 16).replace('T', ' ') : '—');
+export const fmtTime = (v) => (v ? String(v).slice(0, 16).replace('T', ' ') : '');

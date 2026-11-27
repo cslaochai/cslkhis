@@ -538,7 +538,7 @@ const loadLogs = async () => {
     logLoading.value = false;
   }
 };
-const fmtTime = (t) => (t ? String(t).replace('T', ' ').slice(0, 16) : '-');
+const fmtTime = (t) => (t ? String(t).replace('T', ' ').slice(0, 16) : '');
 const refreshAll = () => {
   loadStats();
   if (activeTab.value === 'inventory')

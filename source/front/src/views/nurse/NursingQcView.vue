@@ -5,7 +5,7 @@
         class="mb-3 flex flex-wrap items-center gap-3 rounded-lg border border-slate-200 bg-white px-4 py-3 shadow-sm filter-row">
       <el-select v-model="wardId" :fit-input-width="false" class="!w-60" clearable data-testid="qc-ward"
                  filterable placeholder="全院合并（可见范围）">
-        <el-option v-for="w in wards" :key="w.wardId" :label="`${w.wardName}（${w.totalBeds ?? '—'} 床）`"
+        <el-option v-for="w in wards" :key="w.wardId" :label="`${w.wardName}（${w.totalBeds ?? ''} 床）`"
                    :value="String(w.wardId)"/>
       </el-select>
       <el-date-picker v-model="statMonth" :clearable="false" class="!w-40" data-testid="qc-month"
@@ -42,7 +42,7 @@
                   kpiFoot(k)
                 }}</p>
               <p class="mt-1 text-xs text-slate-400">
-                目标 {{ k.targetValue == null ? '—' : `${fmt(k.targetValue)}${k.unit}` }}
+                目标 {{ k.targetValue == null ? '' : `${fmt(k.targetValue)}${k.unit}` }}
                 · {{ k.wardCount }} 个病区
                 <template v-if="Number(k.notReachedCount) > 0">
                   · <span class="text-rose-600">{{ k.notReachedCount }} 个未达标</span>
@@ -289,7 +289,7 @@
             </el-table-column>
             <el-table-column align="right" label="目标" width="90">
               <template #default="{ row }">{{
-                  row.targetValue == null ? '—' : `${fmt(row.targetValue)}${row.unit}`
+                  row.targetValue == null ? '' : `${fmt(row.targetValue)}${row.unit}`
                 }}
               </template>
             </el-table-column>
@@ -341,7 +341,7 @@
         <el-select v-model="form.wardId" :disabled="!!form.id" :fit-input-width="false" class="w-full"
                    data-testid="qc-f-ward"
                    filterable placeholder="选择病区" @change="onFormWard">
-          <el-option v-for="w in wards" :key="w.wardId" :label="`${w.wardName}（${w.totalBeds ?? '—'} 床）`"
+          <el-option v-for="w in wards" :key="w.wardId" :label="`${w.wardName}（${w.totalBeds ?? ''} 床）`"
                      :value="String(w.wardId)"/>
         </el-select>
         <el-date-picker v-model="form.checkMonth" :clearable="false" :disabled="!!form.id" class="!w-full"
@@ -383,13 +383,13 @@
         <el-table-column align="center" label="抽查例数" width="120">
           <template #default="{ row }">
             <el-input-number v-model="row.checkedNum" :min="0" :precision="0" class="!w-24"
-                             controls-position="right" data-testid="qc-f-checked" placeholder="—" size="small"/>
+                             controls-position="right" data-testid="qc-f-checked" placeholder='' size="small"/>
           </template>
         </el-table-column>
         <el-table-column align="center" label="合格例数" width="120">
           <template #default="{ row }">
             <el-input-number v-model="row.qualifiedNum" :min="0" :precision="0" class="!w-24"
-                             controls-position="right" data-testid="qc-f-qualified" placeholder="—" size="small"/>
+                             controls-position="right" data-testid="qc-f-qualified" placeholder='' size="small"/>
           </template>
         </el-table-column>
         <el-table-column label="存在问题" min-width="150">

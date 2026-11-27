@@ -176,7 +176,7 @@
           </el-table-column>
           <el-table-column label="口径说明（超量提示会带上）" min-width="300" show-overflow-tooltip>
             <template #default="{ row }">
-              <span class="text-[15px] text-slate-700">{{ row.note || '—' }}</span>
+              <span class="text-[15px] text-slate-700">{{ row.note || '' }}</span>
             </template>
           </el-table-column>
           <el-table-column align="center" label="状态" width="80">

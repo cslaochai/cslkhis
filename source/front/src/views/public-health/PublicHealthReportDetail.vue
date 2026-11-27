@@ -4,13 +4,13 @@
       <el-descriptions-item label="患者">{{ row.patientName }}（{{ row.patientNo }}）</el-descriptions-item>
       <el-descriptions-item label="上报类型">{{ typeText(row.reportType) }}</el-descriptions-item>
       <el-descriptions-item label="诊断">{{ row.diagnosis }}</el-descriptions-item>
-      <el-descriptions-item label="ICD-10">{{ row.diagnosisCode || '—' }}</el-descriptions-item>
+      <el-descriptions-item label="ICD-10">{{ row.diagnosisCode || '' }}</el-descriptions-item>
       <el-descriptions-item label="状态">{{ statusText(row.reportStatus) }}</el-descriptions-item>
       <el-descriptions-item label="上报时间">{{ fmtTime(row.reportTime) }}</el-descriptions-item>
-      <el-descriptions-item label="上报人">{{ row.reportBy || '—' }}</el-descriptions-item>
-      <el-descriptions-item label="审核人">{{ row.auditBy || '—' }}</el-descriptions-item>
-      <el-descriptions-item :span="2" label="上报内容">{{ row.reportContent || '—' }}</el-descriptions-item>
-      <el-descriptions-item :span="2" label="审核意见">{{ row.auditRemark || '—' }}</el-descriptions-item>
+      <el-descriptions-item label="上报人">{{ row.reportBy || '' }}</el-descriptions-item>
+      <el-descriptions-item label="审核人">{{ row.auditBy || '' }}</el-descriptions-item>
+      <el-descriptions-item :span="2" label="上报内容">{{ row.reportContent || '' }}</el-descriptions-item>
+      <el-descriptions-item :span="2" label="审核意见">{{ row.auditRemark || '' }}</el-descriptions-item>
     </el-descriptions>
   </el-dialog>
 </template>
@@ -43,7 +43,7 @@ const visible = computed({
   set: (v) => emit('update:modelValue', v),
 })
 
-const fmtTime = (t) => (t ? String(t).replace('T', ' ').slice(0, 16) : '—')
+const fmtTime = (t) => (t ? String(t).replace('T', ' ').slice(0, 16) : '')
 const typeText = (v) => dictLabelText(props.typeDict, v)
 const statusText = (v) => dictLabelText(props.statusDict, v)
 </script>

@@ -18,12 +18,12 @@
       </div>
       <div v-if="preview.statMonth" class="stat-items">
         <div class="stat-item">
-          <div class="stat-value" data-testid="pv-assess-rate">{{ preview.assessRate ?? '-' }}%</div>
+          <div class="stat-value" data-testid="pv-assess-rate">{{ preview.assessRate ?? '' }}%</div>
           <div class="stat-label">VTE 风险评估率（目标 ≥{{ preview.assessRateTarget }}%）</div>
           <div class="stat-sub">{{ preview.assessedCount }} / {{ preview.dischargeCount }} 名出院患者</div>
         </div>
         <div class="stat-item">
-          <div class="stat-value" data-testid="pv-high-risk-rate">{{ preview.highRiskRate ?? '-' }}%</div>
+          <div class="stat-value" data-testid="pv-high-risk-rate">{{ preview.highRiskRate ?? '' }}%</div>
           <div class="stat-label">中高危占比（占已评估）</div>
           <div class="stat-sub">{{ preview.highRiskCount }} / {{ preview.assessedCount }} 人</div>
         </div>
@@ -31,13 +31,13 @@
           <div :class="{ 'stat-value-danger': Number(preview.preventRate) < Number(preview.preventRateTarget) }"
                class="stat-value"
                data-testid="pv-prevent-rate">
-            {{ preview.preventRate ?? '-' }}%
+            {{ preview.preventRate ?? '' }}%
           </div>
           <div class="stat-label">预防措施落实率（目标 ≥{{ preview.preventRateTarget }}%）</div>
           <div class="stat-sub">{{ preview.preventDoneCount }} / {{ preview.highRiskCount }} 名中高危已落实</div>
         </div>
         <div class="stat-item">
-          <div class="stat-value" data-testid="pv-vte-rate">{{ preview.vteIncidenceRate ?? '-' }}%</div>
+          <div class="stat-value" data-testid="pv-vte-rate">{{ preview.vteIncidenceRate ?? '' }}%</div>
           <div class="stat-label">院内 VTE 发生率</div>
           <div class="stat-sub">{{ preview.vteEventCount }} / {{ preview.dischargeCount }} · 出血 {{
               preview.bleedCount
@@ -155,11 +155,11 @@
         </el-table-column>
         <el-table-column label="确诊日期" prop="diagnoseDate" width="110"/>
         <el-table-column label="诊断依据" width="130">
-          <template #default="{ row }">{{ row.diagnosisBasisText || '-' }}</template>
+          <template #default="{ row }">{{ row.diagnosisBasisText || '' }}</template>
         </el-table-column>
         <el-table-column label="部位" min-width="140" prop="thrombusSite" show-overflow-tooltip/>
         <el-table-column label="转归" width="80">
-          <template #default="{ row }">{{ row.outcomeText || '-' }}</template>
+          <template #default="{ row }">{{ row.outcomeText || '' }}</template>
         </el-table-column>
         <el-table-column align="center" label="计入发生率" width="100">
           <template #default="{ row }">

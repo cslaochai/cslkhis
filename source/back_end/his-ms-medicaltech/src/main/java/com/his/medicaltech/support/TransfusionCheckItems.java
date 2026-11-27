@@ -115,7 +115,7 @@ public final class TransfusionCheckItems {
             return "";
         }
         if (codes.isEmpty()) {
-            return "—";
+            return "";
         }
         List<String> texts = new ArrayList<>();
         for (Integer c : codes) {

@@ -102,7 +102,7 @@ public enum SignSceneEnum {
 
     public static String getLabel(Integer code) {
         if (null == code) {
-            return "—";
+            return StringUtils.EMPTY;
         }
         SignSceneEnum item = fromCode(code);
         return item == null ? StringUtils.EMPTY : item.label;

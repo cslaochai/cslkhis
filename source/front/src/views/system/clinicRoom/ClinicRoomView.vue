@@ -13,14 +13,7 @@
             />
           </el-form-item>
           <el-form-item label="所属科室">
-            <el-tree-select
-                v-model="searchForm.deptId"
-                :data="deptList"
-                :props="{ label: 'deptName', value: 'id', children: 'children' }"
-                check-strictly
-                clearable
-                placeholder="请选择科室"
-            />
+            <DeptTreeSelect v-model="searchForm.deptId" mode="ORG" scope="ALL" placeholder="请选择科室"/>
           </el-form-item>
           <el-form-item label="状态">
             <el-select v-model="searchForm.status" clearable placeholder="请选择状态">
@@ -83,7 +76,7 @@
     </el-card>
 
     <!-- 新增/编辑对话框 -->
-    <ClinicRoomEdit v-model="dialogVisible" :dept-list="deptList" :row="dialogRow" @saved="loadData"/>
+    <ClinicRoomEdit v-model="dialogVisible" :row="dialogRow" @saved="loadData"/>
   </div>
 </template>
 
@@ -91,7 +84,9 @@
 import {onMounted, ref} from 'vue'
 import {ElMessage, ElMessageBox} from 'element-plus'
 import {Delete, Edit, Plus, Refresh, Search} from '@element-plus/icons-vue'
-import {deleteClinicRoom, getClinicRoomList, getDepartmentTree} from '@/api/system'
+import {deleteClinicRoom, getClinicRoomList} from '@/api/system'
+import {loadDeptTreeOptions} from '@/lib/deptOptions'
+import DeptTreeSelect from '@/components/his/DeptTreeSelect.vue'
 import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination'
 import {useTableMaxHeight} from '@/lib/useTableMaxHeight'
 import ClinicRoomEdit from '@/views/system/clinicRoom/ClinicRoomEdit.vue'
@@ -126,10 +121,7 @@ onMounted(() => {
 
 const loadDeptList = async () => {
   try {
-    const res = await getDepartmentTree()
-    if (res.code === 200) {
-      deptList.value = res.data || []
-    }
+    deptList.value = await loadDeptTreeOptions({scope: 'ALL', mode: 'ORG'})
   } catch (error) {
     console.error('加载部门列表失败', error)
   }
@@ -205,7 +197,7 @@ const handleCurrentChange = (val) => {
 const getDeptName = (deptId) => {
   const findDept = (list) => {
     for (const dept of list) {
-      if (dept.id === deptId) {
+      if (String(dept.id) === String(deptId)) {
         return dept.deptName
       }
       if (dept.children && dept.children.length > 0) {

@@ -11,15 +11,7 @@
             <el-input v-model="searchForm.empName" clearable placeholder="请输入姓名" @keyup.enter="handleSearch"/>
           </el-form-item>
           <el-form-item label="科室">
-            <el-tree-select
-                v-model="searchForm.deptId"
-                :data="deptList"
-                :props="{label: 'deptName', value: 'id', children: 'children'}"
-                check-strictly
-                clearable
-                filterable
-                placeholder="全部科室"
-            />
+            <DeptTreeSelect v-model="searchForm.deptId" mode="ORG" placeholder="全部科室"/>
           </el-form-item>
           <el-form-item label="员工类型">
             <el-select v-model="searchForm.empType" clearable placeholder="全部">
@@ -97,7 +89,7 @@
         <!-- 列表接口已脱敏（前 4 后 4，中间打星），页面直接渲染，不要再自己打码一次 -->
         <el-table-column label="身份证号" prop="idCard" width="180">
           <template #default="{ row }">
-            <span :class="row.idCard ? '' : 'text-slate-300'">{{ row.idCard || '—' }}</span>
+            <span :class="row.idCard ? '' : 'text-slate-300'">{{ row.idCard || '' }}</span>
           </template>
         </el-table-column>
         <el-table-column label="主科室" min-width="120" prop="deptName"/>
@@ -195,7 +187,8 @@ import EmployeeSignEdit from './EmployeeSignEdit.vue'
 import EmployeePostEdit from './EmployeePostEdit.vue'
 import EmployeeSignDialog from './EmployeeSignDialog.vue'
 import {getDictLabelByValue} from '@/lib/employeeDict'
-import {deleteEmployee, getDepartmentTree, getEmployeeListPage} from '@/api/system'
+import {deleteEmployee, getEmployeeListPage} from '@/api/system'
+import DeptTreeSelect from '@/components/his/DeptTreeSelect.vue'
 import {DICT_TYPE, loadDictDataMap} from '@/lib/dict-cache'
 
 const loading = ref(false)
@@ -226,7 +219,6 @@ const empTypeOptions = ref([])  // 员工类型
 const titleOptions = ref([])  // 职称
 const positionOptions = ref([])  // 职位
 const educationOptions = ref([]) // 学历
-const deptList = ref([])
 
 // 新增/编辑弹框状态已整体搬进 EmployeeEdit.vue，这里只控显隐与传行
 const dialogVisible = ref(false)
@@ -247,7 +239,6 @@ const signDialogRow = ref(null)
 onMounted(() => {
   loadData()
   loadDictData()
-  loadDeptTree()
 })
 
 const loadDictData = async () => {
@@ -263,15 +254,6 @@ const loadDictData = async () => {
     educationOptions.value = map['his_education'] || []
   } catch (error) {
     console.error('加载字典数据失败', error)
-  }
-}
-
-const loadDeptTree = async () => {
-  try {
-    const res = await getDepartmentTree()
-    if (res.code === 200) deptList.value = res.data || []
-  } catch (error)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
-
   }
 }
 

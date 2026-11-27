@@ -8,7 +8,7 @@
             detail.totalDays
           }} 天）</span>
         <span>患者：<b class="text-slate-800">{{ detail.patientName }}</b>（{{ detail.patientNo }}）</span>
-        <span>科室：{{ detail.deptName || '—' }}</span>
+        <span>科室：{{ detail.deptName || '' }}</span>
         <span>入径日期：<b class="text-slate-800">{{ detail.enrollDate }}</b></span>
         <span>当前路径日：<b class="text-lg font-semibold text-sky-700">{{ detail.currentDay }}</b></span>
         <span>状态：<el-tag :type="enrollStatusTag(detail.status)" size="small">{{
@@ -49,7 +49,7 @@
           </el-table-column>
           <el-table-column label="变异原因" min-width="200" prop="varianceReason" show-overflow-tooltip/>
           <el-table-column label="处理措施" min-width="160" prop="handling" show-overflow-tooltip>
-            <template #default="{ row }">{{ row.handling || '—' }}</template>
+            <template #default="{ row }">{{ row.handling || '' }}</template>
           </el-table-column>
           <el-table-column label="发生日期" prop="occurredDate" width="105"/>
           <el-table-column label="登记人" prop="recorderName" width="90"/>

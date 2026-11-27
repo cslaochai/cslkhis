@@ -4,7 +4,7 @@
       <div class="rounded bg-slate-50 p-2 text-slate-600">
         <div>登记号：{{ row.registerNo }}</div>
         <div>药品：{{ row.drugName }}（{{ flagText(row.specialFlag) }}）</div>
-        <div>发出安瓿数：<span class="font-medium text-slate-800">{{ row.ampouleIssued ?? '—' }}</span></div>
+        <div>发出安瓿数：<span class="font-medium text-slate-800">{{ row.ampouleIssued ?? '' }}</span></div>
       </div>
       <el-form label-width="120px">
         <el-form-item label="回收空安瓿数" required>

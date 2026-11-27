@@ -102,7 +102,7 @@ export function specialFlagTagType(flag) {
  * @returns {string} 命中字典取 dictLabel；未命中渲染「未知(n)」；空值渲染「—」
  */
 export function specialFlagText(flag, dictList) {
-  if (flag === null || flag === undefined || flag === '') return '—'
+  if (flag === null || flag === undefined || flag === '') return ''
   const list = Array.isArray(dictList) ? dictList : []
   const hit = list.find(o => String(o.dictValue) === String(flag))
   if (!hit) return `未知(${flag})`
@@ -124,7 +124,7 @@ export const AMPOULE_STATUS_OPTIONS = [
  * 空安瓿回收状态 → 文案（命中不了渲染「未知(n)」，不回落成"不适用"）
  */
 export function ampouleStatusText(status) {
-  if (status === null || status === undefined || status === '') return '—'
+  if (status === null || status === undefined || status === '') return ''
   const hit = AMPOULE_STATUS_OPTIONS.find(o => o.value === Number(status))
   return hit ? hit.label : `未知(${status})`
 }

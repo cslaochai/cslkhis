@@ -322,7 +322,7 @@ public class AnesthesiaFollowupServiceImpl extends ServiceImpl<BizAnesthesiaFoll
     private void decorate(AnesthesiaFollowupVO vo) {
         vo.setGenderText(SysGenderEnum.getLabel(vo.getGender()));
         vo.setRecoveryText(FollowupAdverseItems.recoveryText(vo.getRecovery()));
-        vo.setFollowupStatusText(AnesthesiaFollowupStatusEnum.getLabel(vo.getFollowupStatus(), "—"));
+        vo.setFollowupStatusText(AnesthesiaFollowupStatusEnum.getLabel(vo.getFollowupStatus()));
         vo.setRoundText(FollowupAdverseItems.roundText(vo.getRoundNo()));
         try {
             vo.setAdverseItemsText(FollowupAdverseItems.summaryText(vo.getAdverseItems()));

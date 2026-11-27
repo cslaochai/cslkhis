@@ -167,10 +167,10 @@
                   class="text-gray-400 text-xs ml-1">{{ row.patientNo }}</span></template>
             </el-table-column>
             <el-table-column label="联系电话" prop="phoneMasked" width="120">
-              <template #default="{ row }">{{ row.phoneMasked || '—' }}</template>
+              <template #default="{ row }">{{ row.phoneMasked || '' }}</template>
             </el-table-column>
             <el-table-column label="科室" prop="deptName" show-overflow-tooltip width="130">
-              <template #default="{ row }">{{ row.deptName || '—' }}</template>
+              <template #default="{ row }">{{ row.deptName || '' }}</template>
             </el-table-column>
             <el-table-column label="来源" width="100">
               <template #default="{ row }">{{ sourceText(row.sourceType) }}</template>
@@ -240,18 +240,18 @@
             <el-table-column label="问卷" prop="templateName" show-overflow-tooltip width="170"/>
             <el-table-column label="患者" prop="patientName" width="110"/>
             <el-table-column label="科室" prop="deptName" show-overflow-tooltip width="130">
-              <template #default="{ row }">{{ row.deptName || '—' }}</template>
+              <template #default="{ row }">{{ row.deptName || '' }}</template>
             </el-table-column>
             <el-table-column align="right" label="均分" width="80">
-              <template #default="{ row }">{{ row.avgScore ?? '—' }}</template>
+              <template #default="{ row }">{{ row.avgScore ?? '' }}</template>
             </el-table-column>
             <el-table-column align="right" label="百分制" width="90">
               <template #default="{ row }">
-                <el-tag :type="scoreTag(row.score100)" size="small">{{ row.score100 ?? '—' }}</el-tag>
+                <el-tag :type="scoreTag(row.score100)" size="small">{{ row.score100 ?? '' }}</el-tag>
               </template>
             </el-table-column>
             <el-table-column align="right" label="NPS" width="80">
-              <template #default="{ row }">{{ row.nps ?? '—' }}</template>
+              <template #default="{ row }">{{ row.nps ?? '' }}</template>
             </el-table-column>
             <el-table-column label="填报方式" width="110">
               <template #default="{ row }">{{ fillSourceText(row.fillSource) }}</template>
@@ -425,7 +425,7 @@ import SurveyFillEdit from './SurveyFillEdit.vue';
 import SurveyTemplateEdit from './SurveyTemplateEdit.vue';
 
 const activeTab = ref('board');
-const fmtTime = (v) => (v ? String(v).slice(0, 16).replace('T', ' ') : '—');
+const fmtTime = (v) => (v ? String(v).slice(0, 16).replace('T', ' ') : '');
 // ---------------- 字典（一次最多 5 个 type，超了整批返回空且不报错 → 分两批） ----------------
 const dicts = reactive({
   scene: [], dimension: [], questionType: [], source: [], channel: [],

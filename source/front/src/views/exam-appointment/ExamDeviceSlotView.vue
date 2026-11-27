@@ -137,7 +137,7 @@
 
     <!-- ============ 设备档位弹窗 ============ -->
     <ExamDeviceSlotEdit v-model="devDlg.visible" :row="devDlg.row" :device-type-dict="deviceTypeDict"
-                        :device-status-dict="deviceStatusDict" :dept-options="deptOptions"
+                        :device-status-dict="deviceStatusDict"
                         @saved="handleDeviceSaved"/>
 
     <!-- ============ 可开展项目弹窗 ============ -->
@@ -151,14 +151,14 @@
       <div v-if="itemDlg.candidates.length" class="mb-3 border border-gray-100 rounded p-2 max-h-32 overflow-auto">
         <el-button v-for="c in itemDlg.candidates" :key="c.itemId" v-perm="'medtech:examAppoint:add'" class="mb-1"
                    size="small" @click="addItem(c); searchCandidates()">
-          + {{ c.itemName }}（{{ c.itemCode }}，{{ c.itemDictMinutes ?? '-' }}′）
+          + {{ c.itemName }}（{{ c.itemCode }}，{{ c.itemDictMinutes ?? '' }}′）
         </el-button>
       </div>
       <el-table :data="itemDlg.rows" max-height="360" size="small">
         <el-table-column label="编码" prop="itemCode" width="120"/>
         <el-table-column label="项目名称" min-width="200" prop="itemName" show-overflow-tooltip/>
         <el-table-column align="right" label="字典时长" width="90">
-          <template #default="{ row }">{{ row.itemDictMinutes ?? '-' }}′</template>
+          <template #default="{ row }">{{ row.itemDictMinutes ?? '' }}′</template>
         </el-table-column>
         <el-table-column label="本机时长覆盖" width="160">
           <template #default="{ row }">
@@ -210,21 +210,19 @@ import {Calendar, Search} from '@element-plus/icons-vue';
 import {
   deleteExamDevice,
   examDeviceItemSave,
-  examDeviceUpsert,
   examSlotGenerate,
   examSlotRecalc,
   examSlotToggle,
   getExamDeviceItems,
   getExamDeviceListPage,
   getExamDeviceSelectList,
-  getExamEquipmentOptions,
   getExamItemCandidates,
   getExamSlotBoard,
 } from '@/api/examAppointment';
-import {getDepartmentSelectList, getDictDataMapList} from '@/api/system';
+import {getDictDataMapList} from '@/api/system';
 import {DICT_TYPE} from '@/lib/dict-cache';
 import {dictLabelText} from '@/lib/utils';
-import {DEVICE_STATUS, deviceStatusTag, SLOT_STATUS, slotCellState} from '@/lib/examAppointment';
+import {deviceStatusTag, SLOT_STATUS, slotCellState} from '@/lib/examAppointment';
 import {DEFAULT_PAGE_SIZE} from '@/lib/pagination';
 import {useTableMaxHeight} from '@/lib/useTableMaxHeight';
 
@@ -235,7 +233,6 @@ const today = (() => {
 // ---------------- 字典 / 科室 ----------------
 const deviceTypeDict = ref([]);
 const deviceStatusDict = ref([]);
-const deptOptions = ref([]);
 const deviceTypeText = (v) => dictLabelText(deviceTypeDict.value, v);
 const loadDicts = async () => {
   try {
@@ -244,12 +241,6 @@ const loadDicts = async () => {
     deviceStatusDict.value = res?.data?.[DICT_TYPE.EXAM_DEVICE_STATUS] || [];
   } catch (e) {
     console.error('加载字典失败', e);
-  }
-  try {
-    const res = await getDepartmentSelectList();
-    deptOptions.value = res?.data || [];
-  } catch (e) {
-    console.error('加载科室失败', e);
   }
 };
 // ---------------- 设备档位台账 ----------------
@@ -279,67 +270,13 @@ const loadDevices = async () => {
     devLoading.value = false;
   }
 };
-const equipOptions = ref([]);
-const devDlg = reactive({
-  visible: false, saving: false,
-  form: {
-    id: null, deviceCode: '', deviceName: '', deviceType: 1, equipmentId: null,
-    deptId: null, roomName: '', amStart: '08:00', amEnd: '12:00', pmStart: '14:30', pmEnd: '17:30',
-    slotMinutes: 30, parallelCount: 1, aheadDays: 7, maxSlotMinutes: 240, status: DEVICE_STATUS.OPEN, remark: '',
-  },
-});
-const openDevice = async (row) => {
-  if (!equipOptions.value.length) {
-    try {
-      const res = await getExamEquipmentOptions();
-      equipOptions.value = res?.data || [];
-    } catch (e) {
-      console.error(e);
-    }
-  }
-  Object.assign(devDlg.form, {
-    id: row?.id || null, deviceCode: row?.deviceCode || '', deviceName: row?.deviceName || '',
-    deviceType: row?.deviceType || 1, equipmentId: row?.equipmentId || null, deptId: row?.deptId || null,
-    roomName: row?.roomName || '', amStart: row?.amStart || '08:00', amEnd: row?.amEnd || '12:00',
-    pmStart: row?.pmStart || '14:30', pmEnd: row?.pmEnd || '17:30',
-    slotMinutes: row?.slotMinutes ?? 30, parallelCount: row?.parallelCount ?? 1,
-    aheadDays: row?.aheadDays ?? 7, maxSlotMinutes: row?.maxSlotMinutes ?? 240,
-    status: row?.status ?? DEVICE_STATUS.OPEN, remark: row?.remark || '',
-  });
+const devDlg = reactive({visible: false, row: null});
+const openDevice = (row) => {
+  devDlg.row = row || null;
   devDlg.visible = true;
 };
-const saveDevice = async () => {
-  const f = devDlg.form;
-  if (!f.deviceCode.trim() || !f.deviceName.trim()) {
-    ElMessage.warning('设备编码与名称必填');
-    return;
-  }
-  if (!f.deviceType) {
-    ElMessage.warning('请选择设备类别');
-    return;
-  }
-  devDlg.saving = true;
-  try {
-    const deptName = f.deptId ? (deptOptions.value.find((d) => String(d.id) === String(f.deptId))?.deptName || '') : '';
-    const res = await examDeviceUpsert({
-      id: f.id || undefined, deviceCode: f.deviceCode.trim(), deviceName: f.deviceName.trim(),
-      deviceType: f.deviceType, equipmentId: f.equipmentId || undefined,
-      deptId: f.deptId || undefined, deptName: deptName || undefined, roomName: f.roomName.trim() || undefined,
-      amStart: f.amStart, amEnd: f.amEnd, pmStart: f.pmStart || undefined, pmEnd: f.pmEnd || undefined,
-      slotMinutes: f.slotMinutes, parallelCount: f.parallelCount, aheadDays: f.aheadDays,
-      maxSlotMinutes: f.maxSlotMinutes, status: f.status, remark: f.remark.trim() || undefined,
-    });
-    if (res.code === 200) {
-      ElMessage({type: res.data?.warning ? 'warning' : 'success', message: res.message || '已保存', duration: 6000});
-      devDlg.visible = false;
-      await Promise.all([loadDevices(), loadSlotDevices()]);
-    } 
-  } catch (e) {
-    console.error(e);
-    
-  } finally {
-    devDlg.saving = false;
-  }
+const handleDeviceSaved = async () => {
+  await Promise.all([loadDevices(), loadSlotDevices()]);
 };
 const removeDevice = async (row) => {
   try {

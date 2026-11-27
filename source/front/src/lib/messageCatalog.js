@@ -49,12 +49,12 @@ const CATALOG = {
     regist: {
         label: '挂号', tagClass: 'bg-blue-100 text-blue-700',
         severity: 'info', kind: 'notify',
-        owner: '—', permissions: ['portal:messages:view'],
+        owner: '', permissions: ['portal:messages:view'],
     },
     appointment: {
         label: '预约', tagClass: 'bg-green-100 text-green-700',
         severity: 'info', kind: 'notify',
-        owner: '—', permissions: ['portal:messages:view'],
+        owner: '', permissions: ['portal:messages:view'],
     },
     prescription: {
         label: '处方', tagClass: 'bg-amber-100 text-amber-700',
@@ -196,6 +196,34 @@ const CATALOG = {
         severity: 'warning', kind: 'notify',
         owner: '医生', permissions: ['portal:messages:view'],
     },
+    // 接通发送方（QualityControlServiceImpl.remindOverdueOutpatientDrafts）：门诊病历就诊次日仍为草稿
+    // → 催责任医生补写提交；提交后由结诊收尾闭环待办（24h 判重，不重复催）。
+    'emr-draft-overdue': {
+        label: '病历草稿超时未提交', tagClass: 'bg-red-100 text-red-700',
+        severity: 'urgent', kind: 'task',
+        owner: '医生', permissions: ['portal:messages:view'],
+    },
+    // 接通发送方（InpatientRecordServiceImpl.remindOverdueDrafts）：住院文书草稿超过规范时限
+    // （入院24h/首程8h/手术24h/出院24h/转入24h）→ 催书写医生补写提交；24h 判重。
+    'inpat-draft-overdue': {
+        label: '住院文书草稿超时', tagClass: 'bg-red-100 text-red-700',
+        severity: 'urgent', kind: 'task',
+        owner: '书写医生', permissions: ['ipd:record:list'],
+    },
+    // 接通发送方（EmrHandoverServiceImpl.assign）：离岗/调离医生名下草稿移交上级医师或质控岗代补
+    // → 待办投给承接人；代补提交后由结诊收尾闭环待办。经治医生不变，代补留痕。
+    'emr-draft-handover': {
+        label: '病历草稿移交代补', tagClass: 'bg-orange-100 text-orange-700',
+        severity: 'warning', kind: 'task',
+        owner: '承接医师/质控', permissions: ['portal:messages:view'],
+    },
+    // 接通发送方（EmrCorrectionServiceImpl）：已提交/归档病历发起更正申请 → 科室初审、医务终审两级待办；
+    // 批准后通知申请人在授权范围内回写，回写完成闭环待办。
+    'emr-correction': {
+        label: '病历更正申请', tagClass: 'bg-orange-100 text-orange-700',
+        severity: 'warning', kind: 'task',
+        owner: '科室主任 / 医务科', permissions: ['emr:correction:deptApprove', 'emr:correction:medicalApprove'],
+    },
     // 接通发送方（ArchiveBorrowServiceImpl.notifyOverdue）：借阅单应还日期已过仍未归还
     // → 每日一条提醒申请人（定时 08:30 + POST /charge/archiveBorrow/notifyOverdue 补跑）。
     // 整改动作是「去病案室归还」，无消息内闭环接口 → 通知型。
@@ -241,7 +269,7 @@ const CATALOG = {
     notice: {
         label: '系统公告', tagClass: 'bg-slate-100 text-slate-600',
         severity: 'info', kind: 'notify',
-        owner: '—', permissions: ['portal:messages:view'],
+        owner: '', permissions: ['portal:messages:view'],
     },
     // 接通发送方（DeathCertificateServiceImpl.notifyOverdue）：已开具且逾院内上报时限仍未上报
     // → 每日一条提醒病案/防保科补报（定时 09:00 + POST /patient/death/cert/notifyOverdue 补跑）。
@@ -257,7 +285,7 @@ const CATALOG = {
 const FALLBACK = {
     label: null, tagClass: 'bg-slate-100 text-slate-600',
     severity: 'info', kind: 'notify',
-    owner: '—', permissions: ['portal:messages:view'],
+    owner: '', permissions: ['portal:messages:view'],
 }
 
 /**
@@ -295,6 +323,10 @@ const GOTO_TARGETS = {
     'inpat-order': {path: '/inpatient-order', label: '住院医生站', bizNoKey: 'orderNo'},
     'emr-arch': {path: '/archive-center', label: '病案管理', bizNoKey: 'recordNo'},
     'emr-qc': {path: '/medical-record-qc', label: '病历质控', bizNoKey: 'qcNo'},
+    'emr-draft-overdue': {path: '/medical-record', label: '病历列表', bizNoKey: 'recordNo'},
+    'inpat-draft-overdue': {path: '/inpatient-record', label: '住院病历', bizNoKey: 'recordNo'},
+    'emr-draft-handover': {path: '/medical-record', label: '病历列表', bizNoKey: 'recordNo'},
+    'emr-correction': {path: '/medical-record-correction', label: '病历更正审批', bizNoKey: 'recordNo'},
     'arch-borrow': {path: '/archive-center', label: '病案管理', bizNoKey: 'borrowNo'},
     'code-task': {path: '/archive-center', label: '病案管理', bizNoKey: 'taskNo'},
     'infectious-report': {path: '/my-unreported', label: '我的未报', bizNoKey: 'registNo'},
@@ -450,6 +482,8 @@ const PAYLOAD_KEYS = [
     ['issueCount', '问题数'],
     ['grade', '等级'],
     ['visitDate', '就诊日'],
+    ['recordTypeText', '文书类型'],
+    ['overdueHours', '超时小时'],
     ['overdueDays', '超期天数'],
     ['verifyNurse', '校对护士'],
     ['arrears', '欠费'],

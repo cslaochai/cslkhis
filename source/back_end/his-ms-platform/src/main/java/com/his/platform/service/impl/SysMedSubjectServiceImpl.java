@@ -255,6 +255,15 @@ public class SysMedSubjectServiceImpl extends ServiceImpl<SysMedSubjectMapper, S
     }
 
     @Override
+    public List<Long> listMappedDeptIds() {
+        return sysDeptSubjectMapMapper.selectList(
+                        new LambdaQueryWrapper<SysDeptSubjectMap>()
+                                .select(SysDeptSubjectMap::getDeptId)
+                                .orderByAsc(SysDeptSubjectMap::getDeptId))
+                .stream().map(SysDeptSubjectMap::getDeptId).distinct().collect(Collectors.toList());
+    }
+
+    @Override
     public List<DeptSubjectVO> listUnmappedDepts() {
         List<SysDepartment> all = sysDepartmentMapper.selectList(new LambdaQueryWrapper<SysDepartment>()
                 .orderByAsc(SysDepartment::getDeptCode));

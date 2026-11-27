@@ -19,14 +19,14 @@
           {{ sessionView.dryWeight }}kg / {{ sessionView.durationMin }}min / {{ sessionView.bloodFlow }}ml·min ·
           {{ dictText('dialyzer', sessionView.dialyzer) }} · {{ dictText('anticoag', sessionView.anticoagulant) }}
         </el-form-item>
-        <el-form-item label="透前体重">{{ sessionView.beforeWeight ?? '—' }} kg</el-form-item>
-        <el-form-item label="透后体重">{{ sessionView.afterWeight ?? '—' }} kg</el-form-item>
-        <el-form-item label="上机">{{ sessionView.onTime || '—' }} {{ sessionView.onBy || '' }}</el-form-item>
-        <el-form-item label="下机">{{ sessionView.offTime || '—' }} {{ sessionView.offBy || '' }}</el-form-item>
-        <el-form-item label="实际时长">{{ sessionView.actualDurationMin ?? '—' }} min</el-form-item>
-        <el-form-item label="超滤量">{{ sessionView.ultraMl ?? '—' }} ml</el-form-item>
+        <el-form-item label="透前体重">{{ sessionView.beforeWeight ?? '' }} kg</el-form-item>
+        <el-form-item label="透后体重">{{ sessionView.afterWeight ?? '' }} kg</el-form-item>
+        <el-form-item label="上机">{{ sessionView.onTime || '' }} {{ sessionView.onBy || '' }}</el-form-item>
+        <el-form-item label="下机">{{ sessionView.offTime || '' }} {{ sessionView.offBy || '' }}</el-form-item>
+        <el-form-item label="实际时长">{{ sessionView.actualDurationMin ?? '' }} min</el-form-item>
+        <el-form-item label="超滤量">{{ sessionView.ultraMl ?? '' }} ml</el-form-item>
       </div>
-      <el-form-item label="通路评估">{{ sessionView.accessCheck || '—' }}</el-form-item>
+      <el-form-item label="通路评估">{{ sessionView.accessCheck || '' }}</el-form-item>
       <el-form-item label="不良反应">
         <span v-if="sessionView.adverseType">
           {{ dictText('adverse', sessionView.adverseType) }}：{{ sessionView.adverseDesc || '未填处置' }}

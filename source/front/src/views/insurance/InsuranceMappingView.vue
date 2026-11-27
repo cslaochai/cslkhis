@@ -82,24 +82,24 @@
           </template>
         </el-table-column>
         <el-table-column class-name="font-mono" label="国家医保编码" prop="ybCode" show-overflow-tooltip width="230">
-          <template #default="{row}">{{ row.ybCode || '—' }}</template>
+          <template #default="{row}">{{ row.ybCode || '' }}</template>
         </el-table-column>
         <el-table-column label="目录名称" min-width="150" prop="ybName" show-overflow-tooltip>
-          <template #default="{row}">{{ row.ybName || '—' }}</template>
+          <template #default="{row}">{{ row.ybName || '' }}</template>
         </el-table-column>
         <el-table-column label="甲乙类" width="80">
           <template #default="{row}">
-            {{ row.insuranceLevel ? (levelMap[row.insuranceLevel] || `未知(${row.insuranceLevel})`) : '—' }}
+            {{ row.insuranceLevel ? (levelMap[row.insuranceLevel] || `未知(${row.insuranceLevel})`) : '' }}
           </template>
         </el-table-column>
         <el-table-column label="对照方式" width="95">
           <template #default="{row}">{{
-              row.matchType ? (matchTypeMap[row.matchType] || `未知(${row.matchType})`) : '—'
+              row.matchType ? (matchTypeMap[row.matchType] || `未知(${row.matchType})`) : ''
             }}
           </template>
         </el-table-column>
         <el-table-column label="对照时间" prop="mappedTime" width="160">
-          <template #default="{row}">{{ (row.mappedTime || '').slice(0, 16).replace('T', ' ') || '—' }}</template>
+          <template #default="{row}">{{ (row.mappedTime || '').slice(0, 16).replace('T', ' ') || '' }}</template>
         </el-table-column>
         <el-table-column fixed="right" label="操作" width="150">
           <template #default="{row}">
@@ -157,11 +157,11 @@
         <el-table-column label="规格" prop="spec" show-overflow-tooltip width="110"/>
         <el-table-column label="甲乙类" width="75">
           <template #default="{row}">
-            {{ row.insuranceLevel ? (levelMap[row.insuranceLevel] || `未知(${row.insuranceLevel})`) : '—' }}
+            {{ row.insuranceLevel ? (levelMap[row.insuranceLevel] || `未知(${row.insuranceLevel})`) : '' }}
           </template>
         </el-table-column>
         <el-table-column align="right" label="支付比例" width="85">
-          <template #default="{row}">{{ row.payRatio != null ? row.payRatio + '%' : '—' }}</template>
+          <template #default="{row}">{{ row.payRatio != null ? row.payRatio + '%' : '' }}</template>
         </el-table-column>
       </el-table>
       <template #footer>

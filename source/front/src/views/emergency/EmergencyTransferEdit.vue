@@ -54,7 +54,7 @@ const visible = computed({
   set: (v) => emit('update:modelValue', v),
 });
 const statusMap = {1: '候诊', 2: '诊治中', 3: '留观', 4: '转住院', 5: '离院', 6: '死亡'};
-const currentLabel = computed(() => statusMap[props.row?.emergencyStatus] || '—');
+const currentLabel = computed(() => statusMap[props.row?.emergencyStatus] || '');
 const emergencyWards = computed(() => (props.wards || []).filter((w) => (w.wardName || '').startsWith('急诊')));
 
 const targetStatus = ref(null);

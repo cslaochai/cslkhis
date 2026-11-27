@@ -6,9 +6,7 @@
                        @select="onPatientSelect"/>
       </el-form-item>
       <el-form-item label="接诊科室">
-        <el-select v-model="form.deptId" clearable filterable placeholder="请选择" style="width: 100%">
-          <el-option v-for="d in deptOptions" :key="d.id" :label="d.deptName || d.name" :value="d.id"/>
-        </el-select>
+        <DeptTreeSelect v-model="form.deptId" mode="LEAF" width="100%" placeholder="请选择"/>
       </el-form-item>
       <el-form-item label="问诊方式" required>
         <el-radio-group v-model="form.consultType">
@@ -44,11 +42,10 @@ import {computed, reactive, ref, watch} from 'vue';
 import {ElMessage} from 'element-plus';
 import {applyOnlineConsult} from '@/api/teleconsult';
 import PatientSelect from '@/components/his/PatientSelect.vue';
+import DeptTreeSelect from '@/components/his/DeptTreeSelect.vue';
 
 const props = defineProps({
   modelValue: {type: Boolean, default: false},
-  // 接诊科室名册由页面加载一次传下来（查询条件同一份）
-  deptOptions: {type: Array, default: () => []},
   // 问诊方式字典由页面加载一次传下来（查询条件与列表列同一份）
   onlineTypeDict: {type: Array, default: () => []},
 });

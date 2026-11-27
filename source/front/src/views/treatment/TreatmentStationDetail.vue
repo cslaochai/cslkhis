@@ -30,7 +30,7 @@
             <template #default="{ row }">{{ money(row.chargeAmount) }}</template>
           </el-table-column>
           <el-table-column label="执行人/时间" width="170">
-            <template #default="{ row }">{{ row.executorName || '—' }} {{ fmtTime(row.executeTime) }}</template>
+            <template #default="{ row }">{{ row.executorName || '' }} {{ fmtTime(row.executeTime) }}</template>
           </el-table-column>
           <el-table-column label="治疗记录" min-width="200" prop="result" show-overflow-tooltip/>
         </el-table>

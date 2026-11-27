@@ -4,14 +4,14 @@
     <div class="mb-3 rounded-lg border border-slate-200 bg-white px-4 py-3 shadow-sm">
       <div class="grid grid-cols-4 gap-3 lg:grid-cols-11">
         <div v-for="c in statCards()" :key="c.label" class="text-center">
-          <p :class="['text-xl font-bold leading-tight', c.color]">{{ statsLoaded ? c.value : '—' }}</p>
+          <p :class="['text-xl font-bold leading-tight', c.color]">{{ statsLoaded ? c.value : '' }}</p>
           <p class="mt-0.5 text-xs text-slate-500">{{ c.label }}</p>
         </div>
       </div>
       <div
           class="mt-2 flex flex-wrap items-center gap-x-6 gap-y-1 border-t border-slate-100 pt-2 text-xs text-slate-500">
-        <span>平均候诊 <b class="text-slate-700">{{ statsLoaded ? stats.avgWaitMinutes : '—' }}</b> 分</span>
-        <span>平均就诊 <b class="text-slate-700">{{ statsLoaded ? stats.avgVisitMinutes : '—' }}</b> 分</span>
+        <span>平均候诊 <b class="text-slate-700">{{ statsLoaded ? stats.avgWaitMinutes : '' }}</b> 分</span>
+        <span>平均就诊 <b class="text-slate-700">{{ statsLoaded ? stats.avgVisitMinutes : '' }}</b> 分</span>
         <span class="text-slate-400">（时长按「到达→开始 / 开始→结束」现算，跨天异常值已剔除）</span>
         <el-button :icon="Refresh" class="ml-auto" size="small" @click="settleDialog = true">日终结转</el-button>
       </div>
@@ -30,11 +30,7 @@
                 type="daterange" value-format="YYYY-MM-DD"/>
           </el-form-item>
           <el-form-item label="科室">
-            <el-select
-                v-model="searchForm.deptIds" :fit-input-width="false" collapse-tags collapse-tags-tooltip
-                filterable multiple placeholder="全部科室">
-              <el-option v-for="d in deptOptions" :key="d.id" :label="d.deptName" :value="String(d.id)"/>
-            </el-select>
+            <DeptTreeSelect v-model="searchForm.deptIds" multiple mode="LEAF" placeholder="全部科室"/>
           </el-form-item>
           <el-form-item label="医生">
             <el-select v-model="searchForm.doctorId" :fit-input-width="false" clearable filterable
@@ -120,12 +116,12 @@
         <el-table-column align="center" label="来源" width="76">
           <template #default="{ row }">
             <span class="text-slate-500">{{
-                row.registSource != null ? statusOf(REGIST_SOURCE, row.registSource).label : '-'
+                row.registSource != null ? statusOf(REGIST_SOURCE, row.registSource).label : ''
               }}</span>
           </template>
         </el-table-column>
         <el-table-column align="center" label="就诊日期" width="150">
-          <template #default="{ row }"><span class="text-slate-600">{{ row.visitDate || '-' }}</span></template>
+          <template #default="{ row }"><span class="text-slate-600">{{ row.visitDate || '' }}</span></template>
         </el-table-column>
 
         <el-table-column label="签到到达" width="150">
@@ -146,7 +142,7 @@
         <el-table-column align="center" label="结算" width="90">
           <template #default="{ row }">
             <span class="text-slate-600">{{
-                row.settlementType != null ? statusOf(SETTLEMENT_TYPE, row.settlementType).label : '-'
+                row.settlementType != null ? statusOf(SETTLEMENT_TYPE, row.settlementType).label : ''
               }}</span>
           </template>
         </el-table-column>
@@ -187,7 +183,8 @@
 import {onMounted, ref} from 'vue';
 import {Refresh, Search, View} from '@element-plus/icons-vue';
 import {getOpdLogListPage, getOpdLogStats} from '@/api/appoint';
-import {getDepartmentSelectList, getEmployeeList} from '@/api/system';
+import {getEmployeeList} from '@/api/system';
+import DeptTreeSelect from '@/components/his/DeptTreeSelect.vue';
 import {
   OPD_LOG_STATUS_OPTIONS,
   REGIST_SOURCE,
@@ -265,13 +262,10 @@ const dateShortcuts = [
   },
 ];
 // ========== 下拉数据源（科室 / 员工数组，全部走真实接口） ==========
-const deptOptions = ref([]);
 const doctorOptions = ref([]);
 const loadOptions = async () => {
   try {
-    // 不传 scope → 默认按当前人过滤（今日就诊列表本就该只看自己能管的科室）
-    const [d, e] = await Promise.all([getDepartmentSelectList({}), getEmployeeList({})]);
-    deptOptions.value = d.data || [];
+    const e = await getEmployeeList({});
     doctorOptions.value = e.data || [];
   } catch (err) {
     console.error('加载科室/医生下拉失败:', err);

@@ -4,20 +4,20 @@
       <template v-if="detail">
         <div class="flex flex-wrap items-center gap-4 text-sm">
           <span>质控单：<b>{{ detail.qcNo }}</b></span>
-          <span>病历：<b>{{ detail.recordNo || '—' }}</b>（{{
+          <span>病历：<b>{{ detail.recordNo || '' }}</b>（{{
               detail.recordSourceText
             }}{{ detail.recordTypeText ? ' · ' + detail.recordTypeText : '' }}）</span>
-          <span>患者：<b>{{ detail.patientName || '—' }}</b></span>
+          <span>患者：<b>{{ detail.patientName || '' }}</b></span>
           <span data-testid="p5-qc-detail-score">得分：<b>{{ scoreText(detail.score) }}</b></span>
-          <span>等级：<b>{{ detail.gradeText || '—' }}</b></span>
+          <span>等级：<b>{{ detail.gradeText || '' }}</b></span>
           <span :class="detail.qcResult === 1 ? 'text-emerald-600' : 'text-red-600'">
             结论：<b>{{ detail.qcResultText }}</b>
           </span>
           <span data-testid="p5-qc-detail-issuecount">问题：<b>{{ num(detail.errorCount) }}</b> 条</span>
         </div>
-        <p class="mt-2 text-xs text-slate-500">{{ detail.qcContent }} · 触发 {{ detail.triggerSourceText || '—' }} ·
-          质控人 {{ detail.qcBy || '—' }} ·
-          {{ detail.qcTime || '—' }}</p>
+        <p class="mt-2 text-xs text-slate-500">{{ detail.qcContent }} · 触发 {{ detail.triggerSourceText || '' }} ·
+          质控人 {{ detail.qcBy || '' }} ·
+          {{ detail.qcTime || '' }}</p>
 
         <!-- 明细表为空但 error_count>0：这类单子的问题只存在 error_detail 文本里
              （旧版质控，以及 qc_type=4 的 AI 内涵质控 —— AI 的发现是自由文本，没有结构化明细）。

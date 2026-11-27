@@ -42,7 +42,7 @@
           </template>
         </el-table-column>
         <el-table-column label="备注" min-width="140" prop="remark" show-overflow-tooltip>
-          <template #default="{ row }">{{ row.remark || '—' }}</template>
+          <template #default="{ row }">{{ row.remark || '' }}</template>
         </el-table-column>
         <el-table-column fixed="right" label="操作" width="120">
           <template #default="{ row }">

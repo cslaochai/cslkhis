@@ -14,13 +14,13 @@
     <div class="grid grid-cols-4 gap-3 mb-3">
       <div class="bg-white rounded-lg border border-gray-100 p-4 shadow-sm" data-testid="dip-stat-total">
         <p class="text-xs text-gray-500">已模拟病案</p>
-        <p class="text-2xl font-semibold mt-1 text-blue-600">{{ stat?.total ?? '—' }}</p>
+        <p class="text-2xl font-semibold mt-1 text-blue-600">{{ stat?.total ?? '' }}</p>
       </div>
       <div class="bg-white rounded-lg border border-gray-100 p-4 shadow-sm" data-testid="dip-stat-grouped">
         <p class="text-xs text-gray-500">已入组 / 未入组</p>
         <p class="text-2xl font-semibold mt-1 text-green-600">
-          {{ stat?.grouped ?? '—' }} <span class="text-sm text-gray-400">/</span>
-          <span class="text-lg text-gray-500">{{ stat?.ungrouped ?? '—' }}</span></p>
+          {{ stat?.grouped ?? '' }} <span class="text-sm text-gray-400">/</span>
+          <span class="text-lg text-gray-500">{{ stat?.ungrouped ?? '' }}</span></p>
       </div>
       <div class="bg-white rounded-lg border border-gray-100 p-4 shadow-sm" data-testid="dip-stat-profit">
         <p class="text-xs text-gray-500">入组结余合计</p>
@@ -94,7 +94,7 @@
           <template #default="{ row }">{{ row.mainDiagCode }} {{ row.mainDiagName || '' }}</template>
         </el-table-column>
         <el-table-column align="center" label="手术" prop="operCode" width="110" show-overflow-tooltip>
-          <template #default="{ row }">{{ row.operCode || '—' }}</template>
+          <template #default="{ row }">{{ row.operCode || '' }}</template>
         </el-table-column>
         <el-table-column align="center" label="版本" prop="version" width="60"/>
         <el-table-column label="病种" prop="dipCode" width="100">
@@ -103,19 +103,19 @@
           </template>
         </el-table-column>
         <el-table-column align="center" label="类型" width="80">
-          <template #default="{ row }">{{ row.diseaseType === 1 ? '核心' : row.diseaseType === 2 ? '综合' : '—' }}</template>
+          <template #default="{ row }">{{ row.diseaseType === 1 ? '核心' : row.diseaseType === 2 ? '综合' : '' }}</template>
         </el-table-column>
         <el-table-column align="right" label="基准分值" width="85">
-          <template #default="{ row }">{{ row.baseScore ?? '—' }}</template>
+          <template #default="{ row }">{{ row.baseScore ?? '' }}</template>
         </el-table-column>
         <el-table-column align="right" label="系数" width="65">
-          <template #default="{ row }">{{ row.coeff ?? '—' }}</template>
+          <template #default="{ row }">{{ row.coeff ?? '' }}</template>
         </el-table-column>
         <el-table-column align="right" label="分值" width="75">
-          <template #default="{ row }">{{ row.score ?? '—' }}</template>
+          <template #default="{ row }">{{ row.score ?? '' }}</template>
         </el-table-column>
         <el-table-column align="right" label="结算金额" width="95">
-          <template #default="{ row }">{{ row.settleAmount ?? '—' }}</template>
+          <template #default="{ row }">{{ row.settleAmount ?? '' }}</template>
         </el-table-column>
         <el-table-column align="right" label="实际费用" prop="actualAmount" width="95"/>
         <el-table-column align="right" label="盈亏" width="95">
@@ -140,19 +140,19 @@
         <el-table-column label="病种编码" prop="diseaseCode" width="100"/>
         <el-table-column label="病种名称" min-width="220" prop="diseaseName" show-overflow-tooltip/>
         <el-table-column align="center" label="类型" width="80">
-          <template #default="{ row }">{{ row.diseaseType === 1 ? '核心' : row.diseaseType === 2 ? '综合' : '—' }}</template>
+          <template #default="{ row }">{{ row.diseaseType === 1 ? '核心' : row.diseaseType === 2 ? '综合' : '' }}</template>
         </el-table-column>
         <el-table-column label="主诊断" min-width="150" show-overflow-tooltip>
           <template #default="{ row }">{{ row.mainDiagCode }} {{ row.mainDiagName || '' }}</template>
         </el-table-column>
         <el-table-column label="手术操作" min-width="140" show-overflow-tooltip>
-          <template #default="{ row }">{{ row.operCode || '—' }} {{ row.operName || '' }}</template>
+          <template #default="{ row }">{{ row.operCode || '' }} {{ row.operName || '' }}</template>
         </el-table-column>
         <el-table-column align="center" label="匹配方式" width="80">
           <template #default="{ row }">{{ row.diagMatch === 2 ? '前缀' : '整码' }}</template>
         </el-table-column>
         <el-table-column align="right" label="基准分值" prop="baseScore" width="90">
-          <template #default="{ row }">{{ row.baseScore ?? '—' }}</template>
+          <template #default="{ row }">{{ row.baseScore ?? '' }}</template>
         </el-table-column>
         <el-table-column label="来源" min-width="150" prop="source" show-overflow-tooltip/>
       </el-table>

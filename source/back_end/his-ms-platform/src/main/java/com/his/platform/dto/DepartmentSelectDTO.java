@@ -42,16 +42,14 @@ public class DepartmentSelectDTO {
     private String nodeType;
 
     /**
-     * 科室名称，模糊匹配（下拉搜索用）
+     * 树形下拉选择模式（{@code selectTree} 入口使用）：
+     * <ul>
+     *   <li>{@code LEAF} — 仅末级业务科室可选；</li>
+     *   <li>{@code TREE}（默认）— 父子均可，父节点按子树聚合；</li>
+     *   <li>{@code ORG} — 组织归属维护，除根节点外均可选。</li>
+     * </ul>
+     * 码值见 {@code DeptSelectModeEnum}。
      */
-    @Schema(description = "科室名称，模糊匹配")
-    private String deptName;
-
-    /**
-     * 只看末级科室：{@code true} 时滤掉有下级科室的节点（如「内科系统」「长沙麓康医院」）。
-     * <p>「请哪个科室」这类必须落到具体科室的下拉（会诊、转科、排班）要传，
-     * 否则用户会选中一个不存在的「科室」提交上去。
-     */
-    @Schema(description = "只看末级科室：true-滤掉有下级的节点")
-    private Boolean leafOnly;
+    @Schema(description = "选择模式：LEAF-仅末级 TREE-父子均可 ORG-组织归属维护，默认 TREE")
+    private String mode;
 }

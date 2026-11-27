@@ -4,16 +4,16 @@
       <el-descriptions :column="2" border class="mb-4" size="small">
         <el-descriptions-item label="入库单号">{{ detail.inboundNo }}</el-descriptions-item>
         <el-descriptions-item label="类型">{{ typeText(detail.inboundType) }}</el-descriptions-item>
-        <el-descriptions-item label="供应商">{{ detail.supplier || '—' }}</el-descriptions-item>
-        <el-descriptions-item label="采购订单号">{{ detail.purchaseOrderNo || '—' }}</el-descriptions-item>
+        <el-descriptions-item label="供应商">{{ detail.supplier || '' }}</el-descriptions-item>
+        <el-descriptions-item label="采购订单号">{{ detail.purchaseOrderNo || '' }}</el-descriptions-item>
         <el-descriptions-item label="状态">
           <el-tag :type="inboundStatusTagType(detail.inboundStatus)">{{ statusText(detail.inboundStatus) }}</el-tag>
         </el-descriptions-item>
         <el-descriptions-item label="金额合计">{{ formatMoney(detail.totalAmount) }}</el-descriptions-item>
-        <el-descriptions-item label="审核人">{{ detail.auditBy || '—' }}</el-descriptions-item>
-        <el-descriptions-item label="入库人">{{ detail.inboundBy || '—' }}</el-descriptions-item>
-        <el-descriptions-item :span="2" label="取消原因">{{ detail.cancelReason || '—' }}</el-descriptions-item>
-        <el-descriptions-item :span="2" label="备注">{{ detail.remark || '—' }}</el-descriptions-item>
+        <el-descriptions-item label="审核人">{{ detail.auditBy || '' }}</el-descriptions-item>
+        <el-descriptions-item label="入库人">{{ detail.inboundBy || '' }}</el-descriptions-item>
+        <el-descriptions-item :span="2" label="取消原因">{{ detail.cancelReason || '' }}</el-descriptions-item>
+        <el-descriptions-item :span="2" label="备注">{{ detail.remark || '' }}</el-descriptions-item>
       </el-descriptions>
 
       <el-table :data="detail.items || []" border data-testid="inbound-detail-table" size="small">

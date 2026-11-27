@@ -33,16 +33,16 @@
         <el-table-column label="器械包条码" prop="packNo" width="180"/>
         <el-table-column label="器械包名称" min-width="130" prop="packName" show-overflow-tooltip/>
         <el-table-column label="申领科室" prop="deptName" width="110">
-          <template #default="{ row }">{{ row.deptName || '—' }}</template>
+          <template #default="{ row }">{{ row.deptName || '' }}</template>
         </el-table-column>
         <el-table-column label="灭菌方式" width="100">
           <template #default="{ row }">{{ methodText(row.sterilizeMethod) }}</template>
         </el-table-column>
         <el-table-column label="灭菌锅次" prop="sterilizerNo" width="100">
-          <template #default="{ row }">{{ row.sterilizerNo || '—' }}</template>
+          <template #default="{ row }">{{ row.sterilizerNo || '' }}</template>
         </el-table-column>
         <el-table-column label="批次号" prop="batchNo" width="100">
-          <template #default="{ row }">{{ row.batchNo || '—' }}</template>
+          <template #default="{ row }">{{ row.batchNo || '' }}</template>
         </el-table-column>
         <el-table-column label="最近流转" width="160">
           <template #default="{ row }">{{ fmtTime(row.lastNodeTime) }}</template>

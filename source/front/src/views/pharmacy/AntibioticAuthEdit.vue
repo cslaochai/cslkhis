@@ -12,7 +12,7 @@
             :disabled="!!authForm.id"
             placeholder="输入姓名搜索（在职医师）"
             style="width: 100%">
-            <el-option v-for="d in doctorOptions" :key="d.id" :label="`${d.doctorName}（${d.deptName || '—'} / ${d.title || '—'}）`" :value="d.id" />
+            <el-option v-for="d in doctorOptions" :key="d.id" :label="`${d.doctorName}（${d.deptName || ''} / ${d.title || ''}）`" :value="d.id" />
           </el-select>
         </div>
       </el-form-item>

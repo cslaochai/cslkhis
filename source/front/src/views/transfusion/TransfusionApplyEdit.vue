@@ -174,7 +174,7 @@ const visible = computed({
   set: (v) => emit('update:modelValue', v),
 });
 
-const text = (v) => (v === null || v === undefined || v === '' ? '—' : String(v));
+const text = (v) => (v === null || v === undefined || v === '' ? '' : String(v));
 const AMOUNT_UNITS = ['U', 'ml', '治疗量'];
 
 const applySubmitting = ref(false);
@@ -200,7 +200,7 @@ const applyForm = reactive({
   remark: '',
 });
 const currentAdmission = computed(() => props.admissions.find((a) => String(a.admissionId) === String(applyForm.admissionId)));
-const currentComponentLabel = computed(() => props.components.find((c) => c.code === applyForm.bloodComponent)?.label || '—');
+const currentComponentLabel = computed(() => props.components.find((c) => c.code === applyForm.bloodComponent)?.label || '');
 
 watch(visible, (open) => {
   if (!open) return;

@@ -30,7 +30,7 @@ public final class OperationCheckItems {
 
     public static String text(Integer code) {
         if (code == null) {
-            return "—";
+            return "";
         }
         return OperationPreCheckItemEnum.getLabel(code);
     }
@@ -112,7 +112,7 @@ public final class OperationCheckItems {
             return "未知核对结果(" + items + ")";
         }
         if (codes.isEmpty()) {
-            return "—";
+            return "";
         }
         List<String> texts = new ArrayList<>();
         for (Integer c : codes) {

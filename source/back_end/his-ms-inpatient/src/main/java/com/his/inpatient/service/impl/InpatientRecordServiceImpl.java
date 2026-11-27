@@ -1,5 +1,6 @@
 package com.his.inpatient.service.impl;
 
+import cn.hutool.json.JSONUtil;
 import com.his.spi.service.PatientFacadeService;
 import com.his.spi.vo.PatientMasterVO;
 
@@ -24,12 +25,15 @@ import com.his.inpatient.vo.InpatientRecordVO;
 import com.his.inpatient.vo.InpatientRecordDetailVO;
 import com.his.inpatient.vo.InpatientRecordLogVO;
 import com.his.inpatient.vo.RecordQualityStatVO;
+import com.his.inpatient.vo.InpatOverdueDraftVO;
+import com.his.inpatient.vo.InpatDraftOverduePayloadVO;
 import com.his.common.vo.CodeOptionVO;
 import com.his.spi.vo.WardVO;
 import com.his.spi.dto.SignCommandDTO;
 import com.his.common.entity.CurrentUser;
 import com.his.spi.service.DeptScopeService;
 import com.his.spi.service.EmrSignatureFacadeService;
+import com.his.spi.service.SysMessageService;
 import com.his.common.utils.UserUtils;
 import com.his.spi.vo.SignatureVO;
 import lombok.RequiredArgsConstructor;
@@ -64,6 +68,10 @@ public class InpatientRecordServiceImpl extends ServiceImpl<BizInpatientRecordMa
      * 电子签名（P5.5）：提交即签名、归档补签、签名即锁定
      */
     private final EmrSignatureFacadeService signatureService;
+    /**
+     * 超时草稿催办消息投递（窄端口，跨模块只发消息不碰对方表）
+     */
+    private final SysMessageService sysMessageService;
 
     // 保存（新增 / 修改）
 
@@ -96,7 +104,7 @@ public class InpatientRecordServiceImpl extends ServiceImpl<BizInpatientRecordMa
     }
 
     private static String rateText(BigDecimal rate) {
-        return rate == null ? "—" : rate.toPlainString() + "%";
+        return rate == null ? "" : rate.toPlainString() + "%";
     }
 
     // 校验
@@ -441,7 +449,7 @@ public class InpatientRecordServiceImpl extends ServiceImpl<BizInpatientRecordMa
         vo.setAge(r.getAge());
         vo.setAgeUnit(r.getAgeUnit());
         vo.setAgeUnitText(AgeUnitEnum.getLabel(r.getAgeUnit()));
-        vo.setAgeText(r.getAge() == null ? "—" : r.getAge() + AgeUnitEnum.getLabel(r.getAgeUnit()));
+        vo.setAgeText(r.getAge() == null ? "" : r.getAge() + AgeUnitEnum.getLabel(r.getAgeUnit()));
         vo.setDeptName(r.getDeptName());
         vo.setWardName(r.getWardName());
         vo.setBedNo(r.getBedNo());
@@ -499,7 +507,7 @@ public class InpatientRecordServiceImpl extends ServiceImpl<BizInpatientRecordMa
     private String vitalText(BizInpatientRecord r) {
         if (r.getTemperature() == null && r.getPulse() == null && r.getRespiration() == null
                 && r.getSystolicPressure() == null) {
-            return "—";
+            return "";
         }
         StringBuilder sb = new StringBuilder();
         if (r.getTemperature() != null) {
@@ -756,7 +764,7 @@ public class InpatientRecordServiceImpl extends ServiceImpl<BizInpatientRecordMa
      */
     private String fieldLabel(Integer docType, String code) {
         if (code == null) {
-            return "—";
+            return "";
         }
         if (Objects.equals(RecordDocTypeEnum.MEDICAL.getCode(), docType)) {
             for (RecordStructuredFields.KeyElement e : RecordStructuredFields.allElements()) {
@@ -799,7 +807,7 @@ public class InpatientRecordServiceImpl extends ServiceImpl<BizInpatientRecordMa
             stat.setElementTotal(0);
             stat.setElementFilled(0);
             stat.setStructuredRate(null);
-            stat.setStructuredRateText("—");
+            stat.setStructuredRateText("");
             return stat;
         }
 
@@ -1048,6 +1056,49 @@ public class InpatientRecordServiceImpl extends ServiceImpl<BizInpatientRecordMa
                 record.setAgeUnit(1);
             }
         }
+    }
+
+    @Override
+    public int remindOverdueDrafts(int limit) {
+        int batch = Math.min(Math.max(limit, 1), 200);
+        List<InpatOverdueDraftVO> candidates = bizInpatientRecordMapper.selectOverdueDraftCandidates(batch);
+        LocalDateTime now = LocalDateTime.now();
+        int reminded = 0;
+        for (InpatOverdueDraftVO draft : candidates) {
+            if (draft.getDoctorId() == null || draft.getBaselineTime() == null || draft.getDeadlineHours() == null) {
+                continue;
+            }
+            LocalDateTime deadline = draft.getBaselineTime().plusHours(draft.getDeadlineHours());
+            if (!now.isAfter(deadline)) {
+                continue;
+            }
+            long overdueHours = Math.max(ChronoUnit.HOURS.between(deadline, now), 1);
+            // 24h 判重：挂住的草稿次日还会再催，不做永久判重
+            if (sysMessageService.sentWithinHours(BizTypeEnum.INPAT_DRAFT_OVERDUE.getType(),
+                    draft.getRecordId(), draft.getDoctorId(), "urgent", 24)) {
+                continue;
+            }
+            draft.setOverdueHours(overdueHours);
+            InpatDraftOverduePayloadVO payload = new InpatDraftOverduePayloadVO();
+            payload.setPatientName(draft.getPatientName());
+            payload.setRecordNo(draft.getRecordNo());
+            payload.setRecordTypeText(InpatientRecordTypeEnum.getLabel(draft.getRecordType()));
+            payload.setOverdueHours(overdueHours);
+            String typeText = InpatientRecordTypeEnum.getLabel(draft.getRecordType(), "住院文书");
+            String content = String.format(
+                    "您书写的%s（%s，患者 %s）已超过规范时限 %d 小时未提交，请尽快补写并完成提交；已提交病历如需更正请走病历更正流程。",
+                    typeText, draft.getRecordNo(),
+                    draft.getPatientName() == null ? "未知" : draft.getPatientName(), overdueHours);
+            sysMessageService.sendSystemMessage(draft.getDoctorId(), draft.getDoctorName(),
+                    "住院文书超时未提交：" + draft.getRecordNo(), content,
+                    BizTypeEnum.INPAT_DRAFT_OVERDUE.getType(), draft.getRecordId(),
+                    "urgent", JSONUtil.toJsonStr(payload), 0);
+            reminded++;
+        }
+        if (!candidates.isEmpty()) {
+            log.info("[住院文书催办] 超时草稿候选 {} 份，本轮催办 {} 份", candidates.size(), reminded);
+        }
+        return reminded;
     }
 
     private String nextRecordNo() {

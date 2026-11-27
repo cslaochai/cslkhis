@@ -36,10 +36,10 @@
             </template>
           </el-table-column>
           <el-table-column label="WHO DDD（g/日）" width="130" align="right">
-            <template #default="{ row }">{{ row.dddValue ?? '—' }}</template>
+            <template #default="{ row }">{{ row.dddValue ?? '' }}</template>
           </el-table-column>
           <el-table-column label="每单位含药量（g）" width="140" align="right">
-            <template #default="{ row }">{{ row.dddUnitGram ?? '—' }}</template>
+            <template #default="{ row }">{{ row.dddUnitGram ?? '' }}</template>
           </el-table-column>
           <el-table-column label="操作" width="120" fixed="right">
             <template #default="{ row }">

@@ -33,7 +33,6 @@ import java.util.List;
 @RestController
 @RequestMapping("/report/dip")
 @RequiredArgsConstructor
-@PreAuthorize("hasAuthority('report:dip:list')")
 public class DipSimController {
 
     private final DipSimService dipSimService;
@@ -42,6 +41,7 @@ public class DipSimController {
 
     private final SystemConfigFacadeService sysConfigService;
 
+    @PreAuthorize("isAuthenticated()")
     @Operation(summary = "医保付费主参数（主付费方式 / DIP 病种库版本 / DIP 点值）")
     @GetMapping("/config")
     public Result<MedpayConfigVO> medpayConfig() {
@@ -70,18 +70,21 @@ public class DipSimController {
         return Result.success("医保付费参数已保存", null);
     }
 
+    @PreAuthorize("hasAuthority('report:dip:list')")
     @Operation(summary = "单条模拟（首页主诊断为空时补传 icdCode，手术操作为空时补传 operCode）")
     @PostMapping("/simulate")
     public Result<DipSimVO.SimResult> simulate(@Valid @RequestBody DipSimDTO.Simulate dto) {
         return Result.success("模拟完成", dipSimService.simulate(dto));
     }
 
+    @PreAuthorize("hasAuthority('report:dip:list')")
     @Operation(summary = "批量模拟（不传 ids 默认最近 50 条）")
     @PostMapping("/simulateBatch")
     public Result<DipSimVO.SummaryListVO> simulateBatch(@Valid @RequestBody DipSimDTO.SimulateBatch dto) {
         return Result.success("批量模拟完成", dipSimService.simulateBatch(dto));
     }
 
+    @PreAuthorize("hasAuthority('report:dip:list')")
     @Operation(summary = "模拟结果分页")
     @PostMapping("/result/listPage")
     public Result<PageResult<DipSimVO.ResultRow>> resultPage(@Valid @RequestBody DipSimDTO.ResultQuery dto) {
@@ -90,6 +93,7 @@ public class DipSimController {
                 page.getRecords()));
     }
 
+    @PreAuthorize("hasAuthority('report:dip:list')")
     @Operation(summary = "可模拟首页列表 + 入组/盈亏统计")
     @GetMapping("/summary/list")
     public Result<DipSimVO.SummaryListVO> summaryList(@RequestParam(required = false) Integer limit,
@@ -97,13 +101,14 @@ public class DipSimController {
         return Result.success(dipSimService.summaryList(limit, version, null));
     }
 
+    @PreAuthorize("hasAuthority('report:dip:list')")
     @Operation(summary = "病种目录（biz_dip_disease）")
     @GetMapping("/disease/list")
     public Result<List<DipSimVO.DiseaseRow>> diseaseList(@RequestParam(required = false) String version) {
         return Result.success(dipSimService.diseaseList(version));
     }
 
-    @PreAuthorize("hasAnyAuthority('system:config:add')")
+    @PreAuthorize("isAuthenticated()")
     @Operation(summary = "当前 DIP 结算默认病种库版本")
     @GetMapping("/version")
     public Result<DipVersionVO> dipVersion() {

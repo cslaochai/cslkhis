@@ -25,7 +25,7 @@
         </el-form>
         <div class="flex shrink-0 items-start gap-3">
           <span class="text-sm text-slate-500">
-            共 <span class="font-semibold text-slate-700">{{ loading ? '—' : pagination.total }}</span> 张发票
+            共 <span class="font-semibold text-slate-700">{{ loading ? '' : pagination.total }}</span> 张发票
           </span>
         </div>
       </div>
@@ -36,11 +36,11 @@
         <el-table-column class-name="font-mono" label="发票号" min-width="200" prop="invoiceNo"/>
         <el-table-column label="患者" min-width="110">
           <template #default="{ row }">
-            <span class="text-slate-800">{{ row.patientName || '—' }}</span>
+            <span class="text-slate-800">{{ row.patientName || '' }}</span>
           </template>
         </el-table-column>
         <el-table-column class-name="font-mono" label="收费单号" min-width="180" prop="chargeNo">
-          <template #default="{ row }">{{ row.chargeNo || '—' }}</template>
+          <template #default="{ row }">{{ row.chargeNo || '' }}</template>
         </el-table-column>
         <el-table-column label="发票类型" width="110">
           <template #default="{ row }">{{ invoiceTypeText(row.invoiceType) }}</template>
@@ -56,7 +56,7 @@
           </template>
         </el-table-column>
         <el-table-column label="开票时间" prop="invoiceTime" width="170">
-          <template #default="{ row }">{{ row.invoiceTime || '—' }}</template>
+          <template #default="{ row }">{{ row.invoiceTime || '' }}</template>
         </el-table-column>
         <el-table-column fixed="right" label="操作" width="200">
           <template #default="{ row }">

@@ -21,24 +21,17 @@ export function getDepartmentList(params) {
     return request.post('/system/department/listPage', params)
 }
 
-// 查询科室树
+// 查询科室树（左栏导航树专用；下拉候选一律走 selectTree / loadDeptTreeOptions）
 export function getDepartmentTree() {
     return request.get('/system/department/tree')
 }
 
 /**
- * 科室下拉统一入口 —— 页面**只应该**用这一个。
- *
- * @param {Object} params
- * @param {string} [params.scope]    数据范围。**不传 / 'CURRENT' = 按当前人过滤（默认）**；
- *                                   'ALL' = 全部科室（字典维护、排班模板这类要全量范围的场景）。
- *                                   默认按当前人，是为了让漏传参数的页面拿到收窄结果而不是全院号源。
- * @param {number} [params.deptType] 科室类型：1-门诊科室 2-医技科室 3-药房 4-住院科室 5-其他
- * @param {string} [params.deptName] 科室名称模糊匹配
- * @returns 科室下拉项数组（含 id / deptCode / deptName / deptType / parentId）
+ * 科室树形下拉：出参为嵌套树，节点自带 disabled/disabledReason，可选规则由服务端按 mode 标注。
+ * @param {Object} params { scope, deptType, nodeType, mode: 'LEAF'|'TREE'|'ORG' }
  */
-export function getDepartmentSelectList(params = {}) {
-    return request.get('/system/department/selectList', {params})
+export function getDepartmentSelectTree(params = {}) {
+    return request.get('/system/department/selectTree', {params})
 }
 
 // 获取科室详情
@@ -673,6 +666,11 @@ export function saveDeptSubjectMap(deptId, items) {
 // 反向：某科目被哪些科室当主科目用
 export function getDeptMapBySubject(subjectCode) {
     return request.get('/system/medSubject/deptMapBySubject', {params: {subjectCode}})
+}
+
+// 已配过上报科目的科室ID（前端区分可维护节点 / 只读分组节点）
+export function getMappedDeptIds() {
+    return request.get('/system/medSubject/mappedDeptIds')
 }
 
 // 还没配科目的临床科室（数据治理待办）

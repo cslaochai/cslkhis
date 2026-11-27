@@ -12,7 +12,7 @@
           detail.check.categoryName || categoryText(detail.check.category)
         }}
       </el-descriptions-item>
-      <el-descriptions-item label="检查人">{{ detail.check.inspectorName || '—' }}</el-descriptions-item>
+      <el-descriptions-item label="检查人">{{ detail.check.inspectorName || '' }}</el-descriptions-item>
       <el-descriptions-item label="抽查/合格">{{ detail.check.qualifiedCount }} / {{
           detail.check.sampleCount
         }}
@@ -27,7 +27,7 @@
         }}
       </el-descriptions-item>
       <el-descriptions-item label="录入时间">{{ detail.check.createTime }}</el-descriptions-item>
-      <el-descriptions-item :span="2" label="小结">{{ detail.check.summary || '—' }}</el-descriptions-item>
+      <el-descriptions-item :span="2" label="小结">{{ detail.check.summary || '' }}</el-descriptions-item>
     </el-descriptions>
     <p v-if="detail && Number(detail.missingItemCount) > 0" class="mt-2 text-sm text-amber-700"
        data-testid="qc-missing">

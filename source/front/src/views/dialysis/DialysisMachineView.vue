@@ -32,7 +32,7 @@
       <el-table v-loading="loading" :data="rows" :max-height="tableMaxHeight" data-testid="hd-machine-table" stripe>
         <el-table-column label="机位号" prop="machineNo" width="140"/>
         <el-table-column label="分区" min-width="160" prop="roomName">
-          <template #default="{ row }">{{ row.roomName || '—' }}</template>
+          <template #default="{ row }">{{ row.roomName || '' }}</template>
         </el-table-column>
         <el-table-column label="状态" width="100">
           <template #default="{ row }">
@@ -41,7 +41,7 @@
         </el-table-column>
         <el-table-column align="right" label="累计例次" prop="sessionTotal" width="110"/>
         <el-table-column label="备注" min-width="180" prop="remark">
-          <template #default="{ row }">{{ row.remark || '—' }}</template>
+          <template #default="{ row }">{{ row.remark || '' }}</template>
         </el-table-column>
         <el-table-column fixed="right" label="操作" width="110">
           <template #default="{ row }">

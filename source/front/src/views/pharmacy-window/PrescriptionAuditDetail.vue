@@ -24,7 +24,7 @@
           </div>
           <div>
             <p class="text-xs text-slate-400">临床诊断</p>
-            <p class="text-sm font-medium text-slate-700">{{ detailRow.diagnosis || '—' }}</p>
+            <p class="text-sm font-medium text-slate-700">{{ detailRow.diagnosis || '' }}</p>
           </div>
           <div>
             <p class="text-xs text-slate-400">金额</p>
@@ -33,7 +33,7 @@
           <div v-if="detailRow.prescriptionStatus === 7"
                class="col-span-2 rounded border border-orange-200 bg-orange-50 p-2">
             <p class="text-xs text-orange-500">退回原因（已退回 {{ detailRow.returnCount || 1 }} 次）</p>
-            <p class="text-sm text-orange-700">{{ detailRow.returnReason || '—' }}</p>
+            <p class="text-sm text-orange-700">{{ detailRow.returnReason || '' }}</p>
           </div>
         </div>
 
@@ -152,7 +152,7 @@ const detailRow = computed(() => props.row);
 const verifying = ref(false);
 const verifyResults = ref([]);
 
-const fmtTime = (v) => (v ? String(v).replace('T', ' ').slice(0, 19) : '—');
+const fmtTime = (v) => (v ? String(v).replace('T', ' ').slice(0, 19) : '');
 
 /** 验证该处方全部签名的有效性（含已作废） */
 const handleVerify = async () => {

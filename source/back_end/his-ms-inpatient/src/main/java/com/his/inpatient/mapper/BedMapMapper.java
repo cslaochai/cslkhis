@@ -5,6 +5,7 @@ import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 
+import java.util.Collection;
 import java.util.List;
 
 /**
@@ -36,6 +37,7 @@ public interface BedMapMapper {
             + ") r ON r.bed_id = b.bed_id AND r.del_flag = 0 ";
 
     @Select("""
+            <script>
             SELECT b.bed_id     AS bedId,
                    b.bed_no     AS bedNo,
                    b.bed_type   AS bedType,
@@ -90,11 +92,15 @@ public interface BedMapMapper {
             """ + RESERVE_JOIN + """
                      LEFT JOIN biz_bed_wait bw ON bw.id = r.wait_id AND bw.del_flag = 0
             WHERE b.del_flag = 0
-              AND (#{deptId} IS NULL OR b.dept_id = #{deptId})
+              <if test="deptIds != null and deptIds.size() > 0">
+                AND b.dept_id IN
+                <foreach collection="deptIds" item="did" open="(" separator="," close=")">#{did}</foreach>
+              </if>
               AND (#{wardId} IS NULL OR b.ward_id = #{wardId})
             ORDER BY b.ward_id, LENGTH(b.bed_no), b.bed_no
+            </script>
             """)
-    List<BedMapVO.BedCard> selectBedCards(@Param("deptId") Long deptId, @Param("wardId") Long wardId);
+    List<BedMapVO.BedCard> selectBedCards(@Param("deptIds") Collection<Long> deptIds, @Param("wardId") Long wardId);
 
     /**
      * 有床位的科室（授权收口在服务层做，这里不带权限语义）
@@ -117,6 +123,7 @@ public interface BedMapMapper {
      * 当前科室下真正有床位的病区
      */
     @Select("""
+            <script>
             SELECT b.ward_id AS wardId,
                    IFNULL(w.ward_name, CONCAT('病区#', b.ward_id)) AS wardName,
                    b.dept_id AS deptId,
@@ -125,11 +132,16 @@ public interface BedMapMapper {
                    IFNULL(SUM(CASE WHEN b.bed_status = 3 THEN 1 ELSE 0 END), 0) AS reserved
             FROM sys_bed b
                      LEFT JOIN sys_ward w ON w.ward_id = b.ward_id
-            WHERE b.del_flag = 0 AND b.dept_id = #{deptId}
+            WHERE b.del_flag = 0
+              <if test="deptIds != null and deptIds.size() > 0">
+                AND b.dept_id IN
+                <foreach collection="deptIds" item="did" open="(" separator="," close=")">#{did}</foreach>
+              </if>
             GROUP BY b.ward_id, w.ward_name, b.dept_id
             ORDER BY wardName
+            </script>
             """)
-    List<BedMapVO.WardOption> selectWardOptions(@Param("deptId") Long deptId);
+    List<BedMapVO.WardOption> selectWardOptions(@Param("deptIds") Collection<Long> deptIds);
 
     /**
      * 病区归属（校验传入 wardId 是否落在已收口的科室内，防止跨科窥探）

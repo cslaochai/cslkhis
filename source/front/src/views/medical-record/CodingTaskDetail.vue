@@ -10,25 +10,25 @@
               detail.returnCount
             }} 次</span>
         </el-descriptions-item>
-        <el-descriptions-item label="编码员">{{ detail.coderName || '—' }}</el-descriptions-item>
-        <el-descriptions-item label="病历号">{{ detail.recordNo || '—' }}</el-descriptions-item>
-        <el-descriptions-item label="患者">{{ detail.patientName || '—' }}</el-descriptions-item>
-        <el-descriptions-item label="科室">{{ detail.deptName || '—' }}</el-descriptions-item>
+        <el-descriptions-item label="编码员">{{ detail.coderName || '' }}</el-descriptions-item>
+        <el-descriptions-item label="病历号">{{ detail.recordNo || '' }}</el-descriptions-item>
+        <el-descriptions-item label="患者">{{ detail.patientName || '' }}</el-descriptions-item>
+        <el-descriptions-item label="科室">{{ detail.deptName || '' }}</el-descriptions-item>
         <el-descriptions-item label="分配时间">
-          {{ detail.assignTime ? (detail.assignTime || '').replace('T', ' ').slice(0, 19) : '—' }}
+          {{ detail.assignTime ? (detail.assignTime || '').replace('T', ' ').slice(0, 19) : '' }}
         </el-descriptions-item>
-        <el-descriptions-item :span="2" label="病历诊断">{{ detail.diagnosis || '—' }}</el-descriptions-item>
+        <el-descriptions-item :span="2" label="病历诊断">{{ detail.diagnosis || '' }}</el-descriptions-item>
         <el-descriptions-item :span="2" label="主诊断 ICD">
-          {{ detail.mainIcdCode ? `${detail.mainIcdCode} ${detail.mainIcdName}` : '—' }}
+          {{ detail.mainIcdCode ? `${detail.mainIcdCode} ${detail.mainIcdName}` : '' }}
         </el-descriptions-item>
-        <el-descriptions-item :span="2" label="其他诊断">{{ detail.otherIcdText || '—' }}</el-descriptions-item>
+        <el-descriptions-item :span="2" label="其他诊断">{{ detail.otherIcdText || '' }}</el-descriptions-item>
         <el-descriptions-item label="提交时间">
-          {{ detail.submitTime ? (detail.submitTime || '').replace('T', ' ').slice(0, 19) : '—' }}
+          {{ detail.submitTime ? (detail.submitTime || '').replace('T', ' ').slice(0, 19) : '' }}
         </el-descriptions-item>
         <el-descriptions-item label="审核时间">
-          {{ detail.auditTime ? (detail.auditTime || '').replace('T', ' ').slice(0, 19) : '—' }}
+          {{ detail.auditTime ? (detail.auditTime || '').replace('T', ' ').slice(0, 19) : '' }}
         </el-descriptions-item>
-        <el-descriptions-item :span="2" label="审核意见">{{ detail.auditRemark || '—' }}</el-descriptions-item>
+        <el-descriptions-item :span="2" label="审核意见">{{ detail.auditRemark || '' }}</el-descriptions-item>
       </el-descriptions>
     </template>
   </el-dialog>

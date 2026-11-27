@@ -46,6 +46,15 @@ public enum BizTypeEnum {
     /* ---------- 病历域 ---------- */
     EMR_ARCHIVE("emr-arch", "病历归档超期"),
     EMR_QC("emr-qc", "病历质控问题"),
+    // emr-draft-overdue：门诊病历就诊当日应完成，次日仍为草稿 → 催责任医生补写提交（24h 判重，提交后闭环）。
+    EMR_DRAFT_OVERDUE("emr-draft-overdue", "病历草稿超时未提交"),
+    // inpat-draft-overdue：住院文书草稿超过规范时限（入院记录24h/首次病程8h/手术记录24h/出院记录24h/转入记录24h）
+    // → 催书写医生补写提交（24h 判重，提交后闭环；规范时限无节假日顺延）。
+    INPAT_DRAFT_OVERDUE("inpat-draft-overdue", "住院文书草稿超时"),
+    // emr-draft-handover：医生离岗/调离后名下草稿移交上级或质控岗代补 → 待办投给承接人，代补提交后闭环。
+    EMR_DRAFT_HANDOVER("emr-draft-handover", "病历草稿移交代补"),
+    // emr-correction：已提交/归档病历的更正申请 → 科室初审、医务终审，批准后授权回写并全程留痕。
+    EMR_CORRECTION("emr-correction", "病历更正申请"),
     ARCHIVE_BORROW("arch-borrow", "病案借阅超期"),
     CODE_TASK("code-task", "编码任务退修"),
     INFECTIOUS_REPORT("infectious-report", "传染病报卡时限预警"),

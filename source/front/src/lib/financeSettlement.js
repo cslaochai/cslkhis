@@ -39,7 +39,7 @@ export function defaultShiftType() {
 }
 
 export function shiftTypeText(value) {
-  if (value === null || value === undefined || value === '') return '—'
+  if (value === null || value === undefined || value === '') return ''
   const hit = SHIFT_TYPE_OPTIONS.find(o => o.value === Number(value))
   return hit ? hit.label : `未知(${value})`
 }
@@ -54,7 +54,7 @@ export const CASHIER_SETTLE_STATUS_OPTIONS = [
 ]
 
 export function cashierStatusText(value) {
-  if (value === null || value === undefined || value === '') return '—'
+  if (value === null || value === undefined || value === '') return ''
   const hit = CASHIER_SETTLE_STATUS_OPTIONS.find(o => o.value === Number(value))
   return hit ? hit.label : `未知(${value})`
 }
@@ -77,7 +77,7 @@ export const DAY_SETTLE_STATUS_OPTIONS = [
 ]
 
 export function dayStatusText(value) {
-  if (value === null || value === undefined || value === '') return '—'
+  if (value === null || value === undefined || value === '') return ''
   const hit = DAY_SETTLE_STATUS_OPTIONS.find(o => o.value === Number(value))
   return hit ? hit.label : `未知(${value})`
 }
@@ -99,7 +99,7 @@ export const RECONCILE_STATUS_OPTIONS = [
 ]
 
 export function reconcileText(value) {
-  if (value === null || value === undefined || value === '') return '—'
+  if (value === null || value === undefined || value === '') return ''
   const hit = RECONCILE_STATUS_OPTIONS.find(o => o.value === Number(value))
   return hit ? hit.label : `未知(${value})`
 }
@@ -124,7 +124,7 @@ export const PAYMENT_METHOD_OPTIONS = [
 ]
 
 export function paymentMethodText(value) {
-  if (value === null || value === undefined || value === '') return '—'
+  if (value === null || value === undefined || value === '') return ''
   const hit = PAYMENT_METHOD_OPTIONS.find(o => o.value === Number(value))
   return hit ? hit.label : `未知(${value})`
 }

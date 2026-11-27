@@ -2,7 +2,7 @@
   <el-dialog v-model="visible" :title="`失控处理：${row?.itemName || ''}`" width="560px">
     <div class="mb-2 text-sm">
       <el-tag size="small" type="danger">{{ row?.statusText }}</el-tag>
-      <span class="ml-2 text-gray-500">Z={{ row?.zScore }}　命中：{{ row?.violatedRules || '-' }}</span>
+      <span class="ml-2 text-gray-500">Z={{ row?.zScore }}　命中：{{ row?.violatedRules || '' }}</span>
     </div>
     <el-form label-width="100px">
       <el-form-item label="原因分析" required>

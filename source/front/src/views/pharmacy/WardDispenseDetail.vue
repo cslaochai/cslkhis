@@ -5,14 +5,14 @@
     <div v-if="detail" v-loading="detailLoading" class="space-y-3">
       <div class="flex gap-6 text-sm text-slate-600 flex-wrap">
         <span>摆药日期：<b class="text-slate-800">{{ detail.dispenseDate }}</b></span>
-        <span>患者：<b class="text-slate-800">{{ detail.patientName || '—' }}</b>（{{ detail.patientNo || '—' }}）</span>
-        <span>病区：<b class="text-slate-800">{{ detail.wardName || '—' }}</b></span>
+        <span>患者：<b class="text-slate-800">{{ detail.patientName || '' }}</b>（{{ detail.patientNo || '' }}）</span>
+        <span>病区：<b class="text-slate-800">{{ detail.wardName || '' }}</b></span>
         <span>
           状态：<el-tag :type="orderStatusTag(detail.status)" size="small">{{
             orderStatusText(detail.status)
           }}</el-tag>
         </span>
-        <span>生成人：{{ detail.generateBy || '—' }}</span>
+        <span>生成人：{{ detail.generateBy || '' }}</span>
       </div>
       <el-table :data="detail.items || []" border data-testid="wd-item-table" size="small">
         <el-table-column label="药品" min-width="150" prop="drugName"/>
@@ -35,10 +35,10 @@
           </template>
         </el-table-column>
         <el-table-column label="配药人" prop="dispenserName" width="90">
-          <template #default="{ row }">{{ row.dispenserName || '—' }}</template>
+          <template #default="{ row }">{{ row.dispenserName || '' }}</template>
         </el-table-column>
         <el-table-column label="核对人" prop="checkerName" width="90">
-          <template #default="{ row }">{{ row.checkerName || '—' }}</template>
+          <template #default="{ row }">{{ row.checkerName || '' }}</template>
         </el-table-column>
         <el-table-column fixed="right" label="操作" width="170">
           <template #default="{ row }">

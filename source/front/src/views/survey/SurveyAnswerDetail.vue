@@ -13,11 +13,11 @@
           <el-input :model-value="`${anDetail.patientName || ''} ${anDetail.patientNo || ''}`"/>
         </el-form-item>
         <el-form-item label="科室">
-          <el-input :model-value="anDetail.deptName || '—'"/>
+          <el-input :model-value="anDetail.deptName || ''"/>
         </el-form-item>
         <el-form-item label="得分">
           <el-input
-              :model-value="`均分 ${anDetail.avgScore ?? '—'} ｜ 百分制 ${anDetail.score100 ?? '—'} ｜ NPS ${anDetail.nps ?? '—'}`"/>
+              :model-value="`均分 ${anDetail.avgScore ?? ''} ｜ 百分制 ${anDetail.score100 ?? ''} ｜ NPS ${anDetail.nps ?? ''}`"/>
         </el-form-item>
         <el-form-item label="填报">
           <el-input
@@ -80,7 +80,7 @@ const visible = computed({
   set: (v) => emit('update:modelValue', v),
 });
 
-const fmtTime = (v) => (v ? String(v).slice(0, 16).replace('T', ' ') : '—');
+const fmtTime = (v) => (v ? String(v).slice(0, 16).replace('T', ' ') : '');
 const dimensionText = (v) => dictLabelText(props.dicts.dimension, v);
 const answerStatusText = (v) => dictLabelText(props.dicts.answerStatus, v);
 const fillSourceText = (v) => dictLabelText(props.dicts.fillSource, v);

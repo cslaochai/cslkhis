@@ -1064,7 +1064,7 @@ public class EmergencyServiceImpl extends ServiceImpl<EmergencyMapper, Emergency
                         + "本人无法处理时请在急诊台改派，不要让它留在候诊队列里。"
                         + "本科室无人响应时，本待办会自动升级到当日总值班做全院协调。",
                 emergency.getEmergencyNo(), humanWait(waitMinutes), target, levelText,
-                TextUtil.hasText(emergency.getDeptName()) ? emergency.getDeptName() : "-");
+                TextUtil.hasText(emergency.getDeptName()) ? emergency.getDeptName() : "");
 
         int sent = 0;
         for (Long receiverId : receivers) {
@@ -1903,7 +1903,7 @@ public class EmergencyServiceImpl extends ServiceImpl<EmergencyMapper, Emergency
                         + "请立即评估处置优先级。",
                 emergency.getEmergencyNo(), emergency.getPatientName(),
                 EmergencyTriageLevelEnum.getLabel(before), EmergencyTriageLevelEnum.getLabel(after),
-                emergency.getMewsScore() == null ? "-" : emergency.getMewsScore(), reason);
+                emergency.getMewsScore() == null ? "" : emergency.getMewsScore(), reason);
         for (Long receiverId : receivers) {
             sysMessageService.sendSystemMessage(
                     receiverId, employeeNameOf(receiverId),

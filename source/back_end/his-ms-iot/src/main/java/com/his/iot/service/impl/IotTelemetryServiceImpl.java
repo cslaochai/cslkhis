@@ -1,11 +1,13 @@
 package com.his.iot.service.impl;
 
+import com.his.common.enums.IotEventLevelEnum;
 import com.his.common.exception.BusinessException;
 import com.his.iot.config.IotProperties;
 import com.his.iot.dto.IotColdChainRecordQueryDTO;
 import com.his.iot.dto.IotHistoryQueryDTO;
 import com.his.iot.dto.IotLatestQueryDTO;
 import com.his.iot.mapper.IotColdChainTempLogMapper;
+import com.his.iot.service.IotEventService;
 import com.his.iot.service.IotTelemetryService;
 import com.his.iot.support.DeviceTypeSchema;
 import com.his.iot.support.TsdbQuerySupport;
@@ -59,6 +61,7 @@ public class IotTelemetryServiceImpl implements IotTelemetryService {
     private final TsdbQuerySupport tsdb;
     private final IotProperties properties;
     private final IotColdChainTempLogMapper coldChainArchiveMapper;
+    private final IotEventService eventService;
 
     @Override
     public List<IotDeviceTypeVO> deviceTypes() {
@@ -79,6 +82,8 @@ public class IotTelemetryServiceImpl implements IotTelemetryService {
         // 多条 SQL 共用一次连接，避免 11 类设备 11 次 TCP 握手
         List<List<Map<String, Object>>> batches =
                 tsdb.queryBatch(schemas.stream().map(this::latestSql).toList());
+        // 告警状态以事件中心为准：存在未处理且级别≥2 的事件才算告警，前端不拿遥测快照二次推断
+        Map<String, Integer> alarmLevels = eventService.activeAlarmDeviceLevels();
         List<IotLatestVO> result = new ArrayList<>();
         for (int i = 0; i < schemas.size(); i++) {
             DeviceTypeSchema.Schema schema = schemas.get(i);
@@ -93,6 +98,9 @@ public class IotTelemetryServiceImpl implements IotTelemetryService {
                 vo.setDeviceNo(String.valueOf(deviceNo));
                 vo.setTs(parseTs(row.get("ts")));
                 vo.setMetrics(metrics(schema, row));
+                Integer alarmLevel = alarmLevels.get(vo.getDeviceNo());
+                vo.setAlarmLevel(alarmLevel);
+                vo.setAlarmLevelText(alarmLevel == null ? null : IotEventLevelEnum.getLabel(alarmLevel));
                 result.add(vo);
             }
         }

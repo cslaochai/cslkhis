@@ -48,7 +48,7 @@
             }}</span></template>
         </el-table-column>
         <el-table-column label="用法" min-width="140" prop="usageText" show-overflow-tooltip>
-          <template #default="{ row }">{{ row.usageText || row.dosage || '—' }}</template>
+          <template #default="{ row }">{{ row.usageText || row.dosage || '' }}</template>
         </el-table-column>
         <el-table-column label="状态" prop="dispenseStatusText" width="100">
           <template #default="{ row }">
@@ -56,7 +56,7 @@
           </template>
         </el-table-column>
         <el-table-column label="发药人" prop="dispenseName" width="100">
-          <template #default="{ row }">{{ row.dispenseName || '—' }}</template>
+          <template #default="{ row }">{{ row.dispenseName || '' }}</template>
         </el-table-column>
         <el-table-column label="开单人" prop="createBy" width="100"/>
         <el-table-column fixed="right" label="操作" width="170">

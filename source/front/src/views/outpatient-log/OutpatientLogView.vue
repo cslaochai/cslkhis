@@ -5,7 +5,7 @@
       <div class="grid grid-cols-5 gap-3">
         <div v-for="c in statCards()" :key="c.label" :class="c.onClick ? 'cursor-pointer' : ''"
              class="text-center" @click="c.onClick && c.onClick()">
-          <p :class="['text-xl font-bold leading-tight', c.color]">{{ statsLoaded ? c.value : '—' }}</p>
+          <p :class="['text-xl font-bold leading-tight', c.color]">{{ statsLoaded ? c.value : '' }}</p>
           <p class="mt-0.5 text-xs text-slate-500">{{ c.label }}</p>
         </div>
       </div>
@@ -21,10 +21,7 @@
               start-placeholder="开始日期" type="daterange" value-format="YYYY-MM-DD"/>
         </el-form-item>
         <el-form-item label="科室">
-          <el-select v-model="searchForm.deptId" :fit-input-width="false" class="!w-44" clearable
-                     filterable placeholder="全部科室">
-            <el-option v-for="d in deptOptions" :key="d.id" :label="d.deptName" :value="String(d.id)"/>
-          </el-select>
+          <DeptTreeSelect v-model="searchForm.deptId" mode="LEAF" width="176px" placeholder="全部科室"/>
         </el-form-item>
         <el-form-item label="医生">
           <el-select v-model="searchForm.doctorId" :fit-input-width="false" class="!w-40" clearable
@@ -67,20 +64,20 @@
           </template>
         </el-table-column>
         <el-table-column align="center" fixed="left" label="就诊日期" width="150">
-          <template #default="{ row }"><span class="text-slate-600">{{ row.visitDate || '-' }}</span></template>
+          <template #default="{ row }"><span class="text-slate-600">{{ row.visitDate || '' }}</span></template>
         </el-table-column>
         <el-table-column label="科室" prop="deptName" show-overflow-tooltip width="200"/>
         <el-table-column label="接诊医生" prop="doctorName" show-overflow-tooltip width="150"/>
         <el-table-column label="诊断" min-width="200">
           <template #default="{ row }">
-            <div class="text-slate-800">{{ row.diagnosisName || '-' }}</div>
+            <div class="text-slate-800">{{ row.diagnosisName || '' }}</div>
             <div v-if="row.diagnosisCode" class="font-mono text-slate-400">ICD {{ row.diagnosisCode }}</div>
           </template>
         </el-table-column>
         <el-table-column align="center" label="体温" width="82">
           <template #default="{ row }">
             <span :class="[row.fever ? 'font-bold text-red-600' : 'text-slate-600']">
-              {{ row.temperature ? row.temperature + '℃' : '-' }}
+              {{ row.temperature ? row.temperature + '℃' : '' }}
             </span>
           </template>
         </el-table-column>
@@ -155,23 +152,23 @@
         </div>
         <template v-if="detailRecord">
           <div><p class="text-slate-400">主诉</p>
-            <p class="whitespace-pre-wrap text-slate-700">{{ detailRecord.chiefComplaint || '-' }}</p></div>
+            <p class="whitespace-pre-wrap text-slate-700">{{ detailRecord.chiefComplaint || '' }}</p></div>
           <div><p class="text-slate-400">现病史</p>
-            <p class="whitespace-pre-wrap text-slate-700">{{ detailRecord.presentIllness || '-' }}</p></div>
+            <p class="whitespace-pre-wrap text-slate-700">{{ detailRecord.presentIllness || '' }}</p></div>
           <div><p class="text-slate-400">既往史</p>
-            <p class="whitespace-pre-wrap text-slate-700">{{ detailRecord.pastHistory || '-' }}</p></div>
+            <p class="whitespace-pre-wrap text-slate-700">{{ detailRecord.pastHistory || '' }}</p></div>
           <div><p class="text-slate-400">体格检查</p>
-            <p class="whitespace-pre-wrap text-slate-700">{{ detailRecord.physicalExamination || '-' }}</p></div>
+            <p class="whitespace-pre-wrap text-slate-700">{{ detailRecord.physicalExamination || '' }}</p></div>
           <div><p class="text-slate-400">诊断</p>
             <p class="whitespace-pre-wrap text-slate-700">
-              {{ detailRecord.diagnosisName || detailRecord.diagnosis || '-' }}
+              {{ detailRecord.diagnosisName || detailRecord.diagnosis || '' }}
               <span v-if="detailRecord.diagnosisCode"
                     class="font-mono text-xs text-slate-400">（ICD {{ detailRecord.diagnosisCode }}）</span>
             </p>
           </div>
           <div><p class="text-slate-400">处理意见</p>
             <p class="whitespace-pre-wrap text-slate-700">{{
-                detailRecord.treatmentPlan || detailRecord.advice || '-'
+                detailRecord.treatmentPlan || detailRecord.advice || ''
               }}</p></div>
         </template>
         <el-empty v-else-if="!detailLoading" :image-size="60" description="未取到病历内容"/>
@@ -200,7 +197,8 @@ import {onMounted, ref} from 'vue';
 import {useRouter} from 'vue-router';
 import {Position, Refresh, Search, View} from '@element-plus/icons-vue';
 import {getOutpatientLogPage, getOutpatientLogStats, getRecordDetail} from '@/api/emr';
-import {getDepartmentSelectList, getEmployeeList} from '@/api/system';
+import {getEmployeeList} from '@/api/system';
+import DeptTreeSelect from '@/components/his/DeptTreeSelect.vue';
 import {patientGenderText} from '@/lib/patientGender';
 import {recordStatusTagType, recordStatusText} from '@/lib/recordStatus';
 import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination';
@@ -261,12 +259,10 @@ const dateShortcuts = [
     }
   },
 ];
-const deptOptions = ref([]);
 const doctorOptions = ref([]);
 const loadOptions = async () => {
   try {
-    const [d, e] = await Promise.all([getDepartmentSelectList({}), getEmployeeList({})]);
-    deptOptions.value = d.data || [];
+    const e = await getEmployeeList({});
     doctorOptions.value = e.data || [];
   } catch (err) {
     console.error('加载科室/医生下拉失败:', err);

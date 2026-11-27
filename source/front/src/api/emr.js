@@ -14,6 +14,33 @@ export function getRecordListPage(params) {
     return request.get('/emr/listPage', {params})
 }
 
+// 本人未完成病历（草稿）列表：转科/跨日后回流续写
+export function getMyDrafts() {
+    return request.get('/emr/myDrafts')
+}
+
+// ========== 病历草稿移交代补 ==========
+
+// 我的待代补草稿
+export function getMyReceivingDrafts() {
+    return request.get('/emr/handover/myReceiving')
+}
+
+// 移交台账分页（管理侧）
+export function getHandoverPage(params) {
+    return request.post('/emr/handover/listPage', params)
+}
+
+// 批量移交草稿代补
+export function assignHandover(data) {
+    return request.post('/emr/handover/assign', data)
+}
+
+// 撤销移交单
+export function revokeHandover(id) {
+    return request.post('/emr/handover/revoke', null, { params: { id } })
+}
+
 // 获取病历详情
 export function getRecordDetail(recordId) {
     return request.get('/emr/getRecordDetailById', {params: {recordId}})

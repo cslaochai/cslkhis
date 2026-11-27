@@ -15,15 +15,15 @@
     <div class="mb-3 grid grid-cols-3 gap-3">
       <div class="rounded-lg border border-slate-200 bg-white p-3" data-testid="narco-count-total">
         <div class="text-xs text-slate-500">专册登记总数</div>
-        <div class="mt-1 text-xl font-semibold text-[#1269B5]">{{ countsLoaded ? counts.total : '—' }}</div>
+        <div class="mt-1 text-xl font-semibold text-[#1269B5]">{{ countsLoaded ? counts.total : '' }}</div>
       </div>
       <div class="rounded-lg border border-slate-200 bg-white p-3" data-testid="narco-count-pending">
         <div class="text-xs text-slate-500">待回收空安瓿</div>
-        <div class="mt-1 text-xl font-semibold text-rose-600">{{ countsLoaded ? counts.pendingAmpoule : '—' }}</div>
+        <div class="mt-1 text-xl font-semibold text-rose-600">{{ countsLoaded ? counts.pendingAmpoule : '' }}</div>
       </div>
       <div class="rounded-lg border border-slate-200 bg-white p-3" data-testid="narco-count-returned">
         <div class="text-xs text-slate-500">已回收空安瓿</div>
-        <div class="mt-1 text-xl font-semibold text-emerald-600">{{ countsLoaded ? counts.returnedAmpoule : '—' }}</div>
+        <div class="mt-1 text-xl font-semibold text-emerald-600">{{ countsLoaded ? counts.returnedAmpoule : '' }}</div>
       </div>
     </div>
 
@@ -79,7 +79,7 @@
         <el-table-column fixed label="登记号" prop="registerNo" show-overflow-tooltip width="160"/>
         <el-table-column label="患者" prop="patientName" show-overflow-tooltip width="110">
           <template #default="{ row }">
-            {{ row.patientName || '—' }}
+            {{ row.patientName || '' }}
             <span class="text-slate-400">{{ patientGenderText(row.gender) }}</span>
           </template>
         </el-table-column>
@@ -88,11 +88,11 @@
             <el-tag :type="flagTag(row.specialFlag)" class="mr-1" effect="dark" size="small">
               {{ flagText(row.specialFlag) }}
             </el-tag>
-            <span>{{ row.drugName || '—' }}</span>
+            <span>{{ row.drugName || '' }}</span>
           </template>
         </el-table-column>
         <el-table-column align="right" label="数量" prop="quantity" width="90">
-          <template #default="{ row }">{{ row.quantity ?? '—' }} {{ row.unit || '' }}</template>
+          <template #default="{ row }">{{ row.quantity ?? '' }} {{ row.unit || '' }}</template>
         </el-table-column>
         <el-table-column label="批号（FEFO 实扣）" min-width="150" prop="batchNo" show-overflow-tooltip>
           <template #default="{ row }">
@@ -102,7 +102,7 @@
         <el-table-column align="center" label="限量/实际" prop="limitDays" width="110">
           <template #default="{ row }">
             <span :class="overLimit(row) ? 'text-rose-600 font-medium' : ''">
-              {{ row.limitDays ?? '—' }} / {{ row.duration ?? '—' }} 日
+              {{ row.limitDays ?? '' }} / {{ row.duration ?? '' }} 日
             </span>
           </template>
         </el-table-column>
@@ -110,7 +110,7 @@
         <el-table-column label="发药人" prop="dispenseBy" show-overflow-tooltip width="100"/>
         <el-table-column label="复核人" prop="checkerName" show-overflow-tooltip width="100">
           <template #default="{ row }">
-            <span :class="row.checkerName ? '' : 'text-slate-400'">{{ row.checkerName || '—' }}</span>
+            <span :class="row.checkerName ? '' : 'text-slate-400'">{{ row.checkerName || '' }}</span>
           </template>
         </el-table-column>
         <el-table-column label="发药时间" prop="dispenseTime" show-overflow-tooltip width="160"/>

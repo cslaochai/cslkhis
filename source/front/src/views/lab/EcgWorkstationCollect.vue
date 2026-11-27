@@ -11,7 +11,7 @@
           <span class="mx-2 text-slate-300">|</span>
           <span class="text-slate-400">状态：</span>{{ collectDetail.recordStatusText }}
           <span class="mx-2 text-slate-300">|</span>
-          <span class="text-slate-400">临床诊断：</span>{{ collectDetail.clinicalDiagnosis || '—' }}
+          <span class="text-slate-400">临床诊断：</span>{{ collectDetail.clinicalDiagnosis || '' }}
         </div>
 
         <div v-if="collectDetail.recordStatus === 1" class="rounded-lg border border-amber-200 bg-amber-50 p-3">

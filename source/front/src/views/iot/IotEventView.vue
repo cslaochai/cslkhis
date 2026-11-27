@@ -55,19 +55,19 @@
         </el-table-column>
         <el-table-column align="center" label="级别" width="90">
           <template #default="{ row }">
-            <el-tag :type="levelTagType(row.level)" size="small">{{ row.levelText || '—' }}</el-tag>
+            <el-tag :type="levelTagType(row.level)" size="small">{{ row.levelText || '' }}</el-tag>
           </template>
         </el-table-column>
         <el-table-column align="center" label="状态" width="100">
           <template #default="{ row }">
-            <el-tag :type="statusTagType(row.handledFlag)" size="small">{{ row.handledFlagText || '—' }}</el-tag>
+            <el-tag :type="statusTagType(row.handledFlag)" size="small">{{ row.handledFlagText || '' }}</el-tag>
           </template>
         </el-table-column>
         <el-table-column label="处理人" width="90">
-          <template #default="{ row }">{{ row.handleBy || '—' }}</template>
+          <template #default="{ row }">{{ row.handleBy || '' }}</template>
         </el-table-column>
         <el-table-column label="处理时间" width="165">
-          <template #default="{ row }">{{ row.handleTime ? fmtTs(row.handleTime) : '—' }}</template>
+          <template #default="{ row }">{{ row.handleTime ? fmtTs(row.handleTime) : '' }}</template>
         </el-table-column>
         <el-table-column fixed="right" label="操作" width="150">
           <template #default="{ row }">
@@ -130,10 +130,10 @@ const query = reactive({
   pageSize: DEFAULT_PAGE_SIZE,
 });
 
-const typeLabel = (type) => deviceTypes.value.find(t => t.type === type)?.label || type || '—';
+const typeLabel = (type) => deviceTypes.value.find(t => t.type === type)?.label || type || '';
 const levelTagType = (level) => level === 3 ? 'danger' : level === 2 ? 'warning' : 'info';
 const statusTagType = (flag) => flag === 1 ? 'success' : flag === 2 ? 'info' : 'warning';
-const fmtTs = (ts) => (ts ? String(ts).replace('T', ' ').slice(0, 19) : '—');
+const fmtTs = (ts) => (ts ? String(ts).replace('T', ' ').slice(0, 19) : '');
 
 const loadList = async () => {
   loading.value = true;

@@ -33,7 +33,7 @@
             <el-option
                 v-for="d in drugOptions"
                 :key="d.id"
-                :label="`${d.drugName}（${d.specification || '—'}）`"
+                :label="`${d.drugName}（${d.specification || ''}）`"
                 :value="d.id"
             />
           </el-select>
@@ -176,7 +176,7 @@ const initEdit = async (orderId) => {
     form.remark = d.remark || '';
     items.value = (d.items || []).map((x) => ({
       drugId: x.drugId,
-      drugLabel: `${x.drugName}（${x.specification || '—'}）`,
+      drugLabel: `${x.drugName}（${x.specification || ''}）`,
       batchNo: x.batchNo || '',
       productionDate: x.productionDate || '',
       expiryDate: x.expiryDate || '',

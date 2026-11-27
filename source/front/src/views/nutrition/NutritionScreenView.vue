@@ -3,27 +3,27 @@
     <el-card class="stat-card" shadow="never">
       <div class="stat-items">
         <div class="stat-item">
-          <div class="stat-value" data-testid="ov-in-hospital">{{ overview.inHospitalCount ?? '-' }}</div>
+          <div class="stat-value" data-testid="ov-in-hospital">{{ overview.inHospitalCount ?? '' }}</div>
           <div class="stat-label">在院患者数</div>
           <div class="stat-sub">其中已筛 {{ overview.inHospitalScreenedCount ?? 0 }} 人</div>
         </div>
         <div class="stat-item">
           <div :class="{ 'stat-value-danger': (overview.missedScreenCount ?? 0) > 0 }" class="stat-value"
                data-testid="ov-missed">
-            {{ overview.missedScreenCount ?? '-' }}
+            {{ overview.missedScreenCount ?? '' }}
           </div>
           <div class="stat-label">在院未筛人数（漏筛提醒）</div>
           <div class="stat-sub">筛查率考核的就是这一档</div>
         </div>
         <div class="stat-item">
-          <div class="stat-value" data-testid="ov-risk">{{ overview.inHospitalRiskCount ?? '-' }}</div>
+          <div class="stat-value" data-testid="ov-risk">{{ overview.inHospitalRiskCount ?? '' }}</div>
           <div class="stat-label">在院有营养风险人数</div>
           <div class="stat-sub">最新一次 NRS2002 总分≥3</div>
         </div>
         <div class="stat-item">
           <div :class="{ 'stat-value-warn': (overview.reScreenDueCount ?? 0) > 0 }" class="stat-value"
                data-testid="ov-due">
-            {{ overview.reScreenDueCount ?? '-' }}
+            {{ overview.reScreenDueCount ?? '' }}
           </div>
           <div class="stat-label">到期未复筛人数</div>
           <div class="stat-sub">下次筛查日期 ≤ 今天</div>
@@ -99,14 +99,14 @@
       <el-table v-loading="loading" :data="rows" :max-height="tableMaxHeight" data-testid="screen-table" stripe>
         <el-table-column label="患者" min-width="150">
           <template #default="{ row }">
-            <div>{{ row.patientName || '-' }}</div>
+            <div>{{ row.patientName || '' }}</div>
             <div class="muted">{{ row.patientNo || '' }}</div>
           </template>
         </el-table-column>
         <el-table-column label="住院号" prop="admissionNo" show-overflow-tooltip width="150"/>
         <el-table-column label="科室 / 病区" min-width="160">
           <template #default="{ row }">
-            <div>{{ row.deptName || '-' }}</div>
+            <div>{{ row.deptName || '' }}</div>
             <div class="muted">{{ row.wardName || '' }}{{ row.bedNo ? ' · ' + row.bedNo + '床' : '' }}</div>
           </template>
         </el-table-column>
@@ -115,9 +115,9 @@
         </el-table-column>
         <el-table-column label="分项" width="150">
           <template #default="{ row }">
-            <span class="muted">受损 {{ row.impairScore ?? '-' }} · 严重 {{
-                row.severityScore ?? '-'
-              }} · 年龄 {{ row.ageScore ?? '-' }}</span>
+            <span class="muted">受损 {{ row.impairScore ?? '' }} · 严重 {{
+                row.severityScore ?? ''
+              }} · 年龄 {{ row.ageScore ?? '' }}</span>
           </template>
         </el-table-column>
         <el-table-column align="right" label="总分" width="80">
@@ -134,7 +134,7 @@
           </template>
         </el-table-column>
         <el-table-column align="right" label="BMI" width="80">
-          <template #default="{ row }">{{ row.bmi ?? '-' }}</template>
+          <template #default="{ row }">{{ row.bmi ?? '' }}</template>
         </el-table-column>
         <el-table-column label="筛查时机" width="130">
           <template #default="{ row }">{{ row.screenSourceText }}</template>
@@ -143,7 +143,7 @@
         <el-table-column label="下次筛查" width="130">
           <template #default="{ row }">
           <span :class="{ 'stat-value-warn': row.reScreenDue === 1 }" data-testid="cell-next-screen">
-            {{ row.nextScreenDate || '—' }}
+            {{ row.nextScreenDate || '' }}
           </span>
           </template>
         </el-table-column>

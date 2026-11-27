@@ -27,10 +27,10 @@
             <template #default="{ row }">{{ row.tierLabel }}</template>
           </el-table-column>
           <el-table-column class-name="font-mono text-xs" label="国家编码" min-width="160">
-            <template #default="{ row }">{{ row.ybCode || '—' }}</template>
+            <template #default="{ row }">{{ row.ybCode || '' }}</template>
           </el-table-column>
           <el-table-column label="单位" width="70">
-            <template #default="{ row }">{{ row.unit || '—' }}</template>
+            <template #default="{ row }">{{ row.unit || '' }}</template>
           </el-table-column>
           <el-table-column align="right" label="全额" width="110">
             <template #default="{ row }">
@@ -90,25 +90,25 @@
           <el-button :icon="Search" type="primary" @click="handleSearch">查询</el-button>
           <el-button :icon="Refresh" @click="handleReset">重置</el-button>
           <span class="ml-auto text-sm text-slate-500">
-            共 <span class="font-semibold text-slate-700">{{ loading ? '—' : pagination.total }}</span> 条
+            共 <span class="font-semibold text-slate-700">{{ loading ? '' : pagination.total }}</span> 条
           </span>
         </div>
 
         <el-table v-loading="loading" :data="rows" class="mt-3" style="width: 100%">
           <el-table-column :label="typeMeta().codeLabel" class-name="font-mono text-xs" min-width="150">
-            <template #default="{ row }">{{ row.itemCode || '—' }}</template>
+            <template #default="{ row }">{{ row.itemCode || '' }}</template>
           </el-table-column>
           <el-table-column :label="typeMeta().nameLabel" min-width="200">
-            <template #default="{ row }">{{ row.itemName || '—' }}</template>
+            <template #default="{ row }">{{ row.itemName || '' }}</template>
           </el-table-column>
           <el-table-column label="规格" min-width="120">
-            <template #default="{ row }">{{ row.specification || '—' }}</template>
+            <template #default="{ row }">{{ row.specification || '' }}</template>
           </el-table-column>
           <el-table-column label="单位" width="80">
-            <template #default="{ row }">{{ row.unit || '—' }}</template>
+            <template #default="{ row }">{{ row.unit || '' }}</template>
           </el-table-column>
           <el-table-column label="生产厂家" min-width="150" show-overflow-tooltip>
-            <template #default="{ row }">{{ row.manufacturer || '—' }}</template>
+            <template #default="{ row }">{{ row.manufacturer || '' }}</template>
           </el-table-column>
           <el-table-column align="right" label="价格" width="120">
             <template #default="{ row }">
@@ -164,12 +164,12 @@
           />
           <el-button :icon="Search" type="primary" @click="handleHistorySearch">查询</el-button>
           <span class="ml-auto text-sm text-slate-500">
-            共 <span class="font-semibold text-slate-700">{{ historyLoading ? '—' : historyPagination.total }}</span> 条
+            共 <span class="font-semibold text-slate-700">{{ historyLoading ? '' : historyPagination.total }}</span> 条
           </span>
         </div>
         <el-table v-loading="historyLoading" :data="historyRows" class="mt-3" style="width: 100%">
           <el-table-column label="调价时间" prop="changeTime" width="170">
-            <template #default="{ row }">{{ row.changeTime || '—' }}</template>
+            <template #default="{ row }">{{ row.changeTime || '' }}</template>
           </el-table-column>
           <el-table-column label="类型" width="90">
             <template #default="{ row }">
@@ -177,10 +177,10 @@
             </template>
           </el-table-column>
           <el-table-column class-name="font-mono text-xs" label="项目编码" min-width="150" prop="itemCode">
-            <template #default="{ row }">{{ row.itemCode || '—' }}</template>
+            <template #default="{ row }">{{ row.itemCode || '' }}</template>
           </el-table-column>
           <el-table-column label="项目名称" min-width="180" prop="itemName">
-            <template #default="{ row }">{{ row.itemName || '—' }}</template>
+            <template #default="{ row }">{{ row.itemName || '' }}</template>
           </el-table-column>
           <el-table-column align="right" label="原价" width="110">
             <template #default="{ row }">¥{{ formatMoney(row.oldPrice) }}</template>
@@ -191,10 +191,10 @@
             </template>
           </el-table-column>
           <el-table-column label="调价原因" min-width="180" prop="changeReason" show-overflow-tooltip>
-            <template #default="{ row }">{{ row.changeReason || '—' }}</template>
+            <template #default="{ row }">{{ row.changeReason || '' }}</template>
           </el-table-column>
           <el-table-column label="操作人" prop="operatorName" width="110">
-            <template #default="{ row }">{{ row.operatorName || '—' }}</template>
+            <template #default="{ row }">{{ row.operatorName || '' }}</template>
           </el-table-column>
         </el-table>
         <div v-if="!historyLoading && historyRows.length === 0" class="py-12 text-center text-sm text-slate-400">

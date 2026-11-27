@@ -6,10 +6,10 @@
         <el-descriptions-item label="术式">{{ detail.itemName }}（{{ detail.itemCode }}）</el-descriptions-item>
         <el-descriptions-item label="最长滞留(h)">{{ detail.maxStayHours }}</el-descriptions-item>
         <el-descriptions-item label="患者">{{ detail.patientName }}（{{
-            detail.patientNo || '—'
+            detail.patientNo || ''
           }}）
         </el-descriptions-item>
-        <el-descriptions-item label="手术科室">{{ detail.deptName || '—' }}</el-descriptions-item>
+        <el-descriptions-item label="手术科室">{{ detail.deptName || '' }}</el-descriptions-item>
         <el-descriptions-item label="计划手术日">{{ detail.planSurgeryDate }}</el-descriptions-item>
         <el-descriptions-item label="状态">
           <el-tag :type="statusTag(detail.status)" size="small">{{ statusText(detail.status) }}</el-tag>
@@ -20,17 +20,17 @@
           <span v-else>—</span>
         </el-descriptions-item>
         <el-descriptions-item label="麻醉方式">{{ anesText(detail.anesthesiaType) }}</el-descriptions-item>
-        <el-descriptions-item :span="3" label="评估意见">{{ detail.evalRemark || '—' }}</el-descriptions-item>
-        <el-descriptions-item label="手术时间">{{ detail.surgeryTime || '—' }}</el-descriptions-item>
-        <el-descriptions-item label="手术间">{{ detail.operatingRoom || '—' }}</el-descriptions-item>
-        <el-descriptions-item label="主刀">{{ detail.surgeon || '—' }}</el-descriptions-item>
-        <el-descriptions-item label="手术结束">{{ detail.surgeryEndTime || '—' }}</el-descriptions-item>
+        <el-descriptions-item :span="3" label="评估意见">{{ detail.evalRemark || '' }}</el-descriptions-item>
+        <el-descriptions-item label="手术时间">{{ detail.surgeryTime || '' }}</el-descriptions-item>
+        <el-descriptions-item label="手术间">{{ detail.operatingRoom || '' }}</el-descriptions-item>
+        <el-descriptions-item label="主刀">{{ detail.surgeon || '' }}</el-descriptions-item>
+        <el-descriptions-item label="手术结束">{{ detail.surgeryEndTime || '' }}</el-descriptions-item>
         <el-descriptions-item label="离院方式">{{
-            detail.leaveType ? leaveText(detail.leaveType) : '—'
+            detail.leaveType ? leaveText(detail.leaveType) : ''
           }}
         </el-descriptions-item>
-        <el-descriptions-item label="离院时间">{{ detail.dischargeTime || '—' }}</el-descriptions-item>
-        <el-descriptions-item label="随访时限">{{ detail.followDue || '—' }}</el-descriptions-item>
+        <el-descriptions-item label="离院时间">{{ detail.dischargeTime || '' }}</el-descriptions-item>
+        <el-descriptions-item label="随访时限">{{ detail.followDue || '' }}</el-descriptions-item>
         <el-descriptions-item label="随访次数">{{ detail.followCount ?? 0 }}</el-descriptions-item>
         <el-descriptions-item label="超期">
           <el-tag v-if="detail.overdue" size="small" type="danger">滞留超期</el-tag>
@@ -43,7 +43,7 @@
             detail.cancelReason
           }}
         </el-descriptions-item>
-        <el-descriptions-item :span="3" label="出院评估">{{ detail.dischargeRemark || '—' }}</el-descriptions-item>
+        <el-descriptions-item :span="3" label="出院评估">{{ detail.dischargeRemark || '' }}</el-descriptions-item>
       </el-descriptions>
 
       <div class="flow-title">随访台账</div>
@@ -57,7 +57,7 @@
             </el-tag>
             <span class="flow-op">{{ f.operator }}</span>
           </div>
-          <div class="flow-content">{{ f.content || '—' }}</div>
+          <div class="flow-content">{{ f.content || '' }}</div>
         </el-timeline-item>
       </el-timeline>
       <el-empty v-else :image-size="60" description="暂无随访记录"/>

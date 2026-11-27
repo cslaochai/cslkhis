@@ -23,7 +23,7 @@ public final class MiniappPdfStub {
     public static byte[] reportPdf(String reportNo, String patientName, String itemName,
                                    String deptName, String doctorName, LocalDateTime reportTime) {
         String time = reportTime == null
-                ? "-" : reportTime.format(DateFormats.DATETIME_MINUTE);
+                ? "" : reportTime.format(DateFormats.DATETIME_MINUTE);
         List<String> lines = List.of(
                 "Lukang Hospital (HIS stub PDF)",
                 "--------------------------------------------",
@@ -81,7 +81,7 @@ public final class MiniappPdfStub {
     }
 
     private static String safe(String s) {
-        return !TextUtil.hasText(s) ? "-" : s.replaceAll("[()\\\\]", " ");
+        return !TextUtil.hasText(s) ? "" : s.replaceAll("[()\\\\]", " ");
     }
 
     private static String escape(String s) {

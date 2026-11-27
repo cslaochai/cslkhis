@@ -2,11 +2,11 @@
   <el-dialog v-model="visible" destroy-on-close title="申请退费" width="520px">
     <el-form class="space-y-2" label-width="96px">
       <el-form-item label="患者">
-        <span class="text-sm text-slate-800">{{ refundForm.patientName || '-' }}</span>
+        <span class="text-sm text-slate-800">{{ refundForm.patientName || '' }}</span>
         <span class="ml-3 font-mono text-xs text-slate-500">{{ refundForm.registNo }}</span>
       </el-form-item>
       <el-form-item label="原收费单">
-        <span class="font-mono text-xs text-slate-600">{{ refundForm.billNo || '-' }}</span>
+        <span class="font-mono text-xs text-slate-600">{{ refundForm.billNo || '' }}</span>
       </el-form-item>
       <el-form-item label="退费类型" required>
         <el-select v-model="refundForm.refundType" :fit-input-width="false" class="!w-full" placeholder="请选择">

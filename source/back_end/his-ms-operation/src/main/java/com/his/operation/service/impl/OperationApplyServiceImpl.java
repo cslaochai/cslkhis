@@ -1149,7 +1149,7 @@ public class OperationApplyServiceImpl extends ServiceImpl<BizOperationApplyMapp
         vo.setIncisionLevelText(dictCacheService.getDicDataLabel(DictTypeConst.INCISION_LEVEL, vo.getIncisionLevel()));
         vo.setAnesthesiaTypeText(OperationAnesthesiaMethodEnum.getLabel(vo.getAnesthesiaType()));
         vo.setIsEmergencyText(YesOrNoEnum.getLabel(vo.getIsEmergency()));
-        vo.setIsMainText(vo.getIsMain() == null ? "—" : (vo.getIsMain() == 1 ? "主要手术" : "次要手术"));
+        vo.setIsMainText(vo.getIsMain() == null ? "" : (vo.getIsMain() == 1 ? "主要手术" : "次要手术"));
         vo.setGenderText(SysGenderEnum.getLabel(vo.getGender()));
         vo.setAdmitStatusText(AdmitStatusEnum.getLabel(vo.getAdmitStatus()));
         vo.setPreopCheckItemsText(OperationCheckItems.summaryText(vo.getPreopCheckItems()));

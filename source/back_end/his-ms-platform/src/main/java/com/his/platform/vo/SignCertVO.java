@@ -142,6 +142,16 @@ public class SignCertVO {
     private Boolean expired;
 
     /**
+     * 是否进入换发窗口：有效且未过期，剩余有效期 ≤ his.sign.renew-window-days
+     */
+    private Boolean expiringSoon;
+
+    /**
+     * 距到期天数（仅有效且未过期的证书现算；其余为 null）
+     */
+    private Integer daysToExpire;
+
+    /**
      * 吊销原因
      */
     private String revokeReason;

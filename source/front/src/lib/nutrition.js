@@ -155,7 +155,7 @@ export function nrsLocalRisk(total) {
 
 /** 应答耗时展示：<60 分钟按分钟，否则按小时（会诊列表列与详情弹框共用） */
 export function responseText(row) {
-  if (row.responseMinutes == null) return '—'
+  if (row.responseMinutes == null) return ''
   const m = Number(row.responseMinutes)
   return m < 60 ? `${m} 分钟` : `${(m / 60).toFixed(1)} 小时`
 }

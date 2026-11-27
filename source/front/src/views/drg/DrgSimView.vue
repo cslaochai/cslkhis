@@ -25,15 +25,15 @@
     <div class="grid grid-cols-4 gap-3 mb-3">
       <div class="bg-white rounded-lg border border-gray-100 p-4 shadow-sm" data-testid="drg-stat-total">
         <p class="text-xs text-gray-500">已模拟病案</p>
-        <p class="text-2xl font-semibold mt-1 text-blue-600">{{ stat?.total ?? '—' }}</p>
+        <p class="text-2xl font-semibold mt-1 text-blue-600">{{ stat?.total ?? '' }}</p>
       </div>
       <div class="bg-white rounded-lg border border-gray-100 p-4 shadow-sm" data-testid="drg-stat-grouped">
         <p class="text-xs text-gray-500">已入组 / 未入组 / 歧义</p>
         <p class="text-2xl font-semibold mt-1 text-green-600">
-          {{ stat?.grouped ?? '—' }} <span class="text-sm text-gray-400">/</span>
-          <span class="text-lg text-gray-500">{{ stat?.ungrouped ?? '—' }}</span>
+          {{ stat?.grouped ?? '' }} <span class="text-sm text-gray-400">/</span>
+          <span class="text-lg text-gray-500">{{ stat?.ungrouped ?? '' }}</span>
           <span class="text-sm text-gray-400">/</span>
-          <span class="text-lg text-amber-600">{{ stat?.ambiguous ?? '—' }}</span></p>
+          <span class="text-lg text-amber-600">{{ stat?.ambiguous ?? '' }}</span></p>
       </div>
       <div class="bg-white rounded-lg border border-gray-100 p-4 shadow-sm" data-testid="drg-stat-profit">
         <p class="text-xs text-gray-500">入组结余合计</p>
@@ -117,10 +117,10 @@
           </template>
         </el-table-column>
         <el-table-column align="right" label="权重" prop="weight" width="70">
-          <template #default="{ row }">{{ row.weight ?? '—' }}</template>
+          <template #default="{ row }">{{ row.weight ?? '' }}</template>
         </el-table-column>
         <el-table-column align="right" label="支付标准" prop="payStandard" width="95">
-          <template #default="{ row }">{{ row.payStandard ?? '—' }}</template>
+          <template #default="{ row }">{{ row.payStandard ?? '' }}</template>
         </el-table-column>
         <el-table-column align="right" label="实际费用" prop="actualAmount" width="95"/>
         <el-table-column align="right" label="盈亏" width="95">
@@ -155,10 +155,10 @@
         <el-table-column align="center" label="MDC" prop="mdcCode" width="70"/>
         <el-table-column align="center" label="ADRG" prop="adrgCode" width="80"/>
         <el-table-column align="right" label="权重" prop="weight" width="80">
-          <template #default="{ row }">{{ row.weight ?? '—' }}</template>
+          <template #default="{ row }">{{ row.weight ?? '' }}</template>
         </el-table-column>
         <el-table-column align="right" label="支付标准(元)" prop="payStandard" width="110">
-          <template #default="{ row }">{{ row.payStandard ?? '—' }}</template>
+          <template #default="{ row }">{{ row.payStandard ?? '' }}</template>
         </el-table-column>
         <el-table-column label="来源" min-width="160" prop="source" show-overflow-tooltip/>
       </el-table>

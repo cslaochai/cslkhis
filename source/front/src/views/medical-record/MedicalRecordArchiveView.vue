@@ -12,15 +12,15 @@
     <div class="grid grid-cols-2 gap-3 md:grid-cols-4 mb-3">
       <div class="rounded-lg border border-slate-200 bg-white p-3" data-testid="arc-count-pending">
         <div class="text-xs text-slate-500">待归档</div>
-        <div class="mt-1 text-xl font-semibold text-amber-600">{{ countsLoaded ? counts.pending : '—' }}</div>
+        <div class="mt-1 text-xl font-semibold text-amber-600">{{ countsLoaded ? counts.pending : '' }}</div>
       </div>
       <div class="rounded-lg border border-slate-200 bg-white p-3" data-testid="arc-count-archived">
         <div class="text-xs text-slate-500">已归档</div>
-        <div class="mt-1 text-xl font-semibold text-emerald-600">{{ countsLoaded ? counts.archived : '—' }}</div>
+        <div class="mt-1 text-xl font-semibold text-emerald-600">{{ countsLoaded ? counts.archived : '' }}</div>
       </div>
       <div class="rounded-lg border border-slate-200 bg-white p-3" data-testid="arc-count-sealed">
         <div class="text-xs text-slate-500">已封存</div>
-        <div class="mt-1 text-xl font-semibold text-slate-600">{{ countsLoaded ? counts.sealed : '—' }}</div>
+        <div class="mt-1 text-xl font-semibold text-slate-600">{{ countsLoaded ? counts.sealed : '' }}</div>
       </div>
       <div class="rounded-lg border border-slate-200 bg-white p-3" data-testid="arc-count-total">
         <div class="text-xs text-slate-500">合计</div>
@@ -62,13 +62,13 @@
         <el-table-column class-name="font-mono" label="归档单号" min-width="150" prop="archiveNo"/>
         <el-table-column label="患者" min-width="110">
           <template #default="{ row }">
-            <div class="text-sm text-slate-800">{{ row.patientName || '—' }}</div>
+            <div class="text-sm text-slate-800">{{ row.patientName || '' }}</div>
             <div class="text-xs text-slate-400">{{ row.patientNo || '' }}</div>
           </template>
         </el-table-column>
         <el-table-column label="就诊" min-width="150">
           <template #default="{ row }">
-            <div class="text-xs text-slate-600">{{ row.visitDate || '—' }}</div>
+            <div class="text-xs text-slate-600">{{ row.visitDate || '' }}</div>
             <div class="text-xs text-slate-400">{{ row.deptName || '' }}{{
                 row.doctorName ? ' · ' + row.doctorName : ''
               }}
@@ -76,7 +76,7 @@
           </template>
         </el-table-column>
         <el-table-column label="诊断" min-width="140" prop="diagnosis" show-overflow-tooltip>
-          <template #default="{ row }">{{ row.diagnosis || '—' }}</template>
+          <template #default="{ row }">{{ row.diagnosis || '' }}</template>
         </el-table-column>
         <el-table-column label="状态" width="100">
           <template #default="{ row }">
@@ -91,7 +91,7 @@
             <el-tag v-else-if="row.paperVerifyStatus === 1" effect="plain" size="small" type="info">纸质核验</el-tag>
             <el-tag v-else effect="plain" size="small" type="danger">待补签</el-tag>
             <div v-if="row.paperVerifyStatus === 1" class="mt-1 text-xs text-slate-400">
-              {{ row.paperVerifyByName || '—' }} · {{ row.paperVerifyTime || '—' }}
+              {{ row.paperVerifyByName || '' }} · {{ row.paperVerifyTime || '' }}
             </div>
             <div v-if="row.paperCertNo" class="text-xs text-slate-400">件号 {{ row.paperCertNo }}</div>
           </template>
@@ -166,7 +166,7 @@
       <el-form ref="paperVerifyFormRef" :model="paperVerifyForm" :rules="paperVerifyRules" class="mt-3" label-width="100px">
         <el-form-item label="患者/病历">
           <span class="text-sm text-slate-700">
-            {{ paperVerifyRow?.patientName || '—' }} / {{ paperVerifyRow?.recordNo || paperVerifyRow?.archiveNo || '—' }}
+            {{ paperVerifyRow?.patientName || '' }} / {{ paperVerifyRow?.recordNo || paperVerifyRow?.archiveNo || '' }}
           </span>
         </el-form-item>
         <el-form-item label="纸质件编号" prop="paperCertNo">
@@ -236,7 +236,7 @@ const loadDicts = async () => {
 /** 状态文案：命中字典用字典，命中不了暴露「未知(n)」 */
 const statusText = (v) => {
   if (v === null || v === undefined)
-    return '—';
+    return '';
   const hit = statusOptions.value.find(o => o.value === Number(v));
   return hit ? hit.label : `未知(${v})`;
 };
@@ -312,7 +312,7 @@ const openDetail = (row) => {
 // ---------------- 归档 / 封存 ----------------
 const actionLoading = ref(false);
 const doArchive = async (row) => {
-  await ElMessageBox.confirm(`确认将「${row.patientName || '—'}」的病历（${row.recordNo || row.archiveNo || '—'}）归档？归档后病历不可再修改。`, '归档确认', {
+  await ElMessageBox.confirm(`确认将「${row.patientName || ''}」的病历（${row.recordNo || row.archiveNo || ''}）归档？归档后病历不可再修改。`, '归档确认', {
     type: 'warning',
     confirmButtonText: '确认归档',
     cancelButtonText: '取消'
@@ -336,7 +336,7 @@ const doArchive = async (row) => {
 const doSeal = async (row) => {
   let reason = '';
   try {
-    const {value} = await ElMessageBox.prompt(`封存「${row.patientName || '—'}」的病历（${row.recordNo || row.archiveNo || '—'}）。封存是法律动作，封存后不可解封 —— 请填写封存事由。`, '病历封存', {
+    const {value} = await ElMessageBox.prompt(`封存「${row.patientName || ''}」的病历（${row.recordNo || row.archiveNo || ''}）。封存是法律动作，封存后不可解封 —— 请填写封存事由。`, '病历封存', {
       type: 'warning',
       confirmButtonText: '确认封存',
       cancelButtonText: '取消',

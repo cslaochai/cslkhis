@@ -40,7 +40,7 @@ public enum PacuStatusEnum {
     // 展示口径：脏码值出空串；要看原始码值走 getLabelOrUnknown
     public static String getLabel(Integer code) {
         if (null == code) {
-            return "—";
+            return StringUtils.EMPTY;
         }
         PacuStatusEnum item = fromCode(code);
         return item == null ? StringUtils.EMPTY : item.label;

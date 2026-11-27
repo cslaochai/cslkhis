@@ -13,10 +13,10 @@
       <div v-if="detailSettlement" class="rounded-lg border border-slate-200 p-4">
         <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
           <div><span class="text-slate-400">日结单号：</span>
-            <span class="font-mono text-slate-700">{{ detailSettlement.settlementNo || '—' }}</span>
+            <span class="font-mono text-slate-700">{{ detailSettlement.settlementNo || '' }}</span>
           </div>
           <div><span class="text-slate-400">日期：</span>
-            <span class="text-slate-700">{{ detailSettlement.settleDate || '—' }}</span>
+            <span class="text-slate-700">{{ detailSettlement.settleDate || '' }}</span>
           </div>
           <div><span class="text-slate-400">状态：</span>
             <el-tag :class="dayStatusTagClass(detailSettlement.settleStatus)" class="border" effect="plain"
@@ -58,16 +58,16 @@
             <span class="font-semibold text-slate-800">¥{{ formatMoney(detailSettlement.netAmount) }}</span>
           </div>
           <div><span class="text-slate-400">日结人：</span>
-            <span class="text-slate-700">{{ detailSettlement.settleBy || '—' }}</span>
+            <span class="text-slate-700">{{ detailSettlement.settleBy || '' }}</span>
           </div>
           <div><span class="text-slate-400">日结时间：</span>
-            <span class="text-slate-700">{{ detailSettlement.settleTime || '—' }}</span>
+            <span class="text-slate-700">{{ detailSettlement.settleTime || '' }}</span>
           </div>
           <div><span class="text-slate-400">审核人：</span>
-            <span class="text-slate-700">{{ detailSettlement.auditBy || '—' }}</span>
+            <span class="text-slate-700">{{ detailSettlement.auditBy || '' }}</span>
           </div>
           <div><span class="text-slate-400">审核时间：</span>
-            <span class="text-slate-700">{{ detailSettlement.auditTime || '—' }}</span>
+            <span class="text-slate-700">{{ detailSettlement.auditTime || '' }}</span>
           </div>
         </div>
         <div class="mt-3 grid grid-cols-2 gap-3 lg:grid-cols-5">
@@ -154,7 +154,7 @@
         <el-table :data="detailShifts" data-testid="fin-detail-shift-table" size="small" style="width: 100%">
           <el-table-column class-name="font-mono text-xs" label="交班单号" min-width="150" prop="settlementNo"/>
           <el-table-column label="收费员" width="90">
-            <template #default="{ row }">{{ row.cashierName || '—' }}</template>
+            <template #default="{ row }">{{ row.cashierName || '' }}</template>
           </el-table-column>
           <el-table-column label="班次" width="76">
             <template #default="{ row }">{{ shiftTypeText(row.shiftType) }}</template>
@@ -197,7 +197,7 @@
           <el-table-column label="科室" min-width="180">
             <template #default="{ row }">
               <span :class="row.unattributed ? 'text-rose-600' : 'text-slate-700'">
-                {{ row.deptName || '—' }}
+                {{ row.deptName || '' }}
               </span>
             </template>
           </el-table-column>

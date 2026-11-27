@@ -3,29 +3,29 @@
     <div v-loading="loading" class="space-y-4 text-sm">
       <div class="grid grid-cols-2 gap-3 rounded-lg border border-slate-200 p-4">
         <div><span class="text-slate-400">发票号：</span><span
-            class="font-mono text-slate-700">{{ detail?.invoiceNo || '—' }}</span></div>
+            class="font-mono text-slate-700">{{ detail?.invoiceNo || '' }}</span></div>
         <div><span class="text-slate-400">发票类型：</span><span
             class="text-slate-700">{{ invoiceTypeText(detail?.invoiceType) }}</span></div>
         <div><span class="text-slate-400">患者：</span><span class="text-slate-700">{{
-            detail?.patientName || '—'
+            detail?.patientName || ''
           }}</span></div>
         <div><span class="text-slate-400">患者号：</span><span class="text-slate-700">{{
-            detail?.patientNo || '—'
+            detail?.patientNo || ''
           }}</span></div>
         <div><span class="text-slate-400">收费单号：</span><span
-            class="font-mono text-slate-700">{{ detail?.chargeNo || '—' }}</span></div>
+            class="font-mono text-slate-700">{{ detail?.chargeNo || '' }}</span></div>
         <div><span class="text-slate-400">金额：</span><span
             class="font-semibold text-slate-800">¥{{ formatMoney(detail?.totalAmount) }}</span></div>
         <div><span class="text-slate-400">状态：</span><span
             class="text-slate-700">{{ invoiceStatusText(detail?.invoiceStatus) }}</span></div>
         <div><span class="text-slate-400">开票时间：</span><span class="text-slate-700">{{
-            detail?.invoiceTime || '—'
+            detail?.invoiceTime || ''
           }}</span></div>
         <div><span class="text-slate-400">打印时间：</span><span class="text-slate-700">{{
-            detail?.printTime || '—'
+            detail?.printTime || ''
           }}</span></div>
         <div><span class="text-slate-400">作废时间：</span><span class="text-slate-700">{{
-            detail?.voidTime || '—'
+            detail?.voidTime || ''
           }}</span></div>
       </div>
       <div v-if="detail?.voidReason" class="rounded-lg border border-rose-200 bg-rose-50 p-3 text-rose-700">

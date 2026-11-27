@@ -2,15 +2,15 @@
   <!-- ==================== 床位卡详情（图上点床） ==================== -->
   <el-dialog v-model="visible" :title="`床位 ${bed.bedNo || ''} · ${bed.bedStatusText || ''}`" width="520px">
     <el-descriptions :column="2" border size="small">
-      <el-descriptions-item label="所属">{{ bed.deptName || '—' }} · {{ bed.wardName || '—' }}
+      <el-descriptions-item label="所属">{{ bed.deptName || '' }} · {{ bed.wardName || '' }}
       </el-descriptions-item>
-      <el-descriptions-item label="床型">{{ bed.bedTypeText || bed.bedType || '—' }}
+      <el-descriptions-item label="床型">{{ bed.bedTypeText || bed.bedType || '' }}
       </el-descriptions-item>
       <el-descriptions-item label="状态">
         <el-tag :type="bedStatusTag(bed.bedStatus)" size="small">{{ bed.bedStatusText }}</el-tag>
       </el-descriptions-item>
       <el-descriptions-item label="占用患者">
-        {{ bed.patientName || '—' }}
+        {{ bed.patientName || '' }}
         <span v-if="bed.admitTime" class="text-xs text-slate-400">（{{ bed.admitTime }} 入院）</span>
       </el-descriptions-item>
       <el-descriptions-item label="预留去向">
@@ -23,11 +23,11 @@
         <span v-else class="text-xs text-slate-400">—</span>
       </el-descriptions-item>
       <el-descriptions-item label="调配方式">
-        {{ bed.allocTypeText || '—' }}
+        {{ bed.allocTypeText || '' }}
         <el-tag v-if="bed.crossDept" class="ml-1" size="small" type="warning">跨科</el-tag>
       </el-descriptions-item>
-      <el-descriptions-item label="预留时间">{{ bed.reserveTime || '—' }}</el-descriptions-item>
-      <el-descriptions-item label="备注">{{ bed.remark || '—' }}</el-descriptions-item>
+      <el-descriptions-item label="预留时间">{{ bed.reserveTime || '' }}</el-descriptions-item>
+      <el-descriptions-item label="备注">{{ bed.remark || '' }}</el-descriptions-item>
     </el-descriptions>
     <template #footer>
       <el-button v-if="bed.canReserve" v-perm="'ipd:bedCenter:assign'" data-testid="bc-bed-reserve"

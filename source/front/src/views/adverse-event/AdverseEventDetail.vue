@@ -6,24 +6,24 @@
         <el-descriptions-item label="事件等级">
           <el-tag :type="levelTagType(detail.eventLevel)">{{ levelText(detail.eventLevel) }}</el-tag>
         </el-descriptions-item>
-        <el-descriptions-item label="发生科室">{{ detail.occurDeptName || '—' }}</el-descriptions-item>
-        <el-descriptions-item label="发生病区">{{ detail.occurWardName || '—' }}</el-descriptions-item>
+        <el-descriptions-item label="发生科室">{{ detail.occurDeptName || '' }}</el-descriptions-item>
+        <el-descriptions-item label="发生病区">{{ detail.occurWardName || '' }}</el-descriptions-item>
         <el-descriptions-item v-if="Number(detail.eventType) === EVENT_TYPE_PRESSURE_INJURY" label="压疮来源">
-          {{ acquiredText(detail.acquiredFlag) || '—' }}
+          {{ acquiredText(detail.acquiredFlag) || '' }}
         </el-descriptions-item>
         <el-descriptions-item label="发生时间">{{ (detail.occurTime || '').replace('T', ' ') }}</el-descriptions-item>
-        <el-descriptions-item label="关联患者">{{ detail.patientName || '—' }}</el-descriptions-item>
+        <el-descriptions-item label="关联患者">{{ detail.patientName || '' }}</el-descriptions-item>
         <el-descriptions-item label="状态">
           <el-tag :type="statusTagType(detail.status)">{{ statusText(detail.status) }}</el-tag>
         </el-descriptions-item>
-        <el-descriptions-item label="上报人">{{ detail.reporterName || '—' }}</el-descriptions-item>
+        <el-descriptions-item label="上报人">{{ detail.reporterName || '' }}</el-descriptions-item>
         <el-descriptions-item label="上报时间">{{
             (detail.reportTime || '').replace('T', ' ')
           }}
         </el-descriptions-item>
         <el-descriptions-item :span="2" label="事件摘要">{{ detail.title }}</el-descriptions-item>
         <el-descriptions-item :span="2" label="详细经过">{{ detail.description }}</el-descriptions-item>
-        <el-descriptions-item :span="2" label="即时处置">{{ detail.immediateAction || '—' }}</el-descriptions-item>
+        <el-descriptions-item :span="2" label="即时处置">{{ detail.immediateAction || '' }}</el-descriptions-item>
         <el-descriptions-item :span="2" label="处理（D）">
           <template v-if="detail.handleTime">
             {{ detail.handlerName }} · {{ (detail.handleTime || '').replace('T', ' ') }}<br/>{{ detail.handleRemark }}

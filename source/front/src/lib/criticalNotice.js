@@ -6,7 +6,7 @@ import {ElMessage} from 'element-plus'
 
 export const NS = {DRAFT: 1, ISSUED: 2, ACKED: 3, VOID: 4}
 
-export const fmt = (t) => (t ? String(t).slice(0, 19) : '—')
+export const fmt = (t) => (t ? String(t).slice(0, 19) : '')
 
 export const statusTag = (s) => (s === NS.DRAFT ? 'warning' : s === NS.ISSUED ? 'primary' : s === NS.ACKED ? 'success' : 'info')
 

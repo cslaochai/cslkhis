@@ -23,7 +23,7 @@
       <div class="flex items-center justify-between border-b border-slate-100 px-4 py-3">
         <span class="text-sm font-medium">科室排名（按质控单数）</span>
         <span class="text-xs text-slate-400">共 {{ data?.totalQc ?? 0 }} 张质控单，平均 {{
-            data?.avgScore ?? '—'
+            data?.avgScore ?? ''
           }} 分</span>
       </div>
       <el-table :data="data?.deptRanks || []" size="default">
@@ -62,7 +62,7 @@ const loading = ref(false);
 const days = ref(30);
 const data = ref(null);
 
-const pct = (v) => (v === null || v === undefined ? '—' : `${Number(v).toFixed(1)}%`);
+const pct = (v) => (v === null || v === undefined ? '' : `${Number(v).toFixed(1)}%`);
 
 const cards = computed(() => {
   const d = data.value || {};

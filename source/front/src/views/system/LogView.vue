@@ -301,7 +301,7 @@
             </el-table-column>
             <!-- 变更原因：参数/字典/用户三类配置保存时登记的"为什么改"，等保访谈与错配置回溯的第一句话 -->
             <el-table-column label="变更原因" min-width="180" prop="remark" show-overflow-tooltip>
-              <template #default="{ row }">{{ row.remark || '—' }}</template>
+              <template #default="{ row }">{{ row.remark || '' }}</template>
             </el-table-column>
             <el-table-column label="操作人" prop="operatorName" width="100"/>
             <el-table-column label="科室" prop="deptName" width="110"/>
@@ -360,10 +360,10 @@
             </el-table-column>
             <el-table-column label="模型" prop="model" min-width="130" show-overflow-tooltip/>
             <el-table-column label="耗时" prop="latencyMs" width="80" align="right">
-              <template #default="{ row }">{{ row.latencyMs != null ? row.latencyMs + 'ms' : '—' }}</template>
+              <template #default="{ row }">{{ row.latencyMs != null ? row.latencyMs + 'ms' : '' }}</template>
             </el-table-column>
             <el-table-column label="Token(入/出)" width="110" align="right">
-              <template #default="{ row }">{{ row.promptTokens ?? '—' }}/{{ row.completionTokens ?? '—' }}</template>
+              <template #default="{ row }">{{ row.promptTokens ?? '' }}/{{ row.completionTokens ?? '' }}</template>
             </el-table-column>
             <el-table-column label="操作人" prop="operator" min-width="100" show-overflow-tooltip/>
             <el-table-column label="业务" min-width="130" show-overflow-tooltip>
@@ -545,7 +545,7 @@ const AI_STATUS = [
 const aiCapabilityLabel = (key) => AI_CAPABILITIES.find(c => c.value === key)?.label || key;
 const aiStatusTag = (s) => ({1:'success',2:'danger',3:'warning',4:'warning',5:'danger'})[s] || 'info';
 const aiStatusLabel = (row) => row.statusText || AI_STATUS.find(s => s.value === row.status)?.label || row.status;
-const formatTime = (t) => t ? String(t).replace('T', ' ').slice(0, 19) : '—';
+const formatTime = (t) => t ? String(t).replace('T', ' ').slice(0, 19) : '';
 const loadAi = async () => {
   const res = await getAiAuditLogPage({
     ...aiQuery,

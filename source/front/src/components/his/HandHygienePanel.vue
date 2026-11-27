@@ -31,11 +31,8 @@
                  @change="query.pageNum = 1; loadRows()">
         <el-option v-for="d in obsObjectDict" :key="d.dictValue" :label="d.dictLabel" :value="d.dictValue"/>
       </el-select>
-      <el-select v-model="query.deptId" clearable data-testid="hand-filter-dept" filterable placeholder="被观察科室"
-                 style="width:170px"
-                 @change="query.pageNum = 1; loadRows()">
-        <el-option v-for="d in deptOptions" :key="d.id" :label="d.deptName" :value="d.id"/>
-      </el-select>
+      <DeptTreeSelect v-model="query.deptId" mode="LEAF" data-testid="hand-filter-dept" width="170px"
+                      placeholder="被观察科室" @change="query.pageNum = 1; loadRows()"/>
       <el-date-picker v-model="query.obsDateStart" placeholder="观察日期从" style="width:150px" type="date"
                       value-format="YYYY-MM-DD"/>
       <el-date-picker v-model="query.obsDateEnd" placeholder="至" style="width:130px" type="date"
@@ -82,9 +79,8 @@
           </div>
         </el-form-item>
         <el-form-item label="科室">
-          <el-select v-model="form.deptId" data-testid="hand-dept" filterable style="width:100%" @change="onDeptChange">
-            <el-option v-for="d in deptOptions" :key="d.id" :label="d.deptName" :value="d.id"/>
-          </el-select>
+          <DeptTreeSelect v-model="form.deptId" mode="LEAF" data-testid="hand-dept" width="100%"
+                          placeholder="请选择科室" @change="onDeptChange"/>
         </el-form-item>
         <el-form-item label="观察对象">
           <el-select v-model="form.obsObject" data-testid="hand-object" filterable style="width:100%">
@@ -129,15 +125,16 @@
 import {onMounted, reactive, ref} from 'vue'
 import {ElMessage} from 'element-plus'
 import {Refresh, Search} from '@element-plus/icons-vue'
-import request from '@/api/request'
 import {getDictDataMapList} from '@/api/system'
+import {loadDeptTreeOptions, flattenDeptTree} from '@/lib/deptOptions'
+import DeptTreeSelect from '@/components/his/DeptTreeSelect.vue'
 import {DICT_TYPE} from '@/lib/dict-cache'
 import {DEFAULT_PAGE_SIZE} from '@/lib/pagination'
 import {getHandObsListPage, getHandObsStats, handObsAdd} from '@/api/infectionMonitor'
 
-const pct = (v) => (v === null || v === undefined ? '—' : Number(v).toFixed(1))
-const fmtTime = (t) => (t ? String(t).replace('T', ' ').slice(0, 16) : '—')
-const fmtDate = (d) => (d ? String(d).slice(0, 10) : '—')
+const pct = (v) => (v === null || v === undefined ? '' : Number(v).toFixed(1))
+const fmtTime = (t) => (t ? String(t).replace('T', ' ').slice(0, 16) : '')
+const fmtDate = (d) => (d ? String(d).slice(0, 10) : '')
 
 // ---------------- 字典（筛选用；表格里的对象文案取后端 obsObjectText） ----------------
 const obsObjectDict = ref([])
@@ -214,8 +211,8 @@ const deptOptions = ref([])
 const loadDepts = async () => {
   if (deptOptions.value.length) return
   try {
-    const res = await request.get('/system/department/selectList')
-    if (res.code === 200) deptOptions.value = res.data || []
+    const tree = await loadDeptTreeOptions({mode: 'LEAF'})
+    deptOptions.value = flattenDeptTree(tree)
   } catch (e) {
     console.error(e)
   }

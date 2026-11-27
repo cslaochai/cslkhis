@@ -16,7 +16,7 @@
           <div>
             <p class="text-slate-400">科室 / 班次</p>
             <p class="font-medium text-slate-800">{{ hoDetail.handover.deptName }}
-              {{ hoDetail.handover.shiftName || '—' }}</p>
+              {{ hoDetail.handover.shiftName || '' }}</p>
           </div>
           <div>
             <p class="text-slate-400">本班时段</p>
@@ -62,7 +62,7 @@
           </el-table-column>
           <el-table-column label="补充交代" min-width="150">
             <template #default="{ row }">
-              <span class="text-xs text-slate-500">{{ row.handoverNote || '—' }}</span>
+              <span class="text-xs text-slate-500">{{ row.handoverNote || '' }}</span>
             </template>
           </el-table-column>
         </el-table>

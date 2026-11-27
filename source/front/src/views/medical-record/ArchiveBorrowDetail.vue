@@ -11,11 +11,11 @@
           <el-tag :type="statusTagType(detail.status)">{{ statusText(detail.status) }}</el-tag>
           <el-tag v-if="isOverdue(detail)" class="ml-1" size="small" type="danger">超期</el-tag>
         </el-descriptions-item>
-        <el-descriptions-item label="病历号">{{ detail.recordNo || '—' }}</el-descriptions-item>
-        <el-descriptions-item label="患者">{{ detail.patientName || '—' }}</el-descriptions-item>
-        <el-descriptions-item label="科室">{{ detail.deptName || '—' }}</el-descriptions-item>
-        <el-descriptions-item label="应还日期">{{ detail.expectReturnDate || '—' }}</el-descriptions-item>
-        <el-descriptions-item label="申请人">{{ detail.applicantName || '—' }}</el-descriptions-item>
+        <el-descriptions-item label="病历号">{{ detail.recordNo || '' }}</el-descriptions-item>
+        <el-descriptions-item label="患者">{{ detail.patientName || '' }}</el-descriptions-item>
+        <el-descriptions-item label="科室">{{ detail.deptName || '' }}</el-descriptions-item>
+        <el-descriptions-item label="应还日期">{{ detail.expectReturnDate || '' }}</el-descriptions-item>
+        <el-descriptions-item label="申请人">{{ detail.applicantName || '' }}</el-descriptions-item>
         <el-descriptions-item label="申请时间">{{
             (detail.createTime || '').replace('T', ' ').slice(0, 19)
           }}
@@ -30,10 +30,10 @@
           <template v-else>—</template>
         </el-descriptions-item>
         <el-descriptions-item label="借出时间">
-          {{ detail.lendTime ? (detail.lendTime || '').replace('T', ' ').slice(0, 19) : '—' }}
+          {{ detail.lendTime ? (detail.lendTime || '').replace('T', ' ').slice(0, 19) : '' }}
         </el-descriptions-item>
         <el-descriptions-item label="归还时间">
-          {{ detail.returnTime ? (detail.returnTime || '').replace('T', ' ').slice(0, 19) : '—' }}
+          {{ detail.returnTime ? (detail.returnTime || '').replace('T', ' ').slice(0, 19) : '' }}
         </el-descriptions-item>
       </el-descriptions>
     </template>

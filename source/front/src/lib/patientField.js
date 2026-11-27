@@ -5,7 +5,7 @@
  * 码值 → 文案的映射只在这里写一份，页面不许再各写一套。
  *
  * 为什么必须收口：同一个字段以前在三处各写一遍，且已经写出分歧 ——
- *   - Header.vue / PatientsView.vue 写 `maritalStatus === 1 ? '已婚' : maritalStatus === 0 ? '未婚' : '-'`
+ *   - Header.vue / PatientsView.vue 写 `maritalStatus === 1 ? '已婚' : maritalStatus === 0 ? '未婚' : ''`
  *     → 「离异(2)」「丧偶(3)」被吞成一个「-」，看着像没采集，实际是页面不认识这两个码值。
  *   - DoctorWorkstationView.vue 写 `['未婚','已婚','离异','丧偶'][maritalStatus]`
  *     → 这个反而是全的。同一语义两种写法，改一处必漏另一处。
@@ -36,7 +36,7 @@ export const MARITAL_STATUS_OPTIONS = [
  * @returns {string} 未婚 / 已婚 / 离异 / 丧偶 / 未知(n) / —
  */
 export function maritalStatusText(v) {
-  if (v === null || v === undefined || v === '') return '—'
+  if (v === null || v === undefined || v === '') return ''
   const hit = MARITAL_STATUS_OPTIONS.find(o => o.value === Number(v))
   return hit ? hit.label : `未知(${v})`
 }
@@ -61,7 +61,7 @@ export const CARD_TYPE_OPTIONS = [
  * @returns {string} 就诊卡 / 身份证 / 医保卡 / 未知(n) / —
  */
 export function cardTypeText(v) {
-  if (v === null || v === undefined || v === '') return '—'
+  if (v === null || v === undefined || v === '') return ''
   const hit = CARD_TYPE_OPTIONS.find(o => o.value === Number(v))
   return hit ? hit.label : `未知(${v})`
 }
@@ -74,7 +74,7 @@ export function cardTypeText(v) {
  * @param {number|string|null|undefined} v
  */
 export function patientStatusText(v) {
-  if (v === null || v === undefined || v === '') return '—'
+  if (v === null || v === undefined || v === '') return ''
   const n = Number(v)
   if (n === 1) return '启用'
   if (n === 0) return '停用'
@@ -99,9 +99,9 @@ export function patientStatusText(v) {
  * @returns {string} 原值 / —
  */
 export function freeText(v) {
-  if (v === null || v === undefined) return '—'
+  if (v === null || v === undefined) return ''
   const s = String(v).trim()
-  return s === '' ? '—' : s
+  return s === '' ? '' : s
 }
 
 /**
@@ -110,9 +110,9 @@ export function freeText(v) {
  * @param {number|string|null|undefined} v
  */
 export function moneyText(v) {
-  if (v === null || v === undefined || v === '') return '—'
+  if (v === null || v === undefined || v === '') return ''
   const n = Number(v)
-  return Number.isNaN(n) ? '—' : `¥${n.toFixed(2)}`
+  return Number.isNaN(n) ? '' : `¥${n.toFixed(2)}`
 }
 
 /**
@@ -120,7 +120,7 @@ export function moneyText(v) {
  * @param {string|null|undefined} t
  */
 export function timeToMinute(t) {
-  return t ? String(t).substring(0, 16) : '—'
+  return t ? String(t).substring(0, 16) : ''
 }
 
 /**
@@ -128,7 +128,7 @@ export function timeToMinute(t) {
  * @param {string|null|undefined} t
  */
 export function timeToDate(t) {
-  return t ? String(t).substring(0, 10) : '—'
+  return t ? String(t).substring(0, 10) : ''
 }
 
 /* ==================== 隐私字段脱敏：不在前端做 ====================

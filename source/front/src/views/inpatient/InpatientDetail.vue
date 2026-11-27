@@ -12,21 +12,21 @@
           </div>
           <div class="grid grid-cols-3 gap-x-4 gap-y-2 text-sm">
             <div><span class="text-slate-400">性别 / 年龄</span>：{{ genderText(detail.admission?.gender) }} ·
-              {{ detail.admission?.age ?? '—' }}岁
+              {{ detail.admission?.age ?? '' }}岁
             </div>
-            <div><span class="text-slate-400">科室</span>：{{ detail.admission?.deptName || '—' }}</div>
-            <div><span class="text-slate-400">病区 / 床位</span>：{{ detail.admission?.wardName || '—' }} ·
-              {{ detail.admission?.bedNo || '—' }}
+            <div><span class="text-slate-400">科室</span>：{{ detail.admission?.deptName || '' }}</div>
+            <div><span class="text-slate-400">病区 / 床位</span>：{{ detail.admission?.wardName || '' }} ·
+              {{ detail.admission?.bedNo || '' }}
             </div>
             <div><span class="text-slate-400">入院途径</span>：{{ textOf(admitWayMap, detail.admission?.admitWay) }}
             </div>
-            <div><span class="text-slate-400">入院时间</span>：{{ detail.admission?.admitTime || '—' }}</div>
-            <div><span class="text-slate-400">出院时间</span>：{{ detail.admission?.dischargeTime || '—' }}</div>
+            <div><span class="text-slate-400">入院时间</span>：{{ detail.admission?.admitTime || '' }}</div>
+            <div><span class="text-slate-400">出院时间</span>：{{ detail.admission?.dischargeTime || '' }}</div>
             <div><span class="text-slate-400">住院天数</span>：{{ detail.admission?.inpatientDays ?? 0 }} 天</div>
-            <div><span class="text-slate-400">主管医生</span>：{{ detail.admission?.doctorName || '—' }}</div>
-            <div><span class="text-slate-400">医保卡号</span>：{{ detail.admission?.medicalInsuranceNo || '—' }}</div>
+            <div><span class="text-slate-400">主管医生</span>：{{ detail.admission?.doctorName || '' }}</div>
+            <div><span class="text-slate-400">医保卡号</span>：{{ detail.admission?.medicalInsuranceNo || '' }}</div>
             <div class="col-span-3"><span class="text-slate-400">入院诊断</span>：{{
-                detail.admission?.diagnosis || '—'
+                detail.admission?.diagnosis || ''
               }}
             </div>
           </div>
@@ -46,7 +46,7 @@
             <el-table-column label="科室" prop="deptName" min-width="120"/>
             <el-table-column label="生效时间" prop="effectiveTime" width="160"/>
             <el-table-column label="失效时间" width="160">
-              <template #default="{ row }">{{ row.expireTime || '—' }}</template>
+              <template #default="{ row }">{{ row.expireTime || '' }}</template>
             </el-table-column>
             <el-table-column label="状态" width="80" align="center">
               <template #default="{ row }">
@@ -79,7 +79,7 @@
             <el-table-column label="科室" prop="deptName" min-width="120"/>
             <el-table-column label="生效时间" prop="effectiveTime" width="160"/>
             <el-table-column label="失效时间" width="160">
-              <template #default="{ row }">{{ row.expireTime || '—' }}</template>
+              <template #default="{ row }">{{ row.expireTime || '' }}</template>
             </el-table-column>
             <el-table-column label="状态" width="80" align="center">
               <template #default="{ row }">
@@ -113,7 +113,7 @@
           </div>
           <div class="grid grid-cols-3 gap-x-4 gap-y-2 text-sm">
             <div><span class="text-slate-400">主要诊断</span>：{{
-                detail.summary?.mainDiagnosisName || '—'
+                detail.summary?.mainDiagnosisName || ''
               }}（{{ detail.summary?.mainDiagnosisCode || '未编码' }}）
             </div>
             <div><span class="text-slate-400">离院方式</span>：{{
@@ -121,7 +121,7 @@
               }}
             </div>
             <div><span class="text-slate-400">是否危重</span>：{{
-                detail.summary?.isCritical === 1 ? '是' : detail.summary?.isCritical === 0 ? '否' : '—'
+                detail.summary?.isCritical === 1 ? '是' : detail.summary?.isCritical === 0 ? '否' : ''
               }}
             </div>
             <div><span class="text-slate-400">住院总费用</span>：<span

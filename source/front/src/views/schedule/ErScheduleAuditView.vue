@@ -81,7 +81,7 @@
           </el-table-column>
           <el-table-column label="班次" min-width="170">
             <template #default="{ row }">
-              {{ row.shiftName || '—' }} {{ row.startTime }}~{{ row.endTime }}
+              {{ row.shiftName || '' }} {{ row.startTime }}~{{ row.endTime }}
             </template>
           </el-table-column>
           <el-table-column label="响应形态" prop="attendModeText" width="100"/>

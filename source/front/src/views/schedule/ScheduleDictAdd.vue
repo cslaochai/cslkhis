@@ -34,10 +34,8 @@
       </p>
       <div class="grid grid-cols-2 gap-4">
         <el-form-item label="适用科室">
-          <el-select v-model="shiftAddForm.deptId" class="w-full" filterable placeholder="请选择适用科室">
-            <el-option label="全部科室" :value="''"/>
-            <el-option v-for="d in departments" :key="d.id" :label="d.deptName" :value="d.id"/>
-          </el-select>
+          <DeptTreeSelect v-model="shiftAddForm.deptId" mode="LEAF" dept-type="1" clearable class="w-full"
+                          placeholder="全部科室"/>
         </el-form-item>
         <el-form-item label="班别">
           <el-select v-model="shiftAddForm.scheduleType" class="w-full" clearable placeholder="班别">
@@ -95,15 +93,14 @@ import {computed, ref, watch} from 'vue';
 import {ElMessage} from 'element-plus';
 import {createShift} from '@/api/appoint';
 import {SCHEDULE_TYPE_OPTIONS, SHIFT_SCOPE_OPTIONS, SHIFT_SCOPE_OUTPATIENT} from '@/lib/scheduleShift';
+import DeptTreeSelect from '@/components/his/DeptTreeSelect.vue';
 
 /**
  * 班次字典「新增」：与「编辑已有班次」字段与版式都不同（这里是完整建条：名称/起止时间/科室/类型都开放），
  * 所以单独一个组件，不与 ScheduleShiftEdit 合并。
- * 科室列表由页面加载一次后 prop 下发（字典列表列与这里同一份）。
  */
 const props = defineProps({
   modelValue: {type: Boolean, default: false},
-  departments: {type: Array, default: () => []},
 });
 const emit = defineEmits(['update:modelValue', 'saved']);
 
@@ -148,7 +145,7 @@ const durationHint = computed(() => {
   const toMin = (t) => (t ? Number(t.slice(0, 2)) * 60 + Number(t.slice(3, 5)) : NaN);
   const s = toMin(shiftAddForm.value.startTime);
   const e = toMin(shiftAddForm.value.endTime);
-  if (!Number.isFinite(s) || !Number.isFinite(e)) return '—';
+  if (!Number.isFinite(s) || !Number.isFinite(e)) return '';
   let diff = e - s;
   let cross = false;
   if (diff <= 0) {

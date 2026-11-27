@@ -76,7 +76,7 @@ export function canDeleteOrder(order) {
 
 /** 订单收货进度文案（派生自入库单，不是订单表字段） */
 export function orderInboundText(order) {
-  if (!order) return '—'
+  if (!order) return ''
   if (order.inboundDone) return '已入库'
   if (order.inboundNo) return '入库中'
   return '未入库'
@@ -135,7 +135,7 @@ export function inboundStatusTagType(status) {
 
 /** 入库单明细状态 → 文案（无字典，单点定义） */
 export function detailStatusText(status) {
-  if (status === null || status === undefined || status === '') return '—'
+  if (status === null || status === undefined || status === '') return ''
   const n = Number(status)
   if (n === DETAIL_STATUS.NORMAL) return '正常'
   if (n === DETAIL_STATUS.STOCKED) return '已入库'

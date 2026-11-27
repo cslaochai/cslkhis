@@ -13,7 +13,7 @@
           <el-form-item label="患者">{{ regDetail?.patientName }}（{{ regDetail?.patientNo }}）</el-form-item>
         </el-col>
         <el-col :span="8">
-          <el-form-item label="医保卡号">{{ regDetail?.medicalInsuranceNoMasked || '—' }}</el-form-item>
+          <el-form-item label="医保卡号">{{ regDetail?.medicalInsuranceNoMasked || '' }}</el-form-item>
         </el-col>
         <el-col :span="12">
           <el-form-item label="病种">{{ regDetail?.diseaseCode }} {{ regDetail?.diseaseName }}</el-form-item>
@@ -25,10 +25,10 @@
           </el-form-item>
         </el-col>
         <el-col :span="8">
-          <el-form-item label="诊断科室">{{ regDetail?.certifyDeptName || '—' }}</el-form-item>
+          <el-form-item label="诊断科室">{{ regDetail?.certifyDeptName || '' }}</el-form-item>
         </el-col>
         <el-col :span="8">
-          <el-form-item label="诊断医师">{{ regDetail?.certifyDoctorName || '—' }}</el-form-item>
+          <el-form-item label="诊断医师">{{ regDetail?.certifyDoctorName || '' }}</el-form-item>
         </el-col>
         <el-col :span="8">
           <el-form-item label="诊断日期">{{ regDetail?.certifyDate }}</el-form-item>
@@ -37,7 +37,7 @@
           <el-form-item label="诊断依据">{{ regDetail?.certifyBasis }}</el-form-item>
         </el-col>
         <el-col :span="8">
-          <el-form-item label="备案机构">{{ regDetail?.registerDeptName || '—' }}</el-form-item>
+          <el-form-item label="备案机构">{{ regDetail?.registerDeptName || '' }}</el-form-item>
         </el-col>
         <el-col :span="8">
           <el-form-item label="备案经办人">{{ regDetail?.registerEmpName }}</el-form-item>
@@ -51,7 +51,7 @@
         <el-col :span="12">
           <el-form-item label="剩余天数">
             {{
-              regDetail?.longTerm ? '长期有效' : (regDetail?.remainDays != null ? `${regDetail.remainDays} 天` : '—')
+              regDetail?.longTerm ? '长期有效' : (regDetail?.remainDays != null ? `${regDetail.remainDays} 天` : '')
             }}
           </el-form-item>
         </el-col>

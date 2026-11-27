@@ -47,6 +47,12 @@ public interface SysMedSubjectService {
     String saveDeptMap(DeptSubjectMapUpsertDTO upsertDTO);
 
     /**
+     * 已配过上报科目的科室ID（用于前端区分「可维护 / 只读分组节点」：
+     * 临床/其他节点天然可维护，管理片区只有本身已是上报主体时才可维护）。
+     */
+    List<Long> listMappedDeptIds();
+
+    /**
      * 还没配科目的**临床**科室（门诊/住院/急诊类型，且不是有下级的分组目录节点）。
      *
      * <p>病案首页上报取不到科目就是这个清单里的科室，属于数据治理待办。

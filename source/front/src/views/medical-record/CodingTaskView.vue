@@ -84,7 +84,7 @@
           </template>
         </el-table-column>
         <el-table-column label="编码员" prop="coderName" width="90">
-          <template #default="{ row }">{{ row.coderName || '—' }}</template>
+          <template #default="{ row }">{{ row.coderName || '' }}</template>
         </el-table-column>
         <el-table-column align="center" label="状态" width="130">
           <template #default="{ row }">
@@ -127,7 +127,7 @@
       <div v-if="assignRow" class="text-sm text-gray-600 mb-3">
         <div><span class="text-gray-400">病案：</span>{{ assignRow.recordNo }} / {{
             assignRow.patientName
-          }}（{{ assignRow.deptName || '—' }}）
+          }}（{{ assignRow.deptName || '' }}）
         </div>
       </div>
       <el-select v-model="assignCoderId" :fit-input-width="false" data-testid="ct-assign-coder" filterable
@@ -152,7 +152,7 @@
       <div v-if="auditRow" class="text-sm text-gray-600 mb-3">
         <div><span class="text-gray-400">主诊断：</span>{{ auditRow.mainIcdCode }} {{ auditRow.mainIcdName }}</div>
         <div v-if="auditRow.otherIcdText"><span class="text-gray-400">其他诊断：</span>{{ auditRow.otherIcdText }}</div>
-        <div><span class="text-gray-400">编码员：</span>{{ auditRow.coderName || '—' }}</div>
+        <div><span class="text-gray-400">编码员：</span>{{ auditRow.coderName || '' }}</div>
       </div>
       <el-radio-group v-model="auditApprove" class="mb-3" data-testid="ct-audit-approve">
         <el-radio :value="true">通过</el-radio>

@@ -6,21 +6,21 @@
       <el-descriptions-item label="状态">
         <el-tag :type="statusTag(row.status)" size="small">{{ statusLabel(row) }}</el-tag>
       </el-descriptions-item>
-      <el-descriptions-item label="模型">{{ row.model || '—' }}</el-descriptions-item>
-      <el-descriptions-item label="服务提供方">{{ row.provider || '—' }}</el-descriptions-item>
-      <el-descriptions-item label="提示词版本">{{ row.promptVersion || '—' }}</el-descriptions-item>
-      <el-descriptions-item label="耗时">{{ row.latencyMs != null ? row.latencyMs + ' ms' : '—' }}</el-descriptions-item>
-      <el-descriptions-item label="Token（入/出）">{{ row.promptTokens ?? '—' }} / {{ row.completionTokens ?? '—' }}</el-descriptions-item>
-      <el-descriptions-item label="操作人">{{ row.operator || '—' }}</el-descriptions-item>
+      <el-descriptions-item label="模型">{{ row.model || '' }}</el-descriptions-item>
+      <el-descriptions-item label="服务提供方">{{ row.provider || '' }}</el-descriptions-item>
+      <el-descriptions-item label="提示词版本">{{ row.promptVersion || '' }}</el-descriptions-item>
+      <el-descriptions-item label="耗时">{{ row.latencyMs != null ? row.latencyMs + ' ms' : '' }}</el-descriptions-item>
+      <el-descriptions-item label="Token（入/出）">{{ row.promptTokens ?? '' }} / {{ row.completionTokens ?? '' }}</el-descriptions-item>
+      <el-descriptions-item label="操作人">{{ row.operator || '' }}</el-descriptions-item>
       <el-descriptions-item label="业务">
         <template v-if="row.bizType">{{ row.bizType }}<template v-if="row.bizId"> #{{ row.bizId }}</template></template>
         <span v-else>—</span>
       </el-descriptions-item>
       <el-descriptions-item label="输入摘要" :span="2">
-        <div class="detail-text">{{ row.inputDigest || '—' }}</div>
+        <div class="detail-text">{{ row.inputDigest || '' }}</div>
       </el-descriptions-item>
       <el-descriptions-item label="输出摘要" :span="2">
-        <div class="detail-text">{{ row.outputDigest || '—' }}</div>
+        <div class="detail-text">{{ row.outputDigest || '' }}</div>
       </el-descriptions-item>
       <el-descriptions-item v-if="row.errorMsg" label="错误信息" :span="2">
         <div class="detail-text text-red-500">{{ row.errorMsg }}</div>

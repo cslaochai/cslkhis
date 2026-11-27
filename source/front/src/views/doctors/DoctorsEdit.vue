@@ -19,7 +19,7 @@
         <el-input v-model="editForm.phone" placeholder="请输入联系电话"/>
       </el-form-item>
       <el-form-item label="主科室">
-        <span class="text-sm font-medium text-slate-700">{{ editForm.deptName || '-' }}</span>
+        <span class="text-sm font-medium text-slate-700">{{ editForm.deptName || '' }}</span>
         <p class="mt-1 text-xs text-slate-400">执业科室与角色请在员工档案的「岗位」中配置</p>
       </el-form-item>
       <el-form-item label="职称">

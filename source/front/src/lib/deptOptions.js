@@ -5,47 +5,63 @@
  * 而 AppointmentsView 首屏就是因为同一个接口被拆成多处调用才打出 7 个请求。
  * 这里按 {@code scope + deptType} 缓存 Promise（不是结果），并发调用只会发一次请求。
  *
- * <p><b>scope 默认按当前人过滤</b>，与后端 `/system/department/selectList` 一致：
+ * <p><b>scope 默认按当前人过滤</b>，与后端 `/system/department/selectTree` 一致：
  * <ul>
  *   <li>`CURRENT`（默认）→ 只返回当前用户被授权的科室；不限权用户（管理员/院领导）天然拿到全部</li>
  *   <li>`ALL` → 全部科室，仅用于「必须看到全量才能维护」的场景（字典维护 / 排班模板）</li>
  * </ul>
  * 默认值选 CURRENT 而不是 ALL：漏传参数时要"看不到"，不要"看到太多"。
  */
-import { getDepartmentSelectList } from '@/api/system'
+import { getDepartmentSelectTree } from '@/api/system'
 
-/** 缓存：key = `${scope}|${deptType ?? ''}|${nodeType ?? ''}|${leafOnly ? 1 : 0}` → Promise<List> */
-const cache = new Map()
+/** 树形下拉缓存：key = `${scope}|${deptType ?? ''}|${nodeType ?? ''}|${mode}` → Promise<TreeNode[]> */
+const treeCache = new Map()
 
 /**
- * 取科室下拉列表（带缓存）。失败不写入缓存，下次调用会重试。
+ * 取科室树形下拉（带缓存）。节点可选性由服务端按 mode 标注 disabled，前端不自行判定。
  *
- * <p>{@code leafOnly} 只在「被邀请/被选择的科室」这类场景用：会诊、转科选的是具体接诊科室，
- * 选到「内科系统」这种父节点等于把单子发给一个没人值守的壳。
- * <p>{@code nodeType} 传 {@code BUSINESS_NODE_TYPES.join(',')}（见 lib/deptNodeType）可把管理片区与
- * 行政后勤挡在候选外 —— 排班单元、开诊科室、收治科室这类「必须是真人上班的地方」一律要传。
+ * @param {string} [params.scope]    CURRENT（默认，按当前人授权）/ ALL（全量）
+ * @param {string} [params.deptType] 服务范围逗号串：1 门诊 2 医技 3 药房 4 住院 5 其他
+ * @param {string} [params.nodeType] 节点类型逗号串：1 片区 2 临床 3 医技 4 药剂 5 行政 6 辅助 7 其他
+ * @param {string} [params.mode]      LEAF-仅末级业务科室 / TREE-父子均可（默认）/ ORG-组织归属维护
  */
-export function loadDeptOptions({ scope = 'CURRENT', deptType = null, nodeType = null, leafOnly = false } = {}) {
-  const key = `${scope}|${deptType ?? ''}|${nodeType ?? ''}|${leafOnly ? 1 : 0}`
-  if (!cache.has(key)) {
-    const p = getDepartmentSelectList({
+export function loadDeptTreeOptions({ scope = 'CURRENT', deptType = null, nodeType = null, mode = 'TREE' } = {}) {
+  const key = `${scope}|${deptType ?? ''}|${nodeType ?? ''}|${mode}`
+  if (!treeCache.has(key)) {
+    const p = getDepartmentSelectTree({
       scope,
+      mode,
       ...(deptType != null ? { deptType } : {}),
       ...(nodeType != null ? { nodeType } : {}),
-      ...(leafOnly ? {leafOnly: true} : {}),
     })
       .then((res) => res?.data || [])
       .catch((err) => {
-        // 失败要把缓存清掉，否则一次网络抖动会让整页在整个会话里都拿不到科室
-        cache.delete(key)
+        treeCache.delete(key)
         throw err
       })
-    cache.set(key, p)
+    treeCache.set(key, p)
   }
-  return cache.get(key)
+  return treeCache.get(key)
+}
+
+/** 把树形下拉结果拍平成 [{id, deptName, deptType, nodeType, parentId, parentDeptName}]，供默认值计算与行内回显查找。
+ *  服务端标注 disabled 的分组/片区/行政/停用节点不进扁平候选（旧 el-select 不消费 disabled 字段，需在拍平时剔除），
+ *  但其下可选后代仍递归保留。 */
+export function flattenDeptTree(tree) {
+  const out = []
+  const walk = (list, parentName) => {
+    for (const d of list || []) {
+      if (!d.disabled) {
+        out.push({ id: d.id, deptName: d.deptName, deptType: d.deptType, nodeType: d.nodeType, parentId: d.parentId, parentDeptName: parentName || '' })
+      }
+      if (d.children && d.children.length) walk(d.children, d.deptName)
+    }
+  }
+  walk(tree, '')
+  return out
 }
 
 /** 显式刷新（科室管理页增删改后使用） */
 export function invalidateDeptOptions() {
-  cache.clear()
+  treeCache.clear()
 }

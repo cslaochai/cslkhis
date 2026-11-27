@@ -1,6 +1,6 @@
 <template>
   <!-- ---------------- 证书详情 ---------------- -->
-  <el-drawer v-model="visible" size="50%" title="签名证书详情">
+  <el-drawer v-model="visible" size="50%" title="证书信息">
     <template v-if="certDetail">
       <div class="text-sm">
         <p>证书编号：<b>{{ certDetail.certNo }}</b></p>
@@ -14,8 +14,9 @@
         <p>申请主体 DN：<span class="font-mono">{{ text(certDetail.caSubjectDn) }}</span></p>
         <p>CA 签发：<span v-if="certDetail.caSerial" class="font-mono">序列号 {{ certDetail.caSerial }}</span>
           <span v-else>{{ certDetail.caApplyNo ? '待 CA 签发' : '未回填（待线下送 CA 签发）' }}</span></p>
-        <p v-if="certDetail.caApplyNo">CA 申请单：<span class="font-mono">{{ certDetail.caApplyNo }}</span> ·
-          {{ text(certDetail.caApplyStatusText) }}</p>
+        <p v-if="certDetail.caApplyNo">CA 申请单：<el-button class="!p-0 font-mono" link size="small" type="primary"
+                                                          @click="emit('progress', certDetail.id)">
+          {{ certDetail.caApplyNo }}</el-button> · {{ text(certDetail.caApplyStatusText) }}</p>
         <p v-if="certDetail.caLastMessage" class="text-slate-600">CA 说明：{{ certDetail.caLastMessage }}</p>
         <p>状态：{{ certDetail.certStatusText }}<span v-if="certDetail.expired"
                                                      class="text-red-600"> · 已过有效期</span></p>
@@ -64,7 +65,7 @@ const props = defineProps({
   // 当前查看的证书 id，抽屉打开时按 id 自取详情
   id: {type: [String, Number], default: null},
 });
-const emit = defineEmits(['update:modelValue', 'saved']);
+const emit = defineEmits(['update:modelValue', 'saved', 'progress']);
 
 const visible = computed({
   get: () => props.modelValue,

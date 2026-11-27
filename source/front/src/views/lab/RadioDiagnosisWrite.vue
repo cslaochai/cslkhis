@@ -10,11 +10,11 @@
               {{ patientGenderText(detail.gender) }} {{ detail.age }}岁
             </div>
             <div><span class="text-slate-400">记录号：</span>{{ detail.recordNo }}</div>
-            <div><span class="text-slate-400">部位：</span>{{ detail.bodyPart || '—' }}</div>
-            <div><span class="text-slate-400">申请：</span>{{ detail.applyDeptName || '—' }}
+            <div><span class="text-slate-400">部位：</span>{{ detail.bodyPart || '' }}</div>
+            <div><span class="text-slate-400">申请：</span>{{ detail.applyDeptName || '' }}
               {{ detail.applyDoctorName || '' }}
             </div>
-            <div><span class="text-slate-400">临床诊断：</span>{{ detail.clinicalDiagnosis || '—' }}</div>
+            <div><span class="text-slate-400">临床诊断：</span>{{ detail.clinicalDiagnosis || '' }}</div>
             <div><span class="text-slate-400">胶片：</span>{{ detail.filmCount ?? 0 }} 张</div>
           </div>
           <ExamImagePanel :apply-id="detail.applyId" :biz-type="1" readonly/>

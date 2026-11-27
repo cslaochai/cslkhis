@@ -20,10 +20,8 @@
         </el-select>
       </el-form-item>
       <el-form-item label="发生科室" required>
-        <el-select v-model="form.occurDeptId" :fit-input-width="false" data-testid="ae-form-dept" filterable
-                   placeholder="请选择" style="width: 100%">
-          <el-option v-for="d in deptOptions" :key="d.id" :label="d.deptName" :value="d.id"/>
-        </el-select>
+        <DeptTreeSelect v-model="form.occurDeptId" mode="LEAF" data-testid="ae-form-dept" width="100%"
+                        placeholder="请选择"/>
       </el-form-item>
       <el-form-item label="发生时间" required>
         <el-date-picker
@@ -78,6 +76,7 @@ import {ElMessage} from 'element-plus';
 import {upsertAdverseEvent} from '@/api/adverseEvent';
 import {EVENT_TYPE_PRESSURE_INJURY} from '@/lib/adverseEvent';
 import PatientSelect from '@/components/his/PatientSelect.vue';
+import DeptTreeSelect from '@/components/his/DeptTreeSelect.vue';
 
 const props = defineProps({
   // v-model 控制显隐
@@ -90,8 +89,6 @@ const props = defineProps({
   levelDict: {type: Array, default: () => []},
   // 压疮来源字典（页面已加载）
   acquiredDict: {type: Array, default: () => []},
-  // 科室下拉数据（页面已加载）
-  deptOptions: {type: Array, default: () => []},
 });
 const emit = defineEmits(['update:modelValue', 'saved']);
 

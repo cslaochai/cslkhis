@@ -50,7 +50,7 @@ public enum AnesthesiaFollowupRoundEnum {
      */
     public static String getLabel(Integer code) {
         if (null == code) {
-            return "—";
+            return StringUtils.EMPTY;
         }
         AnesthesiaFollowupRoundEnum item = fromCode(code);
         return item == null ? "第" + code + "轮·追加随访" : item.label;

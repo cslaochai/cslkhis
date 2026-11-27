@@ -5,7 +5,7 @@
         <span :class="['rounded border px-1.5 py-0.5 font-medium', triageLevelMap[row?.triageLevel]?.color || '']">
           {{ triageLevelMap[row?.triageLevel]?.label || '未定级' }}
         </span>
-        已候诊 {{ row?.waitMinutes ?? 0 }} 分钟，应接诊时限 {{ row?.targetSeeMinutes ?? '-' }} 分钟。
+        已候诊 {{ row?.waitMinutes ?? 0 }} 分钟，应接诊时限 {{ row?.targetSeeMinutes ?? '' }} 分钟。
       </p>
       <p class="mt-1 text-slate-400">
         分诊规范：候诊超过响应时限应再次评估分级，级别<b>只升不降</b>。复评后时限按新级别重算，流水留痕。

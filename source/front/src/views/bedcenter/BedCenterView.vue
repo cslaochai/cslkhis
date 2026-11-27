@@ -72,10 +72,8 @@
                 <el-option :value="2" label="已收治入院"/>
                 <el-option :value="3" label="已取消"/>
               </el-select>
-              <el-select v-model="query.applyDeptId" :fit-input-width="false" class="!w-44" clearable data-testid="bc-q-dept"
-                         filterable placeholder="拟收治科室">
-                <el-option v-for="d in deptOptions" :key="d.id" :label="d.deptName" :value="d.id"/>
-              </el-select>
+              <DeptTreeSelect v-model="query.applyDeptId" mode="LEAF" data-testid="bc-q-dept"
+                              width="176px" placeholder="拟收治科室"/>
               <el-select v-model="query.priority" class="!w-28" clearable data-testid="bc-q-priority"
                          placeholder="优先级">
                 <el-option :value="1" label="普通"/>
@@ -107,9 +105,9 @@
               <el-table-column label="等待号" prop="waitNo" width="130"/>
               <el-table-column label="患者" min-width="140">
                 <template #default="{ row }">
-                  <div class="font-medium text-slate-800">{{ row.patientName || '—' }}</div>
+                  <div class="font-medium text-slate-800">{{ row.patientName || '' }}</div>
                   <div class="text-xs text-slate-400" data-testid="bc-row-patient-sub">
-                    {{ row.genderText || '—' }} · {{ row.age ?? '—' }}岁 · {{ row.phone || '无电话' }}
+                    {{ row.genderText || '' }} · {{ row.age ?? '' }}岁 · {{ row.phone || '无电话' }}
                   </div>
                 </template>
               </el-table-column>
@@ -216,10 +214,8 @@
             </div>
 
             <div class="mb-2 flex flex-wrap items-center gap-2">
-              <el-select v-model="poolQuery.deptId" :fit-input-width="false" class="!w-44" clearable data-testid="bc-pool-dept"
-                         filterable placeholder="科室">
-                <el-option v-for="d in deptOptions" :key="d.id" :label="d.deptName" :value="d.id"/>
-              </el-select>
+              <DeptTreeSelect v-model="poolQuery.deptId" mode="LEAF" data-testid="bc-pool-dept"
+                              width="176px" placeholder="科室"/>
               <el-select v-model="poolQuery.wardId" :fit-input-width="false" class="!w-44" clearable
                          data-testid="bc-pool-ward"
                          placeholder="病区">
@@ -242,8 +238,8 @@
               <el-table-column label="床号" prop="bedNo" width="90"/>
               <el-table-column label="所属科室 / 病区" min-width="180">
                 <template #default="{ row }">
-                  <span>{{ row.deptName || '—' }}</span>
-                  <span class="text-xs text-slate-400"> · {{ row.wardName || '—' }}</span>
+                  <span>{{ row.deptName || '' }}</span>
+                  <span class="text-xs text-slate-400"> · {{ row.wardName || '' }}</span>
                 </template>
               </el-table-column>
               <el-table-column label="类型" prop="bedTypeText" width="80"/>
@@ -254,7 +250,7 @@
               </el-table-column>
               <el-table-column label="占用患者" min-width="160">
                 <template #default="{ row }">
-                  <span v-if="row.patientName">{{ row.patientName }}（{{ row.admitTime || '—' }}入院）</span>
+                  <span v-if="row.patientName">{{ row.patientName }}（{{ row.admitTime || '' }}入院）</span>
                   <span v-else class="text-xs text-slate-400">—</span>
                 </template>
               </el-table-column>
@@ -369,7 +365,7 @@
     </div>
 
     <!-- 登记 / 改需求：表单在 BedCenterQueueEdit（新增+编辑合并） -->
-    <BedCenterQueueEdit v-model="formVisible" :dept-options="deptOptions" :row="formRow" :ward-options="wardOptions"
+    <BedCenterQueueEdit v-model="formVisible" :row="formRow" :ward-options="wardOptions"
                         @saved="reloadAll"/>
 
     <!-- ==================== 安排床位 ==================== -->
@@ -397,7 +393,7 @@
         <el-table-column label="床号" prop="bedNo" width="90"/>
         <el-table-column label="归属科室 / 病区" min-width="180">
           <template #default="{ row }">
-            {{ row.deptName || '—' }} · {{ row.wardName || '—' }}
+            {{ row.deptName || '' }} · {{ row.wardName || '' }}
           </template>
         </el-table-column>
         <el-table-column label="床型" prop="bedTypeText" width="80"/>
@@ -443,7 +439,7 @@
       </div>
       <el-select v-model="reserveWaitId" :fit-input-width="false" class="!w-full" data-testid="bc-reserve-patient"
                  filterable placeholder="选择等待中的患者" @change="onReservePick">
-        <el-option v-for="w in waitingRows" :key="w.id" :label="`#${w.seq ?? '-'} ${w.patientName} · ${w.priorityText || ''} · ${w.applyDeptName || '未指定科室'}`"
+        <el-option v-for="w in waitingRows" :key="w.id" :label="`#${w.seq ?? ''} ${w.patientName} · ${w.priorityText || ''} · ${w.applyDeptName || '未指定科室'}`"
                    :value="String(w.id)"/>
       </el-select>
       <div v-if="reserveHint" class="mt-2 rounded border border-slate-200 bg-slate-50 p-2 text-xs"
@@ -478,7 +474,7 @@ import {computed, onMounted, reactive, ref} from 'vue';
 import {ElMessage} from 'element-plus';
 import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination';
 import {bedStatusTag} from '@/lib/bedCenter';
-import {getDepartmentSelectList} from '@/api/system';
+import DeptTreeSelect from '@/components/his/DeptTreeSelect.vue';
 import {getInpatientWardList} from '@/api/inpatient';
 // 今日总值班：跨科调配与等床超时的兜底协调人（sql/169）
 import DutyOfficerBar from '@/components/his/DutyOfficerBar.vue';
@@ -511,7 +507,6 @@ const poolTotal = ref(0);
 const stats = ref({});
 const overview = ref({summary: {}, deptRows: []});
 const waitingCount = ref(0);
-const deptOptions = ref([]);
 const wardOptions = ref([]);
 const query = reactive({
   pageNum: 1, pageSize: DEFAULT_PAGE_SIZE, waitStatus: null, applyDeptId: null,
@@ -570,13 +565,6 @@ const loadTop = async () => {
   }
 };
 const loadOptions = async () => {
-  try {
-    const res = await getDepartmentSelectList({});
-    if (res.code === 200)
-      deptOptions.value = (res.data || []).filter((d) => d && d.deptName);
-  } catch {
-    deptOptions.value = [];
-  }
   try {
     const res = await getInpatientWardList();
     if (res.code === 200)
@@ -811,7 +799,7 @@ const onReservePick = async () => {
       return;
     const hit = (res.data || []).find((m) => String(m.bedId) === String(bedDetail.value.bedId));
     reserveHint.value = hit
-        ? `匹配档位：${hit.matchLevelText || hit.matchLevel}（${hit.matchScore ?? '-'} 分）— ${hit.matchReason || ''}`
+        ? `匹配档位：${hit.matchLevelText || hit.matchLevel}（${hit.matchScore ?? ''} 分）— ${hit.matchReason || ''}`
         : '该床不在推荐候选内（可能跨科或床型降级），确认后仍会强制安排';
   } catch {
     /* 提示拿不到不阻断安排 */

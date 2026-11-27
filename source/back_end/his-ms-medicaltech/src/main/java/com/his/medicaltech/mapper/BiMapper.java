@@ -7,6 +7,8 @@ import com.his.medicaltech.vo.BiDayCountRowVO;
 import com.his.medicaltech.vo.BiDeptAmountRowVO;
 import com.his.medicaltech.vo.BiDischargeWindowRowVO;
 import com.his.medicaltech.vo.BiDrgWeightRowVO;
+import com.his.medicaltech.vo.BiOverviewVO;
+import com.his.medicaltech.vo.BiWindowRevenueRowVO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Select;
 
@@ -34,6 +36,33 @@ public interface BiMapper {
     @Select("SELECT COUNT(*) FROM biz_admission WHERE del_flag = 0 AND discharge_time IS NOT NULL AND DATE(discharge_time) = CURDATE()")
     Long countTodayDischarge();
 
+    @Select("SELECT COUNT(*) FROM biz_admission WHERE del_flag = 0 AND DATE(admit_time) = CURDATE()")
+    Long countTodayAdmissions();
+
+    @Select("SELECT COUNT(*) FROM biz_admission WHERE del_flag = 0 AND DATE(admit_time) = DATE_SUB(CURDATE(), INTERVAL 1 DAY)")
+    Long countYesterdayAdmissions();
+
+    @Select("SELECT COUNT(*) FROM biz_admission WHERE del_flag = 0 AND discharge_time IS NOT NULL "
+            + "AND DATE(discharge_time) = DATE_SUB(CURDATE(), INTERVAL 1 DAY)")
+    Long countYesterdayDischarge();
+
+    /** 今日主手术台次：一次住院的主手术（is_main=1）算一台，辅助操作不计。 */
+    @Select("SELECT COUNT(*) FROM biz_inpatient_operation WHERE del_flag = 0 AND is_main = 1 "
+            + "AND DATE(operation_date) = CURDATE()")
+    Long countTodayOperations();
+
+    @Select("SELECT COUNT(*) FROM biz_inpatient_operation WHERE del_flag = 0 AND is_main = 1 "
+            + "AND DATE(operation_date) = DATE_SUB(CURDATE(), INTERVAL 1 DAY)")
+    Long countYesterdayOperations();
+
+    /** 待入院排队：待收治住院证（order_status=1），已收治/作废/过期不计。 */
+    @Select("SELECT COUNT(*) FROM biz_admission_order WHERE del_flag = 0 AND order_status = 1")
+    Long countPendingAdmission();
+
+    @Select("SELECT COUNT(*) FROM biz_appoint_info WHERE del_flag = 0 "
+            + "AND visit_date = DATE_SUB(CURDATE(), INTERVAL 1 DAY)")
+    Long countYesterdayAppointments();
+
     @Select("SELECT IFNULL(ROUND(" + REVENUE_EXPR + ",2),0) FROM biz_fee_record f "
             + "WHERE f.del_flag = 0 AND DATE(f.book_time) = CURDATE()")
     BigDecimal sumTodayRevenue();
@@ -41,6 +70,15 @@ public interface BiMapper {
     @Select("SELECT IFNULL(ROUND(" + REVENUE_EXPR + ",2),0) FROM biz_fee_record f "
             + "WHERE f.del_flag = 0 AND f.item_type IN (2,3,4) AND DATE(f.book_time) = CURDATE()")
     BigDecimal sumTodayDrugRevenue();
+
+    @Select("SELECT IFNULL(ROUND(" + REVENUE_EXPR + ",2),0) FROM biz_fee_record f "
+            + "WHERE f.del_flag = 0 AND DATE(f.book_time) = DATE_SUB(CURDATE(), INTERVAL 1 DAY)")
+    BigDecimal sumYesterdayRevenue();
+
+    @Select("SELECT IFNULL(ROUND(" + REVENUE_EXPR + ",2),0) FROM biz_fee_record f "
+            + "WHERE f.del_flag = 0 AND f.item_type IN (2,3,4) "
+            + "AND DATE(f.book_time) = DATE_SUB(CURDATE(), INTERVAL 1 DAY)")
+    BigDecimal sumYesterdayDrugRevenue();
 
     @Select("SELECT IFNULL(SUM(CASE WHEN bed_status = 0 THEN 1 ELSE 0 END),0) repair, "
             + "IFNULL(SUM(CASE WHEN bed_status = 2 THEN 1 ELSE 0 END),0) occupied, COUNT(*) total "
@@ -61,6 +99,25 @@ public interface BiMapper {
             + "WHERE f.del_flag = 0 AND f.book_time >= DATE_SUB(CURDATE(), INTERVAL 30 DAY) "
             + "GROUP BY f.dept_name ORDER BY amount DESC LIMIT 5")
     List<BiDeptAmountRowVO> deptTop();
+
+    /**
+     * 近 30 日收入结构：药品归并西药/中成药/中药饮片，其余按 his_charge_item_type 大类归口；
+     * 净额口径与今日收入同源（红冲负行现算）。
+     */
+    @Select("SELECT code, MAX(name) AS name, ROUND(SUM(amount), 2) AS amount FROM ("
+            + "SELECT CASE WHEN f.item_type IN (2,3,4) THEN 'drug' "
+            + "WHEN f.item_type = 1 THEN 'registration' WHEN f.item_type = 5 THEN 'exam' "
+            + "WHEN f.item_type = 6 THEN 'lab' WHEN f.item_type = 7 THEN 'treatment' "
+            + "WHEN f.item_type = 8 THEN 'consumable' ELSE 'other' END AS code, "
+            + "CASE WHEN f.item_type IN (2,3,4) THEN '药品' WHEN f.item_type = 1 THEN '诊查费' "
+            + "WHEN f.item_type = 5 THEN '检查' WHEN f.item_type = 6 THEN '检验' "
+            + "WHEN f.item_type = 7 THEN '治疗' WHEN f.item_type = 8 THEN '耗材材料' ELSE '其他' END AS name, "
+            + REVENUE_EXPR + " AS amount "
+            + "FROM biz_fee_record f WHERE f.del_flag = 0 "
+            + "AND f.book_time >= DATE_SUB(CURDATE(), INTERVAL 30 DAY) "
+            + "GROUP BY f.item_type"
+            + ") t GROUP BY code ORDER BY amount DESC")
+    List<BiOverviewVO.RevenueStructure> revenueStructure30d();
 
     // 国考四指标（M5，统一「近 30 日」窗口）
 
@@ -88,6 +145,18 @@ public interface BiMapper {
     @Select("SELECT IFNULL(ROUND(" + REVENUE_EXPR + ",2),0) FROM biz_fee_record f "
             + "WHERE f.del_flag = 0 AND f.item_type = 8 AND f.book_time >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)")
     BigDecimal sumWindow30dMaterialRevenue();
+
+    /** 近 30 日门诊/住院收入拆分（encounter_type 1-门诊 2-住院）。 */
+    @Select("SELECT IFNULL(ROUND(SUM(CASE WHEN f.encounter_type = 1 THEN f.amount ELSE 0 END),2),0) outpatient, "
+            + "IFNULL(ROUND(SUM(CASE WHEN f.encounter_type = 2 THEN f.amount ELSE 0 END),2),0) inpatient "
+            + "FROM biz_fee_record f WHERE f.del_flag = 0 "
+            + "AND f.book_time >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)")
+    BiWindowRevenueRowVO windowRevenue30d();
+
+    /** 近 30 日门诊人次（次均分母，口径与今日挂号人次同源，不排退号）。 */
+    @Select("SELECT COUNT(*) FROM biz_appoint_info WHERE del_flag = 0 "
+            + "AND visit_date >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)")
+    Long countOutpatientVisits30d();
 
     /**
      * 近 30 日出院且主诊断已编码的病案首页（CMI 分母样本），连分组维度一次带回。

@@ -50,7 +50,7 @@
 
       <div class="flex items-center gap-2 text-[12px] text-gray-400">
         <span class="inline-block w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-        自动刷新 15s · {{ lastRefresh || '—' }}
+        自动刷新 15s · {{ lastRefresh || '' }}
         <el-button size="small" text @click="refreshAll">刷新</el-button>
       </div>
     </div>
@@ -103,15 +103,15 @@
             </el-table-column>
             <el-table-column label="申请科室 / 人" min-width="150">
               <template #default="{row}">
-                <div>{{ row.applicantDeptName || '—' }}</div>
-                <div class="text-[12px] text-gray-400">{{ row.applicantName || '—' }}</div>
+                <div>{{ row.applicantDeptName || '' }}</div>
+                <div class="text-[12px] text-gray-400">{{ row.applicantName || '' }}</div>
               </template>
             </el-table-column>
             <el-table-column label="患者 / 床位" min-width="150">
               <template #default="{row}">
                 <template v-if="row.admissionId">
-                  <div>{{ row.patientName || '—' }}</div>
-                  <div class="text-[12px] text-gray-400">{{ row.bedNo || '—' }} 床 · {{ row.wardName || '' }}</div>
+                  <div>{{ row.patientName || '' }}</div>
+                  <div class="text-[12px] text-gray-400">{{ row.bedNo || '' }} 床 · {{ row.wardName || '' }}</div>
                 </template>
                 <span v-else class="text-gray-400">科室公用</span>
               </template>
@@ -171,7 +171,7 @@
             <el-table-column label="设备" min-width="190">
               <template #default="{row}">
                 <div class="font-medium text-gray-800">{{ row.equipmentName }}</div>
-                <div class="text-[12px] text-gray-400">{{ row.equipmentCode }} · {{ row.brand || '—' }} {{ row.model || '' }}</div>
+                <div class="text-[12px] text-gray-400">{{ row.equipmentCode }} · {{ row.brand || '' }} {{ row.model || '' }}</div>
               </template>
             </el-table-column>
             <el-table-column label="归属科室" prop="deptName" width="130"/>
@@ -183,7 +183,7 @@
               </template>
             </el-table-column>
             <el-table-column label="上次保养" width="112">
-              <template #default="{row}">{{ row.lastMaintainDate || '—' }}</template>
+              <template #default="{row}">{{ row.lastMaintainDate || '' }}</template>
             </el-table-column>
             <el-table-column label="状态" width="84">
               <template #default="{row}"><el-tag size="small" type="success" effect="plain">在用</el-tag></template>
@@ -210,8 +210,8 @@
           <div><span class="text-gray-400">单号：</span>{{ detailRow.orderNo }}</div>
           <div><span class="text-gray-400">申请人：</span>{{ detailRow.applicantDeptName }} · {{ detailRow.applicantName }}</div>
           <div><span class="text-gray-400">患者：</span>{{ detailRow.admissionId ? `${detailRow.patientName} · ${detailRow.bedNo}床` : '科室公用' }}</div>
-          <div><span class="text-gray-400">原因：</span>{{ detailRow.purpose || '—' }}</div>
-          <div><span class="text-gray-400">送达：</span>{{ detailRow.deliveryPlace || '—' }}</div>
+          <div><span class="text-gray-400">原因：</span>{{ detailRow.purpose || '' }}</div>
+          <div><span class="text-gray-400">送达：</span>{{ detailRow.deliveryPlace || '' }}</div>
           <div><span class="text-gray-400">状态：</span>{{ detailRow.statusText }}</div>
         </div>
         <el-table :data="detailRow.items || []" size="small">
@@ -281,8 +281,8 @@ const statusTagType = (s) => (
     s === 1 ? 'warning' : s === 2 ? 'info' : s === 3 ? 'success' : s === 4 ? 'warning'
         : s === 5 ? 'success' : s === 7 ? 'danger' : 'info'
 );
-const shortTime = (t) => (t ? String(t).replace('T', ' ').slice(5, 16) : '—');
-const itemSummary = (row) => (row.items || []).map(i => i.equipmentName || i.deviceNo || '设备').join('、') || '—';
+const shortTime = (t) => (t ? String(t).replace('T', ' ').slice(5, 16) : '');
+const itemSummary = (row) => (row.items || []).map(i => i.equipmentName || i.deviceNo || '设备').join('、') || '';
 
 const refreshAll = async () => {
   await Promise.all([loadOrders(), loadStats(), loadCatalog()]);

@@ -47,20 +47,40 @@
 
     <!-- 分页列表 -->
     <el-card class="table-card" shadow="never">
-      <el-table :data="records" :max-height="tableMaxHeight" empty-text="暂无病历记录" stripe style="width: 100%">
+      <div class="mb-3 flex items-center justify-between">
+        <el-radio-group v-model="viewMode" @change="switchViewMode">
+          <el-radio-button value="all">全部病历</el-radio-button>
+          <el-radio-button value="receiving">待我代补</el-radio-button>
+        </el-radio-group>
+        <el-button
+            v-if="viewMode === 'all'"
+            v-perm="'emr:medicalRecord:handover'"
+            :disabled="!selectedRows.length"
+            type="warning"
+            @click="openHandover"
+        >
+          移交代补（{{ selectedRows.length }}）
+        </el-button>
+      </div>
+      <el-table :data="records" :max-height="tableMaxHeight" empty-text="暂无病历记录" stripe style="width: 100%"
+                @selection-change="onSelectionChange">
+        <el-table-column v-if="viewMode === 'all'" type="selection" width="46" :selectable="selectDraftable"/>
         <el-table-column label="病历号" prop="recordNo" width="180"/>
         <el-table-column label="患者" prop="patientName" width="90"/>
         <el-table-column align="center" label="性别/年龄" width="110">
           <template #default="{ row }">
-            <span class="text-xs text-slate-600">{{ patientGenderText(row.gender) }} {{ row.age ?? '-' }}岁</span>
+            <span class="text-xs text-slate-600">{{ patientGenderText(row.gender) }} {{ row.age ?? '' }}岁</span>
           </template>
         </el-table-column>
         <el-table-column label="科室" prop="deptName" width="120"/>
-        <el-table-column label="医生" prop="doctorName" width="90"/>
+        <el-table-column v-if="viewMode === 'all'" label="医生" prop="doctorName" width="90"/>
+        <el-table-column v-if="viewMode === 'receiving'" label="原经治" prop="originalDoctorName" width="100"/>
+        <el-table-column v-if="viewMode === 'receiving'" label="承接人" prop="receiverName" width="90"/>
+        <el-table-column v-if="viewMode === 'receiving'" label="移交原因" prop="reasonText" width="110"/>
         <el-table-column label="就诊日期" prop="visitDate" width="120"/>
         <el-table-column label="诊断" min-width="160" show-overflow-tooltip>
           <template #default="{ row }">
-            <span>{{ row.diagnosisName || row.diagnosis || '-' }}</span>
+            <span>{{ row.diagnosisName || row.diagnosis || '' }}</span>
           </template>
         </el-table-column>
         <el-table-column align="center" label="病历状态" width="100">
@@ -70,14 +90,21 @@
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column align="center" label="审核状态" width="100">
+        <el-table-column v-if="viewMode === 'all'" align="center" label="审核状态" width="100">
           <template #default="{ row }">
             <el-tag :type="reviewStatusTagType(row.reviewStatus)" effect="plain" size="small">
               {{ reviewStatusText(row.reviewStatus) }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column fixed="right" label="操作" width="160">
+        <el-table-column v-if="viewMode === 'receiving'" align="center" label="移交状态" width="100">
+          <template #default="{ row }">
+            <el-tag :type="row.status === 1 ? 'warning' : 'info'" effect="plain" size="small">
+              {{ row.statusText }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column fixed="right" label="操作" width="220">
           <template #default="{ row }">
             <el-button link size="small" type="primary" @click="openRecordPage(row)">
               <el-icon class="mr-0.5">
@@ -85,12 +112,27 @@
               </el-icon>
               门诊病案首页
             </el-button>
+            <el-button
+              v-if="Number(row.recordStatus) === 1"
+              link size="small" type="success"
+              @click="resumeDraft(row)"
+            >
+              继续书写
+            </el-button>
+            <el-button
+                v-if="[2, 3].includes(Number(row.recordStatus))"
+                v-perm="'emr:correction:apply'"
+                link size="small" type="warning"
+                @click="openApply(row)"
+            >
+              申请更正
+            </el-button>
           </template>
         </el-table-column>
       </el-table>
 
       <!-- 分页：在流内紧跟表格底 -->
-      <div ref="footerRef" class="list-footer flex items-center justify-end">
+      <div v-if="viewMode === 'all'" ref="footerRef" class="list-footer flex items-center justify-end">
         <el-pagination
             v-model:current-page="pagination.pageNum"
             v-model:page-size="pagination.pageSize"
@@ -145,7 +187,7 @@
                   detailData.record.doctorName
                 }}</span></div>
               <div><span class="text-slate-400">挂号单号：</span><span
-                  class="font-mono font-medium">{{ detailData.record.registNo || '-' }}</span></div>
+                  class="font-mono font-medium">{{ detailData.record.registNo || '' }}</span></div>
             </div>
           </div>
 
@@ -154,9 +196,9 @@
             <h3 class="mb-2 border-l-4 border-blue-500 pl-2 text-sm font-bold text-slate-700">三、病史</h3>
             <div class="space-y-2 rounded border border-slate-200 p-3 text-sm">
               <div><span class="font-medium text-slate-500">主诉：</span><span
-                  class="text-slate-700">{{ detailData.record.chiefComplaint || '-' }}</span></div>
+                  class="text-slate-700">{{ detailData.record.chiefComplaint || '' }}</span></div>
               <div><span class="font-medium text-slate-500">现病史：</span><span
-                  class="text-slate-700">{{ detailData.record.presentIllness || '-' }}</span></div>
+                  class="text-slate-700">{{ detailData.record.presentIllness || '' }}</span></div>
               <div class="rounded border border-red-200 bg-red-50 p-2"><span
                   class="font-medium text-red-600">过敏史：</span><span
                   class="text-red-700">{{ detailData.record.allergyHistory || '无' }}</span></div>
@@ -171,14 +213,14 @@
             <div class="rounded border border-slate-200 p-3 text-sm">
               <div class="grid grid-cols-5 gap-3">
                 <div><span class="text-slate-400">体温：</span><span
-                    class="font-medium">{{ detailData.record.temperature || '-' }}℃</span></div>
+                    class="font-medium">{{ detailData.record.temperature || '' }}℃</span></div>
                 <div><span class="text-slate-400">脉搏：</span><span
-                    class="font-medium">{{ detailData.record.pulse || '-' }}次/分</span></div>
+                    class="font-medium">{{ detailData.record.pulse || '' }}次/分</span></div>
                 <div><span class="text-slate-400">呼吸：</span><span
-                    class="font-medium">{{ detailData.record.respiration || '-' }}次/分</span></div>
+                    class="font-medium">{{ detailData.record.respiration || '' }}次/分</span></div>
                 <div><span class="text-slate-400">血压：</span><span class="font-medium">{{
-                    detailData.record.systolicPressure || '-'
-                  }}/{{ detailData.record.diastolicPressure || '-' }}mmHg</span></div>
+                    detailData.record.systolicPressure || ''
+                  }}/{{ detailData.record.diastolicPressure || '' }}mmHg</span></div>
                 <div></div>
               </div>
               <div v-if="detailData.record.generalCondition" class="mt-2"><span class="text-slate-400">一般情况：</span>{{
@@ -197,7 +239,7 @@
             <div class="rounded border border-slate-200 p-3 text-sm">
               <div class="flex items-center gap-2">
                 <span class="font-medium text-slate-900">{{
-                    detailData.record.diagnosisName || detailData.record.diagnosis || '-'
+                    detailData.record.diagnosisName || detailData.record.diagnosis || ''
                   }}</span>
                 <span v-if="detailData.record.diagnosisCode"
                       class="font-mono text-xs text-slate-400">（{{ detailData.record.diagnosisCode }}）</span>
@@ -213,10 +255,10 @@
               <div class="flex items-center justify-between">
                 <span class="font-mono font-medium text-slate-900">{{ p.prescriptionNo }}</span>
                 <span class="text-xs text-slate-400">{{
-                    p.createTime ? String(p.createTime).substring(0, 10) : '-'
+                    p.createTime ? String(p.createTime).substring(0, 10) : ''
                   }}</span>
               </div>
-              <div class="mt-1 text-xs text-slate-500">{{ p.diagnosis || '-' }} | {{ p.drugCount || 0 }}种药 |
+              <div class="mt-1 text-xs text-slate-500">{{ p.diagnosis || '' }} | {{ p.drugCount || 0 }}种药 |
                 ¥{{ p.totalAmount || 0 }}
               </div>
             </div>
@@ -239,7 +281,7 @@
               <div v-for="lab in detailData.laboratoryApplies" :key="lab.id"
                    class="rounded border border-slate-200 p-2 text-xs">
                 <span class="font-medium text-slate-900">[检验]</span> {{ lab.laboratoryItemName }}
-                <span class="text-slate-400">（{{ lab.specimenType || '-' }}）</span>
+                <span class="text-slate-400">（{{ lab.specimenType || '' }}）</span>
               </div>
             </div>
           </div>
@@ -255,8 +297,8 @@
 
           <!-- 病历状态 -->
           <div class="mt-4 flex items-center justify-between border-t border-slate-200 pt-4 text-xs text-slate-400">
-            <span>创建时间：{{ detailData.record.createTime || '-' }}</span>
-            <span>提交时间：{{ detailData.record.submitTime || '-' }}</span>
+            <span>创建时间：{{ detailData.record.createTime || '' }}</span>
+            <span>提交时间：{{ detailData.record.submitTime || '' }}</span>
             <span class="rounded bg-slate-100 px-2 py-0.5 font-medium text-slate-600">
               {{ recordStatusText(detailData.record.recordStatus) }}
             </span>
@@ -267,13 +309,30 @@
         </div>
       </div>
     </el-drawer>
+
+    <!-- 草稿移交代补弹框 -->
+    <MedicalRecordHandoverDialog
+        v-model="handoverVisible"
+        :records="selectedRows"
+        @saved="onHandoverSaved"
+    />
+
+    <!-- 病历更正申请弹框 -->
+    <EmrCorrectionApplyDialog
+        v-model="applyVisible"
+        :record="applyRecord"
+        @saved="onApplySaved"
+    />
   </div>
 </template>
 
 <script setup>
 import {onMounted, ref} from 'vue';
+import {useRouter} from 'vue-router';
 import {Document, Refresh, Search} from '@element-plus/icons-vue';
-import {getRecordDetail, getRecordListPage} from '@/api/emr';
+import {getMyReceivingDrafts, getRecordDetail, getRecordListPage} from '@/api/emr';
+import MedicalRecordHandoverDialog from './MedicalRecordHandoverDialog.vue';
+import EmrCorrectionApplyDialog from './EmrCorrectionApplyDialog.vue';
 import {patientGenderText} from '@/lib/patientGender';
 import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination';
 import {useTableMaxHeight} from '@/lib/useTableMaxHeight';
@@ -286,11 +345,17 @@ import {
 } from '@/lib/recordStatus';
 
 const loading = ref(false);
+const router = useRouter();
 const records = ref([]);
 const selectedRecord = ref(null);
 const detailLoading = ref(false);
 const detailData = ref(null);
 const drawerVisible = ref(false);
+const viewMode = ref('all');
+const selectedRows = ref([]);
+const handoverVisible = ref(false);
+const applyVisible = ref(false);
+const applyRecord = ref(null);
 const searchForm = ref({
   keyword: '',
   recordStatus: null,
@@ -330,14 +395,48 @@ const buildQuery = () => {
 const loadData = async () => {
   loading.value = true;
   try {
-    const res = await getRecordListPage(buildQuery());
-    records.value = res.data?.records || [];
-    pagination.value.total = res.data?.total || 0;
+    if (viewMode.value === 'receiving') {
+      const res = await getMyReceivingDrafts();
+      records.value = (res.data || []).map((h) => ({
+        ...h,
+        id: h.recordId,
+        recordStatus: 1,
+      }));
+      pagination.value.total = records.value.length;
+    } else {
+      const res = await getRecordListPage(buildQuery());
+      records.value = res.data?.records || [];
+      pagination.value.total = res.data?.total || 0;
+    }
   } catch (error) {
     console.error('加载病历列表失败:', error);
   } finally {
     loading.value = false;
   }
+};
+const switchViewMode = () => {
+  selectedRows.value = [];
+  pagination.value.pageNum = 1;
+  loadData();
+};
+const selectDraftable = (row) => Number(row.recordStatus) === 1;
+const onSelectionChange = (rows) => {
+  selectedRows.value = rows;
+};
+const openHandover = () => {
+  handoverVisible.value = true;
+};
+const onHandoverSaved = () => {
+  selectedRows.value = [];
+  loadData();
+};
+const openApply = (row) => {
+  applyRecord.value = row;
+  applyVisible.value = true;
+};
+const onApplySaved = () => {
+  applyRecord.value = null;
+  loadData();
 };
 const handleSearch = () => {
   pagination.value.pageNum = 1;
@@ -370,6 +469,13 @@ const openRecordPage = async (row) => {
   } finally {
     detailLoading.value = false;
   }
+};
+/** 草稿续写：跳医生工作站直接打开本次就诊病历，不要求患者在今日队列 */
+const resumeDraft = (row) => {
+  router.push({
+    name: 'DoctorWorkstation',
+    query: {registId: row.registId, recordId: row.id, resumeDraft: '1'},
+  });
 };
 onMounted(() => {
   loadData();

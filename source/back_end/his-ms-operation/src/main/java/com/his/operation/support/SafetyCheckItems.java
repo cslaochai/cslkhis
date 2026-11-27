@@ -24,7 +24,7 @@ public final class SafetyCheckItems {
 
     public static String phaseText(Integer phase) {
         if (phase == null) {
-            return "—";
+            return "";
         }
         return OperationSafetyPhaseEnum.getLabel(phase);
     }

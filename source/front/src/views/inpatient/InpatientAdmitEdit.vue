@@ -8,10 +8,10 @@
     <div v-if="admitFromOrder" class="mb-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-slate-600">
       <div class="font-semibold text-slate-800">住院证 {{ admitFromOrder.orderNo }}</div>
       <div class="mt-1">
-        来源门诊：{{ admitFromOrder.sourceDeptName || '—' }} · {{ admitFromOrder.sourceDoctorName || '—' }}
-        （挂号号 {{ admitFromOrder.registNo || '—' }}）
+        来源门诊：{{ admitFromOrder.sourceDeptName || '' }} · {{ admitFromOrder.sourceDoctorName || '' }}
+        （挂号号 {{ admitFromOrder.registNo || '' }}）
       </div>
-      <div>拟收治：{{ admitFromOrder.applyDeptName || '—' }} · 拟诊：{{ admitFromOrder.diagnosisName || '—' }}</div>
+      <div>拟收治：{{ admitFromOrder.applyDeptName || '' }} · 拟诊：{{ admitFromOrder.diagnosisName || '' }}</div>
       <div class="mt-1 text-slate-500">
         入院途径由证决定（门诊转住院），患者与拟诊已锁定；入院处只需选病区、床位、入院医生。
         如实际收治科室与拟收治不同，系统会记为「调科」。
