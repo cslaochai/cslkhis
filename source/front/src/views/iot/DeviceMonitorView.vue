@@ -480,4 +480,6 @@ onUnmounted(() => {
   flex-wrap: wrap;
   align-items: center;
   gap: 8px;
-  m
+  margin-bottom: 12px;
+}
+</style>
