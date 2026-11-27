@@ -709,6 +709,8 @@ public class BizPatientServiceImpl extends ServiceImpl<BizPatientMapper, BizPati
         vo.setCardNo(null);
         vo.setMedicalInsuranceNoMasked(SensitiveMaskUtil.maskCardNo(vo.getMedicalInsuranceNo()));
         vo.setMedicalInsuranceNo(null);
+        vo.setAddressMasked(SensitiveMaskUtil.maskAddress(vo.getAddress()));
+        vo.setAddress(null);
     }
 
     /**

@@ -70,33 +70,20 @@
           </el-collapse>
         </el-card>
       </el-tab-pane>
-
-      <!-- ============ 数据域 ============ -->
-      <el-tab-pane label="数据域" name="schema">
-        <el-card class="qa-schema-card" shadow="never">
-          <div class="qa-schema-list">
-            <div v-for="item in schemaList" :key="item.tableName" class="qa-schema-item">
-              <span class="qa-schema-usage">{{ item.description }}</span>
-              <span class="qa-schema-table">{{ item.tableName }}</span>
-            </div>
-          </div>
-        </el-card>
-      </el-tab-pane>
     </el-tabs>
   </div>
 </template>
 
 <script setup>
-import {computed, onMounted, ref} from 'vue';
+import {computed, ref} from 'vue';
 import {ElMessage} from 'element-plus';
-import {askOperationQa, getOperationSchema} from '@/api/ai';
+import {askOperationQa} from '@/api/ai';
 
 const activeTab = ref('ask');
 const question = ref('');
 const withSummary = ref(true);
 const loading = ref(false);
 const result = ref(null);
-const schemaList = ref([]);
 const quickQuestions = [
   '最近7天每天的发药处方数量和金额',
   '本月各支付方式的净收款金额',
@@ -134,14 +121,6 @@ const ask = async (q) => {
     loading.value = false;
   }
 };
-onMounted(async () => {
-  try {
-    const res = await getOperationSchema();
-    schemaList.value = res?.data || [];
-  } catch (e) {
-    console.error('加载数据域失败', e);
-  }
-});
 </script>
 
 <style scoped>
@@ -229,30 +208,5 @@ onMounted(async () => {
   font-size: 12px;
   white-space: pre-wrap;
   word-break: break-all;
-}
-
-.qa-schema-list {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: 8px 20px;
-}
-
-.qa-schema-item {
-  display: flex;
-  justify-content: space-between;
-  gap: 8px;
-  font-size: 13px;
-  padding: 4px 0;
-  border-bottom: 1px dashed #e5e7eb;
-}
-
-.qa-schema-usage {
-  color: #374151;
-}
-
-.qa-schema-table {
-  color: #9ca3af;
-  font-family: monospace;
-  font-size: 12px;
 }
 </style>

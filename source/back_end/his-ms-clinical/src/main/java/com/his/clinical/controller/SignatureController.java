@@ -6,6 +6,7 @@ import com.his.clinical.service.EmrSignatureService;
 import com.his.clinical.service.SignatureCenterService;
 import com.his.clinical.vo.MyPendingSignVO;
 import com.his.clinical.vo.ObjectSignatureVO;
+import com.his.clinical.vo.SignCertRevokeImpactVO;
 import com.his.clinical.vo.SignatureOptionsVO;
 import com.his.clinical.vo.SignatureSummaryVO;
 import com.his.common.base.PageResult;
@@ -326,13 +327,29 @@ public class SignatureController {
     }
 
     /**
+     * 吊销前影响面：该证书持有人名下未签病历/处方/检查/检验数量 + 证书使用情况。
+     *
+     * <p>只开放给「能吊销的人」（医务科业务吊销 / 信息科应急吊销），用于弹窗把不可逆后果先摆出来。
+     */
+    @PreAuthorize("hasAnyAuthority('sign:cert:revoke', 'sign:cert:revoke:emergency')")
+    @Operation(summary = "证书吊销影响面")
+    @GetMapping("/emr/signCert/revokeImpact")
+    public Result<SignCertRevokeImpactVO> signCertRevokeImpact(@RequestParam Long certId) {
+        return Result.success(signatureCenterService.revokeImpact(certId));
+    }
+
+    /**
      * 吊销证书：必须写明理由；吊销不删行，历史签名仍要靠它的公钥验通。
      *
-     * <p>吊销是独立处置权（sign:cert:revoke），不与证书办理（sign:cert:edit）混用：
-     * 保留独立权限码便于单独收回。2026-11-04 起本页全部按钮（含吊销）只授信息科管理员
-     * （sql326，role 33），不再授医务科；无签结诊催办预警仍发给持本权限的人，即信息科。
+     * <p>两码分权（2026-11-27）：
+     * <ul>
+     *   <li>sign:cert:revoke —— 业务吊销（医务科）：离职/转岗/违规/资质变化时停用签名资格；</li>
+     *   <li>sign:cert:revoke:emergency —— 应急吊销（信息科）：UKey 丢失、私钥/PIN 泄露等安全事件的即时处置。</li>
+     * </ul>
+     * 吊销类型由服务层按操作人权限判定（同时持两码按业务吊销），落 sys_sign_cert.revoke_type，
+     * 并自动派单：业务吊销通知信息科重办，应急吊销通知医务科补备案。
      */
-    @PreAuthorize("hasAuthority('sign:cert:revoke')")
+    @PreAuthorize("hasAnyAuthority('sign:cert:revoke', 'sign:cert:revoke:emergency')")
     @Operation(summary = "吊销签名证书（必须写理由）")
     @PostMapping("/emr/signCert/revoke")
     public Result<SignCertVO> signCertRevoke(@Valid @RequestBody SignCertRevokeDTO dto) {

@@ -71,7 +71,8 @@ public interface BizInpatientRecordMapper extends BaseMapper<BizInpatientRecord>
      */
     @Select("""
             SELECT r.id AS recordId, r.record_no AS recordNo, r.record_type AS recordType,
-                   r.record_title AS recordTitle, r.patient_name AS patientName, r.dept_name AS deptName,
+                   r.record_title AS recordTitle, r.patient_name AS patientName,
+                   r.dept_id AS deptId, r.dept_name AS deptName,
                    r.doctor_id AS doctorId, r.doctor_name AS doctorName, r.admission_id AS admissionId,
                    CASE r.record_type
                        WHEN 1 THEN a.admit_time

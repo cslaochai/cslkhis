@@ -4,12 +4,14 @@ import com.his.common.base.Result;
 import com.his.iot.dto.IotColdChainRecordQueryDTO;
 import com.his.iot.dto.IotHistoryQueryDTO;
 import com.his.iot.dto.IotLatestQueryDTO;
+import com.his.iot.dto.IotWaveformQueryDTO;
 import com.his.iot.service.IotTelemetryService;
 import com.his.iot.vo.IotColdChainRecordVO;
 import com.his.iot.vo.IotColdChainSummaryVO;
 import com.his.iot.vo.IotDeviceTypeVO;
 import com.his.iot.vo.IotHistoryPointVO;
 import com.his.iot.vo.IotLatestVO;
+import com.his.iot.vo.IotWaveformVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -67,6 +69,17 @@ public class IotTelemetryController {
     @PostMapping("/historyList")
     public Result<List<IotHistoryPointVO>> historyList(@Valid @RequestBody IotHistoryQueryDTO query) {
         return Result.success(iotTelemetryService.historyList(query));
+    }
+
+    /**
+     * 监护波形批量取窗。曲线只在内存缓冲不落库；大屏一轮轮询把本科室监护仪编号传入，
+     * 拿回最近一段 ECG/脉搏波/呼吸波重绘。
+     */
+    @Operation(summary = "监护波形窗（waveformList）")
+    @PreAuthorize("isAuthenticated()")
+    @PostMapping("/waveformList")
+    public Result<List<IotWaveformVO>> waveformList(@RequestBody(required = false) IotWaveformQueryDTO query) {
+        return Result.success(iotTelemetryService.waveformList(query));
     }
 
     /**

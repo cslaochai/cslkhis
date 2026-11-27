@@ -22,7 +22,7 @@
         </el-form>
         <!-- 主操作区：新增/批量等动作统一靠右，与查询条件视觉分离 -->
         <div class="flex shrink-0 items-start gap-3">
-          <el-button v-perm="'checkup:manage:add'" data-testid="checkup-create-btn" plain type="primary"
+          <el-button v-perm="'checkup:record:add'" data-testid="checkup-create-btn" plain type="primary"
                      @click="openCreate">体检登记
           </el-button>
         </div>
@@ -50,15 +50,15 @@
         </el-table-column>
         <el-table-column fixed="right" label="操作" width="185">
           <template #default="{ row }">
-            <el-button v-perm="'checkup:manage:edit'" link size="small" type="primary" @click="openDetail(row)">结果
+            <el-button v-perm="'checkup:result:save'" link size="small" type="primary" @click="openDetail(row)">结果
             </el-button>
-            <el-button v-if="row.recordStatus === 1" v-perm="'checkup:manage:edit'" link size="small" type="warning"
+            <el-button v-if="row.recordStatus === 1" v-perm="'checkup:record:edit'" link size="small" type="warning"
                        @click="startOne(row)">开始体检
             </el-button>
-            <el-button v-if="row.recordStatus === 3" v-perm="'checkup:manage:edit'" link size="small" type="success"
+            <el-button v-if="row.recordStatus === 3" v-perm="'checkup:record:edit'" link size="small" type="success"
                        @click="openConclude(row)">总检
             </el-button>
-            <el-button v-if="row.recordStatus === 1" v-perm="'checkup:manage:delete'" link size="small" type="danger"
+            <el-button v-if="row.recordStatus === 1" v-perm="'checkup:record:delete'" link size="small" type="danger"
                        @click="deleteOne(row)">删除
             </el-button>
           </template>

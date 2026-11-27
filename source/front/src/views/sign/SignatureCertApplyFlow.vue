@@ -31,14 +31,14 @@
         <p class="font-medium text-amber-800">该证书未发起 CA 在线申请，当前走线下送 CA 流程</p>
         <p class="mt-1 text-slate-700">HIS 无法自动查询 CA 结果，请按以下步骤让证书生效并展示 CA 处理记录：</p>
         <ol class="mt-1 list-decimal pl-5 text-slate-700">
-          <li>复制下方「CA 申请材料」（主体 DN + 公钥 PEM）；</li>
+          <li>复制下方公钥 PEM；</li>
           <li>到 CA 平台「证书申请」页粘贴提交，等待 CA 审核签发；</li>
           <li>CA 签发后在 CA 平台「详情」下载/复制证书 PEM（含 <span class="font-mono">BEGIN CERTIFICATE</span> 段）；</li>
           <li>回 HIS → 办理签名证书 → 改为线下回填 → 粘贴证书 PEM，证书即生效，CA 序列号/签发者也会在此展示。</li>
         </ol>
         <div class="mt-2">
           <el-button :disabled="!certDetail?.publicKey" link size="small" type="primary"
-                     data-testid="p5-sign-flow-copy-apply" @click="copyApplyMaterial">复制 CA 申请材料（DN + 公钥）
+                     data-testid="p5-sign-flow-copy-apply" @click="copyApplyMaterial">复制公钥
           </el-button>
         </div>
         <div class="mt-2 grid grid-cols-1 gap-2">
@@ -177,13 +177,13 @@ watch(visible, async (open) => {
   if (open) await loadData();
 });
 
-// 一键复制 CA 申请材料（Subject DN + 公钥 PEM）：拿去 CA 平台「证书申请」粘贴提交
+// 一键复制公钥 PEM：拿去 CA 平台「证书申请」粘贴提交
 const copyApplyMaterial = async () => {
   const d = certDetail.value || {};
-  const material = `Subject DN: ${d.caSubjectDn || ''}\nPublic Key PEM:\n${d.publicKey || ''}`;
+  const material = d.publicKey || '';
   try {
     await navigator.clipboard.writeText(material);
-    ElMessage.success('已复制申请材料，可到 CA 平台证书申请页粘贴提交');
+    ElMessage.success('已复制公钥，可到 CA 平台证书申请页粘贴提交');
   } catch (e) {
     ElMessage.warning('复制失败，请手动选中上方文本复制');
   }

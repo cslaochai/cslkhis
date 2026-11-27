@@ -5,6 +5,7 @@ import com.his.clinical.dto.MyMakeupSignDTO;
 import com.his.clinical.dto.SignatureInvalidateDTO;
 import com.his.clinical.dto.SignatureSignDTO;
 import com.his.clinical.vo.MyPendingSignVO;
+import com.his.clinical.vo.SignCertRevokeImpactVO;
 import com.his.clinical.vo.SignatureOptionsVO;
 
 import java.util.List;
@@ -40,4 +41,9 @@ public interface SignatureCenterService {
      * 作废签名：操作人取当前登录用户
      */
     SignatureVO invalidate(SignatureInvalidateDTO dto);
+
+    /**
+     * 吊销前的影响面：该证书持有人名下未签病历/处方/检查/检验数量 + 证书使用情况。
+     */
+    SignCertRevokeImpactVO revokeImpact(Long certId);
 }

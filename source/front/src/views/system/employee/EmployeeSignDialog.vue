@@ -25,6 +25,18 @@
               text(cert.publicKey)
             }}</pre>
         </div>
+
+        <div v-if="cert.certPem" class="mt-3">
+          <div class="flex items-center justify-between">
+            <p class="text-xs font-medium text-slate-900">证书（PEM）</p>
+            <el-button link size="small" type="primary" @click="copyCertPem">复制证书</el-button>
+          </div>
+          <pre
+              class="mt-2 max-h-56 overflow-auto whitespace-pre-wrap rounded bg-slate-50 p-3 font-mono text-xs leading-5 text-slate-700">{{
+            cert.certPem
+          }}</pre>
+          <p class="mt-2 text-xs text-slate-500">CA 签发回填的证书本体（含签发链）；仅展示证书，不含私钥。</p>
+        </div>
       </template>
       <div v-else-if="!loading" class="py-6 text-center text-sm text-slate-400" data-testid="emp-sign-cert-empty">
         该员工暂无有效签名证书
@@ -35,6 +47,7 @@
 
 <script setup>
 import {computed, ref, watch} from 'vue';
+import {ElMessage} from 'element-plus';
 import {getSignCertByEmp} from '@/api/signature';
 import {num, text} from '@/lib/sign';
 
@@ -66,4 +79,14 @@ watch(visible, async (open) => {
     loading.value = false;
   }
 });
+
+const copyCertPem = async () => {
+  const material = cert.value?.certPem || '';
+  try {
+    await navigator.clipboard.writeText(material);
+    ElMessage.success('已复制证书 PEM');
+  } catch (e) {
+    ElMessage.warning('复制失败，请手动选中上方文本复制');
+  }
+};
 </script>

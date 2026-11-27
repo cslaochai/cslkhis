@@ -786,12 +786,14 @@ const routes = [
                 path: 'drgsim',
                 name: 'GroupSim',
                 component: () => import('@/views/drg/GroupSimView.vue'),
-                meta: {title: '分组模拟'}
+                meta: {title: '医保付费'}
             },
             {
+                // 医保付费结算已并入「医保付费」聚合壳的「医保结算」页签（见菜单 SQL 400）；
+                // 旧链接重定向到壳页对应页签，不再单独加载组件。
                 path: 'medpaysettle',
                 name: 'MedpaySettle',
-                component: () => import('@/views/drg/MedpaySettleView.vue'),
+                redirect: {path: '/drgsim', query: {tab: 'settle'}},
                 meta: {title: '医保付费结算'}
             },
             {

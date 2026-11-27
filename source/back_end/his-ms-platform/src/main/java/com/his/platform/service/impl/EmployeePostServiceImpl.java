@@ -15,12 +15,14 @@ import com.his.platform.mapper.SysEmployeeMapper;
 import com.his.platform.mapper.SysEmployeePostMapper;
 import com.his.platform.mapper.SysRoleMapper;
 import com.his.platform.service.EmployeePostService;
+import com.his.platform.service.SignQualReviewService;
 import com.his.platform.service.SysAuditLogService;
 import com.his.platform.service.UserIdentityCache;
 import com.his.common.util.JwtUtils;
 import com.his.platform.vo.EmployeePostVO;
 import com.his.platform.vo.SwitchPostVO;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -32,6 +34,7 @@ import java.util.stream.Collectors;
 /**
  * 岗位（角色 × 科室）的实现 —— 「以什么身份在哪个科室执业」的唯一判定点。
  */
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class EmployeePostServiceImpl extends ServiceImpl<SysEmployeePostMapper, SysEmployeePost> implements EmployeePostService {
@@ -43,6 +46,7 @@ public class EmployeePostServiceImpl extends ServiceImpl<SysEmployeePostMapper, 
     private final JwtUtils jwtUtils;
     private final SysAuditLogService sysAuditLogService;
     private final UserIdentityCache userIdentityCache;
+    private final SignQualReviewService signQualReviewService;
 
     /**
      * 岗位当前是否生效（sql/113）：两侧 NULL = 不限，存量数据行为中性。
@@ -165,6 +169,14 @@ public class EmployeePostServiceImpl extends ServiceImpl<SysEmployeePostMapper, 
         Map<String, SysRole> roleByCode = loadRoles(rows);
         Map<Long, SysDepartment> deptById = loadDepts(rows);
 
+        // 异动前仍在生效的岗位：签名资格复核只比较「要不要签名」是否翻转
+        List<EmployeePostVO> beforePosts = listActivePosts(employeeId);
+        String empName = null;
+        SysEmployee employee = sysEmployeeMapper.selectById(employeeId);
+        if (employee != null) {
+            empName = employee.getEmpName();
+        }
+
         sysEmployeePostMapper.delete(new LambdaQueryWrapper<SysEmployeePost>()
                 .eq(SysEmployeePost::getEmployeeId, employeeId));
 
@@ -195,6 +207,12 @@ public class EmployeePostServiceImpl extends ServiceImpl<SysEmployeePostMapper, 
         syncPrimaryDept(employeeId, primary);
         // 岗位 = 角色 × 科室是鉴权直接 join 的事实来源，角色集合变了，名下账号的身份缓存必须清
         userIdentityCache.invalidateByEmployeeId(employeeId);
+        // 签名资格复核是二级动作：失败只记日志，绝不让它回滚岗位保存
+        try {
+            signQualReviewService.handlePostsChanged(employeeId, empName, beforePosts, listActivePosts(employeeId));
+        } catch (Exception e) {
+            log.warn("签名资格复核生成失败 empId={}", employeeId, e);
+        }
         return primary;
     }
 

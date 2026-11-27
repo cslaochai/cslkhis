@@ -43,6 +43,10 @@
       <el-form-item label="排序" prop="sortOrder">
         <el-input-number v-model="formData.sortOrder" :max="999" :min="0"/>
       </el-form-item>
+      <el-form-item label="电子签名" prop="signRequired">
+        <el-switch v-model="formData.signRequired" :active-value="1" :inactive-value="0"/>
+        <span class="ml-2 text-xs text-slate-500">需要电子签名资格（医生/护士等要签文书的岗位）</span>
+      </el-form-item>
       <el-form-item label="状态" prop="status">
         <el-radio-group v-model="formData.status">
           <el-radio :value="1">启用</el-radio>
@@ -90,6 +94,8 @@ const formData = reactive({
   // 后端判定点只认 ==1（DeptScopeProviderImpl.isUnrestrictedRole），库里 NULL 与非 1 行为相同，
   // 前端统一归一成 2 提交，避免 updateById 跳过 null 字段导致改不回「按岗位」。
   dataScope: 2,
+  // 是否需要电子签名资格：0-不需要（默认，新增角色不自动纳入签名岗）
+  signRequired: 0,
 })
 
 const rules = {
@@ -107,6 +113,7 @@ const resetForm = () => {
   formData.sortOrder = 0
   formData.status = 1
   formData.dataScope = 2  // 新增默认按岗位科室收口，放开全院要显式选
+  formData.signRequired = 0
 }
 
 watch(visible, async (open) => {

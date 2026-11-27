@@ -1,6 +1,6 @@
 <template>
   <!-- 详情 + 实盘录入 -->
-  <el-drawer v-model="visible" data-testid="stocktake-detail-drawer" size="1000px" title="盘点单详情">
+  <el-dialog v-model="visible" data-testid="stocktake-detail-drawer" title="盘点单详情" top="3vh" width="1000px">
     <template v-if="detail">
       <div class="mb-3 flex items-center justify-between">
         <div class="flex items-center gap-2">
@@ -138,7 +138,7 @@
         </el-table>
       </template>
     </template>
-  </el-drawer>
+  </el-dialog>
 </template>
 
 <script setup>

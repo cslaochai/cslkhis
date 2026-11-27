@@ -2,9 +2,10 @@
   <!-- 某一天的出勤对照：这里有「补登工时」「确认缺勤」两个动作。
        为什么必须给人这两个按钮：全院没有考勤机对接，查不到打卡数据的日子只能靠登记。
        与其让护士长去别的菜单找入口，不如把登记动作放在她看到问题的那一行旁边。 -->
-  <el-drawer v-model="visible" :title="`${date} 出勤对照（计划 vs 实际）`"
+  <el-dialog v-model="visible" :title="`${date} 出勤对照（计划 vs 实际）`"
              data-testid="ns-attend-detail"
-             size="70%">
+             top="4vh"
+             width="70%">
     <el-table v-loading="loading" :data="rows" border size="small" style="width: 100%">
       <el-table-column fixed label="护士" prop="employeeName" width="110"/>
       <el-table-column label="班次" prop="shiftName" width="130"/>
@@ -48,7 +49,7 @@
     <template v-if="!rows.length && !loading" #footer>
       <span class="text-xs text-slate-400">这一天该单元没有「上班」排班，没有可对照的行。</span>
     </template>
-  </el-drawer>
+  </el-dialog>
 </template>
 
 <script setup>

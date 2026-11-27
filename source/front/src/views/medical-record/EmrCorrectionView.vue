@@ -111,8 +111,8 @@
       </div>
     </el-card>
 
-    <!-- 申请单详情抽屉 -->
-    <el-drawer v-model="detailVisible" direction="rtl" size="56%">
+    <!-- 申请单详情弹框 -->
+    <el-dialog v-model="detailVisible" top="4vh" width="56%">
       <template #header>
         <div class="flex items-center gap-3">
           <span class="text-base font-semibold text-slate-900">病历更正申请单</span>
@@ -186,7 +186,7 @@
           </div>
         </div>
       </div>
-    </el-drawer>
+    </el-dialog>
 
     <!-- 审批意见弹框 -->
     <EmrCorrectionOpinionDialog

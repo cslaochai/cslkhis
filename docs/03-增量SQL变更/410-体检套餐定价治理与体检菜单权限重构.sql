@@ -116,26 +116,40 @@ WHERE rm.role_id IN (1, 25, 40, 43)
   AND m.id IN (1400, 905, 2930, 2131, 2132, 2133,
                9210000000000011001, 9210000000000011002, 9210000000000011003);
 
--- 菜单节点：只读角色 1 与 everybody 都要能进两个页面
-INSERT INTO sys_role_menu (role_id, menu_id)
-SELECT v.role_id, v.menu_id FROM (
-  SELECT 1 AS role_id, 1400 AS menu_id UNION ALL SELECT 1, 2930 UNION ALL SELECT 1, 905
-  UNION ALL SELECT 25, 1400 UNION ALL SELECT 25, 2930 UNION ALL SELECT 25, 905
-  UNION ALL SELECT 43, 1400 UNION ALL SELECT 43, 2930 UNION ALL SELECT 43, 905
-  UNION ALL SELECT 40, 1400 UNION ALL SELECT 40, 2930
+-- 菜单节点：只读角色 1 与 everybody 都要能进两个页面（id 取本文件专属段 9210000000000020001~011，避免撞主键）
+INSERT INTO sys_role_menu (id, role_id, menu_id)
+SELECT v.id, v.role_id, v.menu_id FROM (
+  SELECT 9210000000000020001 AS id, 1 AS role_id, 1400 AS menu_id
+  UNION ALL SELECT 9210000000000020002, 1, 2930
+  UNION ALL SELECT 9210000000000020003, 1, 905
+  UNION ALL SELECT 9210000000000020004, 25, 1400
+  UNION ALL SELECT 9210000000000020005, 25, 2930
+  UNION ALL SELECT 9210000000000020006, 25, 905
+  UNION ALL SELECT 9210000000000020007, 43, 1400
+  UNION ALL SELECT 9210000000000020008, 43, 2930
+  UNION ALL SELECT 9210000000000020009, 43, 905
+  UNION ALL SELECT 9210000000000020010, 40, 1400
+  UNION ALL SELECT 9210000000000020011, 40, 2930
 ) v
 WHERE NOT EXISTS (SELECT 1 FROM sys_role_menu x WHERE x.role_id = v.role_id AND x.menu_id = v.menu_id);
 
 -- 按钮节点
-INSERT INTO sys_role_menu (role_id, menu_id)
-SELECT v.role_id, v.menu_id FROM (
+INSERT INTO sys_role_menu (id, role_id, menu_id)
+SELECT v.id, v.role_id, v.menu_id FROM (
   -- 门诊办管理员：全量
-  SELECT 25 AS role_id, 2131 AS menu_id UNION ALL SELECT 25, 2132 UNION ALL SELECT 25, 2133
-  UNION ALL SELECT 25, 9210000000000011001 UNION ALL SELECT 25, 9210000000000011002 UNION ALL SELECT 25, 9210000000000011003
-  -- 门诊办管理员之外的第二套：体检中心前台（登记 / 开始体检与总检 / 结果录入）
-  UNION ALL SELECT 43, 2131 UNION ALL SELECT 43, 2132 UNION ALL SELECT 43, 9210000000000011001
+  SELECT 9210000000000020012 AS id, 25 AS role_id, 2131 AS menu_id
+  UNION ALL SELECT 9210000000000020013, 25, 2132
+  UNION ALL SELECT 9210000000000020014, 25, 2133
+  UNION ALL SELECT 9210000000000020015, 25, 9210000000000011001
+  UNION ALL SELECT 9210000000000020016, 25, 9210000000000011002
+  UNION ALL SELECT 9210000000000020017, 25, 9210000000000011003
+  -- 体检中心前台：登记 / 开始体检与总检 / 结果录入
+  UNION ALL SELECT 9210000000000020018, 43, 2131
+  UNION ALL SELECT 9210000000000020019, 43, 2132
+  UNION ALL SELECT 9210000000000020020, 43, 9210000000000011001
   -- 物价员：套餐新增修改 / 套餐停用
-  UNION ALL SELECT 40, 9210000000000011002 UNION ALL SELECT 40, 9210000000000011003
+  UNION ALL SELECT 9210000000000020021, 40, 9210000000000011002
+  UNION ALL SELECT 9210000000000020022, 40, 9210000000000011003
 ) v
 WHERE NOT EXISTS (SELECT 1 FROM sys_role_menu x WHERE x.role_id = v.role_id AND x.menu_id = v.menu_id);
 
@@ -148,5 +162,7 @@ WHERE NOT EXISTS (SELECT 1 FROM sys_role_menu x WHERE x.role_id = v.role_id AND 
 --    11001=result:save、11002/11003=package:add/edit；不再出现 checkup:manage:*
 -- 3) 前台不再持有套餐码：select 1 from sys_role_menu rm join sys_menu m on m.id=rm.menu_id
 --    where rm.role_id=43 and m.permission like 'checkup:package:%';  -- 必须 0 行
--- 4) 系统管理员仍只读：select count(*) from sys_role_menu rm join sys_menu m on m.id=rm.menu_id
---    where rm.role_id=1 and m.menu_type=3;  -- 必须 0
+-- 4) 系统管理员对体检仍只读：select count(*) from sys_role_menu rm join sys_menu m on m.id=rm.menu_id
+--    where rm.role_id=1 and m.menu_type=3 and m.permission like 'checkup:%';  -- 必须 0
+-- 5) 物价员拿到套餐两个按钮：select m.permission from sys_role_menu rm join sys_menu m on m.id=rm.menu_id
+--    where rm.role_id=40 and m.permission like 'checkup:%';  -- 预期 package:list/add/edit

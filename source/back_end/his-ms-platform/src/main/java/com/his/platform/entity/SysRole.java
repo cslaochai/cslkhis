@@ -45,6 +45,14 @@ public class SysRole extends BaseEntity {
     private Integer status;
 
     /**
+     * 该角色是否需要电子签名资格（1-需要 0-不需要）。
+     *
+     * <p>岗位 = 角色 × 科室，所以「这个岗位要不要签」落在角色上：
+     * 人事异动把「需要签名」换成「不需要签名」时，才生成医务科的签名资格复核单。
+     */
+    private Integer signRequired;
+
+    /**
      * 逻辑删除标志（0 未删除 1 已删除）
      */
     @TableLogic

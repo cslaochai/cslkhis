@@ -3,11 +3,13 @@ package com.his.iot.service;
 import com.his.iot.dto.IotColdChainRecordQueryDTO;
 import com.his.iot.dto.IotHistoryQueryDTO;
 import com.his.iot.dto.IotLatestQueryDTO;
+import com.his.iot.dto.IotWaveformQueryDTO;
 import com.his.iot.vo.IotColdChainRecordVO;
 import com.his.iot.vo.IotColdChainSummaryVO;
 import com.his.iot.vo.IotDeviceTypeVO;
 import com.his.iot.vo.IotHistoryPointVO;
 import com.his.iot.vo.IotLatestVO;
+import com.his.iot.vo.IotWaveformVO;
 
 import java.util.List;
 
@@ -30,6 +32,11 @@ public interface IotTelemetryService {
      * 单台设备的历史遥测点，按时间升序，最多 {@code limit} 行。
      */
     List<IotHistoryPointVO> historyList(IotHistoryQueryDTO query);
+
+    /**
+     * 监护波形批量取窗：从内存缓冲取最近一段 ECG/脉搏波/呼吸波，不落时序库。
+     */
+    List<IotWaveformVO> waveformList(IotWaveformQueryDTO query);
 
     /**
      * 冷链温湿度记录：固定 5 分钟一窗，含平均/最低/最高与点数，供 GSP 检查导出。

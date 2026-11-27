@@ -40,9 +40,9 @@
         <span class="text-[12px] text-gray-500">自动刷新</span>
         <el-select v-model="query.interval" :disabled="!query.autoRefresh" size="small"
                    :fit-input-width="false" style="width:92px" @change="resetTimer">
-          <el-option label="3 秒" :value="3"/>
-          <el-option label="5 秒" :value="5"/>
           <el-option label="10 秒" :value="10"/>
+          <el-option label="30 秒" :value="30"/>
+          <el-option label="60 秒" :value="60"/>
         </el-select>
         <el-button size="small" :icon="Refresh" @click="loadLatest()">刷新</el-button>
         <span class="text-[12px] text-gray-400" title="数据窗口：TDengine 时序库">刷新于 {{ lastRefreshAt || '' }}</span>
@@ -64,9 +64,23 @@
             <span v-else class="text-[12px] text-gray-400">—</span>
           </template>
         </el-table-column>
-        <el-table-column label="最新读数" min-width="150">
+        <el-table-column label="最新读数" min-width="190">
           <template #default="{ row }">
-            <span v-if="primaryMetric(row)" class="text-[13px]" :class="isAlarmRow(row) ? 'text-red-600' : 'text-gray-700'">
+            <!-- 物流机器人：设备侧只报英文任务码，运维看不懂，这里译成中文并与电量/载重排成两行 -->
+            <template v-if="row.deviceType === 'robot'">
+              <div class="flex items-center gap-1.5">
+                <el-tooltip placement="top" :content="`设备原始上报码 ${robotState(row).code}`">
+                  <el-tag size="small" :type="robotState(row).tag">{{ robotState(row).text }}</el-tag>
+                </el-tooltip>
+                <span v-if="metricVal(row, 'location')" class="text-[12px] text-gray-500 truncate">
+                  {{ metricVal(row, 'location') }}
+                </span>
+              </div>
+              <div class="text-[12px] text-gray-500">
+                电量 {{ metricText(row, 'battery', '%') }} · 载重 {{ metricText(row, 'loadKg', 'kg') }}
+              </div>
+            </template>
+            <span v-else-if="primaryMetric(row)" class="text-[13px]" :class="isAlarmRow(row) ? 'text-red-600' : 'text-gray-700'">
               {{ primaryMetric(row).label }} {{ primaryMetric(row).value }}{{ primaryMetric(row).unit }}
             </span>
             <span v-else class="text-[12px] text-gray-400">—</span>
@@ -125,7 +139,8 @@
  * 为什么没有分页：最新值按「设备类型 → 超级表 PARTITION BY device_no」一条 SQL 取回，
  * 一台设备一行，量级是几十台（上限受设备台账约束），不需要分页。
  */
-import {computed, onMounted, onUnmounted, reactive, ref} from 'vue';
+import {computed, onMounted, onUnmounted, reactive, ref, watch} from 'vue';
+import {useRoute} from 'vue-router';
 import {ElMessage} from 'element-plus';
 import {Refresh} from '@element-plus/icons-vue';
 import {iotActiveBinds, iotDeviceSelectList, iotLatestList, iotSelectDeviceTypes} from '@/api/iot';
@@ -133,6 +148,7 @@ import DeviceHistoryDialog from './DeviceHistoryDialog.vue';
 import {useTableMaxHeight} from '@/lib/useTableMaxHeight';
 
 const {queryCardRef, tableMaxHeight} = useTableMaxHeight();
+const route = useRoute();
 
 const deviceTypes = ref([]);
 const rows = ref([]);
@@ -140,7 +156,10 @@ const loading = ref(false);
 const lastRefreshAt = ref('');
 const alarmOnly = ref(false);
 const activeType = ref('');
-const query = reactive({deviceNo: '', autoRefresh: true, interval: 5});
+// 自动刷新间隔：物联网监控全站统一 10 秒一档（其余 5 个监控页同为 10 秒），
+// 设备台账几十台、TDengine 一条 SQL 取最新值，10 秒已经够及时；3/5 秒只多耗库不带来信息增量。
+const REFRESH_SEC = 10;
+const query = reactive({deviceNo: '', autoRefresh: true, interval: REFRESH_SEC});
 
 const ONLINE_WINDOW_MS = 120 * 1000;
 // 30 秒一跳的心跳，让「在线/离线」和「x 分钟前」随时间自然变化，而不是只在拉数据时才重算
@@ -161,6 +180,7 @@ const isAlarmRow = (row) => row.alarmLevel != null;
 /**
  * 主指标展示映射：每类设备取最能反映运行状态的一个读数在列表直出。
  * 这是前端展示口径（选哪个指标给运维先看），不是码值字典；指标键以后端 DeviceTypeSchema 为准。
+ * 物流机器人不走这条：它有状态/位置/电量/载重四项，单独渲染（见模板 robot 分支）。
  */
 const PRIMARY_METRIC = {
   coldchain: {key: 'temp'},
@@ -169,10 +189,10 @@ const PRIMARY_METRIC = {
   env: {key: 'temp'},
   gas: {key: 'o2Kpa'},
   bed: {key: 'heartRate'},
+  monitor: {key: 'heartRate'},
   dialysis: {key: 'tmpMmHg'},
   cabinet: {key: 'stockPct'},
   uv: {key: 'running'},
-  robot: {key: 'state'},
 };
 const primaryMetric = (row) => {
   const cfg = PRIMARY_METRIC[row.deviceType];
@@ -180,6 +200,38 @@ const primaryMetric = (row) => {
   const m = (row.metrics || []).find(x => x.key === cfg.key);
   if (!m || m.value == null || m.value === '') return null;
   return {label: m.label, value: m.value, unit: m.unit || ''};
+};
+
+/** 按指标键取原始值（机器人读数和趋势都用它，避免各处自己 find）。 */
+const metricVal = (row, key) => {
+  const m = (row.metrics || []).find(x => x.key === key);
+  return m && m.value != null && m.value !== '' ? m.value : null;
+};
+const metricText = (row, key, unit) => {
+  const v = metricVal(row, key);
+  return v == null ? '—' : `${v}${unit}`;
+};
+
+/**
+ * 物流机器人任务状态码 → 中文。设备侧报的是 TASK_STATE 英文枚举（IDLE/DELIVERING…），
+ * 直接把原码丢给运维没人看得懂；没登记的新码原样显示，tooltip 里带原始码方便对报文排查。
+ */
+const ROBOT_STATE = {
+  IDLE: {text: '待命', tag: 'info'},
+  LOADING: {text: '装货中', tag: 'warning'},
+  DELIVERING: {text: '配送中', tag: 'success'},
+  WAITING_ELEVATOR: {text: '等电梯', tag: 'warning'},
+  SIGNING: {text: '签收中', tag: 'success'},
+  ARRIVED: {text: '已到达', tag: 'success'},
+  RETURNING: {text: '返程中', tag: 'primary'},
+  CHARGING: {text: '回桩充电', tag: 'primary'},
+  PAUSED: {text: '已暂停', tag: 'info'},
+};
+const robotState = (row) => {
+  const code = metricVal(row, 'state');
+  if (code == null) return {code: '—', text: '无读数', tag: 'info'};
+  const hit = ROBOT_STATE[String(code).toUpperCase()];
+  return {code: String(code), text: hit?.text || String(code), tag: hit?.tag || 'info'};
 };
 
 const statusOf = (row) => {
@@ -266,6 +318,22 @@ const mergeRows = (list) => {
 };
 
 /**
+ * 从告警弹框跳进来：`?deviceNo=PUMP-01&trend=1`。
+ * 先把列表筛到这台设备，再自动打开它的趋势弹框——电量曲线就在趋势里，护士不用自己再找一遍。
+ */
+let routeTrendOpened = false;
+const applyRouteFocus = () => {
+  const no = String(route.query.deviceNo || '').trim();
+  if (!no) return;
+  if (!query.deviceNo) query.deviceNo = no;
+  if (route.query.trend !== '1' || routeTrendOpened) return;
+  const row = rows.value.find(r => r.deviceNo === no);
+  if (!row) return;
+  routeTrendOpened = true;
+  openHistory(row);
+};
+
+/**
  * silent = true（自动刷新）：不置 loading、不弹失败提示，失败保留上一帧数据；
  * silent = false（首屏/点刷新）：显示遮罩与错误提示。
  */
@@ -298,6 +366,7 @@ const loadLatest = async ({silent = false} = {}) => {
         };
       }));
       lastRefreshAt.value = new Date().toLocaleTimeString('zh-CN', {hour12: false});
+      applyRouteFocus();
     } else if (!silent) {
       ElMessage.error(res.message || '查询失败');
     }
@@ -310,6 +379,13 @@ const loadLatest = async ({silent = false} = {}) => {
 
 let timer = null;
 let clockTimer = null;
+
+// 同样停在设备监控页时又从告警弹框点进来：查询参数变了，得把趋势重新打开一次
+watch(() => route.query.deviceNo, () => {
+  if (!route.query.deviceNo) return;
+  routeTrendOpened = false;
+  applyRouteFocus();
+});
 const resetTimer = () => {
   if (timer) {
     clearInterval(timer);
@@ -317,7 +393,7 @@ const resetTimer = () => {
   }
   if (query.autoRefresh) {
     // 自动刷新走静默：不盖遮罩、不重排表格
-    timer = setInterval(() => loadLatest({silent: true}), Math.max(3, query.interval) * 1000);
+    timer = setInterval(() => loadLatest({silent: true}), Math.max(REFRESH_SEC, query.interval) * 1000);
   }
 };
 
@@ -404,6 +480,4 @@ onUnmounted(() => {
   flex-wrap: wrap;
   align-items: center;
   gap: 8px;
-  margin-bottom: 12px;
-}
-</style>
+  m

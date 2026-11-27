@@ -1,5 +1,5 @@
 <template>
-  <el-drawer v-model="visible" data-testid="reg-detail-drawer" size="560px" title="死亡登记详情（只读）">
+  <el-dialog v-model="visible" data-testid="reg-detail-drawer" title="死亡登记详情（只读）" width="560px">
     <el-form :disabled="true" data-testid="reg-detail-body" label-width="120px">
       <el-form-item label="登记号">{{ rd.registerNo }}</el-form-item>
       <el-form-item label="状态">{{ registerStatusText(rd.registerStatus) }}</el-form-item>
@@ -33,7 +33,7 @@
     <template #footer>
       <el-button data-testid="rd-close" @click="visible = false">关闭</el-button>
     </template>
-  </el-drawer>
+  </el-dialog>
 </template>
 
 <script setup>

@@ -61,6 +61,11 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
      * 手写笔迹 PNG dataURL 长度上限（字符数），与病危告知/请假签收同一口径
      */
     private static final int RX_SIGNATURE_MAX = 512 * 1024;
+    /**
+     * 系统管理员角色编码：为应急处置被授予签名证书权限码（sql/412），但不是业务处置岗，
+     * 无签结诊催办按权限码圈接收人时按此编码排除，不把业务待办发给超管。
+     */
+    private static final String SYSTEM_ADMIN_ROLE_CODE = "10012";
     private final BizPrescriptionMapper bizPrescriptionMapper;
     private final BizPrescriptionDetailMapper bizPrescriptionDetailMapper;
     private final BizPrescriptionAuditLogMapper bizPrescriptionAuditLogMapper;
@@ -1930,6 +1935,7 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
             final String alertRecordNo = bizMedicalRecord.getRecordNo();
             final String alertPatientName = bizMedicalRecord.getPatientName();
             final String alertDeptName = bizMedicalRecord.getDeptName();
+            final Long alertDoctorId = bizMedicalRecord.getDoctorId();
             final String alertDoctorName = bizMedicalRecord.getDoctorName();
             if (TransactionSynchronizationManager.isSynchronizationActive()) {
                 TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
@@ -1942,7 +1948,7 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
                         }
                         if (signSkipped) {
                             sendUnsignedSignAlert(signCheck, submittedRecordId, alertRecordNo, alertPatientName,
-                                    alertDeptName, alertDoctorName);
+                                    alertDeptName, alertDoctorId, alertDoctorName);
                         }
                     }
                 });
@@ -1951,7 +1957,7 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
                 asyncAfterSubmit(submittedRecordId, submittedOperator);
                 if (signSkipped) {
                     sendUnsignedSignAlert(signCheck, submittedRecordId, alertRecordNo, alertPatientName,
-                            alertDeptName, alertDoctorName);
+                            alertDeptName, alertDoctorId, alertDoctorName);
                 }
             }
         }
@@ -1960,25 +1966,45 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
     }
 
     /**
-     * 无签结诊催办：发给办证（sign:cert:edit，信息科）与处置（sign:cert:revoke，医务科）两边的人。
+     * 无签结诊催办：发给补签责任人（当事医生）与办证（sign:cert:edit，信息科）、处置（sign:cert:revoke，医务科）两端。
      *
      * <p>每天每份病历最多一条（countSentSince 按天判重），重复结诊/补跑不刷屏；
-     * 接收人按权限码圈定而非写死角色名，权限授给谁谁就收。
+     * 接收人按权限码圈定而非写死角色名，权限授给谁谁就收。系统管理员为应急处置持这两个码（sql/412），
+     * 但不是业务处置岗，按角色编码排除——否则业务待办全落超管，真正要补签的医生反而收不到。
      *
      * @param signCheck 结诊签名预检结论，证书现状（没办证/过期/未签发）直接取它，不再重查一遍
      */
     private void sendUnsignedSignAlert(SignPreCheckVO signCheck, Long recordId, String recordNo,
-                                       String patientName, String deptName, String doctorName) {
+                                       String patientName, String deptName, Long doctorId, String doctorName) {
         try {
             LocalDateTime sinceToday = LocalDate.now().atStartOfDay();
             if (sysMessageService.countSentSince(BizTypeEnum.SIGN.getType(), recordId, sinceToday) > 0) {
                 return;
             }
             List<EmployeeBriefVO> receivers = distinctReceivers(
-                    systemFacadeService.listEmployeesByPermission("sign:cert:edit"),
-                    systemFacadeService.listEmployeesByPermission("sign:cert:revoke"));
+                    systemFacadeService.listEmployeesByPermissionExcludingRole("sign:cert:edit", SYSTEM_ADMIN_ROLE_CODE),
+                    systemFacadeService.listEmployeesByPermissionExcludingRole("sign:cert:revoke", SYSTEM_ADMIN_ROLE_CODE));
+            final String certStateText = signCheck.getCertStateText();
+            final String doctorText = doctorName == null ? "未知" : doctorName;
+            final String deptText = deptName == null ? "未知" : deptName;
+            final String patientText = patientName == null ? "未知" : patientName;
+
+            // ① 当事医生：这是「他的」待补签任务，只提醒信息科与医务科等于漏掉真正做事的人。
+            //    与权限接收人同一个人时（如本人兼信息科）只发这条，避免同一件事两条消息。
+            if (doctorId != null && receivers.stream().noneMatch(receiver -> doctorId.equals(receiver.getId()))) {
+                sysMessageService.sendSystemMessage(doctorId, doctorText,
+                        "病历待补签：" + recordNo,
+                        String.format("您于 %s 在 %s 提交的病历（病历号 %s，患者 %s）结诊时无可用电子签名证书（%s），"
+                                        + "病历、处方及检查检验申请单均未完成电子签名，已锁定「待补签」。"
+                                        + "请尽快完成补签：证书未办妥期间改走线下纸质签名，并将签名件交病案管理岗核验；"
+                                        + "补签完成前仅病案归档被拦截，检查、检验与药房发药照常进行。",
+                                LocalDate.now(), deptText, recordNo, patientText, certStateText),
+                        BizTypeEnum.SIGN.getType(), recordId, "warning", null, 0);
+            }
+
+            // ② 信息科办证、医务科跟进；两码都没人持有只记日志，医生那条已在上面发出
             if (receivers.isEmpty()) {
-                log.warn("[无签结诊催办] 无接收人（无人持有 sign:cert:edit / sign:cert:revoke 权限），消息未发出 recordId={}", recordId);
+                log.warn("[无签结诊催办] 无办理/处置岗接收人（无人持 sign:cert:edit / sign:cert:revoke），仅通知当事医生 recordId={}", recordId);
                 return;
             }
             String title = "病历待补签提醒";
@@ -1988,12 +2014,12 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
                             + "仅病案归档被拦截，检查、检验与药房发药照常进行；"
                             + "本次已提示该医生改走线下纸质签名并交病案管理岗人工核验。"
                             + "请信息科尽快为其办理或换发软签证书，医务科跟进补签与核验。",
-                    doctorName == null ? "未知" : doctorName,
+                    doctorText,
                     LocalDate.now(),
-                    deptName == null ? "未知" : deptName,
+                    deptText,
                     recordNo,
-                    patientName == null ? "未知" : patientName,
-                    signCheck.getCertStateText());
+                    patientText,
+                    certStateText);
             for (EmployeeBriefVO receiver : receivers) {
                 sysMessageService.sendSystemMessage(receiver.getId(), receiver.getEmpName(),
                         title, content, BizTypeEnum.SIGN.getType(), recordId);

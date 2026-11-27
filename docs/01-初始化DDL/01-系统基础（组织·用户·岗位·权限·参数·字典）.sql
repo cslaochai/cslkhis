@@ -442,6 +442,7 @@ CREATE TABLE `sys_role` (
   `data_scope` tinyint COMMENT '数据权限范围（1-全部数据 2-自定义数据 3-本部门数据 4-本部门及以下 5-仅本人数据）',
   `sort_order` int COMMENT '排序号',
   `status` tinyint COMMENT '状态（0-停用 1-启用）',
+  `sign_required` tinyint NOT NULL DEFAULT '0' COMMENT '是否需要电子签名资格（1-需要 0-不需要）',
   `create_by` varchar(64) NOT NULL COMMENT '创建人',
   `create_time` datetime NOT NULL DEFAULT (now()) COMMENT '创建时间',
   `update_by` varchar(64) NOT NULL COMMENT '更新人',
@@ -531,6 +532,7 @@ CREATE TABLE `sys_sign_cert` (
   `revoke_reason` varchar(200) COMMENT '吊销原因',
   `revoke_time` datetime COMMENT '吊销时间',
   `revoke_by_name` varchar(64) COMMENT '吊销操作人姓名',
+  `revoke_type` tinyint COMMENT '吊销类型（1-业务吊销 2-应急吊销）',
   `last_used_time` datetime COMMENT '最近一次使用时间',
   `sign_count` int NOT NULL DEFAULT '0' COMMENT '累计签名次数',
   `pin_hash` varchar(128) COMMENT '签名PIN哈希（PBKDF2派生，明文不入库）',
@@ -554,6 +556,33 @@ CREATE TABLE `sys_sign_cert` (
   KEY `idx_sigcert_emp` (`emp_id`,`cert_status`),
   KEY `idx_sigcert_status` (`cert_status`,`valid_to`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='电子签名证书';
+
+-- ----------------------------
+-- biz_sign_qual_review  签名资格复核单
+-- ----------------------------
+CREATE TABLE `biz_sign_qual_review` (
+  `id` bigint NOT NULL COMMENT '主键ID',
+  `employee_id` bigint NOT NULL COMMENT '员工ID',
+  `emp_name` varchar(64) NOT NULL DEFAULT '' COMMENT '员工姓名（快照）',
+  `from_posts` varchar(500) NOT NULL DEFAULT '' COMMENT '异动前岗位摘要（角色/科室）',
+  `to_posts` varchar(500) NOT NULL DEFAULT '' COMMENT '异动后岗位摘要（角色/科室）',
+  `new_sign_required` tinyint NOT NULL DEFAULT '0' COMMENT '新岗位是否需要电子签名资格（1-需要 0-不需要）',
+  `cert_id` bigint COMMENT '异动时有效证书ID',
+  `cert_no` varchar(32) COMMENT '证书编号（快照）',
+  `status` tinyint NOT NULL DEFAULT '0' COMMENT '复核状态（0-待复核 1-保留证书 2-已吊销）',
+  `handle_remark` varchar(200) COMMENT '处理意见（吊销时即吊销原因）',
+  `handle_by_name` varchar(64) COMMENT '处理人姓名',
+  `handle_time` datetime COMMENT '处理时间',
+  `create_by` varchar(64) NOT NULL DEFAULT '' COMMENT '创建人',
+  `create_time` datetime NOT NULL DEFAULT (now()) COMMENT '创建时间',
+  `update_by` varchar(64) NOT NULL DEFAULT '' COMMENT '更新人',
+  `update_time` datetime NOT NULL DEFAULT (now()) COMMENT '更新时间',
+  `create_by_id` bigint NOT NULL DEFAULT '0' COMMENT '创建人ID',
+  `update_by_id` bigint NOT NULL DEFAULT '0' COMMENT '更新人ID',
+  PRIMARY KEY (`id`),
+  KEY `idx_qual_review_emp` (`employee_id`),
+  KEY `idx_qual_review_status` (`status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='签名资格复核单（人事异动触发，医务科决定保留或吊销）';
 
 -- ----------------------------
 -- sys_user  用户

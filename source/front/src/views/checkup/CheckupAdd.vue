@@ -49,7 +49,7 @@
       </el-form-item>
     </el-form>
     <template #footer>
-      <el-button v-perm="'checkup:manage:add'" data-testid="checkup-create-submit" type="primary"
+      <el-button v-perm="'checkup:record:add'" data-testid="checkup-create-submit" type="primary"
                  @click="submitCreate">登记
       </el-button>
       <el-button @click="visible = false">取消</el-button>

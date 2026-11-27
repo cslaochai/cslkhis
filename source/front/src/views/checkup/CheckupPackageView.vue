@@ -20,7 +20,7 @@
         </el-form>
         <!-- 主操作区：新增/批量等动作统一靠右，与查询条件视觉分离 -->
         <div class="flex shrink-0 items-start gap-3">
-          <el-button v-perm="'checkup:manage:add'" :icon="Plus" type="primary" @click="openCreate">新增套餐</el-button>
+          <el-button v-perm="'checkup:package:add'" :icon="Plus" type="primary" @click="openCreate">新增套餐</el-button>
         </div>
       </div>
     </el-card>
@@ -31,7 +31,13 @@
         <el-table-column align="center" label="适用性别" width="90">
           <template #default="{ row }">{{ genderText(row.genderLimit) }}</template>
         </el-table-column>
-        <el-table-column align="right" label="价格(元)" prop="price" width="100"/>
+        <el-table-column align="right" label="原价(元)" width="100">
+          <template #default="{ row }">{{ money(row.listPrice) }}</template>
+        </el-table-column>
+        <el-table-column align="right" label="套餐价(元)" prop="price" width="110"/>
+        <el-table-column align="center" label="折扣率" width="80">
+          <template #default="{ row }">{{ discountText(row.discountRate) }}</template>
+        </el-table-column>
         <el-table-column label="说明" min-width="180" prop="description" show-overflow-tooltip>
           <template #default="{ row }">{{ row.description || '' }}</template>
         </el-table-column>
@@ -50,9 +56,9 @@
         </el-table-column>
         <el-table-column fixed="right" label="操作" width="130">
           <template #default="{ row }">
-            <el-button v-perm="'checkup:manage:add'" link size="small" type="primary" @click="openEdit(row)">编辑
+            <el-button v-perm="'checkup:package:add'" link size="small" type="primary" @click="openEdit(row)">编辑
             </el-button>
-            <el-button v-if="Number(row.status) === 1" v-perm="'checkup:manage:edit'" link size="small" type="warning"
+            <el-button v-if="Number(row.status) === 1" v-perm="'checkup:package:edit'" link size="small" type="warning"
                        @click="disable(row)">停用
             </el-button>
           </template>
@@ -100,6 +106,13 @@ import {useTableMaxHeight} from '@/lib/useTableMaxHeight';
 import CheckupPackageEdit from './CheckupPackageEdit.vue';
 
 const genderText = (v) => ({0: '不限', 1: '男', 2: '女'}[Number(v)] || '不限');
+// 金额/折扣率展示：空值一律留空（不显示占位短横线）；折扣率 100% 不打折时不显示
+const money = (v) => (v == null || v === '' ? '' : Number(v).toFixed(2));
+const discountText = (v) => {
+  if (v == null || v === '') return '';
+  const rate = Number(v);
+  return rate >= 1 ? '' : `${(rate * 100).toFixed(0)}%`;
+};
 // ---------------- 套餐列表 ----------------
 const loading = ref(false);
 const rows = ref([]);

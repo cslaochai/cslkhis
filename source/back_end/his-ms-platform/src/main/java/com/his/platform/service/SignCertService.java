@@ -90,8 +90,14 @@ public interface SignCertService {
 
     /**
      * 按员工取当前有效证书：员工管理「数字证书」弹框只读展示用；无有效证书返回 null。
+     * 不带公钥/证书 PEM（审核等内部复用场景走此重载）。
      */
     SignCertVO getActiveCertVO(Long empId);
+
+    /**
+     * 按员工取当前有效证书；withPublicKey=true 时一并回填公钥与证书 PEM（详情/只读弹框用）。
+     */
+    SignCertVO getActiveCertVO(Long empId, boolean withPublicKey);
 
     /**
      * 签名预检：给出签名人当前能不能完成电子签名、PIN 是否还需要本人输入。

@@ -1,5 +1,5 @@
 <template>
-  <el-drawer v-model="visible" destroy-on-close size="880px" title="住院详情">
+  <el-dialog v-model="visible" destroy-on-close title="住院详情" top="4vh" width="880px">
     <div v-loading="detailLoading" class="space-y-4">
       <template v-if="detail">
         <div class="rounded-lg border border-slate-200 p-4">
@@ -249,7 +249,7 @@
         <el-button @click="nurseBindVisible = false">取消</el-button>
       </template>
     </el-dialog>
-  </el-drawer>
+  </el-dialog>
 </template>
 
 <script setup>

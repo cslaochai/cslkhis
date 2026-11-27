@@ -65,6 +65,10 @@ public class IotProperties {
          */
         private String eventTopic = "his/iot/+/+/event";
         /**
+         * 波形主题：his/iot/{设备类型}/{设备编号}/wave（ECG/脉搏波/呼吸高频采样，只留内存窗，不落时序库）
+         */
+        private String waveTopic = "his/iot/+/+/wave";
+        /**
          * QoS。0 = 最多一次，遥测允许丢点换吞吐；需要「至少一次」改 1
          */
         private int qos = 0;

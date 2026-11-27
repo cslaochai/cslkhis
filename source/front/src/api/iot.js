@@ -18,6 +18,11 @@ export function iotHistoryList(data) {
   return request.post('/iot/telemetry/historyList', data)
 }
 
+// 监护波形批量取窗：{deviceNos:[]}，空数组返回缓冲内全部；曲线只在内存，不落时序库
+export function iotWaveformList(data) {
+  return request.post('/iot/telemetry/waveformList', data)
+}
+
 // 冷链温湿度 GSP 记录（5 分钟一轮，含最低/最高）：{deviceNo,startTime,endTime}
 export function iotColdChainRecords(data) {
   return request.post('/iot/telemetry/coldChainRecords', data)

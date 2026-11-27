@@ -1,5 +1,5 @@
 <template>
-  <el-drawer v-model="visible" data-testid="inbound-detail-drawer" size="820px" title="入库单详情">
+  <el-dialog v-model="visible" data-testid="inbound-detail-drawer" title="入库单详情" top="4vh" width="820px">
     <template v-if="detail">
       <el-descriptions :column="2" border class="mb-4" size="small">
         <el-descriptions-item label="入库单号">{{ detail.inboundNo }}</el-descriptions-item>
@@ -39,7 +39,7 @@
       </el-table>
       <div class="mt-2 text-sm text-slate-500 text-right">有效明细金额合计：¥{{ activeAmount }}</div>
     </template>
-  </el-drawer>
+  </el-dialog>
 </template>
 
 <script setup>

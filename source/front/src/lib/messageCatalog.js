@@ -250,6 +250,18 @@ const CATALOG = {
         severity: 'warning', kind: 'task',
         owner: '医生 / 药剂师', permissions: ['portal:messages:view'],
     },
+    // 证书吊销后的双向待办：业务吊销→信息科重办；应急吊销→医务科补备案。bizId 是证书主键
+    'sign-cert': {
+        label: '证书处置待办', tagClass: 'bg-indigo-100 text-indigo-700',
+        severity: 'warning', kind: 'task',
+        owner: '信息科 / 医务科', permissions: ['portal:messages:view'],
+    },
+    // 人事异动触发的签名资格复核（bizId 是员工ID）：医务科决定保留/吊销，信息科按需重办
+    'sign-review': {
+        label: '签名资格复核', tagClass: 'bg-indigo-100 text-indigo-700',
+        severity: 'warning', kind: 'task',
+        owner: '医务科 / 信息科', permissions: ['portal:messages:view'],
+    },
     settle: {
         label: '医保结算结果', tagClass: 'bg-teal-100 text-teal-700',
         severity: 'info', kind: 'notify',
@@ -331,6 +343,8 @@ const GOTO_TARGETS = {
     'code-task': {path: '/archive-center', label: '病案管理', bizNoKey: 'taskNo'},
     'infectious-report': {path: '/my-unreported', label: '我的未报', bizNoKey: 'registNo'},
     sign: {path: '/sign-cert', label: '签名证书'},
+    'sign-cert': {path: '/sign-cert', label: '签名证书'},
+    'sign-review': {path: '/sign-cert', label: '签名证书'},
     settle: {path: '/insurance', label: '医保结算清单', bizNoKey: 'settleNo'},
     arrears: {path: '/arrears-control', label: '欠费管控', bizNoKey: 'admissionNo'},
     pay: {path: '/cashier', label: '收费结算窗口', bizNoKey: 'billNo'},

@@ -39,6 +39,19 @@ function collectMenuPaths(menuTree) {
 const ADMIN_ROLE_CODES = new Set(['10012'])
 
 /**
+ * 当前角色是不是系统管理员（超级管理员）。
+ *
+ * 除患者工作区分流外，患者标签这类「对着具体患者干的运营动作」也不给管理员：
+ * 它的工作对象是配置不是患者，挂了标签也没人认，反而让管理界面看起来像业务界面。
+ *
+ * @param {string} roleCode 当前角色码（Header 的 userInfo.currentRole / localStorage 的 currentRole）
+ * @returns {boolean}
+ */
+export function isSystemAdminRole(roleCode) {
+    return ADMIN_ROLE_CODES.has(String(roleCode || ''))
+}
+
+/**
  * 解析当前角色应当被带往的患者工作台路径
  *
  * @param {import('vue-router').Router} router 路由实例（用 getRoutes() 取 meta）
@@ -48,7 +61,7 @@ const ADMIN_ROLE_CODES = new Set(['10012'])
  */
 export function resolveWorkspacePath(router, menuTree, currentRole) {
     if (!Array.isArray(menuTree) || !menuTree.length || !router) return ''
-    if (ADMIN_ROLE_CODES.has(String(currentRole || ''))) return ''
+    if (isSystemAdminRole(currentRole)) return ''
 
     const workspacePaths = new Set(
         router.getRoutes()

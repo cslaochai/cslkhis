@@ -41,6 +41,10 @@ public class IotEventVO implements Serializable {
     @Schema(description = "事件描述")
     private String detail;
 
+    /** 设备随事件带上的结构化明细（JSON 字符串）：任务单号、货物、箱号、签收人、等梯秒数等 */
+    @Schema(description = "结构化明细（JSON 字符串），无则为空")
+    private String dataJson;
+
     @Schema(description = "事件时间")
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime ts;

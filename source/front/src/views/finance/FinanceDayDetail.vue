@@ -1,5 +1,5 @@
 <template>
-  <el-drawer v-model="visible" :title="`日结单详情 ${detailSettlement?.settlementNo || ''}`" size="72%">
+  <el-dialog v-model="visible" :title="`日结单详情 ${detailSettlement?.settlementNo || ''}`" top="4vh" width="72%">
     <div v-loading="dayDetailLoading" class="space-y-5 text-sm" data-testid="fin-detail-drawer">
       <div
           v-if="isTrial"
@@ -235,7 +235,7 @@
       </el-button>
       <el-button @click="visible = false">关闭</el-button>
     </template>
-  </el-drawer>
+  </el-dialog>
 </template>
 
 <script setup>

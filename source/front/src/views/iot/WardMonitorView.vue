@@ -78,7 +78,7 @@
             护理 {{ bed.nursingLevelText }}
           </el-tag>
           <el-tag v-if="bed.critical" size="small" type="danger" effect="dark">危重</el-tag>
-          <el-tag v-if="pumpsOf(bed).some(p => p.alarm) || bedSensorOf(bed)?.vitalBad" size="small" type="danger" effect="dark" class="ml-auto">
+          <el-tag v-if="pumpsOf(bed).some(p => p.alarm) || bedSensorOf(bed)?.vitalBad || monitorOf(bed)?.vitalBad" size="small" type="danger" effect="dark" class="ml-auto">
             设备告警
           </el-tag>
         </div>
@@ -138,10 +138,6 @@
                 </div>
               </div>
             </div>
-            <div v-else class="mt-3 rounded-md border border-dashed border-gray-200 px-3 py-2 text-center text-[12px] text-gray-400">
-              未绑定床旁设备
-              <span class="ml-1 text-gray-400">（在「物资设备 · 设备共享调配」申请，设备科发放后绑定）</span>
-            </div>
 
             <!-- 床垫体征：与输液泵分开显示，护士一眼区分「输注」和「在床/生命体征」 -->
             <div v-if="bedSensorOf(bed)" class="mt-2 rounded-md border border-gray-100 bg-gray-50 px-3 py-2">
@@ -177,14 +173,68 @@
                 </div>
               </div>
             </div>
-            <div v-else class="mt-2 rounded-md border border-dashed border-gray-200 px-3 py-2 text-center text-[12px] text-gray-400">
-              未安装智能床垫
+            <!-- 床旁监护仪：生命体征数值 + ECG 波形，固定床旁按床号对齐 -->
+            <div v-if="monitorOf(bed)" class="mt-2 rounded-md border border-gray-100 bg-gray-50 px-3 py-2">
+              <div class="flex items-center justify-between text-[12px] text-gray-500">
+                <span>床旁监护仪 <b class="text-gray-700">{{ monitorOf(bed).deviceNo }}</b></span>
+                <span class="flex items-center gap-1" :class="monitorOf(bed).online ? 'text-green-600' : 'text-gray-400'">
+                  <span class="inline-block w-1.5 h-1.5 rounded-full"
+                        :class="monitorOf(bed).online ? 'bg-green-500' : 'bg-gray-400'"></span>
+                  {{ monitorOf(bed).online ? '在线' : '离线' }}
+                </span>
+              </div>
+              <div class="mt-1 grid grid-cols-5 gap-2 text-center">
+                <div>
+                  <div class="text-[11px] text-gray-400">心率</div>
+                  <div class="text-[18px] font-bold leading-6"
+                       :class="monitorOf(bed).hrBad ? 'text-red-600' : 'text-gray-800'">
+                    {{ monitorOf(bed).hr ?? '' }}<span class="text-[10px] text-gray-400 ml-0.5">bpm</span>
+                  </div>
+                </div>
+                <div>
+                  <div class="text-[11px] text-gray-400">血氧</div>
+                  <div class="text-[18px] font-bold leading-6"
+                       :class="monitorOf(bed).spo2Bad ? 'text-red-600' : 'text-gray-800'">
+                    {{ monitorOf(bed).spo2 ?? '' }}<span class="text-[10px] text-gray-400 ml-0.5">%</span>
+                  </div>
+                </div>
+                <div>
+                  <div class="text-[11px] text-gray-400">血压</div>
+                  <div class="text-[18px] font-bold leading-6"
+                       :class="monitorOf(bed).bpBad ? 'text-red-600' : 'text-gray-800'">
+                    {{ monitorOf(bed).sbp ?? '—' }}/{{ monitorOf(bed).dbp ?? '—' }}
+                  </div>
+                </div>
+                <div>
+                  <div class="text-[11px] text-gray-400">呼吸</div>
+                  <div class="text-[18px] font-bold leading-6"
+                       :class="monitorOf(bed).rrBad ? 'text-red-600' : 'text-gray-800'">
+                    {{ monitorOf(bed).rr ?? '' }}<span class="text-[10px] text-gray-400 ml-0.5">次/分</span>
+                  </div>
+                </div>
+                <div>
+                  <div class="text-[11px] text-gray-400">体温</div>
+                  <div class="text-[18px] font-bold leading-6"
+                       :class="monitorOf(bed).tempBad ? 'text-red-600' : 'text-gray-800'">
+                    {{ monitorOf(bed).temp ?? '' }}<span class="text-[10px] text-gray-400 ml-0.5">℃</span>
+                  </div>
+                </div>
+              </div>
+              <div class="mt-1.5 flex items-center gap-2">
+                <span class="text-[11px] text-gray-400 shrink-0 w-16 truncate">{{ monitorOf(bed).rhythmLabel || '—' }}</span>
+                <MonitorEcgCanvas class="flex-1" :data="monitorOf(bed).wave?.ecg || []"/>
+              </div>
             </div>
-            <div class="mt-3 flex items-center justify-between text-[12px] text-gray-400">
-              <span>{{ lastDeviceTime(bed) ? '更新 ' + lastDeviceTime(bed) : '未接入监测设备' }}</span>
-              <span v-if="pumpsOf(bed).length || bedSensorOf(bed)" class="text-[#1269B5] cursor-pointer" @click.stop="openTrend(bed)">
-                查看患者趋势 ›
-              </span>
+            <!-- 一个设备都没有时只给一行，不再铺三块虚线占位，护士扫一眼就知道“这张床没接设备” -->
+            <div v-if="!pumpsOf(bed).length && !bedSensorOf(bed) && !monitorOf(bed)"
+                 class="mt-3 rounded-md border border-dashed border-gray-200 px-3 py-2 text-center text-[12px] text-gray-400"
+                 title="在「物资设备 · 设备共享调配」申请，设备科发放后绑定">
+              未接入床旁设备
+            </div>
+            <div v-if="pumpsOf(bed).length || bedSensorOf(bed) || monitorOf(bed)"
+                 class="mt-3 flex items-center justify-between text-[12px] text-gray-400">
+              <span>{{ lastDeviceTime(bed) ? '更新 ' + lastDeviceTime(bed) : '' }}</span>
+              <span class="text-[#1269B5] cursor-pointer" @click.stop="openTrend(bed)">查看患者趋势 ›</span>
             </div>
           </template>
           <template v-else>
@@ -225,9 +275,10 @@ import {computed, onMounted, onUnmounted, ref} from 'vue';
 import {Refresh} from '@element-plus/icons-vue';
 import {ElMessage} from 'element-plus';
 import {getBedMap} from '@/api/inpatient';
-import {iotActiveBinds, iotDeviceSelectList, iotEventListPage, iotLatestList} from '@/api/iot';
+import {iotActiveBinds, iotDeviceSelectList, iotEventListPage, iotLatestList, iotWaveformList} from '@/api/iot';
 // 设备告警实时流：设备事件（阻塞/余量/断电）落库即推一帧；断线退回本页 10 秒轮询
 import {openIotAlarmStream} from '@/api/iotAlarmStream';
+import MonitorEcgCanvas from './MonitorEcgCanvas.vue';
 // 提示音：与顶栏站内消息共用同一套静音开关与音色（浏览器解锁策略也在那个模块处理）
 import {ALARM_REPEAT_MS, alertAudioReady, alertMuted, lastAlertAt, playAlert} from '@/lib/alertSound';
 import {loadDeptTreeOptions, flattenDeptTree} from '@/lib/deptOptions';
@@ -242,6 +293,10 @@ const devices = ref([]);
 const activeBinds = ref([]);
 const bedDevices = ref([]);
 const bedLatest = ref([]);
+// 床旁监护仪：台账按床号对齐（同床垫，固定床旁不跟患者），最新遥测与波形按设备编号索引
+const monitorDevices = ref([]);
+const monitorLatest = ref([]);
+const monitorWave = ref([]);
 const loading = ref(false);
 const loadError = ref('');
 const lastRefresh = ref('');
@@ -312,10 +367,11 @@ const visibleBeds = computed(() => wardBeds.value.filter(b => b.patientName));
 
 const stats = computed(() => {
     const occupied = wardBeds.value.filter(b => b.patientName).length;
-    const devicesCount = wardBeds.value.reduce((n, b) => n + pumpsOf(b).length + (bedSensorOf(b) ? 1 : 0), 0);
-    const uncovered = wardBeds.value.filter(b => b.patientName && !pumpsOf(b).length && !bedSensorOf(b)).length;
+    const devicesCount = wardBeds.value.reduce((n, b) => n + pumpsOf(b).length + (bedSensorOf(b) ? 1 : 0)
+        + (monitorOf(b) ? 1 : 0), 0);
+    const uncovered = wardBeds.value.filter(b => b.patientName && !pumpsOf(b).length && !bedSensorOf(b) && !monitorOf(b)).length;
     const alarm = wardBeds.value.reduce((n, b) => n + pumpsOf(b).filter(p => p.alarm).length
-        + (bedSensorOf(b)?.vitalBad ? 1 : 0), 0);
+        + (bedSensorOf(b)?.vitalBad ? 1 : 0) + (monitorOf(b)?.vitalBad ? 1 : 0), 0);
     return {occupied, devices: devicesCount, alarm, uncovered, free: wardBeds.value.length - occupied};
 });
 
@@ -372,6 +428,63 @@ const bedSensorOf = (bed) => {
     };
 };
 
+/** 监护仪最新遥测 / 波形按设备编号索引 */
+const monitorTelemetryByNo = computed(() => {
+  const map = new Map();
+  for (const d of monitorLatest.value) map.set(d.deviceNo, d);
+  return map;
+});
+const monitorWaveByNo = computed(() => {
+  const map = new Map();
+  for (const w of monitorWave.value) map.set(w.deviceNo, w);
+  return map;
+});
+/** 监护仪固定装在床旁，按 bed_no 对齐（口径同床垫）；不同病区床号重复，同时限定科室 */
+const monitorDeviceByBedNo = computed(() => {
+  const map = new Map();
+  const names = descendantScope.value.names;
+  for (const dev of monitorDevices.value) {
+    if (!dev.bedNo) continue;
+    const sameDept = !dev.deptName || (names.size ? names.has(dev.deptName) : true);
+    if (sameDept) map.set(normBed(dev.bedNo), dev);
+  }
+  return map;
+});
+
+/**
+ * 这张床的床旁监护仪。监护仪跟床走，按 bedNo 找台账、再按设备编号取最新遥测与波形窗。
+ * 越界阈值与床垫体征口径一致：心率 50~120、血氧 ≥93、血压 90~160/55~100、呼吸 10~26、体温 ≤37.5。
+ */
+const monitorOf = (bed) => {
+  const dev = monitorDeviceByBedNo.value.get(normBed(bed?.bedNo));
+  if (!dev) return null;
+  const telemetry = monitorTelemetryByNo.value.get(dev.deviceNo) || null;
+  const wave = monitorWaveByNo.value.get(dev.deviceNo) || null;
+  const online = !!telemetry && !isStale(telemetry);
+  const hr = numberValue(metricValue(telemetry, 'heartRate'));
+  const spo2 = numberValue(metricValue(telemetry, 'spo2'));
+  const sbp = numberValue(metricValue(telemetry, 'sbp'));
+  const dbp = numberValue(metricValue(telemetry, 'dbp'));
+  const rr = numberValue(metricValue(telemetry, 'respRate'));
+  const temp = numberValue(metricValue(telemetry, 'tempC'));
+  const rhythmLabel = metricValue(telemetry, 'rhythmLabel');
+  const hrBad = online && hr != null && (hr > 120 || hr < 50);
+  const spo2Bad = online && spo2 != null && spo2 < 93;
+  const bpBad = online && ((sbp != null && (sbp > 160 || sbp < 90)) || (dbp != null && (dbp > 100 || dbp < 55)));
+  const rrBad = online && rr != null && (rr > 26 || rr < 10);
+  const tempBad = online && temp != null && temp > 37.5;
+  return {
+    deviceNo: dev.deviceNo,
+    telemetry,
+    wave,
+    online,
+    hr, spo2, sbp, dbp, rr, temp, rhythmLabel,
+    hrBad, spo2Bad, bpBad, rrBad, tempBad,
+    vitalBad: hrBad || spo2Bad || bpBad || rrBad || tempBad,
+    lastSeen: telemetry?.ts ? shortTime(telemetry.ts) : '',
+  };
+};
+
 /** 在用绑定按住院就诊索引：泵跟着患者走，转床后仍挂同一张床位卡 */
 const bindsByAdmission = computed(() => {
     const map = new Map();
@@ -409,8 +522,8 @@ const lastPumpTime = (bed) => {
 const lastDeviceTime = (bed) => {
     const pump = lastPumpTime(bed);
     const sensor = bedSensorOf(bed)?.lastSeen || '';
-    if (pump && sensor) return pump > sensor ? pump : sensor;
-    return pump || sensor;
+    const mon = monitorOf(bed)?.lastSeen || '';
+    return [pump, sensor, mon].filter(Boolean).sort().at(-1) || '';
 };
 
 const metricValue = (device, key) => {
@@ -442,7 +555,7 @@ const shortTime = (ts) => (ts ? String(ts).slice(11, 19) : '');
 const genderText = (g) => (g === 1 ? '男' : g === 2 ? '女' : '');
 
 const cardHeaderClass = (bed) => {
-    if (pumpsOf(bed).some(p => p.alarm) || bedSensorOf(bed)?.vitalBad) return 'bg-red-50 border-red-100';
+    if (pumpsOf(bed).some(p => p.alarm) || bedSensorOf(bed)?.vitalBad || monitorOf(bed)?.vitalBad) return 'bg-red-50 border-red-100';
     if (bed.critical) return 'bg-orange-50 border-orange-100';
     return bed.patientName ? 'bg-[#F2F7FC] border-gray-100' : 'bg-gray-50 border-gray-100';
 };
@@ -459,6 +572,8 @@ const alarmKeys = () => {
         }
         const sensor = bedSensorOf(bed);
         if (sensor?.vitalBad) keys.add(`bed:${sensor.deviceNo}:vital`);
+        const mon = monitorOf(bed);
+        if (mon?.vitalBad) keys.add(`mon:${mon.deviceNo}:vital`);
     }
     return keys;
 };
@@ -511,7 +626,7 @@ const fmtDateTime = (d) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(
     + ` ${pad2(d.getHours())}:${pad2(d.getMinutes())}:${pad2(d.getSeconds())}`;
 
 /** 设备档案：各类型设备编号 → 归属科室名。切科室时拉一次，不随 10 秒轮询反复请求 */
-const DEVICE_TYPES_FOR_ALARM = ['infusion', 'bed', 'coldchain', 'asset', 'robot', 'env', 'gas', 'cabinet', 'uv', 'dialysis'];
+const DEVICE_TYPES_FOR_ALARM = ['infusion', 'bed', 'monitor', 'coldchain', 'asset', 'robot', 'env', 'gas', 'cabinet', 'uv', 'dialysis'];
 const loadDeviceDirectory = async () => {
     const lists = await Promise.all(DEVICE_TYPES_FOR_ALARM
         .map((t) => iotDeviceSelectList({deviceType: t}).catch(() => null)));
@@ -659,12 +774,14 @@ const loadBeds = async ({silent = false} = {}) => {
         loadError.value = '';
     }
     try {
-        const [bedRes, devRes, bindRes, bedDevRes, bedLatestRes] = await Promise.all([
+        const [bedRes, devRes, bindRes, bedDevRes, bedLatestRes, monDevRes, monLatestRes] = await Promise.all([
             getBedMap({deptId: deptId.value}),
             iotLatestList({deviceType: 'infusion'}),
             iotActiveBinds({deviceType: 'infusion'}),
             iotDeviceSelectList({deviceType: 'bed'}),
             iotLatestList({deviceType: 'bed'}),
+            iotDeviceSelectList({deviceType: 'monitor'}),
+            iotLatestList({deviceType: 'monitor'}),
         ]);
         const nextBeds = (bedRes.data?.beds || [])
             .filter(b => b.bedNo)
@@ -677,6 +794,12 @@ const loadBeds = async ({silent = false} = {}) => {
         activeBinds.value = bindRes.data || [];
         bedDevices.value = bedDevRes.data || [];
         bedLatest.value = bedLatestRes.data || [];
+        monitorDevices.value = monDevRes.data || [];
+        monitorLatest.value = monLatestRes.data || [];
+        // 波形窗按本科室在榜监护仪编号批量取；内存缓冲没有的设备自然不返回
+        const monNos = monitorLatest.value.map(d => d.deviceNo).filter(Boolean);
+        const waveRes = monNos.length ? await iotWaveformList({deviceNos: monNos}).catch(() => null) : null;
+        monitorWave.value = waveRes?.data || [];
         if (!beds.value.length) loadError.value = '该科室暂无床位';
         lastRefresh.value = new Date().toLocaleTimeString('zh-CN', {hour12: false});
         // 轮询兜底发声：首轮静默，之后只叫「新出现」的告警（SSE 已在线的会被它提前记账，不会双响）
@@ -710,6 +833,13 @@ const openTrend = (bed) => {
     if (sensor?.telemetry) {
         trendDevice.value = {...sensor.telemetry, deviceNo: sensor.deviceNo, deviceType: 'bed',
             deviceTypeLabel: `${bed.bedNo} 床床垫`};
+        trendVisible.value = true;
+        return;
+    }
+    const mon = monitorOf(bed);
+    if (mon?.telemetry) {
+        trendDevice.value = {...mon.telemetry, deviceNo: mon.deviceNo, deviceType: 'monitor',
+            deviceTypeLabel: `${bed.bedNo} 床监护仪`};
         trendVisible.value = true;
     }
 };

@@ -52,6 +52,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.io.ByteArrayInputStream;
 import java.time.LocalDate;
@@ -919,10 +921,26 @@ public class SignCertServiceImpl extends ServiceImpl<SysSignCertMapper, SysSignC
      * 吊销后自动派单，把「吊销之后该谁办」推给对应部门：
      * 业务吊销（医务科决定）→ 通知信息科重新签发；应急吊销（信息科处置）→ 通知医务科补备案。
      *
-     * <p>通知失败只记日志、不回滚吊销：安全事件下吊销本身必须先行生效，站内信是二级动作。
+     * <p>通知挂在事务提交之后执行，且自成失败边界：吊销本身必须先行落库生效，
+     * 站内信发不出去只记日志，绝不让二级动作用回滚或 rollback-only 污染吊销事务。
      */
     private void notifyAfterRevoke(SysSignCert cert, SignCertRevokeTypeEnum revokeType,
                                    String operatorName, String reason) {
+        Runnable task = () -> doNotifyAfterRevoke(cert, revokeType, operatorName, reason);
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    task.run();
+                }
+            });
+        } else {
+            task.run();
+        }
+    }
+
+    private void doNotifyAfterRevoke(SysSignCert cert, SignCertRevokeTypeEnum revokeType,
+                                     String operatorName, String reason) {
         try {
             boolean business = revokeType == SignCertRevokeTypeEnum.BUSINESS;
             List<Long> empIds = sysUserMapper.selectEmployeeIdsByPermission(
@@ -1064,8 +1082,13 @@ public class SignCertServiceImpl extends ServiceImpl<SysSignCertMapper, SysSignC
 
     @Override
     public SignCertVO getActiveCertVO(Long empId) {
+        return getActiveCertVO(empId, false);
+    }
+
+    @Override
+    public SignCertVO getActiveCertVO(Long empId, boolean withPublicKey) {
         SysSignCert cert = sysSignCertMapper.selectActiveByEmp(empId, TimeUtil.nowSeconds());
-        return cert == null ? null : toVO(cert, false);
+        return cert == null ? null : toVO(cert, withPublicKey);
     }
 
     @Override
@@ -1477,6 +1500,7 @@ public class SignCertServiceImpl extends ServiceImpl<SysSignCertMapper, SysSignC
         vo.setSignCount(c.getSignCount());
         if (withPublicKey) {
             vo.setPublicKey(c.getPublicKey());
+            vo.setCertPem(c.getCertPem());
         }
         // 待 CA 签发的证书，库里的有效期只是申请预估，不能据此判「已过期」
         boolean pendingCa = Objects.equals(CertStatusEnum.PENDING_CA.getCode(), c.getCertStatus());

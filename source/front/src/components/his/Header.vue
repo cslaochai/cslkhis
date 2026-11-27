@@ -387,6 +387,7 @@ import {
   switchPost
 } from '@/api/system'
 import {openMessageStream} from '@/api/messageStream'
+import {openIotAlarmStream} from '@/api/iotAlarmStream'
 // 站内提示音：Web Audio 合成，不引音频文件；开关状态存在 localStorage（见 lib/alertSound）
 import {alertAudioReady, alertLevelOfSeverity, alertMuted, playAlert, toggleAlertMuted} from '@/lib/alertSound'
 import {getMyToday, myCheckIn, myCheckOut} from '@/api/staffAttendance'
@@ -592,6 +593,10 @@ const handleAttendanceClick = async () => {
 }
 // SSE 关闭函数（openMessageStream 返回）；null = 未连接或已降级轮询
 let closeMessageStream = null
+// 设备告警流（科室广播）：顶栏负责"人到哪儿都能收到"，页面只负责自己的卡片刷新
+let closeIotAlarmStream = null
+/** 已弹过的告警事件ID：SSE 重连补发/QoS1 重复帧不重复弹 */
+const notifiedAlarmIds = new Set()
 
 // 患者搜索（PatientSelect 负责选人，选中后按「当前页面 + 当前角色」分流）
 const showPatientDetail = ref(false)
@@ -814,6 +819,7 @@ onMounted(() => {
   updateClock()
   clockTimer = setInterval(updateClock, 1000)
   connectMessageStream()
+  connectIotAlarmStream()
   loadMyAttendance()
 })
 
@@ -821,6 +827,7 @@ onUnmounted(() => {
   if (clockTimer) clearInterval(clockTimer)
   if (messagePollTimer) clearInterval(messagePollTimer)
   if (closeMessageStream) closeMessageStream()
+  if (closeIotAlarmStream) closeIotAlarmStream()
 })
 
 /**
@@ -852,6 +859,56 @@ const connectMessageStream = () => {
       closeMessageStream = null
       if (messagePollTimer) return // 已在轮询，不重复降级
       messagePollTimer = setInterval(loadUnreadCount, 5000)
+    },
+  })
+}
+
+/**
+ * 设备告警通道（科室广播）：设备事件一落库就推一帧。
+ * <p>
+ * 为什么放在顶栏：护士不在监护大屏前也要收到——"几床的泵没电了、哪个信标要换电池"
+ * 不能等人正好开着某个页面才提示。这里只负责"弹框 + 声音 + 点进去"，
+ * 卡片变色/趋势由各页面自己拉数据。
+ * <p>
+ * 只在病区监护大屏页不发声：那页有自己的告警音（含 15/60 秒重响），两边都响会叠成双音。
+ * 归属在设备科（无科室绑定）的信标/机器人告警不会进这条科室流，按现有口径只进设备库告警列表。
+ */
+const connectIotAlarmStream = () => {
+  closeIotAlarmStream = openIotAlarmStream({
+    onAlarm: (data) => {
+      if (!data || data.type !== 'iot-alarm') return
+      const eventId = String(data.eventId ?? '')
+      if (eventId && notifiedAlarmIds.has(eventId)) return
+      if (eventId) {
+        notifiedAlarmIds.add(eventId)
+        // 只留最近 300 条，长时间开着的机器别把内存撑大
+        if (notifiedAlarmIds.size > 300) notifiedAlarmIds.delete(notifiedAlarmIds.values().next().value)
+      }
+      const level = Number(data.level) || 1
+      if (level < 2) return
+      const tone = level >= 3 ? 'critical' : 'warning'
+      if (route.path !== '/iot-ward') playAlert(tone)
+      if (!alertAudioReady.value && !audioHintShown) {
+        audioHintShown = true
+        ElMessage.warning('浏览器要求先点击页面才能播放提示音，点击页面任意位置即可开启')
+      }
+      const bedText = data.bedNo ? ` · ${data.bedNo} 床` : ''
+      ElNotification({
+        title: data.eventCodeText || '设备告警',
+        message: `${data.deviceNo || '未知设备'}${bedText}　${data.detail || ''}`,
+        type: level >= 3 ? 'error' : 'warning',
+        position: 'top-right',
+        duration: level >= 3 ? 0 : 10_000,
+        showClose: true,
+        onClick: () => {
+          router.push({path: '/iot-devices', query: {deviceNo: data.deviceNo, trend: '1'}})
+        },
+      })
+    },
+    onFallback: (reason) => {
+      // 设备告警流断了不降级轮询：监护大屏自己有 10 秒轮询兜底，顶栏不重复造一套
+      console.warn('设备告警 SSE 断开：', reason)
+      closeIotAlarmStream = null
     },
   })
 }

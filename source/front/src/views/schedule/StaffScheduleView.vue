@@ -395,7 +395,7 @@
     <StaffScheduleCopyEdit v-model="copyDialogVisible" :scope="SCHEDULE_SCOPE_STAFF" @saved="loadData"/>
 
     <!-- 变更留痕 -->
-    <ScheduleChangeLogDrawer v-model="logVisible" :staff-schedule-id="logRowId" :title="`变更留痕 · ${logTarget}`"/>
+    <ScheduleChangeLogDialog v-model="logVisible" :staff-schedule-id="logRowId" :title="`变更留痕 · ${logTarget}`"/>
   </div>
 </template>
 
@@ -463,7 +463,7 @@ import {STAFF_TYPE_OPTIONS} from '@/lib/scheduleShift'
 import StaffScheduleEdit from './StaffScheduleEdit.vue'
 import StaffScheduleSwapEdit from './StaffScheduleSwapEdit.vue'
 import StaffScheduleCopyEdit from './StaffScheduleCopyEdit.vue'
-import ScheduleChangeLogDrawer from './ScheduleChangeLogDrawer.vue'
+import ScheduleChangeLogDialog from './ScheduleChangeLogDialog.vue'
 
 const loading = ref(false)
 const tableData = ref([])

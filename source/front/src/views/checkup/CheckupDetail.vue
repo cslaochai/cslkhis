@@ -38,7 +38,7 @@
         </el-table-column>
         <el-table-column fixed="right" label="操作" width="80">
           <template #default="{ row }">
-            <el-button v-if="detail.recordStatus !== 4" v-perm="'checkup:manage:edit'" link size="small"
+            <el-button v-if="detail.recordStatus !== 4" v-perm="'checkup:result:save'" link size="small"
                        type="primary"
                        @click="saveOne(row)">保存
             </el-button>
@@ -48,7 +48,7 @@
       </el-table>
     </div>
     <template #footer>
-      <el-button v-if="detail?.recordStatus === 3" v-perm="'checkup:manage:edit'" data-testid="checkup-conclude-btn"
+      <el-button v-if="detail?.recordStatus === 3" v-perm="'checkup:record:edit'" data-testid="checkup-conclude-btn"
                  type="primary"
                  @click="emit('conclude', detail)">总检出报告
       </el-button>

@@ -146,7 +146,7 @@
     <!-- 查询条件 -->
     <div class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
       <div class="flex items-center gap-3">
-        <el-input v-model="searchForm.keyword" :prefix-icon="Search" class="!w-60"
+        <el-input v-model="searchForm.keyword" :prefix-icon="Search" class="!w-60" data-testid="emg-search-keyword"
                   clearable placeholder="搜索患者、急诊号..." @keyup.enter="handleSearch"/>
         <el-select v-model="searchForm.triageLevel" class="!w-36" clearable placeholder="分诊级别"
                    @change="handleSearch">
@@ -295,7 +295,8 @@
                 <el-button v-perm="'opd:emergency:edit'" link size="small" type="primary" data-testid="emg-btn-transfer"
                            @click="openTransfer(row)">转归
                 </el-button>
-                <el-button v-perm="'opd:emergency:edit'" link size="small" type="default"
+                <!-- 腕带属登记建档环节（纯前端打印、无后端接口），权限随 add；接诊/转归才随 edit -->
+                <el-button v-perm="'opd:emergency:add'" link size="small" type="default"
                            data-testid="emg-btn-wristband"
                            @click="openWristband(row)">腕带
                 </el-button>
@@ -473,7 +474,7 @@
                        @click="handleStatusChange(row, 6)">
               死亡
             </el-button>
-            <el-button v-perm="'opd:emergency:edit'" link size="small" type="default"
+            <el-button v-perm="'opd:emergency:add'" link size="small" type="default"
                        data-testid="emg-btn-wristband-list"
                        @click="openWristband(row)">腕带
             </el-button>

@@ -181,6 +181,11 @@ public class SignCertVO {
     private String publicKey;
 
     /**
+     * CA 签发回填的证书链 PEM（详情接口回填；待 CA 签发/线下未回填时为 null）
+     */
+    private String certPem;
+
+    /**
      * 是否可吊销
      */
     private Boolean canRevoke;

@@ -109,6 +109,21 @@ export function revokeSignCert(certId, reason) {
     return request.post('/emr/signCert/revoke', {certId, reason})
 }
 
+// 吊销前影响面（该医师未签病历/处方/检查/检验数量 + 证书使用情况）
+export function getSignCertRevokeImpact(certId) {
+    return request.get('/emr/signCert/revokeImpact', {params: {certId}})
+}
+
+// 签名资格复核：待处理列表（人事异动把签名岗换成非签名岗时生成）
+export function getSignQualReviewList() {
+    return request.get('/sign/qualReview/listPending')
+}
+
+// 处理签名资格复核：action 1-保留证书 2-吊销证书（吊销必须带理由）
+export function handleSignQualReview(data) {
+    return request.post('/sign/qualReview/handle', data)
+}
+
 // 按员工查签名证书（员工管理「数字证书」只读弹框用；无证书返回空）
 export function getSignCertByEmp(empId) {
     return request.get('/emr/signCert/getByEmp', {params: {empId}})

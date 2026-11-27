@@ -1590,8 +1590,8 @@
   <PatientDetailDialog v-model="showPatientDetail" :patient="currentPatient"
                        :patient-id="currentPatient?.patientId"/>
 
-  <!-- 费用与医保抽屉（原来常驻右栏 + 藏在一个 Tab 里，改为患者条「费用」按需展开） -->
-  <el-drawer v-model="showChargeDrawer" size="560px" title="医保与收费">
+  <!-- 费用与医保弹框（原来常驻右栏 + 藏在一个 Tab 里，改为患者条「费用」按需展开） -->
+  <el-dialog v-model="showChargeDrawer" title="医保与收费" width="560px">
     <div class="space-y-3">
       <div class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
         <div class="mb-3 flex items-center gap-2">
@@ -1643,7 +1643,7 @@
       </div>
 
     </div>
-  </el-drawer>
+  </el-dialog>
 
   <!-- AI诊疗指南弹窗 -->
   <el-dialog

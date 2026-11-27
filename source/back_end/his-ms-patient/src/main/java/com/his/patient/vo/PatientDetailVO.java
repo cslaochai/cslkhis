@@ -62,7 +62,7 @@ public class PatientDetailVO {
      */
     private String contactRelation;
     /**
-     * 家庭住址
+     * 家庭住址。详情接口不回明文（见 {@link #addressMasked}），明文只在编辑回显 getById
      */
     private String address;
     /**
@@ -106,7 +106,7 @@ public class PatientDetailVO {
      */
     private String cardNo;
     /**
-     * 以下 xxxMasked 一律由**服务端**加工（{@code SensitiveMaskUtils}），对应明文本接口恒为 null。
+     * 以下 xxxMasked 一律由**服务端**加工（{@code SensitiveMaskUtil}），对应明文本接口恒为 null。
      *
      * <p>本 VO 只服务「患者档案弹框」这一条**纯展示**链路，所以脱敏放在出参里做，
      * 前端拿到什么就显示什么（不再自己写遮码函数——那等于明文照样在响应体里，抓包和日志照漏）。
@@ -121,6 +121,8 @@ public class PatientDetailVO {
     private String cardNoMasked;
     /** 医保卡号（脱敏展示） */
     private String medicalInsuranceNoMasked;
+    /** 家庭住址（脱敏展示）：只留省、市两级，区县以下打星 */
+    private String addressMasked;
     /**
      * 账户余额，单位：元
      */

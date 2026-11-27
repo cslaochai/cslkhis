@@ -534,15 +534,7 @@ body {
     line-height: 1.4;
 }
 
-/* ---------- 菜单/抽屉/消息 ---------- */
-.el-drawer__header {
-    color: #134B77;
-    font-weight: 600;
-    margin-bottom: 12px;
-    border-bottom: 1px solid var(--his-card-border);
-    padding-bottom: 12px;
-}
-
+/* ---------- 菜单/消息 ---------- */
 .el-message-box {
     border-radius: 12px;
 }

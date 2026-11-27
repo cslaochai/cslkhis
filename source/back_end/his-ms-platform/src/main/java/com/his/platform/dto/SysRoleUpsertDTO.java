@@ -46,4 +46,10 @@ public class SysRoleUpsertDTO {
      */
     @AllowedValues(values = {"0", "1"}, message = "状态取值不合法")
     private Integer status;
+
+    /**
+     * 是否需要电子签名资格：1-需要（医生/护士等要签文书的岗位）0-不需要
+     */
+    @AllowedValues(values = {"0", "1"}, message = "签名资格标识取值不合法")
+    private Integer signRequired;
 }

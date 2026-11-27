@@ -1,5 +1,5 @@
 <template>
-  <el-drawer v-model="visible" size="62%" title="质控单明细">
+  <el-dialog v-model="visible" title="质控单明细" top="4vh" width="62%">
     <div v-loading="detailLoading">
       <template v-if="detail">
         <div class="flex flex-wrap items-center gap-4 text-sm">
@@ -98,7 +98,7 @@
         </div>
       </template>
     </div>
-  </el-drawer>
+  </el-dialog>
 </template>
 
 <script setup>

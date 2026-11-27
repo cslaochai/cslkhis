@@ -1,5 +1,5 @@
 <template>
-  <el-drawer v-model="visible" size="480px" title="报卡详情">
+  <el-dialog v-model="visible" title="报卡详情" width="480px">
     <div class="space-y-2 text-sm" data-testid="detail-body">
       <div class="flex"><span class="w-24 text-gray-400">报卡编号</span><span
           data-testid="detail-no">{{ detailCard().reportNo }}</span></div>
@@ -33,7 +33,7 @@
                   type="textarea"/>
       </div>
     </div>
-  </el-drawer>
+  </el-dialog>
 </template>
 
 <script setup>

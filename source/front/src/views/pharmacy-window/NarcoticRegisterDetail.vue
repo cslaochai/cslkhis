@@ -1,5 +1,5 @@
 <template>
-  <el-drawer v-model="visible" data-testid="narco-detail" size="46%" title="麻精专册登记详情">
+  <el-dialog v-model="visible" data-testid="narco-detail" title="麻精专册登记详情" width="46%">
     <div v-if="detail" class="space-y-3 text-sm">
       <div class="rounded border border-slate-200 p-3">
         <div class="mb-2 font-medium text-slate-700">登记信息</div>
@@ -84,7 +84,7 @@
         {{ detail.remark }}
       </div>
     </div>
-  </el-drawer>
+  </el-dialog>
 </template>
 
 <script setup>

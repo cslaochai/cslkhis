@@ -1,5 +1,5 @@
 <template>
-  <el-drawer v-model="visible" data-testid="g18-drawer" size="560px" title="三级质控流转详情">
+  <el-dialog v-model="visible" data-testid="g18-drawer" title="三级质控流转详情" width="560px">
     <div v-loading="flowDetailLoading">
       <template v-if="flowDetail">
         <div class="grid grid-cols-2 gap-2 text-sm">
@@ -84,7 +84,7 @@
         </el-timeline>
       </template>
     </div>
-  </el-drawer>
+  </el-dialog>
 </template>
 
 <script setup>

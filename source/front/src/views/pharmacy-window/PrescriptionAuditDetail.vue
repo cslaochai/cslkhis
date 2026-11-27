@@ -1,5 +1,5 @@
 <template>
-  <el-drawer v-model="visible" destroy-on-close size="720px" title="处方详情">
+  <el-dialog v-model="visible" destroy-on-close title="处方详情" top="4vh" width="720px">
     <template v-if="detailRow">
       <div class="space-y-4">
         <div class="grid grid-cols-2 gap-4 rounded-lg border border-slate-200 p-4">
@@ -110,7 +110,7 @@
         </div>
       </div>
     </template>
-  </el-drawer>
+  </el-dialog>
 </template>
 
 <script setup>

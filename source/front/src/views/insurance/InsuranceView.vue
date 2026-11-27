@@ -171,7 +171,7 @@
     </el-card>
 
     <!-- 医保结算清单详情 -->
-    <el-drawer v-model="detailVisible" direction="rtl" size="55%">
+    <el-dialog v-model="detailVisible" top="4vh" width="55%">
       <template #header>
         <div class="flex items-center gap-3">
           <span class="text-base font-semibold text-slate-900">医保结算清单</span>
@@ -415,10 +415,10 @@
           </div>
         </div>
       </div>
-    </el-drawer>
+    </el-dialog>
 
     <!-- 医保合规审核（防止高编高套 / 低编入组） -->
-    <el-drawer v-model="complianceVisible" direction="rtl" size="80%">
+    <el-dialog v-model="complianceVisible" top="4vh" width="80%">
       <template #header>
         <div class="flex items-center gap-3">
           <span class="text-base font-semibold text-slate-900">医保合规审核</span>
@@ -653,10 +653,10 @@
 
         <el-empty v-else-if="!complianceLoading" description="尚未审核，请先维护编码明细后点「执行合规审核」"/>
       </div>
-    </el-drawer>
+    </el-dialog>
 
     <!-- G7 报文台账：每一次发给医保的数据都在这里留痕 -->
-    <el-drawer v-model="reportVisible" direction="rtl" size="70%">
+    <el-dialog v-model="reportVisible" top="4vh" width="70%">
       <template #header>
         <div class="flex items-center gap-3">
           <span class="text-base font-semibold text-slate-900">报盘报文台账</span>
@@ -705,7 +705,7 @@
           </el-table-column>
         </el-table>
       </div>
-    </el-drawer>
+    </el-dialog>
 
     <!-- 报文原文：出参 payload + 回执 replyPayload -->
     <el-dialog v-model="payloadVisible" destroy-on-close width="760px">

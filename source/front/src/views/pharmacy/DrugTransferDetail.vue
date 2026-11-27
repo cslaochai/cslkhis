@@ -1,6 +1,6 @@
 <template>
   <!-- 详情 -->
-  <el-drawer v-model="visible" data-testid="transfer-detail-drawer" size="1040px" title="调拨单详情">
+  <el-dialog v-model="visible" data-testid="transfer-detail-drawer" title="调拨单详情" top="3vh" width="1040px">
     <template v-if="detail">
       <div class="mb-3 flex items-center justify-between">
         <div class="flex items-center gap-2">
@@ -110,7 +110,7 @@
         还没有流水 —— 这张单仍在「待发出」，保存明细本身不动库存。
       </div>
     </template>
-  </el-drawer>
+  </el-dialog>
 </template>
 
 <script setup>

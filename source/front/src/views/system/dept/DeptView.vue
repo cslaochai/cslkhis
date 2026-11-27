@@ -100,6 +100,7 @@
                 :data="deptTree"
                 :disabled="formData.deptCode === '1001'"
                 :props="{ label: 'deptName', value: 'id', children: 'children' }"
+                node-key="id"
                 check-strictly
                 placeholder="请选择上级部门"
             />

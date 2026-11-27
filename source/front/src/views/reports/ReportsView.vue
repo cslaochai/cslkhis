@@ -2,6 +2,7 @@
   <div v-loading="loading" class="space-y-6">
     <div class="flex flex-wrap items-end justify-between gap-3">
       <div class="flex items-center gap-2">
+        <el-button v-if="isFromBi" :icon="ArrowLeft" @click="backToBi">返回驾驶舱</el-button>
         <el-date-picker
             v-model="range"
             :clearable="false"
@@ -412,13 +413,24 @@
 </template>
 
 <script setup>
-import {computed, onMounted, ref} from 'vue';
-import {ElMessage} from 'element-plus';
-import {DataLine, FirstAidKit, Money, Suitcase, Tickets, Timer, TrendCharts, User} from '@element-plus/icons-vue';
+import {computed, onMounted, ref, watch} from 'vue';
+import {useRoute, useRouter} from 'vue-router';
+import {ArrowLeft, DataLine, FirstAidKit, Money, Suitcase, Tickets, Timer, TrendCharts, User} from '@element-plus/icons-vue';
 import {getStatsOverview} from '@/api/report';
 
+const route = useRoute();
+const router = useRouter();
+// 由 BI 驾驶舱下钻进入时显示「返回驾驶舱」；侧栏直接进入不显示
+const isFromBi = computed(() => route.query.from === 'bi');
+const backToBi = () => router.push('/bi');
+const REPORT_TABS = ['outpatient', 'inpatient', 'revenue', 'pharmacy'];
+const tabFromQuery = (t) => (REPORT_TABS.includes(t) ? t : 'outpatient');
 const loading = ref(false);
-const activeTab = ref('outpatient');
+const activeTab = ref(tabFromQuery(route.query.tab));
+// 驾驶舱下钻跳转：页签已打开时随 query 切换
+watch(() => route.query.tab, (t) => {
+  if (t) activeTab.value = tabFromQuery(t);
+});
 const data = ref(null);
 const fmtDay = (d) => {
   const p = (n) => String(n).padStart(2, '0');
@@ -473,8 +485,9 @@ const loadData = async () => {
   try {
     const res = await getStatsOverview({startDate: range.value[0], endDate: range.value[1]});
     data.value = res.data || {};
-  } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
-    
+  } catch (e) {
+    /* 错误已由全局拦截器统一提示，无需在此弹窗；本地异常仍留日志便于排障 */
+    console.error('加载运营统计报表失败', e);
   } finally {
     loading.value = false;
   }

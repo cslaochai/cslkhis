@@ -25,6 +25,13 @@
       </div>
 
       <div v-loading="certLoading" class="p-4">
+        <!-- 签名资格复核待办：岗位转出签名岗后，证书保留/吊销由医务科决定 -->
+        <el-alert v-if="canReview && reviewCount > 0" :closable="false" class="mb-3" show-icon type="warning">
+          <template #title>
+            <span class="text-xs">有 <b>{{ reviewCount }}</b> 条签名资格复核待处理（岗位已不需要电子签名，证书是否保留待定）</span>
+            <el-button class="ml-2" link size="small" type="primary" @click="reviewVisible = true">去处理</el-button>
+          </template>
+        </el-alert>
         <!-- CA 通道前置自检：在线申请未接入 / 接入不可用时先亮出来，
             否则操作员只会看到「重新调用」点了还是失败，不知道卡在配置上 -->
         <el-alert v-if="caNotice" :closable="false" :title="caNotice.title" :type="caNotice.type"
@@ -141,9 +148,9 @@
                   >{{ retryLabel(row) }}
                   </el-button>
               </el-tooltip>
-              <el-button v-if="row.canRevoke && !row.expired" v-perm="'sign:cert:revoke'"
+              <el-button v-if="row.canRevoke && !row.expired && canRevokeAny"
                          :data-testid="`p5-sign-cert-revoke-${row.certNo}`"
-                         link size="small" type="danger" @click="openRevoke(row)">吊销
+                         link size="small" type="danger" @click="openRevoke(row)">{{ revokeLabel }}
               </el-button>
               <!-- 临期=到期换发，过期/吊销=重新签发：同一个动作（给同一人开新证），文案跟着处境走 -->
               <el-button v-if="canReissue(row)" v-perm="'sign:cert:edit'"
@@ -185,14 +192,38 @@
     <!-- ---------------- 员工证书操作履历（CA申请+吊销时间线，子组件 SignatureCertEmpTimeline） ---------------- -->
     <SignatureCertEmpTimeline v-model="timelineVisible" :emp-id="timelineEmpId" :emp-name="timelineEmpName"/>
 
+    <!-- ---------------- 签名资格复核（子组件 SignatureQualReviewDialog） ---------------- -->
+    <SignatureQualReviewDialog v-model="reviewVisible" @done="onReviewDone"/>
+
     <!-- ---------------- 吊销证书 ---------------- -->
-    <el-dialog v-model="revokeVisible" title="吊销签名证书" width="480px">
+    <el-dialog v-model="revokeVisible" :title="revokeTitle" width="560px">
       <p class="text-sm">证书：<b>{{ revokeForm.certNo }}</b></p>
+
+      <!-- 影响面：把不可逆后果先摆出来（未签对象 / 使用情况） -->
+      <div v-loading="impactLoading" class="mt-3 rounded bg-slate-50 p-3 text-xs leading-6 text-slate-600">
+        <template v-if="revokeImpact">
+          <p>持有人：{{ revokeImpact.empName }}
+            <span v-if="revokeImpact.deptName">（{{ revokeImpact.deptName }}）</span>
+          </p>
+          <p>未签对象：病历 {{ revokeImpact.pendingRecordCount }} · 处方 {{ revokeImpact.pendingPrescriptionCount }}
+            · 检查 {{ revokeImpact.pendingInspectionCount }} · 检验 {{ revokeImpact.pendingLaboratoryCount }}，
+            合计 <b class="text-red-600">{{ revokeImpact.pendingTotal }}</b> 条
+          </p>
+          <p>该证书累计签名 {{ revokeImpact.signCount }} 次，最近使用：{{ revokeImpact.lastUsedTime || '—' }}</p>
+          <p class="text-amber-600">吊销后该医师将无法继续电子签名，上述未签对象只能走补签流程处理。</p>
+        </template>
+        <p v-else-if="!impactLoading">影响面加载失败，吊销前请自行确认该医师是否有待签单据。</p>
+      </div>
+
+      <p v-if="!canBusinessRevoke" class="mt-3 rounded bg-red-50 p-2 text-xs leading-5 text-red-600">
+        信息科应急吊销：仅用于 UKey 丢失、私钥/PIN 泄露、介质损坏等安全事件。提交后系统自动通知医务科补备案并决定是否重新签发。
+      </p>
+
       <el-input v-model="revokeForm.reason" class="mt-3" data-testid="p5-sign-revoke-reason"
-                placeholder="吊销理由（必填）"/>
+                :placeholder="canBusinessRevoke ? '吊销理由（必填，如：离职/转岗/违规停签）' : '安全事件说明（必填，如：UKey 丢失、私钥泄露）'"/>
       <template #footer>
         <el-button :loading="revoking" data-testid="p5-sign-revoke-submit" type="danger" @click="submitRevoke">
-          确认吊销
+          确认{{ revokeLabel }}
         </el-button>
         <el-button @click="revokeVisible = false">取消</el-button>
       </template>
@@ -207,16 +238,20 @@ import {ElMessage, ElMessageBox} from 'element-plus';
 import {
   getSignCaStatus,
   getSignCertList,
+  getSignCertRevokeImpact,
   getSignatureQueryOptions,
+  getSignQualReviewList,
   revokeSignCert,
   submitSignCaApply,
 } from '@/api/signature';
 import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination';
+import {hasPerm, ensurePerms} from '@/lib/perm';
 import {caApplyTagType, num} from '@/lib/sign';
 import SignatureCenterCertDetail from './SignatureCenterCertDetail.vue';
 import SignatureCenterCertIssue from './SignatureCenterCertIssue.vue';
 import SignatureCertApplyFlow from './SignatureCertApplyFlow.vue';
 import SignatureCertEmpTimeline from './SignatureCertEmpTimeline.vue';
+import SignatureQualReviewDialog from './SignatureQualReviewDialog.vue';
 // ---------------- 下拉选项 ----------------
 const options = ref({});
 // ---------------- 证书 ----------------
@@ -250,6 +285,20 @@ const timelineEmpName = ref('');
 const revokeVisible = ref(false);
 const revoking = ref(false);
 const revokeForm = reactive({certId: '', certNo: '', reason: ''});
+// 吊销分权：业务吊销（医务科 sign:cert:revoke）/ 应急吊销（信息科 sign:cert:revoke:emergency）
+// 两码都有（超管）按业务吊销展示；集合未到或拉取失败时 hasPerm 放行，按业务吊销展示（后端仍按真实权限判定类型）
+const canBusinessRevoke = computed(() => hasPerm('sign:cert:revoke'));
+const canEmergencyRevoke = computed(() => hasPerm('sign:cert:revoke:emergency'));
+const canRevokeAny = computed(() => canBusinessRevoke.value || canEmergencyRevoke.value);
+const revokeLabel = computed(() => (canBusinessRevoke.value ? '吊销' : '应急吊销'));
+const revokeTitle = computed(() => (canBusinessRevoke.value ? '吊销签名证书' : '应急吊销签名证书（安全事件）'));
+// 吊销前影响面
+const revokeImpact = ref(null);
+const impactLoading = ref(false);
+// 签名资格复核（医务科）：待办条数 + 弹窗
+const canReview = computed(() => hasPerm('sign:cert:review'));
+const reviewCount = ref(0);
+const reviewVisible = ref(false);
 // ---------------- CA 通道自检 / 重提 ----------------
 // offline=未接入在线申请；online 且 available=false=已启用但凭证或连通性不达标
 const caStatus = ref(null);
@@ -411,28 +460,74 @@ const openRevoke = (row) => {
   revokeForm.certId = row.id;
   revokeForm.certNo = row.certNo;
   revokeForm.reason = '';
+  revokeImpact.value = null;
   revokeVisible.value = true;
+  loadRevokeImpact(row.id);
+};
+const loadRevokeImpact = async (certId) => {
+  impactLoading.value = true;
+  try {
+    const res = await getSignCertRevokeImpact(certId);
+    revokeImpact.value = res.data || null;
+  } catch (e) {
+    // 影响面是辅助信息：失败不阻断吊销，但必须留痕（页面已提示"加载失败"）
+    console.error('证书吊销影响面加载失败', e);
+    revokeImpact.value = null;
+  } finally {
+    impactLoading.value = false;
+  }
 };
 const submitRevoke = async () => {
   if (!revokeForm.reason.trim()) {
-    ElMessage.warning('吊销必须写理由');
+    ElMessage.warning(canBusinessRevoke.value ? '吊销必须写理由' : '应急吊销必须写明安全事件');
     return;
+  }
+  const pending = revokeImpact.value?.pendingTotal;
+  if (pending > 0) {
+    try {
+      await ElMessageBox.confirm(
+          `该医师名下还有 ${pending} 条未签对象，吊销后只能走补签流程。确认继续${revokeLabel.value}？`,
+          '影响面确认', {type: 'warning', confirmButtonText: '确认继续', cancelButtonText: '取消'});
+    } catch (e) {
+      return;
+    }
   }
   revoking.value = true;
   try {
     await revokeSignCert(revokeForm.certId, revokeForm.reason.trim());
-    ElMessage.success('已吊销');
+    ElMessage.success(canBusinessRevoke.value ? '已吊销，已通知信息科重新签发' : '已应急吊销，已通知医务科补备案');
     revokeVisible.value = false;
     await loadCertList();
   } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */ {
-
+    console.error('证书吊销失败', e);
   } finally {
     revoking.value = false;
   }
 };
+// 签名资格复核待办条数：无复核权的人不请求，避免多余 403 提示
+const loadReviewCount = async () => {
+  if (!canReview.value) {
+    reviewCount.value = 0;
+    return;
+  }
+  try {
+    const res = await getSignQualReviewList();
+    reviewCount.value = (res.data || []).length;
+  } catch (e) {
+    console.error('签名资格复核待办加载失败', e);
+    reviewCount.value = 0;
+  }
+};
+const onReviewDone = async () => {
+  await loadReviewCount();
+  await loadCertList();
+};
 onMounted(async () => {
+  // 先拿到权限集合，吊销按钮才能正确区分「吊销 / 应急吊销」
+  await ensurePerms();
   await loadOptions();
   await loadCaStatus();
   await loadCertList();
+  await loadReviewCount();
 });
 </script>

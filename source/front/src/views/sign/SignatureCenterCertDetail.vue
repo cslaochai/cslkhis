@@ -1,6 +1,6 @@
 <template>
   <!-- ---------------- 证书详情 ---------------- -->
-  <el-drawer v-model="visible" size="50%" title="证书信息">
+  <el-dialog v-model="visible" title="证书信息" top="5vh" width="760px">
     <template v-if="certDetail">
       <div class="text-sm">
         <p>证书编号：<b>{{ certDetail.certNo }}</b></p>
@@ -39,7 +39,7 @@
         <div class="flex items-center justify-between">
           <p class="text-xs font-medium text-slate-900">公钥（PEM）</p>
           <el-button v-if="certDetail.publicKey" data-testid="p5-sign-cert-copy-apply" link size="small"
-                     type="primary" @click="copyApplyMaterial">复制 CA 申请材料（DN + 公钥）
+                     type="primary" @click="copyApplyMaterial">复制公钥
           </el-button>
         </div>
         <pre
@@ -50,8 +50,18 @@
         <p class="mt-2 text-xs text-slate-500">私钥以主口令加密后托管，任何接口都不会回显私钥。复制的内容可直接在 CA
           平台「证书申请」里提交。</p>
       </div>
+      <div v-if="certDetail.certPem" class="mt-3 rounded-lg border border-slate-200 bg-white p-3">
+        <div class="flex items-center justify-between">
+          <p class="text-xs font-medium text-slate-900">证书（PEM）</p>
+          <el-button link size="small" type="primary" @click="copyCertPem">复制证书</el-button>
+        </div>
+        <pre
+            class="mt-2 max-h-64 overflow-auto whitespace-pre-wrap rounded bg-slate-50 p-3 font-mono text-xs leading-5 text-slate-700"
+            data-testid="p5-sign-cert-certpem">{{ certDetail.certPem }}</pre>
+        <p class="mt-2 text-xs text-slate-500">CA 签发回填的证书本体（含签发链）；本区块仅展示证书，不含私钥。</p>
+      </div>
     </template>
-  </el-drawer>
+  </el-dialog>
 </template>
 
 <script setup>
@@ -62,7 +72,7 @@ import {num, text} from '@/lib/sign';
 
 const props = defineProps({
   modelValue: {type: Boolean, default: false},
-  // 当前查看的证书 id，抽屉打开时按 id 自取详情
+  // 当前查看的证书 id，弹框打开时按 id 自取详情
   id: {type: [String, Number], default: null},
 });
 const emit = defineEmits(['update:modelValue', 'saved', 'progress']);
@@ -85,12 +95,23 @@ watch(visible, async (open) => {
   }
 });
 
-// 一键复制 CA 申请材料：拿去 CA 平台「证书申请」粘贴提交（Subject DN + 公钥 PEM，私钥不出 HIS）
+// 一键复制公钥 PEM：拿去 CA 平台「证书申请」粘贴提交（私钥不出 HIS）
 const copyApplyMaterial = async () => {
-  const material = `Subject DN: ${certDetail.value.caSubjectDn || ''}\nPublic Key PEM:\n${certDetail.value.publicKey || ''}`;
+  const material = certDetail.value.publicKey || '';
   try {
     await navigator.clipboard.writeText(material);
-    ElMessage.success('已复制申请材料，可到 CA 平台证书申请页粘贴提交');
+    ElMessage.success('已复制公钥，可到 CA 平台证书申请页粘贴提交');
+  } catch (e) {
+    ElMessage.warning('复制失败，请手动选中上方文本复制');
+  }
+};
+
+// 一键复制 CA 回填的证书 PEM（证书本体，不含私钥）
+const copyCertPem = async () => {
+  const material = certDetail.value.certPem || '';
+  try {
+    await navigator.clipboard.writeText(material);
+    ElMessage.success('已复制证书 PEM');
   } catch (e) {
     ElMessage.warning('复制失败，请手动选中上方文本复制');
   }

@@ -64,6 +64,8 @@ public enum BizTypeEnum {
     // sign-cert：证书吊销后的双向待办。业务吊销（医务科）→ 通知信息科重办；
     // 应急吊销（信息科）→ 通知医务科补备案。与 sign 分码，避免 certId 与病历 recordId 撞判重键。
     SIGN_CERT("sign-cert", "证书处置待办"),
+    // sign-review：人事异动触发的签名资格复核（bizId 是员工ID）→ 医务科决定保留/吊销
+    SIGN_REVIEW("sign-review", "签名资格复核"),
 
     /* ---------- 财务医保域 ---------- */
     SETTLE("settle", "医保结算结果"),

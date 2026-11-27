@@ -41,6 +41,12 @@ public class InpatOverdueDraftVO implements Serializable {
     private String patientName;
 
     /**
+     * 科室ID（书写人不在临床岗位时按它找回接手医生）
+     */
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long deptId;
+
+    /**
      * 科室名称
      */
     private String deptName;

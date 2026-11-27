@@ -165,6 +165,8 @@ public class IotEventServiceImpl extends ServiceImpl<IotEventMapper, IotEvent> i
         page(page, Wrappers.<IotEvent>lambdaQuery()
                 .eq(query.getDeviceType() != null && !query.getDeviceType().isBlank(),
                         IotEvent::getDeviceType, query.getDeviceType())
+                .eq(query.getDeviceNo() != null && !query.getDeviceNo().isBlank(),
+                        IotEvent::getDeviceNo, query.getDeviceNo())
                 .in(hasScope, IotEvent::getDeptId, deptIds)
                 // 传了科室但授权子树为空：强制空结果，不能退化成不加科室条件=全院
                 .eq(!hasScope && query.getDeptId() != null, IotEvent::getDeptId, -1L)
@@ -225,6 +227,7 @@ public class IotEventServiceImpl extends ServiceImpl<IotEventMapper, IotEvent> i
         vo.setLevel(e.getLevel());
         vo.setLevelText(IotEventLevelEnum.getLabel(e.getLevel()));
         vo.setDetail(e.getDetail());
+        vo.setDataJson(e.getDataJson());
         vo.setTs(e.getTs());
         vo.setHandledFlag(e.getHandledFlag());
         vo.setHandledFlagText(IotEventHandleStatusEnum.getLabel(e.getHandledFlag()));

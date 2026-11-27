@@ -6,18 +6,21 @@ import com.his.iot.config.IotProperties;
 import com.his.iot.dto.IotColdChainRecordQueryDTO;
 import com.his.iot.dto.IotHistoryQueryDTO;
 import com.his.iot.dto.IotLatestQueryDTO;
+import com.his.iot.dto.IotWaveformQueryDTO;
 import com.his.iot.mapper.IotColdChainTempLogMapper;
 import com.his.iot.service.IotEventService;
 import com.his.iot.service.IotTelemetryService;
 import com.his.iot.support.DeviceTypeSchema;
 import com.his.iot.support.TsdbQuerySupport;
 import com.his.iot.support.TelemetrySqlBuilder;
+import com.his.iot.support.WaveformBuffer;
 import com.his.iot.vo.IotColdChainRecordVO;
 import com.his.iot.vo.IotColdChainSummaryVO;
 import com.his.iot.vo.IotDeviceTypeVO;
 import com.his.iot.vo.IotHistoryPointVO;
 import com.his.iot.vo.IotLatestVO;
 import com.his.iot.vo.IotMetricVO;
+import com.his.iot.vo.IotWaveformVO;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -62,6 +65,7 @@ public class IotTelemetryServiceImpl implements IotTelemetryService {
     private final IotProperties properties;
     private final IotColdChainTempLogMapper coldChainArchiveMapper;
     private final IotEventService eventService;
+    private final WaveformBuffer waveformBuffer;
 
     @Override
     public List<IotDeviceTypeVO> deviceTypes() {
@@ -170,6 +174,40 @@ public class IotTelemetryServiceImpl implements IotTelemetryService {
             points.add(p);
         }
         return points;
+    }
+
+    @Override
+    public List<IotWaveformVO> waveformList(IotWaveformQueryDTO query) {
+        List<Map<String, Object>> snaps = waveformBuffer.snapshotBatch(
+                query == null ? null : query.getDeviceNos());
+        List<IotWaveformVO> out = new ArrayList<>(snaps.size());
+        for (Map<String, Object> s : snaps) {
+            IotWaveformVO vo = new IotWaveformVO();
+            vo.setDeviceNo((String) s.get("deviceNo"));
+            vo.setRhythm((String) s.get("rhythm"));
+            vo.setHr(toInt(s.get("hr")));
+            vo.setRr(toInt(s.get("rr")));
+            vo.setTs((String) s.get("ts"));
+            vo.setEcg(toDoubleList(s.get("ecg")));
+            vo.setPleth(toDoubleList(s.get("pleth")));
+            vo.setResp(toDoubleList(s.get("resp")));
+            vo.setEcgHz(toInt(s.get("ecgHz")));
+            vo.setWaveHz(toInt(s.get("waveHz")));
+            out.add(vo);
+        }
+        return out;
+    }
+
+    @SuppressWarnings("unchecked")
+    private static List<Double> toDoubleList(Object v) {
+        if (!(v instanceof List<?> list)) {
+            return null;
+        }
+        List<Double> out = new ArrayList<>(list.size());
+        for (Object o : list) {
+            out.add(o instanceof Number n ? n.doubleValue() : 0.0);
+        }
+        return out;
     }
 
     @Override

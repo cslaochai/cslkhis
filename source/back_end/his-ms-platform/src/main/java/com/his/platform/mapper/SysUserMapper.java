@@ -53,4 +53,20 @@ public interface SysUserMapper extends BaseMapper<SysUser> {
             "INNER JOIN sys_employee_post p ON rm.role_id = p.role_id " +
             "WHERE m.permission = #{permission} AND m.del_flag = 0")
     List<Long> selectEmployeeIdsByPermission(@Param("permission") String permission);
+
+    /**
+     * 持有指定权限码、且名下没有指定角色编码岗位的全部员工ID（去重）。
+     *
+     * <p>与上一条的区别只在 NOT EXISTS：超管为应急处置持业务权限码（sql/412），
+     * 按权限码圈业务催办接收人时要按角色编码把它排除，否则业务提醒全落超管。
+     */
+    @Select("SELECT DISTINCT p.employee_id FROM sys_menu m " +
+            "INNER JOIN sys_role_menu rm ON m.id = rm.menu_id " +
+            "INNER JOIN sys_employee_post p ON rm.role_id = p.role_id " +
+            "WHERE m.permission = #{permission} AND m.del_flag = 0 " +
+            "AND NOT EXISTS (SELECT 1 FROM sys_employee_post ep " +
+            "INNER JOIN sys_role er ON er.id = ep.role_id " +
+            "WHERE ep.employee_id = p.employee_id AND er.role_code = #{excludeRoleCode} AND er.del_flag = 0)")
+    List<Long> selectEmployeeIdsByPermissionExcludingRole(@Param("permission") String permission,
+                                                          @Param("excludeRoleCode") String excludeRoleCode);
 }

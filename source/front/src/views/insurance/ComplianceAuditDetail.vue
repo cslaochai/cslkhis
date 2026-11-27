@@ -1,5 +1,5 @@
 <template>
-  <el-drawer v-model="visible" :title="`合规审核 ${detail.auditNo || ''}`" direction="rtl" size="72%">
+  <el-dialog v-model="visible" :title="`合规审核 ${detail.auditNo || ''}`" top="4vh" width="72%">
     <div v-loading="detailLoading" class="detail-wrap">
       <el-descriptions :column="2" border data-testid="ca-detail-head" size="small">
         <el-descriptions-item label="结算清单号">{{ detail.settlementNo || '' }}</el-descriptions-item>
@@ -66,7 +66,7 @@
           aiEvidence.overall
         }}</p>
     </div>
-  </el-drawer>
+  </el-dialog>
 </template>
 
 <script setup>

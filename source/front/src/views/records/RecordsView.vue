@@ -94,13 +94,13 @@
       </div>
     </div>
 
-    <!-- 电子病历抽屉 -->
-    <el-drawer
+    <!-- 电子病历弹框 -->
+    <el-dialog
         v-model="drawerVisible"
         :before-close="() => { drawerVisible = false }"
         :show-close="true"
-        direction="rtl"
-        size="95%"
+        top="3vh"
+        width="95%"
     >
       <template #header>
         <div class="flex items-center gap-3">
@@ -320,7 +320,7 @@
           </el-tabs>
         </div>
       </div>
-    </el-drawer>
+    </el-dialog>
   </div>
 </template>
 

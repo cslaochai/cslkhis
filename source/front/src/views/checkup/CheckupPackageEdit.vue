@@ -14,9 +14,14 @@
             <el-option :value="2" label="女"/>
           </el-select>
         </el-form-item>
-        <el-form-item label="价格(元)">
+        <el-form-item label="套餐价(元)">
           <el-input-number v-model="form.price" :controls="false" :min="0" :precision="2"
                            style="width: 130px" @change="priceAuto = false"/>
+        </el-form-item>
+        <el-form-item label="最低折扣率">
+          <el-input-number v-model="form.floorRatePercent" :controls="false" :min="1" :max="100"
+                           :precision="0" style="width: 80px"/>
+          <span class="text-xs text-gray-500 ml-1">%（价格底线 = 原价 × 本值）</span>
         </el-form-item>
         <el-form-item label="状态">
           <el-radio-group v-model="form.status">
@@ -62,11 +67,16 @@
               </template>
             </el-table-column>
           </el-table>
-          <div class="flex items-center gap-3 flex-wrap mt-1">
+          <div class="flex items-center gap-x-4 gap-y-1 flex-wrap mt-1 text-xs">
             <el-button :icon="Plus" link type="primary" @click="addItem">添加项目</el-button>
-            <span class="text-xs text-gray-500">
-              项目与价格取自项目目录，此处只选不建；明细合计 ￥{{ fmtMoney(itemsTotal) }}
-            </span>
+            <span class="text-gray-500">项目原价合计 ￥{{ fmtMoney(itemsTotal) }}</span>
+            <template v-if="itemsTotal > 0">
+              <span class="text-gray-500">套餐折扣率 {{ discountPercent }}%</span>
+              <span class="text-gray-500">价格底线 ￥{{ fmtMoney(floorPrice) }}（最低折扣率 {{ form.floorRatePercent }}%）</span>
+              <span v-if="belowFloor" class="text-red-500">
+                套餐价低于价格底线 ￥{{ fmtMoney(floorPrice) }}，保存会被拒绝；要促销请先下调最低折扣率
+              </span>
+            </template>
           </div>
         </div>
       </el-form-item>
@@ -128,13 +138,30 @@ const optionGroups = computed(() => [1, 2, 3].map((source) => ({
 })));
 
 const form = reactive({
-  id: null, packageName: '', genderLimit: 0, price: null, description: '', status: 1, remark: '',
+  id: null, packageName: '', genderLimit: 0, price: null, floorRatePercent: 100,
+  description: '', status: 1, remark: '',
   items: [],
 });
 
 const fmtMoney = (v) => (v == null || v === '' ? '' : Number(v).toFixed(2));
 
 const itemsTotal = computed(() => form.items.reduce((sum, i) => sum + Number(i.amount || 0), 0));
+
+// 价格底线 = 原价合计 × 最低折扣率；套餐价低于它就是越权定价，后端也会拦
+const floorPrice = computed(() => itemsTotal.value * Number(form.floorRatePercent || 100) / 100);
+
+// 当前实收价（自动跟随时等于原价）
+const currentPrice = computed(() => {
+  const p = priceAuto.value ? itemsTotal.value : Number(form.price || 0);
+  return Number(p.toFixed(2));
+});
+
+const discountPercent = computed(() => {
+  if (!itemsTotal.value) return '0.0';
+  return (currentPrice.value / itemsTotal.value * 100).toFixed(1);
+});
+
+const belowFloor = computed(() => itemsTotal.value > 0 && currentPrice.value + 0.001 < floorPrice.value);
 
 const blankItem = () => ({
   key: '', itemSource: null, itemId: null, itemCode: '', itemName: '', itemType: null,
@@ -183,7 +210,8 @@ watch(
     loadCatalog();
     if (!props.row) {
       Object.assign(form, {
-        id: null, packageName: '', genderLimit: 0, price: null, description: '', status: 1, remark: '',
+        id: null, packageName: '', genderLimit: 0, price: null, floorRatePercent: 100,
+        description: '', status: 1, remark: '',
         items: [blankItem()],
       });
       priceAuto.value = true;
@@ -209,7 +237,9 @@ watch(
       }));
       Object.assign(form, {
         id: d.id, packageName: d.packageName, genderLimit: Number(d.genderLimit ?? 0),
-        price: d.price ?? null, description: d.description || '', status: Number(d.status ?? 1),
+        price: d.price ?? null,
+        floorRatePercent: d.floorRate == null ? 100 : Math.round(Number(d.floorRate) * 100),
+        description: d.description || '', status: Number(d.status ?? 1),
         remark: d.remark || '',
         items: items.length ? items : [blankItem()],
       });
@@ -240,13 +270,25 @@ const save = async () => {
     ElMessage.warning('还有明细行没有选择项目');
     return;
   }
+  // 定价前置校验（后端同口径再校验一次，前端只做即时提示）
+  const total = Number(itemsTotal.value.toFixed(2));
+  const price = Number((priceAuto.value ? total : form.price ?? total).toFixed(2));
+  if (total > 0 && price > total + 0.001) {
+    ElMessage.warning(`套餐价不能高于项目原价合计 ￥${fmtMoney(total)}`);
+    return;
+  }
+  if (total > 0 && price + 0.001 < floorPrice.value) {
+    ElMessage.warning(`套餐价低于价格底线 ￥${fmtMoney(floorPrice.value)}（最低折扣率 ${form.floorRatePercent}%），请调价或先下调最低折扣率`);
+    return;
+  }
   saving.value = true;
   try {
     const res = await checkupPackageSave({
       id: form.id ?? undefined,
       packageName: form.packageName.trim(),
       genderLimit: form.genderLimit,
-      price: Number((priceAuto.value ? itemsTotal.value : form.price ?? itemsTotal.value).toFixed(2)),
+      price,
+      floorRate: Number(form.floorRatePercent || 100) / 100,
       description: form.description.trim() || undefined,
       status: form.status,
       remark: form.remark.trim() || undefined,

@@ -31,10 +31,15 @@ import com.his.common.vo.CodeOptionVO;
 import com.his.spi.vo.WardVO;
 import com.his.spi.dto.SignCommandDTO;
 import com.his.common.entity.CurrentUser;
+import com.his.common.support.EmpTitleCode;
 import com.his.spi.service.DeptScopeService;
 import com.his.spi.service.EmrSignatureFacadeService;
 import com.his.spi.service.SysMessageService;
+import com.his.spi.service.SystemFacadeService;
 import com.his.common.utils.UserUtils;
+import com.his.spi.vo.EmployeeBriefVO;
+import com.his.spi.vo.EmployeePostBriefVO;
+import com.his.spi.vo.RoleBriefVO;
 import com.his.spi.vo.SignatureVO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -59,6 +64,10 @@ public class InpatientRecordServiceImpl extends ServiceImpl<BizInpatientRecordMa
     private final PatientFacadeService patientFacadeService;
     private final RedisSequenceService redisSequenceService;
     private final DeptScopeService deptScopeService;
+    /**
+     * 员工岗位/角色只读取数：催办收件人必须落在生效中的临床医生岗位上（不在则按科室回落）
+     */
+    private final SystemFacadeService systemFacadeService;
     private final BizInpatientRecordMapper bizInpatientRecordMapper;
     private final BizInpatientRecordLogMapper bizInpatientRecordLogMapper;
     private final BizNursingRecordMapper bizNursingRecordMapper;
@@ -1063,9 +1072,12 @@ public class InpatientRecordServiceImpl extends ServiceImpl<BizInpatientRecordMa
         int batch = Math.min(Math.max(limit, 1), 200);
         List<InpatOverdueDraftVO> candidates = bizInpatientRecordMapper.selectOverdueDraftCandidates(batch);
         LocalDateTime now = LocalDateTime.now();
+        // 同一批里同一书写人/科室会重复出现，缓存岗位判定，别把定时任务打成 N+1
+        Map<Long, Boolean> clinicianCache = new HashMap<>();
+        Map<Long, EmployeeBriefVO> deptReceiverCache = new HashMap<>();
         int reminded = 0;
         for (InpatOverdueDraftVO draft : candidates) {
-            if (draft.getDoctorId() == null || draft.getBaselineTime() == null || draft.getDeadlineHours() == null) {
+            if (draft.getBaselineTime() == null || draft.getDeadlineHours() == null) {
                 continue;
             }
             LocalDateTime deadline = draft.getBaselineTime().plusHours(draft.getDeadlineHours());
@@ -1073,9 +1085,29 @@ public class InpatientRecordServiceImpl extends ServiceImpl<BizInpatientRecordMa
                 continue;
             }
             long overdueHours = Math.max(ChronoUnit.HOURS.between(deadline, now), 1);
+
+            // 收件人必须是「此刻仍在临床医生岗位」的人。书写人离职/换岗，或草稿由管理员等非临床账号登记时，
+            // 逐级回落：入院医生 → 科室上级医师 → 科室在职医生；一个都找不到就跳过本轮，
+            // 绝不把住院文书的催办发给超管/收费等非临床账号（发过去也没人写）。
+            Long receiverId = draft.getDoctorId();
+            String receiverName = draft.getDoctorName();
+            EmployeeBriefVO fallback = null;
+            if (!isActiveClinician(receiverId, clinicianCache)) {
+                fallback = resolveFallbackReceiver(draft, clinicianCache, deptReceiverCache);
+                if (fallback == null) {
+                    log.warn("[住院文书催办] 跳过：书写人 {}（{}）不在临床医生岗位，科室 {} 也无可接手的在职医生，recordNo={}",
+                            draft.getDoctorId(), draft.getDoctorName(), draft.getDeptId(), draft.getRecordNo());
+                    continue;
+                }
+                receiverId = fallback.getId();
+                receiverName = fallback.getEmpName();
+            }
+            if (receiverId == null) {
+                continue;
+            }
             // 24h 判重：挂住的草稿次日还会再催，不做永久判重
             if (sysMessageService.sentWithinHours(BizTypeEnum.INPAT_DRAFT_OVERDUE.getType(),
-                    draft.getRecordId(), draft.getDoctorId(), "urgent", 24)) {
+                    draft.getRecordId(), receiverId, "urgent", 24)) {
                 continue;
             }
             draft.setOverdueHours(overdueHours);
@@ -1085,12 +1117,15 @@ public class InpatientRecordServiceImpl extends ServiceImpl<BizInpatientRecordMa
             payload.setRecordTypeText(InpatientRecordTypeEnum.getLabel(draft.getRecordType()));
             payload.setOverdueHours(overdueHours);
             String typeText = InpatientRecordTypeEnum.getLabel(draft.getRecordType(), "住院文书");
-            String content = String.format(
-                    "您书写的%s（%s，患者 %s）已超过规范时限 %d 小时未提交，请尽快补写并完成提交；已提交病历如需更正请走病历更正流程。",
-                    typeText, draft.getRecordNo(),
-                    draft.getPatientName() == null ? "未知" : draft.getPatientName(), overdueHours);
-            sysMessageService.sendSystemMessage(draft.getDoctorId(), draft.getDoctorName(),
-                    "住院文书超时未提交：" + draft.getRecordNo(), content,
+            String patientNameText = draft.getPatientName() == null ? "未知" : draft.getPatientName();
+            String recordNo = draft.getRecordNo();
+            String content = fallback == null
+                    ? String.format("您书写的%s（%s，患者 %s）已超过规范时限 %d 小时未提交，请尽快补写并完成提交；已提交病历如需更正请走病历更正流程。",
+                    typeText, recordNo, patientNameText, overdueHours)
+                    : String.format("贵科一份%s（%s，患者 %s）已超过规范时限 %d 小时未提交，原书写人当前不在临床岗位，请及时跟进补写并完成提交；已提交病历如需更正请走病历更正流程。",
+                    typeText, recordNo, patientNameText, overdueHours);
+            sysMessageService.sendSystemMessage(receiverId, receiverName,
+                    "住院文书超时未提交：" + recordNo, content,
                     BizTypeEnum.INPAT_DRAFT_OVERDUE.getType(), draft.getRecordId(),
                     "urgent", JSONUtil.toJsonStr(payload), 0);
             reminded++;
@@ -1099,6 +1134,84 @@ public class InpatientRecordServiceImpl extends ServiceImpl<BizInpatientRecordMa
             log.info("[住院文书催办] 超时草稿候选 {} 份，本轮催办 {} 份", candidates.size(), reminded);
         }
         return reminded;
+    }
+
+    /**
+     * 该员工此刻是否有生效中的临床医生岗位。
+     *
+     * <p>只能看岗位行（角色承载岗位类别），不能凭菜单权限或员工档案的 emp_type 判断：
+     * 超管同样被授予医生工作站全部菜单，但它的岗位类别是「行政其他」，催办发过去没人写病历。
+     * 日期按「生效日期 ≤ 今天 ≤ 失效日期」判定，与护理排班的口径一致。
+     */
+    private boolean isActiveClinician(Long employeeId, Map<Long, Boolean> cache) {
+        if (employeeId == null) {
+            return false;
+        }
+        Boolean cached = cache.get(employeeId);
+        if (cached != null) {
+            return cached;
+        }
+        LocalDate today = LocalDate.now();
+        boolean result = false;
+        for (EmployeePostBriefVO post : systemFacadeService.listEmployeePosts(employeeId)) {
+            boolean expired = post.getExpireDate() != null && post.getExpireDate().isBefore(today);
+            boolean notYet = post.getEffectiveDate() != null && post.getEffectiveDate().isAfter(today);
+            if (expired || notYet) {
+                continue;
+            }
+            RoleBriefVO role = systemFacadeService.findRole(post.getRoleId());
+            if (role != null && StaffTypeEnum.isDoctor(role.getStaffType())) {
+                result = true;
+                break;
+            }
+        }
+        cache.put(employeeId, result);
+        return result;
+    }
+
+    /**
+     * 书写人不是临床医生时的接手人：入院医生 → 科室上级医师（副高及以上）→ 科室在职医生。
+     *
+     * <p>只返回仍在临床医生岗位的人；一个都找不到返回 {@code null}，由调用方跳过本轮。
+     * 科室级结果做批内缓存（入院医生是逐患者字段，不缓存）。
+     */
+    private EmployeeBriefVO resolveFallbackReceiver(InpatOverdueDraftVO draft,
+                                                    Map<Long, Boolean> clinicianCache,
+                                                    Map<Long, EmployeeBriefVO> deptReceiverCache) {
+        BizAdmission admission = draft.getAdmissionId() == null
+                ? null : bizAdmissionMapper.selectById(draft.getAdmissionId());
+        if (admission != null && admission.getAdmitDoctorId() != null
+                && isActiveClinician(admission.getAdmitDoctorId(), clinicianCache)) {
+            EmployeeBriefVO admitDoctor = systemFacadeService.findEmployee(admission.getAdmitDoctorId());
+            if (admitDoctor != null && Objects.equals(EnableStatusEnum.ENABLED.getCode(), admitDoctor.getStatus())) {
+                return admitDoctor;
+            }
+        }
+        Long deptId = draft.getDeptId() != null ? draft.getDeptId()
+                : (admission == null ? null : admission.getDeptId());
+        if (deptId == null) {
+            return null;
+        }
+        if (deptReceiverCache.containsKey(deptId)) {
+            return deptReceiverCache.get(deptId);
+        }
+        EmployeeBriefVO receiver = null;
+        for (EmployeeBriefVO senior : systemFacadeService.listActiveEmployeesByTitles(deptId, EmpTitleCode.SENIOR)) {
+            if (isActiveClinician(senior.getId(), clinicianCache)) {
+                receiver = senior;
+                break;
+            }
+        }
+        if (receiver == null) {
+            for (EmployeeBriefVO employee : systemFacadeService.listActiveEmployeesByDept(deptId)) {
+                if (isActiveClinician(employee.getId(), clinicianCache)) {
+                    receiver = employee;
+                    break;
+                }
+            }
+        }
+        deptReceiverCache.put(deptId, receiver);
+        return receiver;
     }
 
     private String nextRecordNo() {

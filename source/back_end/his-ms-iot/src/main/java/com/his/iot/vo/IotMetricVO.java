@@ -35,7 +35,12 @@ public class IotMetricVO implements Serializable {
     }
 
     public static IotMetricVO number(String key, String label, String unit, Double numeric) {
-        return new IotMetricVO(key, label, unit, numeric == null ? null : trim(numeric), numeric);
+        if (numeric == null) {
+            return new IotMetricVO(key, label, unit, null, null);
+        }
+        // 聚合 AVG 会带出一长串浮点尾数（如 338.27472527472537），展示口径统一四舍五入两位
+        double rounded = Math.round(numeric * 100.0) / 100.0;
+        return new IotMetricVO(key, label, unit, trim(rounded), rounded);
     }
 
     private static String trim(Double v) {

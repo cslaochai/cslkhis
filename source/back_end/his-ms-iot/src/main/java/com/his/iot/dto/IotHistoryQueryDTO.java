@@ -25,7 +25,7 @@ public class IotHistoryQueryDTO implements Serializable {
     @Schema(description = "设备类型", example = "infusion")
     @NotBlank(message = "设备类型不能为空")
     @AllowedValues(values = {"coldchain", "infusion", "asset", "env", "gas", "bed",
-            "dialysis", "cabinet", "uv", "robot"}, message = "设备类型取值不合法")
+            "dialysis", "cabinet", "uv", "robot", "monitor"}, message = "设备类型取值不合法")
     private String deviceType;
 
     @Schema(description = "设备编号", example = "PUMP-01")

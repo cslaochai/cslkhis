@@ -3,7 +3,8 @@
     <!-- KPI 卡（今日快照；流量/财务指标带较昨日环比，存量在院人数不挂环比） -->
     <div class="grid grid-cols-7 gap-3">
       <div v-for="k in kpis" :key="k.label" :data-testid="`bi-kpi-${k.color}`"
-           class="bg-white rounded-lg border border-gray-100 p-4 shadow-sm">
+           :class="['bg-white rounded-lg border border-gray-100 p-4 shadow-sm', k.drill && 'cursor-pointer hover:border-blue-200 hover:shadow-md']"
+           @click="goReport(k.drill)">
         <p class="text-xs text-gray-500">{{ k.label }}</p>
         <p :class="{ blue: 'text-blue-600', indigo: 'text-indigo-600', green: 'text-green-600', amber: 'text-amber-600', purple: 'text-purple-600', red: 'text-red-600', teal: 'text-teal-600' }[k.color]"
            class="text-2xl font-semibold mt-1">
@@ -18,7 +19,8 @@
     <!-- 运营效率卡（近 30 日） -->
     <div class="grid grid-cols-3 gap-3" data-testid="bi-national">
       <div v-for="k in nationalKpis" :key="k.label" :data-testid="k.testid"
-           class="bg-white rounded-lg border border-gray-100 p-4 shadow-sm">
+           :class="['bg-white rounded-lg border border-gray-100 p-4 shadow-sm', k.drill && 'cursor-pointer hover:border-blue-200 hover:shadow-md']"
+           @click="goReport(k.drill)">
         <div class="flex items-baseline justify-between">
           <p class="text-xs text-gray-500">{{ k.label }}</p>
           <p class="text-[10px] text-gray-400">近 30 日</p>
@@ -47,7 +49,8 @@
 
     <!-- 趋势图 -->
     <div class="grid grid-cols-2 gap-3">
-      <div class="bg-white rounded-lg border border-gray-100 p-4 shadow-sm" data-testid="bi-appt-trend">
+      <div class="bg-white rounded-lg border border-gray-100 p-4 shadow-sm cursor-pointer hover:border-blue-200 hover:shadow-md"
+           data-testid="bi-appt-trend" @click="goReport('outpatient')">
         <p class="text-sm font-medium mb-3">近 7 日门诊挂号趋势</p>
         <svg class="w-full" viewBox="0 0 480 190">
           <line stroke="#e5e7eb" x1="30" x2="470" y1="160" y2="160"/>
@@ -65,7 +68,8 @@
           </text>
         </svg>
       </div>
-      <div class="bg-white rounded-lg border border-gray-100 p-4 shadow-sm" data-testid="bi-rev-trend">
+      <div class="bg-white rounded-lg border border-gray-100 p-4 shadow-sm cursor-pointer hover:border-blue-200 hover:shadow-md"
+           data-testid="bi-rev-trend" @click="goReport('revenue')">
         <div class="flex items-center justify-between mb-3">
           <p class="text-sm font-medium">近 7 日收入趋势（元）</p>
           <div class="flex items-center gap-3 text-[11px] text-gray-500">
@@ -97,7 +101,8 @@
       <div class="bg-white rounded-lg border border-gray-100 p-4 shadow-sm" data-testid="bi-dept-top">
         <p class="text-sm font-medium mb-3">近 30 日收入 TOP5 科室</p>
         <div class="space-y-2">
-          <div v-for="d in deptBars" :key="d.name" class="flex items-center gap-2">
+          <div v-for="d in deptBars" :key="d.name" class="flex items-center gap-2 cursor-pointer hover:bg-slate-50 rounded px-1 -mx-1"
+               @click="goReport('revenue')">
             <span class="text-xs text-gray-600 w-24 truncate">{{ d.name }}</span>
             <div class="flex-1 h-5 bg-gray-50 rounded overflow-hidden">
               <div :style="{ width: d.w + 'px' }" class="h-5 rounded"
@@ -129,7 +134,8 @@
       <div class="bg-white rounded-lg border border-gray-100 p-4 shadow-sm" data-testid="bi-workload-top">
         <p class="text-sm font-medium mb-3">近 30 日出院人次 TOP5 科室</p>
         <div class="space-y-2">
-          <div v-for="w in workloadBars" :key="w.name" class="flex items-center gap-2">
+          <div v-for="w in workloadBars" :key="w.name" class="flex items-center gap-2 cursor-pointer hover:bg-slate-50 rounded px-1 -mx-1"
+               @click="goReport('inpatient')">
             <span class="text-xs text-gray-600 w-24 truncate">{{ w.name }}</span>
             <div class="flex-1 h-5 bg-gray-50 rounded overflow-hidden">
               <div :style="{ width: w.w + 'px' }" class="h-5 rounded"
@@ -186,6 +192,13 @@
  * 页面不二次拼装。图表用纯 SVG 自绘（趋势柱图 + 科室横向条形），不加 echarts 依赖。
  */
 import {computed, onMounted, ref} from 'vue';
+import {useRouter} from 'vue-router';
+
+const router = useRouter();
+// 下钻：驾驶舱卡片/图表跳运营统计报表对应页签（首版仅回填页签，不带科室筛选）
+const goReport = (tab) => {
+  if (tab) router.push({path: '/reports', query: {tab, from: 'bi'}});
+};
 
 const data = ref(null);
 const national = ref(null);
@@ -232,18 +245,18 @@ const deltaClass = (delta) => (delta.flat ? 'text-gray-400' : delta.good ? 'text
 const kpis = computed(() => {
   const d = data.value;
   return [
-    {label: '今日挂号人次', value: String(d?.todayAppointments ?? ''), color: 'blue',
+    {label: '今日挂号人次', value: String(d?.todayAppointments ?? ''), color: 'blue', drill: 'outpatient',
       delta: buildDelta(d?.todayAppointments, d?.yesterdayAppointments, 'count')},
-    {label: '今日入院', value: String(d?.todayAdmissions ?? ''), color: 'indigo',
+    {label: '今日入院', value: String(d?.todayAdmissions ?? ''), color: 'indigo', drill: 'inpatient',
       delta: buildDelta(d?.todayAdmissions, d?.yesterdayAdmissions, 'count')},
-    {label: '在院人数', value: String(d?.inHospitalCount ?? ''), color: 'green', delta: null},
-    {label: '今日出院', value: String(d?.todayDischargeCount ?? ''), color: 'amber',
+    {label: '在院人数', value: String(d?.inHospitalCount ?? ''), color: 'green', drill: 'inpatient', delta: null},
+    {label: '今日出院', value: String(d?.todayDischargeCount ?? ''), color: 'amber', drill: 'inpatient',
       delta: buildDelta(d?.todayDischargeCount, d?.yesterdayDischargeCount, 'count')},
-    {label: '今日手术台次', value: String(d?.todayOperations ?? ''), color: 'teal',
+    {label: '今日手术台次', value: String(d?.todayOperations ?? ''), color: 'teal', drill: 'inpatient',
       delta: buildDelta(d?.todayOperations, d?.yesterdayOperations, 'count')},
-    {label: '今日收入', value: d ? money(d.todayRevenue) : '', color: 'purple',
+    {label: '今日收入', value: d ? money(d.todayRevenue) : '', color: 'purple', drill: 'revenue',
       delta: buildDelta(d?.todayRevenue, d?.yesterdayRevenue, 'money')},
-    {label: '药占比', value: d ? pct(d.drugRatio) : '', color: 'red',
+    {label: '药占比', value: d ? pct(d.drugRatio) : '', color: 'red', drill: 'pharmacy',
       delta: buildDelta(d?.drugRatio, d?.yesterdayDrugRatio, 'ratio')},
   ];
 });
@@ -252,32 +265,32 @@ const nationalKpis = computed(() => [
   {
     label: '平均住院日', value: national.value ? Number(national.value.avgLengthOfStay).toFixed(2) + ' 天' : '',
     sub: national.value ? `出院 ${national.value.dischargeCount} 人 / 床日 ${national.value.totalBedDays}` : '',
-    color: 'blue', testid: 'bi-nat-los',
+    color: 'blue', testid: 'bi-nat-los', drill: 'inpatient',
   },
   {
     label: '床位周转次数', value: national.value ? Number(national.value.bedTurnover).toFixed(2) : '',
     sub: national.value ? `出院 ${national.value.dischargeCount} 人 / 可用床位 ${national.value.usableBeds} 张` : '',
-    color: 'teal', testid: 'bi-nat-turnover',
+    color: 'teal', testid: 'bi-nat-turnover', drill: 'inpatient',
   },
   {
     label: '耗占比', value: national.value ? pct(national.value.materialRatio) : '',
     sub: national.value ? `耗材 ${money(national.value.materialRevenue)} / 收入 ${money(national.value.revenue)}` : '',
-    color: 'amber', testid: 'bi-nat-material',
+    color: 'amber', testid: 'bi-nat-material', drill: 'revenue',
   },
   {
     label: 'CMI（模拟）', value: national.value ? (national.value.cmi == null ? '—' : Number(national.value.cmi).toFixed(4)) : '',
     sub: national.value ? `入组 ${national.value.cmiGroupedCount} / 样本 ${national.value.cmiSampleCount} 例` : '',
-    color: 'purple', testid: 'bi-nat-cmi',
+    color: 'purple', testid: 'bi-nat-cmi', drill: 'inpatient',
   },
   {
     label: '门诊次均费用', value: national.value ? money(national.value.outpatientAvgCost) : '',
     sub: national.value ? `门诊收入 ${money(national.value.outpatientRevenue)} / ${national.value.outpatientVisits} 人次` : '',
-    color: 'blue', testid: 'bi-nat-out-avg',
+    color: 'blue', testid: 'bi-nat-out-avg', drill: 'outpatient',
   },
   {
     label: '住院次均费用', value: national.value ? money(national.value.inpatientAvgCost) : '',
     sub: national.value ? `住院收入 ${money(national.value.inpatientRevenue)} / 出院 ${national.value.dischargeCount} 人` : '',
-    color: 'teal', testid: 'bi-nat-in-avg',
+    color: 'teal', testid: 'bi-nat-in-avg', drill: 'inpatient',
   },
 ]);
 // 质量与安全卡（近 30 日）：手术结构 / 医保 / 满意度 / 不良事件 / 院内感染

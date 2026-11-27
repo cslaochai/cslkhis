@@ -47,7 +47,7 @@
       </div>
       <div class="flex items-center gap-2 text-[12px] text-gray-400">
         <span class="inline-block w-2 h-2 rounded-full bg-green-500"></span>
-        自动刷新 15s · {{ lastRefresh || '' }}
+        自动刷新 10s · {{ lastRefresh || '' }}
       </div>
     </div>
 
@@ -241,7 +241,7 @@ const equipmentById = computed(() => {
   return map;
 });
 
-/** 设备台账不跟 15 秒定位轮询一起拉：5 分钟刷新一次，维保状态变化足够及时 */
+/** 设备台账不跟 10 秒定位轮询一起拉：5 分钟刷新一次，维保状态变化足够及时 */
 let equipmentLoadedAt = 0;
 const latestByNo = computed(() => {
   const map = new Map();
@@ -425,7 +425,7 @@ const reloadEvents = () => {
 };
 
 /**
- * silent = true（15 秒轮询）：不加遮罩、失败不弹窗（弹窗会盖住大屏），保留上一帧数据；
+ * silent = true（10 秒轮询）：不加遮罩、失败不弹窗（弹窗会盖住大屏），保留上一帧数据；
  * silent = false（首屏/手动刷新）：照旧显示遮罩与错误。
  */
 const loadAll = async ({silent = false} = {}) => {
@@ -480,9 +480,9 @@ onMounted(async () => {
   await loadEquipment();
   await loadAll();
   timer = setInterval(() => {
-    // 轮询静默：不挂加载遮罩，避免每 15 秒整屏闪一次
+    // 轮询静默：不挂加载遮罩，避免每 10 秒整屏闪一次
     loadAll({silent: true});
-  }, 15_000);
+  }, 10_000);
 });
 onUnmounted(() => timer && clearInterval(timer));
 </script>

@@ -55,9 +55,9 @@ export const toggleAlertMuted = () => setAlertMuted(!alertMuted.value)
  */
 const pulses = (freq, dur, count) => Array.from({length: count}, () => [freq, dur])
 const TONES = {
-  info: {pulses: [[780, 0.20], [620, 0.22]], gap: 0.10, gain: 0.32},
-  warning: {pulses: pulses(660, 0.15, 3), gap: 0.12, gain: 0.40},
-  critical: {pulses: pulses(1000, 0.09, 6), gap: 0.055, gain: 0.50},
+  info: {pulses: [[780, 0.20], [620, 0.22]], gap: 0.10, gain: 0.45},
+  warning: {pulses: pulses(660, 0.15, 3), gap: 0.12, gain: 0.65},
+  critical: {pulses: pulses(1000, 0.09, 6), gap: 0.055, gain: 0.85},
 }
 
 /** 二次谐波占比：加一点泛音，听感从「电子音」变成「设备蜂鸣」 */

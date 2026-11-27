@@ -1,5 +1,5 @@
 <template>
-  <el-drawer v-model="visible" data-testid="p5-empi-detail" size="560px" title="患者主索引详情">
+  <el-dialog v-model="visible" data-testid="p5-empi-detail" title="患者主索引详情" width="560px">
     <div v-if="detail" class="space-y-4">
       <div class="rounded-lg border border-slate-200 p-4">
         <p class="text-base font-semibold text-slate-900">
@@ -57,7 +57,7 @@
         </div>
       </div>
     </div>
-  </el-drawer>
+  </el-dialog>
 </template>
 
 <script setup>

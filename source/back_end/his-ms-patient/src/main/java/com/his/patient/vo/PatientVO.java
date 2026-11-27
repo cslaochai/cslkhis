@@ -88,7 +88,7 @@ public class PatientVO {
      */
     private String address;
     /**
-     * 家庭住址脱敏值（列表展示用）：留前 6 字，其余打星
+     * 家庭住址脱敏值（列表展示用）：只留省、市两级，区县以下打星
      */
     private String addressMasked;
     /**

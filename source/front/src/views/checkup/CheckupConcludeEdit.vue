@@ -11,7 +11,7 @@
       </el-form-item>
     </el-form>
     <template #footer>
-      <el-button v-perm="'checkup:manage:edit'" data-testid="checkup-conclude-submit" type="primary"
+      <el-button v-perm="'checkup:record:edit'" data-testid="checkup-conclude-submit" type="primary"
                  @click="submitConclude">出报告
       </el-button>
       <el-button @click="visible = false">取消</el-button>

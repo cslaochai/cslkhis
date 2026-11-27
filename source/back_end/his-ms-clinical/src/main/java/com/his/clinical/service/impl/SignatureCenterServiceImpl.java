@@ -2,7 +2,9 @@ package com.his.clinical.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.his.spi.dto.SignCommandDTO;
+import com.his.spi.service.SignCertFacadeService;
 import com.his.spi.service.SysAuditLogService;
+import com.his.spi.vo.SignCertVO;
 import com.his.spi.vo.SignatureVO;
 import com.his.common.enums.*;
 import com.his.common.exception.BusinessException;
@@ -22,6 +24,7 @@ import com.his.clinical.service.SignatureCenterService;
 import com.his.common.utils.UserUtils;
 import com.his.clinical.vo.MyPendingSignVO;
 import com.his.clinical.vo.OptionItemVO;
+import com.his.clinical.vo.SignCertRevokeImpactVO;
 import com.his.clinical.vo.SignatureOptionsVO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -40,6 +43,7 @@ public class SignatureCenterServiceImpl implements SignatureCenterService {
 
     private final EmrSignatureService emrSignatureService;
     private final SysAuditLogService sysAuditLogService;
+    private final SignCertFacadeService signCertFacadeService;
     private final BizMedicalRecordMapper bizMedicalRecordMapper;
     private final BizPrescriptionMapper bizPrescriptionMapper;
     private final BizInspectionApplyMapper bizInspectionApplyMapper;
@@ -322,6 +326,61 @@ public class SignatureCenterServiceImpl implements SignatureCenterService {
             throw new BusinessException("只能补签本人书写的" + type.getLabel() + "，不能代替其他医师签名");
         }
         return type;
+    }
+
+    @Override
+    public SignCertRevokeImpactVO revokeImpact(Long certId) {
+        if (certId == null) {
+            throw new BusinessException("证书ID不能为空");
+        }
+        SignCertVO cert = signCertFacadeService.getCertDetail(certId);
+        if (cert == null) {
+            throw new BusinessException("证书不存在");
+        }
+        SignCertRevokeImpactVO vo = new SignCertRevokeImpactVO();
+        vo.setCertId(cert.getId());
+        vo.setCertNo(cert.getCertNo());
+        vo.setEmpId(cert.getEmpId());
+        vo.setEmpName(cert.getEmpName());
+        vo.setDeptName(cert.getDeptName());
+        vo.setCertStatus(cert.getCertStatus());
+        vo.setCertStatusText(cert.getCertStatusText());
+        vo.setValidTo(cert.getValidTo());
+        vo.setExpired(cert.getExpired());
+        vo.setSignCount(cert.getSignCount() == null ? 0 : cert.getSignCount());
+        vo.setLastUsedTime(cert.getLastUsedTime());
+
+        long records = 0;
+        long prescriptions = 0;
+        long inspections = 0;
+        long laboratories = 0;
+        Long empId = cert.getEmpId();
+        if (empId != null) {
+            // 与「我的待补签」同口径：只算该医师名下、仍会因证书废止而签不出去的对象
+            records = bizMedicalRecordMapper.selectCount(new LambdaQueryWrapper<BizMedicalRecord>()
+                    .eq(BizMedicalRecord::getDoctorId, empId)
+                    .eq(BizMedicalRecord::getRecordStatus, RecordStatusEnum.SUBMITTED.getCode())
+                    .eq(BizMedicalRecord::getSignStatus, ObjectSignStatusEnum.UNSIGNED.getCode()));
+            prescriptions = bizPrescriptionMapper.selectCount(new LambdaQueryWrapper<BizPrescription>()
+                    .eq(BizPrescription::getDoctorId, empId)
+                    .isNull(BizPrescription::getDoctorSignId)
+                    .notIn(BizPrescription::getPrescriptionStatus, PrescriptionStatusEnum.CANCELLED.getCode(),
+                            PrescriptionStatusEnum.RETURNED.getCode(), PrescriptionStatusEnum.RETURNED_AUDIT.getCode()));
+            inspections = bizInspectionApplyMapper.selectCount(new LambdaQueryWrapper<BizInspectionApply>()
+                    .eq(BizInspectionApply::getDoctorId, empId)
+                    .eq(BizInspectionApply::getSignStatus, ObjectSignStatusEnum.UNSIGNED.getCode())
+                    .ne(BizInspectionApply::getApplyStatus, ApplyStatusEnum.CANCELLED.getCode()));
+            laboratories = bizLaboratoryApplyMapper.selectCount(new LambdaQueryWrapper<BizLaboratoryApply>()
+                    .eq(BizLaboratoryApply::getDoctorId, empId)
+                    .eq(BizLaboratoryApply::getSignStatus, ObjectSignStatusEnum.UNSIGNED.getCode())
+                    .ne(BizLaboratoryApply::getApplyStatus, ApplyStatusEnum.CANCELLED.getCode()));
+        }
+        vo.setPendingRecordCount(records);
+        vo.setPendingPrescriptionCount(prescriptions);
+        vo.setPendingInspectionCount(inspections);
+        vo.setPendingLaboratoryCount(laboratories);
+        vo.setPendingTotal(records + prescriptions + inspections + laboratories);
+        return vo;
     }
 
     private static CurrentUser requireCurrentUser() {

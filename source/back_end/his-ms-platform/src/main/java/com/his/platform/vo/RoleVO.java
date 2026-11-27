@@ -80,4 +80,9 @@ public class RoleVO {
      * 状态：0-停用 1-启用
      */
     private Integer status;
+
+    /**
+     * 是否需要电子签名资格（1-需要 0-不需要）
+     */
+    private Integer signRequired;
 }

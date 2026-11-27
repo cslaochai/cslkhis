@@ -658,7 +658,7 @@ const eventTag = (t) => {
  * item 形状：{ label, value, copy? } —— copy 有值时右侧渲染复制按钮
  * （只有「患者号 / 姓名」这两个跨系统传人用的短标识才给复制，其余字段给了也没人用，
  *  反而让每一行都长出图标、真正的字段值被挤得看不见）
- * 手机号 / 证件号 / 身份证 / 医保卡号一律走 lib/patientField 的打码口径，禁止裸渲染 */
+ * 手机号 / 证件号 / 身份证 / 医保卡号 / 住址一律走后端出参的 xxxMasked 字段，禁止裸渲染 */
 const basicGroups = computed(() => {
   const d = detail.value
   if (!d) return []
@@ -683,7 +683,7 @@ const basicGroups = computed(() => {
         {label: '联系人', value: freeText(d.contactName)},
         {label: '联系人电话', value: freeText(d.contactPhoneMasked)},
         {label: '与患者关系', value: freeText(d.contactRelation)},
-        {label: '家庭住址', value: freeText(d.address)},
+        {label: '家庭住址', value: freeText(d.addressMasked)},
         {label: '民族', value: freeText(d.nation)},
         {label: '职业', value: freeText(d.occupation)},
         {label: '婚姻状况', value: maritalStatusText(d.maritalStatus)},

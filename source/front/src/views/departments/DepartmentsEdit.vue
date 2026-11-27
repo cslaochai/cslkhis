@@ -14,6 +14,7 @@
               v-model="formData.parentId"
               :data="deptTree"
               :props="{ label: 'deptName', value: 'id', children: 'children' }"
+              node-key="id"
               :render-after-expand="false"
               check-strictly
               class="w-full"

@@ -1,5 +1,5 @@
 <template>
-  <el-drawer v-model="visible" :title="title" size="520px">
+  <el-dialog v-model="visible" :title="title" width="520px">
     <div v-loading="loading" data-testid="ss-change-log">
       <el-empty v-if="list.length === 0" :image-size="60" description="这条排班还没有发生过变更"/>
       <el-timeline v-else>
@@ -22,15 +22,15 @@
         </el-timeline-item>
       </el-timeline>
     </div>
-  </el-drawer>
+  </el-dialog>
 </template>
 
 <script setup>
 /**
- * 排班变更留痕抽屉（提交审核 / 审核发布 / 驳回 / 撤回 / 换班…都在这条时间线上）。
+ * 排班变更留痕弹框（提交审核 / 审核发布 / 驳回 / 撤回 / 换班…都在这条时间线上）。
  *
  * 「全院岗位排班」页与「排班审批中心」页都要看同一条时间线，抽成组件给两处共用，
- * 免得以后加一个动作类型要改两个抽屉。
+ * 免得以后加一个动作类型要改两个弹框。
  */
 import {computed, ref, watch} from 'vue'
 import {getScheduleChangeLogList} from '@/api/staffSchedule'
@@ -40,7 +40,7 @@ const props = defineProps({
   modelValue: {type: Boolean, default: false},
   /** 排班行主键 */
   staffScheduleId: {type: [String, Number], default: null},
-  /** 抽屉标题 */
+  /** 弹框标题 */
   title: {type: String, default: '变更留痕'},
 })
 const emit = defineEmits(['update:modelValue'])

@@ -3,6 +3,7 @@
       v-model="selected"
       :data="tree"
       :props="treeProps"
+      node-key="id"
       :disabled="disabled"
       :clearable="clearable"
       :filterable="filterable"

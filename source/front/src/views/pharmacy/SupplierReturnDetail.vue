@@ -1,5 +1,5 @@
 <template>
-  <el-drawer v-model="visible" data-testid="sreturn-detail-drawer" size="1000px" title="退货单详情">
+  <el-dialog v-model="visible" data-testid="sreturn-detail-drawer" title="退货单详情" top="3vh" width="1000px">
     <template v-if="detail">
       <div class="mb-3 flex items-center justify-between">
         <div class="flex items-center gap-2">
@@ -88,7 +88,7 @@
         还没有流水 —— 这张单仍在「待退货」，建单本身不动库存。
       </div>
     </template>
-  </el-drawer>
+  </el-dialog>
 </template>
 
 <script setup>

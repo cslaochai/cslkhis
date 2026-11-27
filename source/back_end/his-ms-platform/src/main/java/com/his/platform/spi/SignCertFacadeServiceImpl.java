@@ -167,7 +167,7 @@ public class SignCertFacadeServiceImpl implements SignCertFacadeService {
 
     @Override
     public SignCertVO getActiveCertByEmp(Long empId) {
-        com.his.platform.vo.SignCertVO inner = signCertService.getActiveCertVO(empId);
+        com.his.platform.vo.SignCertVO inner = signCertService.getActiveCertVO(empId, true);
         if (inner == null) {
             return null;
         }

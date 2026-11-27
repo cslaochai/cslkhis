@@ -20,6 +20,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -44,6 +46,7 @@ public class MqttTelemetrySubscriber {
     private final IotProperties properties;
     private final TsdbTelemetryWriter writer;
     private final IotEventService iotEventService;
+    private final WaveformBuffer waveformBuffer;
 
     private final ObjectMapper json = new ObjectMapper();
 
@@ -114,8 +117,12 @@ public class MqttTelemetrySubscriber {
 
     private void subscribe() {
         try {
-            client.subscribe(new String[]{properties.getMqtt().getTelemetryTopic(), properties.getMqtt().getEventTopic()},
-                    new int[]{properties.getMqtt().getQos(), 1}).waitForCompletion(5_000);
+            client.subscribe(new String[]{
+                            properties.getMqtt().getTelemetryTopic(),
+                            properties.getMqtt().getEventTopic(),
+                            properties.getMqtt().getWaveTopic()},
+                    new int[]{properties.getMqtt().getQos(), 1, properties.getMqtt().getQos()})
+                    .waitForCompletion(5_000);
         } catch (Exception e) {
             log.warn("物联网主题订阅失败：{}", e.getMessage());
             reconnectLater(5);
@@ -143,6 +150,10 @@ public class MqttTelemetrySubscriber {
             JsonNode node = json.readTree(new String(message.getPayload(), StandardCharsets.UTF_8));
             if (topic.endsWith("/event")) {
                 onEvent(node);
+                return;
+            }
+            if (topic.endsWith("/wave")) {
+                onWave(node);
                 return;
             }
             JsonNode metrics = node.get("metrics");
@@ -277,6 +288,40 @@ public class MqttTelemetrySubscriber {
         Long seq = Integer.toUnsignedLong((id + '|' + code + '|' + tsText + '|' + detail).hashCode());
         iotEventService.saveDeviceEvent(id, type, code, intValue(node, "level"), detail, dataJson, seq,
                 TelemetrySqlBuilder.parseTs(tsText));
+    }
+
+    /**
+     * 波形报文：高频曲线只进内存缓冲，不落时序库。channels 三通道任一缺失只跳过该通道。
+     */
+    private void onWave(JsonNode node) {
+        String id = text(node, "deviceId");
+        if (id == null) {
+            return;
+        }
+        JsonNode channels = node.get("channels");
+        if (channels == null || !channels.isObject()) {
+            log.debug("物联网波形报文缺 channels，丢弃：{}", id);
+            return;
+        }
+        waveformBuffer.offer(id,
+                toDoubleList(channels.get("ecg")),
+                toDoubleList(channels.get("pleth")),
+                toDoubleList(channels.get("resp")),
+                text(node, "rhythm"),
+                intValue(node, "hr"),
+                intValue(node, "rr"),
+                text(node, "ts"));
+    }
+
+    private static List<Double> toDoubleList(JsonNode arr) {
+        if (arr == null || !arr.isArray()) {
+            return null;
+        }
+        List<Double> list = new ArrayList<>(arr.size());
+        for (JsonNode v : arr) {
+            list.add(v != null && v.isNumber() ? v.asDouble() : 0.0);
+        }
+        return list;
     }
 
     private static Integer intValue(JsonNode node, String field) {

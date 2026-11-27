@@ -145,8 +145,8 @@
       </div>
     </el-card>
 
-    <!-- 门诊病案首页抽屉 -->
-    <el-drawer v-model="drawerVisible" direction="rtl" size="60%">
+    <!-- 门诊病案首页弹框 -->
+    <el-dialog v-model="drawerVisible" top="4vh" width="60%">
       <template #header>
         <div class="flex items-center gap-3">
           <span class="text-base font-semibold text-slate-900">门（急）诊病历首页</span>
@@ -308,7 +308,7 @@
           </div>
         </div>
       </div>
-    </el-drawer>
+    </el-dialog>
 
     <!-- 草稿移交代补弹框 -->
     <MedicalRecordHandoverDialog

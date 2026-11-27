@@ -100,7 +100,7 @@
       </div>
     </el-card>
 
-    <el-drawer v-model="drawerVisible" size="620px" title="工单处理">
+    <el-dialog v-model="drawerVisible" title="工单处理" top="4vh" width="620px">
       <div v-loading="drawerLoading">
         <template v-if="detail">
           <el-descriptions :column="2" border class="mb-3" size="small">
@@ -183,7 +183,7 @@
           </div>
         </template>
       </div>
-    </el-drawer>
+    </el-dialog>
   </div>
 </template>
 

@@ -5,6 +5,15 @@ package com.his.common.util;
  */
 public final class SensitiveMaskUtil {
 
+    /** 直辖市：省与市同一级，地址常写成「北京市朝阳区…」 */
+    private static final String[] MUNICIPALITIES = {"北京", "上海", "天津", "重庆"};
+
+    /** 省级后缀（按最长优先匹配） */
+    private static final String[] PROVINCE_MARKS = {"特别行政区", "自治区", "省"};
+
+    /** 市级后缀（按最长优先匹配） */
+    private static final String[] CITY_MARKS = {"自治州", "地区", "盟", "市"};
+
     /**
      * 手机号：18878885878 → 188****5878；带区号固话保住区号 0731-****6666
      */
@@ -78,18 +87,73 @@ public final class SensitiveMaskUtil {
     }
 
     /**
-     * 住址：留前 6 个字（省/市/区县/小区片区），后面全星；不足 6 字全留。
+     * 住址：只保留省、市两级行政区划，区县/街道/门牌一律打星。
+     *
+     * <p>口径：直辖市取到「北京市」，省级取到「省 / 自治区 / 特别行政区」，市级取到
+     * 「市 / 自治州 / 地区 / 盟」；认不出省市的自由文本整段打码（宁可看不到，也不漏门牌）。
+     * 星号与原文字等长，便于「是同一条档案」的核对，但不足以还原门牌。
      */
     public static String maskAddress(String v) {
         String s = TextUtil.trimToEmpty(v);
         if (s.isEmpty()) {
             return null;
         }
-        int len = s.length();
-        if (len <= 6) {
+        int keep = regionPrefixLength(s);
+        if (keep <= 0) {
+            return repeat('*', s.length());
+        }
+        if (keep >= s.length()) {
             return s;
         }
-        return s.substring(0, 6) + repeat('*', len - 6);
+        return s.substring(0, keep) + repeat('*', s.length() - keep);
+    }
+
+    /**
+     * 住址里省、市两级行政区划的结束位置（即可以保留的前缀长度）。
+     *
+     * <p>「省」和「市」在中文地址里是仅有的两级稳定边界，区县以下写法五花八门
+     * （区/县/旗/镇/街道/乡/村/路/号/栋/室都有），按固定字数截断必然把某类地址漏出去，
+     * 所以只认这两个行政区划后缀。
+     *
+     * @return 可保留的字符数；0 = 认不出行政区划，整条打码
+     */
+    private static int regionPrefixLength(String s) {
+        // 直辖市：省与市同一级，取「北京市」三个字（不写「市」的老地址退化为保留三字）
+        for (String city : MUNICIPALITIES) {
+            if (s.startsWith(city)) {
+                int cityEnd = s.indexOf('市');
+                return cityEnd >= 0 && cityEnd <= city.length() ? cityEnd + 1 : Math.min(city.length(), s.length());
+            }
+        }
+        int provinceEnd = endOfFirst(s, 0, PROVINCE_MARKS);
+        if (provinceEnd > 0) {
+            int cityEnd = endOfFirst(s, provinceEnd, CITY_MARKS);
+            return cityEnd > 0 ? cityEnd : provinceEnd;
+        }
+        // 没写省，只写了市（「长沙市岳麓区…」）：市级后缀至少落在第 3 个字才认
+        int cityEnd = endOfFirst(s, 0, CITY_MARKS);
+        return cityEnd >= 3 ? cityEnd : 0;
+    }
+
+    /**
+     * 从 from 起找最早出现的某个后缀，返回该后缀之后的字符位置。
+     *
+     * @return -1 = 一个都没找到
+     */
+    private static int endOfFirst(String s, int from, String... marks) {
+        int bestStart = -1;
+        int bestLength = 0;
+        for (String mark : marks) {
+            int index = s.indexOf(mark, from);
+            if (index < 0) {
+                continue;
+            }
+            if (bestStart < 0 || index < bestStart || (index == bestStart && mark.length() > bestLength)) {
+                bestStart = index;
+                bestLength = mark.length();
+            }
+        }
+        return bestStart < 0 ? -1 : bestStart + bestLength;
     }
 
     /**

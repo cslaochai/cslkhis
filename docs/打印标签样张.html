@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>打印标签样张 · 1:1 实物尺寸</title>
+<style>
+  :root { --zoom: 2; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 16px 20px 40px; background: #eef1f5;
+    font-family: "Microsoft YaHei", "PingFang SC", "SimHei", sans-serif;
+    color: #1f2937;
+  }
+  .toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 14px; }
+  .toolbar button {
+    padding: 6px 14px; border: 1px solid #cbd5e1; border-radius: 6px;
+    background: #fff; cursor: pointer; font-size: 13px;
+  }
+  .toolbar button:hover { border-color: #1269b5; color: #1269b5; }
+  .toolbar button.on { background: #1269b5; border-color: #1269b5; color: #fff; }
+  .hint { font-size: 12px; line-height: 1.7; color: #475569; background: #fff;
+          border-left: 3px solid #1269b5; padding: 10px 14px; margin-bottom: 18px; border-radius: 4px; }
+  .hint b { color: #0f172a; }
+  .sheet { zoom: var(--zoom); transform-origin: top left; }
+  .label-card { display: inline-block; vertical-align: top; margin: 0 14px 14px 0; }
+  .caption { font-size: 11px; color: #64748b; margin-bottom: 4px; }
+
+  .label {
+    position: relative; background: #fff; color: #000; overflow: hidden;
+    outline: 0.3mm dashed #94a3b8; font-family: "Microsoft YaHei", "SimHei", sans-serif;
+  }
+  .mono { font-family: ui-monospace, Consolas, "Courier New", monospace; letter-spacing: 0.2px; }
+  .bw { font-weight: 700; }
+
+  /* 1. 检验标本管标签 50×25 */
+  .lb-specimen { width: 50mm; height: 25mm; padding: 1.4mm 1.6mm; }
+  .sp-top { display: flex; justify-content: space-between; align-items: baseline;
+            font-size: 3.1mm; padding-right: 6.2mm; }
+  .sp-dept { font-size: 2.2mm; white-space: nowrap; }
+  .sp-urgent {
+    position: absolute; top: 0; right: 0; background: #c0392b; color: #fff;
+    font-size: 2.6mm; padding: 0.3mm 1.6mm; letter-spacing: 0.5mm;
+  }
+  .sp-code { margin: 0.6mm 0; }
+  .sp-bottom { display: flex; justify-content: space-between; font-size: 2.5mm; }
+
+  /* 2. 血袋标签 80×60 */
+  .lb-blood { width: 80mm; height: 60mm; }
+  .bb-bar { background: #b3261e; color: #fff; font-size: 3.2mm; font-weight: 700;
+            padding: 1.2mm 2mm; display: flex; justify-content: space-between; }
+  .bb-body { display: flex; padding: 1.4mm 2mm 0; }
+  .bb-abo { width: 20mm; text-align: center; border-right: 0.3mm dashed #999; }
+  .bb-abo .big { font-size: 13mm; line-height: 1; font-weight: 800; }
+  .bb-abo .rh { font-size: 3.4mm; font-weight: 700; margin-top: 0.4mm; }
+  .bb-abo .cap { font-size: 2.2mm; color: #444; margin-top: 0.6mm; }
+  .bb-fields { flex: 1; padding-left: 2.2mm; font-size: 2.9mm; line-height: 1.55; }
+  .bb-fields .k { color: #444; }
+  .bb-patient { margin: 1mm 2mm 0; padding-top: 0.8mm; border-top: 0.3mm dashed #999;
+                font-size: 2.8mm; white-space: nowrap; }
+  .bb-code { margin: 0.8mm 2mm 0; }
+  .bb-foot { display: flex; justify-content: space-between; margin: 0 2mm; font-size: 2.4mm; }
+
+  /* 3. 静配输液贴 70×50 */
+  .lb-pivas { width: 70mm; height: 50mm; padding: 1.6mm 2mm; }
+  .pv-head { display: flex; justify-content: space-between; align-items: center;
+             border-bottom: 0.3mm solid #000; padding-bottom: 1mm; }
+  .pv-bed { font-size: 5.4mm; font-weight: 800; }
+  .pv-name { font-size: 3.4mm; margin-left: 1.5mm; }
+  .pv-batch { font-size: 2.6mm; border: 0.3mm solid #000; padding: 0.3mm 1.4mm; border-radius: 1mm; }
+  .pv-drugs { font-size: 3.2mm; line-height: 1.5; margin-top: 1.2mm; }
+  .pv-usage { font-size: 2.8mm; margin-top: 0.6mm; }
+  .pv-code { margin-top: 1mm; }
+  .pv-foot { display: flex; justify-content: space-between; font-size: 2.5mm; }
+
+  /* 4. CSSD 器械包标签 60×40 */
+  .lb-cssd { width: 60mm; height: 40mm; padding: 1.6mm 2mm; }
+  .cs-dept { font-size: 2.4mm; letter-spacing: 0.4mm; }
+  .cs-name { font-size: 4.6mm; font-weight: 800; margin-top: 0.6mm; }
+  .cs-meta { font-size: 2.8mm; line-height: 1.45; margin-top: 0.8mm; }
+  .cs-expire { font-size: 3mm; font-weight: 700; margin-top: 0.4mm; }
+  .cs-code { margin-top: 0.8mm; }
+  .cs-foot { font-size: 2.4mm; display: flex; justify-content: space-between; }
+
+  /* 5. 住院腕带 250×30 */
+  .lb-band { width: 250mm; height: 30mm; padding: 1.6mm 3mm; display: flex; align-items: center; gap: 3mm; }
+  .bd-name { font-size: 7mm; font-weight: 800; line-height: 1.1; }
+  .bd-sub { font-size: 2.8mm; }
+  .bd-right { font-size: 2.9mm; line-height: 1.5; }
+  .bd-alert { color: #c0392b; font-weight: 800; }
+  .bd-sep { width: 0.3mm; height: 22mm; background: #000; }
+  .bd-hosp { font-size: 2.2mm; color: #333; writing-mode: vertical-rl; text-orientation: upright; letter-spacing: 1mm; }
+
+  @media print {
+    .toolbar, .hint, .caption { display: none !important; }
+    body { background: #fff; padding: 0; margin: 0; }
+    .sheet { zoom: 1 !important; }
+    .label-card { margin: 0 !important; }
+    .label { outline: none !important; }
+  }
+</style>
+</head>
+<body>
+
+<div class="toolbar">
+  <strong style="font-size:13px">选一种标签：</strong>
+  <button data-target="c-specimen" class="on">检验标本管 50×25</button>
+  <button data-target="c-blood">血袋 80×60</button>
+  <button data-target="c-pivas">静配输液贴 70×50</button>
+  <button data-target="c-cssd">CSSD 器械包 60×40</button>
+  <button data-target="c-band">住院腕带 250×30</button>
+  <button data-target="c-all">全部</button>
+  <span style="flex:1"></span>
+  <label style="font-size:12px;color:#475569">屏幕缩放
+    <select id="zoomSel" style="padding:4px 6px;border:1px solid #cbd5e1;border-radius:6px">
+      <option value="1">100%（1:1 实物）</option>
+      <option value="2" selected>200%</option>
+      <option value="3">300%</option>
+    </select>
+  </label>
+  <button id="printBtn" style="background:#1269b5;color:#fff;border-color:#1269b5">打印当前标签</button>
+</div>
+
+<div class="hint">
+  <b>这是一张版式样张，数据是演示值，但尺寸、字号、条码密度全部按实物来。</b><br>
+  1. 选一种标签 → 点「打印当前标签」→ 打印机选标签机 / 对应纸张 → <b>缩放必须 100%，绝不能选「适合页面」</b>（一缩放条码就扫不出）。<br>
+  2. 没有标签机也先看版面：打印目标选「另存为 PDF」，出来的就是印在纸上的样子。<br>
+  3. 条码是真正的 <b>Code128B</b>，模块宽 0.28~0.45mm，用你们手上的扫码枪直接扫刚才那串码值就能验证密度够不够（扫不出就是标签尺寸选小了）。<br>
+  4. 屏幕上的 200% 只影响看，打印永远 1:1。
+</div>
+
+<div class="sheet" id="sheet">
+
+<!-- 1 标本管 -->
+<div class="label-card" id="c-specimen" data-size="50x25">
+  <div class="caption">检验标本管标签 · 50×25mm · 贴真空采血管</div>
+  <div class="label lb-specimen">
+    <div class="sp-urgent">急</div>
+    <div class="sp-top">
+      <span class="bw">陈晓梅</span>
+      <span class="sp-dept">女45岁 · 留观3床</span>
+    </div>
+    <div class="sp-code" data-barcode="S2611270012" data-bw="47" data-bh="9"></div>
+    <div class="sp-bottom">
+      <span class="mono bw">S2611270012</span>
+      <span>血常规+CRP</span>
+    </div>
+  </div>
+</div>
+
+<!-- 2 血袋 -->
+<div class="label-card" id="c-blood" data-size="80x60">
+  <div class="caption">血袋标签 · 80×60mm · 配血相合后贴血袋（耐低温材质）</div>
+  <div class="label lb-blood">
+    <div class="bb-bar"><span>输血科 · 交叉配血相合</span><span>已发血</span></div>
+    <div class="bb-body">
+      <div class="bb-abo">
+        <div class="big">A</div>
+        <div class="rh">Rh +</div>
+        <div class="cap">受血者血型</div>
+      </div>
+      <div class="bb-fields">
+        <div><span class="k">成分：</span>悬浮红细胞　<span class="k">2.0U</span></div>
+        <div><span class="k">血袋号：</span><span class="mono">XZ2026112701</span></div>
+        <div><span class="k">献血编号：</span><span class="mono">D2611270088</span></div>
+        <div><span class="k">有效期：</span><span class="bw">2026-12-20</span></div>
+        <div><span class="k">配血：</span>主侧阴性 / 次侧阴性</div>
+      </div>
+    </div>
+    <div class="bb-patient">陈晓梅　女45岁　<span class="mono">ZY2026001234</span>　留观3床</div>
+    <div class="bb-code" data-barcode="XZ2026112701" data-bw="74" data-bh="11"></div>
+    <div class="bb-foot">
+      <span class="mono">XZ2026112701</span>
+      <span>配血 康洁 09:12 · 发血 李敏 09:30 · <b>输血前双人核对</b></span>
+    </div>
+  </div>
+</div>
+
+<!-- 3 静配输液贴 -->
+<div class="label-card" id="c-pivas" data-size="70x50">
+  <div class="caption">静配成品输液贴 · 70×50mm · 贴在输液袋正面</div>
+  <div class="label lb-pivas">
+    <div class="pv-head">
+      <span><span class="pv-bed">3床</span><span class="pv-name bw">陈晓梅</span></span>
+      <span class="pv-batch">第1批</span>
+    </div>
+    <div class="pv-drugs">
+      0.9%氯化钠注射液 100ml<br>
+      注射用头孢曲松钠 2.0g
+    </div>
+    <div class="pv-usage">ivgtt　60 滴/分　静配中心配制</div>
+    <div class="pv-code" data-barcode="P2611270008" data-bw="64" data-bh="10"></div>
+    <div class="pv-foot">
+      <span class="mono">P2611270008</span>
+      <span>配制 08:30 李敏 · 效期 11-28 08:30</span>
+    </div>
+  </div>
+</div>
+
+<!-- 4 CSSD 器械包 -->
+<div class="label-card" id="c-cssd" data-size="60x40">
+  <div class="caption">CSSD 灭菌包标签 · 60×40mm · 贴在包外（耐 134℃ 指示标签）</div>
+  <div class="label lb-cssd">
+    <div class="cs-dept">消毒供应中心 · CSSD</div>
+    <div class="cs-name">腹腔镜器械包</div>
+    <div class="cs-meta">共 32 件 · 打包 王芳<br>高压蒸汽 · 锅次 1# · 批次 20261127-03</div>
+    <div class="cs-expire">灭菌 2026-11-27　失效 2026-12-04</div>
+    <div class="cs-code" data-barcode="CS2611270031" data-bw="54" data-bh="9"></div>
+    <div class="cs-foot"><span class="mono">CS2611270031</span><span>生物监测 合格</span></div>
+  </div>
+</div>
+
+<!-- 5 腕带 -->
+<div class="label-card" id="c-band" data-size="250x30">
+  <div class="caption">住院腕带 · 250×30mm · 腕带专用打印机（杜邦纸/TPU）</div>
+  <div class="label lb-band">
+    <div>
+      <div class="bd-name">陈晓梅</div>
+      <div class="bd-sub">女 45岁</div>
+    </div>
+    <div class="bd-sep"></div>
+    <div>
+      <div data-barcode="ZY2026001234" data-bw="76" data-bh="13"></div>
+      <div class="mono bd-sub" style="text-align:center">ZY2026001234</div>
+    </div>
+    <div class="bd-sep"></div>
+    <div class="bd-right">
+      <div>急诊留观 · 3床</div>
+      <div>血型 <b>A / Rh+</b></div>
+      <div class="bd-alert">过敏：青霉素</div>
+    </div>
+    <div style="flex:1"></div>
+    <div class="bd-hosp">长沙麓康医院</div>
+  </div>
+</div>
+
+</div>
+
+<script>
+/* ---------- Code128B 编码（纯 JS，无外部依赖） ----------
+   条空宽度表：每符号 6 位交替 条/空/…，除终止符（7 位）外合计必须 11 模块。 */
+const C128 = [
+  "212222","222122","222221","121223","121322","131222","122213","122312","132212","221213",
+  "221312","231212","112232","122132","122231","113222","123122","123221","223211","221132",
+  "221231","213212","223112","312131","311222","321122","321221","312212","322112","322211",
+  "212123","212321","232121","111323","131123","131321","112313","132113","132311","211313",
+  "231113","231311","112133","112331","132131","113123","113321","133121","313121","211331",
+  "231131","213113","213311","213131","311123","311321","331121","312113","312311","332111",
+  "314111","221411","431111","111224","111422","121124","121421","141122","141221","112214",
+  "112412","122114","122411","142112","142211","241211","221114","413111","241112","134111",
+  "111242","121142","121241","114212","124112","124211","411212","421112","421211","212141",
+  "214121","412121","111143","111341","131141","114113","114311","411113","411311","113141",
+  "114131","311141","411131","211412","211214","211232","2331112"
+];
+const START_B = 104, STOP = 106;
+
+/* 自检：宽度表错一位，整段条码就废；表不合法直接在控制台报警 */
+(function selfCheck() {
+  const sum = p => p.split("").reduce((s, c) => s + Number(c), 0);
+  const bad = C128.slice(0, 106).filter(p => sum(p) !== 11);
+  if (bad.length || sum(C128[STOP]) !== 13) console.error("Code128 宽度表异常", bad);
+})();
+
+function code128Codes(text) {
+  const codes = [START_B];
+  let chk = START_B;
+  for (let i = 0; i < text.length; i++) {
+    const v = text.charCodeAt(i) - 32;
+    if (v < 0 || v > 94) throw new Error("Code128B 只支持可见 ASCII：" + text);
+    codes.push(v);
+    chk += v * (i + 1);
+  }
+  codes.push(chk % 103, STOP);
+  return codes;
+}
+
+/* 生成 SVG：viewBox 以「模块」为单位，两侧各 10 模块静区 */
+function barcodeSvg(text, widthMm, heightMm) {
+  const mods = [];
+  code128Codes(text).forEach(code => {
+    C128[code].split("").forEach((w, i) => mods.push({ bar: i % 2 === 0, w: Number(w) }));
+  });
+  const quiet = 10;
+  const total = mods.reduce((s, m) => s + m.w, 0) + quiet * 2;
+  let x = quiet, rects = "";
+  for (const m of mods) {
+    if (m.bar) rects += `<rect x="${x}" y="0" width="${m.w}" height="100"/>`;
+    x += m.w;
+  }
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${total} 100"
+    preserveAspectRatio="none" style="width:${widthMm}mm;height:${heightMm}mm;display:block">
+    <g fill="#000">${rects}</g></svg>`;
+}
+
+function paintBarcodes() {
+  document.querySelectorAll("[data-barcode]").forEach(el => {
+    el.innerHTML = barcodeSvg(el.dataset.barcode, Number(el.dataset.bw), Number(el.dataset.bh));
+  });
+}
+
+/* ---------- 交互 ---------- */
+const cards = Array.from(document.querySelectorAll(".label-card"));
+const zoomSel = document.getElementById("zoomSel");
+
+function setVisible(targetId) {
+  cards.forEach(c => { c.style.display = (targetId === "c-all" || c.id === targetId) ? "" : "none"; });
+}
+
+document.querySelectorAll(".toolbar button[data-target]").forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".toolbar button[data-target]").forEach(b => b.classList.remove("on"));
+    btn.classList.add("on");
+    setVisible(btn.dataset.target);
+  });
+});
+
+zoomSel.addEventListener("change", () => {
+  document.documentElement.style.setProperty("--zoom", zoomSel.value);
+});
+
+document.getElementById("printBtn").addEventListener("click", () => {
+  const shown = cards.filter(c => c.style.display !== "none");
+  if (shown.length !== 1) {
+    alert("请先选一种标签再打印（一次只打一张，避免串纸）。");
+    return;
+  }
+  const [w, h] = shown[0].dataset.size.split("x");
+  let pageStyle = document.getElementById("pageStyle");
+  if (!pageStyle) {
+    pageStyle = document.createElement("style");
+    pageStyle.id = "pageStyle";
+    document.head.appendChild(pageStyle);
+  }
+  pageStyle.textContent = "@page{size:" + w + "mm " + h + "mm;margin:0}";
+  window.print();
+});
+
+window.addEventListener("afterprint", () => {
+  const ps = document.getElementById("pageStyle");
+  if (ps) ps.textContent = "@page{size:auto;margin:0}";
+});
+
+setVisible("c-specimen");
+paintBarcodes();
+
+/* 支持 URL hash 直达某张标签，便于逐个验收：打印标签样张.html#c-blood */
+(function applyHash() {
+  const id = location.hash.replace("#", "");
+  if (!id) return;
+  const btn = document.querySelector('.toolbar button[data-target="' + id + '"]');
+  if (btn) btn.click();
+})();
+</script>
+</body>
+</html>

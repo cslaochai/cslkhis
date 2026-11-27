@@ -55,11 +55,11 @@
       </div>
     </el-card>
 
-    <!-- 表格卡 -->
+    <!-- 表格卡：数据列 min-width 摊满卡片宽度（固定 width 会在宽屏右侧留一条空白带） -->
     <el-card class="table-card" shadow="never">
       <el-table v-loading="loading" :data="patients" :max-height="tableMaxHeight" stripe style="width: 100%">
         <!-- 患者号列同时承载标签：简写 chip + 色底，标签多时向下换行（行高增加可接受） -->
-        <el-table-column label="患者号/标签" width="220">
+        <el-table-column label="患者号/标签" min-width="220">
           <template #default="{ row }">
             <div class="font-mono text-slate-700">{{ row.patientNo }}</div>
             <div v-if="(row.tags || []).length" class="mt-1 flex flex-wrap gap-1">
@@ -82,29 +82,29 @@
             </div>
           </template>
         </el-table-column>
-        <el-table-column label="姓名" width="110">
+        <el-table-column label="姓名" min-width="110">
           <template #default="{ row }">
             <span class="font-medium text-slate-800">{{ row.patientName }}</span>
           </template>
         </el-table-column>
-        <el-table-column label="性别/年龄" width="120">
+        <el-table-column label="性别/年龄" min-width="120">
           <template #default="{ row }">
             <div>{{ patientGenderText(row.gender) }} / {{ patientAgeText(row.age) }}</div>
             <div class="text-xs text-slate-400">{{ maritalStatusText(row.maritalStatus) }}</div>
           </template>
         </el-table-column>
-        <el-table-column label="身份证号" width="150">
+        <el-table-column label="身份证号" min-width="150">
           <template #default="{ row }">
             <span class="font-mono">{{ row.idCardMasked || '' }}</span>
           </template>
         </el-table-column>
-        <el-table-column label="联系电话/住址" width="180">
+        <el-table-column label="联系电话/住址" min-width="180">
           <template #default="{ row }">
             <div>{{ row.phoneMasked || '' }}</div>
             <div class="text-xs text-slate-400" :title="row.addressMasked">{{ row.addressMasked || '' }}</div>
           </template>
         </el-table-column>
-        <el-table-column label="费别/医保" width="150">
+        <el-table-column label="费别/医保" min-width="150">
           <template #default="{ row }">
             <div>{{ row.medicalInsuranceType || '' }}</div>
             <div v-if="row.medicalInsuranceNoMasked" class="font-mono text-xs text-slate-400">
@@ -112,13 +112,13 @@
             </div>
           </template>
         </el-table-column>
-        <el-table-column label="就诊次数" width="100">
+        <el-table-column label="就诊次数" min-width="100">
           <template #default="{ row }">
             <div>挂号 {{ row.appointCount ?? 0 }}</div>
             <div class="text-xs text-slate-400">就诊 {{ row.visitCount ?? 0 }}</div>
           </template>
         </el-table-column>
-        <el-table-column label="最近就诊" width="190">
+        <el-table-column label="最近就诊" min-width="190">
           <template #default="{ row }">
             <div>{{ fmtDateTime(row.lastVisitTime) || '' }}</div>
             <div class="text-xs text-slate-400">
@@ -129,7 +129,7 @@
             </div>
           </template>
         </el-table-column>
-        <el-table-column label="建档时间/状态" width="180">
+        <el-table-column label="建档时间/状态" min-width="180">
           <template #default="{ row }">
             <div>{{ fmtDateTime(row.createTime) }}</div>
             <div class="mt-0.5">
@@ -143,7 +143,8 @@
         <el-table-column align="right" fixed="right" label="操作" width="190">
           <template #default="{ row }">
             <el-button link size="small" type="primary" @click.stop="handleViewDetail(row)">详情</el-button>
-            <el-button link size="small" type="primary" @click.stop="openTagDialog(row)">标签</el-button>
+            <!-- 患者标签是窗口/护士的运营标记（VIP、欠费、注意事项）：超级管理员的工作对象是配置不是患者，入口不给 -->
+            <el-button v-if="!isSystemAdmin" link size="small" type="primary" @click.stop="openTagDialog(row)">标签</el-button>
             <el-button v-perm="'patient:edit'" link size="small" type="primary" @click.stop="openEdit(row)">编辑</el-button>
             <el-button v-perm="'patient:edit'" link size="small" type="danger" @click.stop="handleDelete(row)">删除</el-button>
           </template>
@@ -195,6 +196,7 @@ import PatientDetailDialog from '@/components/his/PatientDetailDialog.vue';
 import PatientTagsEdit from './PatientTagsEdit.vue';
 import PatientsEdit from './PatientsEdit.vue';
 import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination';
+import {isSystemAdminRole} from '@/lib/role-workspace';
 import {useTableMaxHeight} from '@/lib/useTableMaxHeight';
 
 // 婚姻状况码值与 PatientsEdit 的 el-option 一一对应（0 是非 nil 值，不能换成 null）
@@ -229,6 +231,9 @@ const editRow = ref(null);
 // 标签维护弹框：当前患者行
 const showTagDialog = ref(false);
 const tagPatient = ref(null);
+// 超级管理员不显示「标签」入口（判定口径见 lib/role-workspace 的 isSystemAdminRole；
+// 切角色会整页刷新，构建时读一次 localStorage 即可）
+const isSystemAdmin = isSystemAdminRole(localStorage.getItem('currentRole'));
 const loading = ref(false);
 const patients = ref([]);
 const pagination = ref({

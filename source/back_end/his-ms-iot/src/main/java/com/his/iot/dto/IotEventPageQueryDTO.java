@@ -26,6 +26,9 @@ public class IotEventPageQueryDTO extends PageParam implements Serializable {
     @Schema(description = "归属科室ID，空=全部；护士站只查本病区告警")
     private Long deptId;
 
+    @Schema(description = "设备编号，空=全部。设备详情看单台的作业记录（任务单、等梯、签收）时用", example = "RBT-01")
+    private String deviceNo;
+
     @Schema(description = "处理状态，空=全部", example = "0")
     @AllowedValues(values = {"0", "1", "2"}, message = "处理状态取值不合法")
     private Integer handledFlag;

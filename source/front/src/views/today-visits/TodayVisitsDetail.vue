@@ -1,6 +1,6 @@
 <template>
-  <!-- 就诊详情抽屉：六段 -->
-  <el-drawer v-model="visible" destroy-on-close size="62%" title="就诊详情">
+  <!-- 就诊详情弹框：六段 -->
+  <el-dialog v-model="visible" destroy-on-close title="就诊详情" top="4vh" width="62%">
     <div v-loading="detailLoading" class="space-y-4">
       <template v-if="drawerRow">
         <!-- ① 挂号信息 -->
@@ -201,7 +201,7 @@
         </section>
       </template>
     </div>
-  </el-drawer>
+  </el-dialog>
 </template>
 
 <script setup>

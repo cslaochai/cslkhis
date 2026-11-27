@@ -1,6 +1,6 @@
 import request from './request'
 
-// ============ DIP 分组模拟（菜单 908，镜像 DRG 模拟器）：每首页一条结果重跑覆盖 ============
+// ============ DIP 分组模拟（菜单 910，并入医保付费壳 DIP 页签；镜像 DRG 模拟器）：每首页一条结果重跑覆盖 ============
 
 // 单条模拟（首页主诊断为空时补 icdCode/icdName，首页手术操作为空时补 operCode/operName）
 export function dipSimulate(data) {

@@ -1,6 +1,6 @@
 <template>
-  <!-- 详情抽屉 -->
-  <el-drawer v-model="visible" data-testid="order-detail-drawer" size="720px" title="订单详情">
+  <!-- 详情弹框 -->
+  <el-dialog v-model="visible" data-testid="order-detail-drawer" title="订单详情" top="4vh" width="720px">
     <template v-if="detail">
       <el-descriptions :column="2" border class="mb-4" size="small">
         <el-descriptions-item label="订单号">{{ detail.orderNo }}</el-descriptions-item>
@@ -31,7 +31,7 @@
         </el-table-column>
       </el-table>
     </template>
-  </el-drawer>
+  </el-dialog>
 </template>
 
 <script setup>

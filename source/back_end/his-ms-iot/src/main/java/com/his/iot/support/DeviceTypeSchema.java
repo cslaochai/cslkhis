@@ -75,6 +75,16 @@ public final class DeviceTypeSchema {
                 b("in_bed", "inBed", "在床", ""), i("heart_rate", "heartRate", "心率", "bpm"),
                 i("resp_rate", "respRate", "呼吸", "次/分"), i("turns", "turns", "翻身次数", "次"),
                 d("body_movement", "bodyMovement", "体动", ""));
+        reg("monitor", "床旁监护仪", "st_monitor",
+                i("heart_rate", "heartRate", "心率", "bpm"),
+                i("spo2", "spo2", "血氧", "%"),
+                i("sbp", "sbp", "收缩压", "mmHg"),
+                i("dbp", "dbp", "舒张压", "mmHg"),
+                i("resp_rate", "respRate", "呼吸", "次/分"),
+                d("temp_c", "tempC", "体温", "℃"),
+                s("rhythm", "rhythm", "心律判读", ""),
+                s("rhythm_label", "rhythmLabel", "心律", ""),
+                s("resp_pattern", "respPattern", "呼吸模式", ""));
         reg("dialysis", "透析机", "st_dialysis",
                 i("blood_flow_ml_min", "bloodFlowMlMin", "血流量", "ml/min"),
                 d("dialysate_temp_c", "dialysateTempC", "透析液温度", "℃"),

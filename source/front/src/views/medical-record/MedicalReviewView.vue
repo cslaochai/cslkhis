@@ -114,8 +114,8 @@
       </div>
     </el-card>
 
-    <!-- 病历详情抽屉 -->
-    <el-drawer v-model="drawerVisible" direction="rtl" size="60%">
+    <!-- 病历详情弹框 -->
+    <el-dialog v-model="drawerVisible" top="4vh" width="60%">
       <template #header>
         <div class="flex items-center gap-3">
           <span class="text-base font-semibold text-slate-900">{{ selectedRecord?.patientName }}</span>
@@ -244,7 +244,7 @@
           </div>
         </div>
       </div>
-    </el-drawer>
+    </el-dialog>
   </div>
 </template>
 

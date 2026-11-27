@@ -137,4 +137,8 @@ public class PatientUpsertDTO {
      */
     @AllowedValues(values = {"0", "1"}, message = "状态取值不合法")
     private Integer status;
+    /**
+     * 备注（仿真造数/夹具标记等可辨识信息）
+     */
+    private String remark;
 }

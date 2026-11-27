@@ -195,6 +195,18 @@ public interface SystemFacadeService {
      */
     List<EmployeeBriefVO> listEmployeesByPermission(String permission);
 
+    /**
+     * 持有指定权限码、且名下没有该角色编码岗位的在职员工。
+     *
+     * <p>解决「持码 ≠ 该收业务待办」：系统管理员为应急处置被授予业务权限码（sql/412），
+     * 但它不是业务处置岗，按权限码圈接收人时会把它一起带上。业务催办应按角色编码把它排除，
+     * 而不是逐个调用点硬编码账号。
+     *
+     * @param permission      权限码（sys_menu.permission 精确匹配，空白时返回空列表）
+     * @param excludeRoleCode 要排除的角色编码（sys_role.role_code，空白时等价于 {@link #listEmployeesByPermission}）
+     */
+    List<EmployeeBriefVO> listEmployeesByPermissionExcludingRole(String permission, String excludeRoleCode);
+
     // ---------- 登录账号 ----------
 
     /**

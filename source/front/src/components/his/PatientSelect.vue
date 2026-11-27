@@ -104,15 +104,15 @@
               <span class="ps-meta-sep">|</span>
               <span class="ps-meta-item">
               <span class="ps-meta-key">联系人</span>{{
-                  p.contactName || ''
-                }}{{ p.contactPhone ? ' ' + p.contactPhone : '' }}
+                  p.contactNameMasked || ''
+                }}{{ p.contactPhoneMasked ? ' ' + p.contactPhoneMasked : '' }}
             </span>
             </div>
 
             <!-- 第四行：地址 + 就诊统计 -->
             <div class="ps-line ps-meta">
             <span class="ps-meta-item ps-address">
-              <span class="ps-meta-key">住址</span>{{ p.address || '' }}
+              <span class="ps-meta-key">住址</span>{{ p.addressMasked || '' }}
             </span>
               <span class="ps-stats">
               <span class="ps-stat"><b>{{ p.appointCount ?? 0 }}</b>次预约</span>

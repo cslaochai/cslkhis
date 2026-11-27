@@ -1,5 +1,5 @@
 <template>
-  <el-drawer v-model="visible" data-testid="cert-detail-drawer" size="620px" title="死亡证明详情（只读）">
+  <el-dialog v-model="visible" data-testid="cert-detail-drawer" title="死亡证明详情（只读）" width="620px">
     <el-form :disabled="true" data-testid="cert-detail-body" label-width="120px">
       <el-form-item label="证明编号"><span data-testid="cd-cert-no">{{ dv.certNo }}</span></el-form-item>
       <el-form-item label="状态">{{ certStatusText(dv.certStatus) }} · 上报 {{
@@ -63,7 +63,7 @@
     <template #footer>
       <el-button data-testid="cd-close" @click="visible = false">关闭</el-button>
     </template>
-  </el-drawer>
+  </el-dialog>
 </template>
 
 <script setup>
