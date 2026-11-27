@@ -3,6 +3,9 @@ package com.his.patient.service;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.his.patient.dto.CheckupDTO;
 import com.his.patient.vo.CheckupVO;
+import com.his.spi.vo.ItemCatalogVO;
+
+import java.util.List;
 
 /**
  * 体检服务：体检套餐维护与体检登记、结果录入、总检出报告的业务收口。
@@ -14,6 +17,13 @@ public interface CheckupService {
      * 用于「体检套餐」页新增与修改弹框提交。
      */
     CheckupVO.PackageVO savePackage(CheckupDTO.PackageSave dto);
+
+    /**
+     * 体检套餐明细可选的项目目录：检验项目 / 检查项目 / 一般检查三段，可按关键字过滤。
+     * 套餐明细只选目录项目，名称与价格以目录为准，不再手填。
+     * 用于「体检套餐」编辑弹框的项目下拉。
+     */
+    List<ItemCatalogVO> selectItemList(Integer itemSource, String keyword);
 
     /**
      * 体检套餐分页：按名称关键字与启用状态筛。

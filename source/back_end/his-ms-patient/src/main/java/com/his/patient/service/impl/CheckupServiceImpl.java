@@ -6,7 +6,11 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.constant.DictTypeConst;
 import com.his.common.exception.BusinessException;
+import com.his.common.enums.CheckupItemSourceEnum;
+import com.his.spi.service.MedicalItemCatalogFacadeService;
 import com.his.spi.service.RedisSequenceService;
+import com.his.spi.service.TreatmentItemCatalogFacadeService;
+import com.his.spi.vo.ItemCatalogVO;
 import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
 import com.his.patient.dto.CheckupDTO;
@@ -23,7 +27,11 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
@@ -49,6 +57,20 @@ public class CheckupServiceImpl extends ServiceImpl<BizCheckupRecordMapper, BizC
     private final BizPatientMapper bizPatientMapper;
 
     private final DeptScopeService deptScopeService;
+
+    private final MedicalItemCatalogFacadeService medicalItemCatalogFacadeService;
+
+    private final TreatmentItemCatalogFacadeService treatmentItemCatalogFacadeService;
+
+    @Override
+    public List<ItemCatalogVO> selectItemList(Integer itemSource, String keyword) {
+        List<ItemCatalogVO> out = new ArrayList<>();
+        out.addAll(medicalItemCatalogFacadeService.listItems(itemSource, keyword));
+        if (itemSource == null || itemSource == CheckupItemSourceEnum.GENERAL.getCode()) {
+            out.addAll(treatmentItemCatalogFacadeService.listItems(keyword));
+        }
+        return out;
+    }
 
     @Transactional(rollbackFor = Exception.class)
     public CheckupVO.PackageVO savePackage(CheckupDTO.PackageSave dto) {
@@ -95,20 +117,57 @@ public class CheckupServiceImpl extends ServiceImpl<BizCheckupRecordMapper, BizC
                 sysCheckupPackageItemMapper.updateById(o);
             }
         }
+        // 明细只认项目目录：名称/编码/价格/参考范围一律按目录回填，手填值不采用
+        Map<String, ItemCatalogVO> catalog = loadItemCatalog();
+        BigDecimal total = BigDecimal.ZERO;
         int sort = 0;
         for (CheckupDTO.PackageSave.Item item : dto.getItems()) {
+            ItemCatalogVO catalogItem = catalog.get(itemKey(item.getItemSource(), item.getItemId()));
+            if (catalogItem == null) {
+                throw new BusinessException("所选项目不存在或已停用，请重新选择");
+            }
             SysCheckupPackageItem it = new SysCheckupPackageItem();
             it.setPackageId(p.getId());
-            it.setItemName(item.getItemName().trim());
-            it.setItemType(item.getItemType() == null ? 1 : item.getItemType());
-            it.setRefStandard(item.getRefStandard());
-            it.setAmount(item.getAmount());
+            it.setItemSource(catalogItem.getItemSource());
+            it.setItemId(catalogItem.getId());
+            it.setItemCode(catalogItem.getItemCode());
+            it.setItemName(catalogItem.getItemName());
+            // 套餐分项分类与项目来源一一对应（1-检验 2-检查 3-一般）
+            it.setItemType(catalogItem.getItemSource());
+            it.setRefStandard(catalogItem.getRefStandard());
+            it.setAmount(catalogItem.getPrice() == null ? BigDecimal.ZERO : catalogItem.getPrice());
             it.setSortOrder(sort++);
             it.setDelFlag(0);
             it.setCreateBy(operatorUser.getRealName());
             sysCheckupPackageItemMapper.insert(it);
+            total = total.add(it.getAmount());
+        }
+        // 套餐价未填时按明细合计兜底；填了按填的（允许打包优惠价低于明细合计）
+        if (p.getPrice() == null) {
+            p.setPrice(total);
+            sysCheckupPackageMapper.updateById(p);
         }
         return toPackageVo(p);
+    }
+
+    /**
+     * 目录项键：项目来源 + 目录项目ID。套餐明细必须精确指向某一张目录表的某一条记录，
+     * 只按名称或只按ID都会撞号（三张目录表 ID 各自从 1 起）。
+     */
+    private String itemKey(Integer itemSource, Long itemId) {
+        return itemSource + ":" + itemId;
+    }
+
+    /**
+     * 一次性取检验/检查/一般三段目录并按「来源+ID」建索引，保存套餐时逐条校验用。
+     */
+    private Map<String, ItemCatalogVO> loadItemCatalog() {
+        List<ItemCatalogVO> all = selectItemList(null, null);
+        Map<String, ItemCatalogVO> map = new HashMap<>();
+        for (ItemCatalogVO c : all) {
+            map.put(itemKey(c.getItemSource(), c.getId()), c);
+        }
+        return map;
     }
 
     public IPage<CheckupVO.PackageVO> packagePage(CheckupDTO.PackageQuery dto) {
@@ -199,6 +258,9 @@ public class CheckupServiceImpl extends ServiceImpl<BizCheckupRecordMapper, BizC
         for (SysCheckupPackageItem item : items) {
             BizCheckupResult res = new BizCheckupResult();
             res.setRecordId(r.getId());
+            res.setItemSource(item.getItemSource());
+            res.setItemId(item.getItemId());
+            res.setItemCode(item.getItemCode());
             res.setItemName(item.getItemName());
             res.setItemType(item.getItemType());
             res.setRefStandard(item.getRefStandard());
@@ -378,6 +440,9 @@ public class CheckupServiceImpl extends ServiceImpl<BizCheckupRecordMapper, BizC
                 .stream().map(it -> {
                     CheckupVO.PackageItemVO iv = new CheckupVO.PackageItemVO();
                     iv.setId(it.getId());
+                    iv.setItemSource(it.getItemSource());
+                    iv.setItemId(it.getItemId());
+                    iv.setItemCode(it.getItemCode());
                     iv.setItemName(it.getItemName());
                     iv.setItemType(it.getItemType());
                     iv.setRefStandard(it.getRefStandard());
@@ -420,6 +485,9 @@ public class CheckupServiceImpl extends ServiceImpl<BizCheckupRecordMapper, BizC
     private CheckupVO.ResultVO toResultVo(BizCheckupResult res) {
         CheckupVO.ResultVO vo = new CheckupVO.ResultVO();
         vo.setId(res.getId());
+        vo.setItemSource(res.getItemSource());
+        vo.setItemId(res.getItemId());
+        vo.setItemCode(res.getItemCode());
         vo.setItemName(res.getItemName());
         vo.setItemType(res.getItemType());
         vo.setRefStandard(res.getRefStandard());

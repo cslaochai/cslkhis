@@ -5,12 +5,15 @@ import com.his.common.base.Result;
 import com.his.patient.dto.CheckupDTO;
 import com.his.patient.service.CheckupService;
 import com.his.patient.vo.CheckupVO;
+import com.his.spi.vo.ItemCatalogVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 /**
  * 体检控制器（套餐 / 登记 / 结果 / 总检）。

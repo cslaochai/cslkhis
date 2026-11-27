@@ -24,7 +24,23 @@ public class BizCheckupResult extends BaseEntity {
     private Long recordId;
 
     /**
-     * 项目名称
+     * 项目来源（1-检验项目 2-检查项目 3-一般检查）
+     */
+    private Integer itemSource;
+
+    /**
+     * 来源目录项目ID（sys_laboratory_item / sys_inspection_item / sys_treatment_item）
+     */
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long itemId;
+
+    /**
+     * 来源目录项目编码（结果回写与报告对码用）
+     */
+    private String itemCode;
+
+    /**
+     * 项目名称（取目录项目名，冗余快照）
      */
     private String itemName;
 

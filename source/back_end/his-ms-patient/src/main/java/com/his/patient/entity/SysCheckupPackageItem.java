@@ -24,7 +24,23 @@ public class SysCheckupPackageItem extends BaseEntity {
     private Long packageId;
 
     /**
-     * 项目名称
+     * 项目来源（1-检验项目 2-检查项目 3-一般检查），决定 item_id 指向哪张项目目录
+     */
+    private Integer itemSource;
+
+    /**
+     * 来源目录项目ID（sys_laboratory_item / sys_inspection_item / sys_treatment_item）
+     */
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long itemId;
+
+    /**
+     * 来源目录项目编码（冗余快照，便于报表与结果回写对码）
+     */
+    private String itemCode;
+
+    /**
+     * 项目名称（取目录项目名，冗余快照）
      */
     private String itemName;
 

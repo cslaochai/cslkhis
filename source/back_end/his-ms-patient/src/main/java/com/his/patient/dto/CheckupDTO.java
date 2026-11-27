@@ -52,16 +52,35 @@ public class CheckupDTO {
         @Data
         public static class Item {
             /**
-             * 项目名称
+             * 项目来源（1-检验项目 2-检查项目 3-一般检查），决定 itemId 指向哪张项目目录
              */
-            @NotBlank(message = "项目名称不能为空")
+            @NotNull(message = "请选择项目来源")
+            @AllowedValues(values = {"1", "2", "3"}, message = "项目来源取值不合法")
+            private Integer itemSource;
+            /**
+             * 项目目录项目ID：项目名称/编码/价格/参考范围一律以目录为准，入参只认这个ID
+             */
+            @NotNull(message = "请选择项目")
+            private Long itemId;
+            /**
+             * 项目名称（服务端按目录回填，入参不采用）
+             */
             private String itemName;
             /**
-             * 1检验 2检查 3一般
+             * 项目编码（服务端按目录回填，入参不采用）
              */
-            @AllowedValues(values = {"1", "2", "3"}, message = "项目类型取值不合法")
+            private String itemCode;
+            /**
+             * 项目类型（1检验 2检查 3一般；服务端按项目来源回填，入参不采用）
+             */
             private Integer itemType;
+            /**
+             * 参考范围（服务端按目录回填）
+             */
             private String refStandard;
+            /**
+             * 单项金额（服务端取目录价格回填）
+             */
             private BigDecimal amount;
         }
     }

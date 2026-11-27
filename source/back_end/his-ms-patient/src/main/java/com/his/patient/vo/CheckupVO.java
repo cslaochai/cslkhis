@@ -42,6 +42,19 @@ public class CheckupVO {
         @JsonSerialize(using = ToStringSerializer.class)
         private Long id;
         /**
+         * 项目来源（1-检验项目 2-检查项目 3-一般检查）
+         */
+        private Integer itemSource;
+        /**
+         * 来源目录项目ID
+         */
+        @JsonSerialize(using = ToStringSerializer.class)
+        private Long itemId;
+        /**
+         * 来源目录项目编码
+         */
+        private String itemCode;
+        /**
          * 项目名称
          */
         private String itemName;
@@ -109,6 +122,19 @@ public class CheckupVO {
     public static class ResultVO {
         @JsonSerialize(using = ToStringSerializer.class)
         private Long id;
+        /**
+         * 项目来源（1-检验项目 2-检查项目 3-一般检查）
+         */
+        private Integer itemSource;
+        /**
+         * 来源目录项目ID
+         */
+        @JsonSerialize(using = ToStringSerializer.class)
+        private Long itemId;
+        /**
+         * 来源目录项目编码
+         */
+        private String itemCode;
         /**
          * 项目名称
          */
