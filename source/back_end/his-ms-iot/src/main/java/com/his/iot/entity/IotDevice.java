@@ -28,6 +28,13 @@ public class IotDevice extends BaseEntity {
     private String deviceType;
 
     /**
+     * 供电方式（411 补列）：mains 插电 / mains_backup 插电+后备电池 / battery 电池·换电 / battery_dock 电池·回桩充电。
+     * <p>
+     * 台账只标"怎么供电"，实时电量和低电提醒走遥测与告警，不在这里存快照值。
+     */
+    private String powerType;
+
+    /**
      * 设备名称
      */
     private String deviceName;

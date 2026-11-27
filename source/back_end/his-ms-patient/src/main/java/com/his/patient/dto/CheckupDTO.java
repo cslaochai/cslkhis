@@ -3,6 +3,8 @@ package com.his.patient.dto;
 import com.his.common.base.PageParam;
 import com.his.common.validation.AllowedValues;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.DecimalMax;
+import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
@@ -35,9 +37,16 @@ public class CheckupDTO {
         @AllowedValues(values = {"0", "1", "2"}, message = "性别限制取值不合法")
         private Integer genderLimit;
         /**
-         * 单价
+         * 套餐价（实收价）。为空时按明细原价合计兜底；不得高于原价合计、不得低于价格底线
          */
         private BigDecimal price;
+        /**
+         * 最低折扣率（价格底线）：套餐价不得低于「原价 × 本值」。
+         * 留空时更新保留原值、新增取 1.0000（即默认不打折，要促销必须显式下调底线）
+         */
+        @DecimalMin(value = "0.01", message = "最低折扣率不能小于 1%")
+        @DecimalMax(value = "1.00", message = "最低折扣率不能大于 100%")
+        private BigDecimal floorRate;
         private String description;
         private Integer status;
         /**

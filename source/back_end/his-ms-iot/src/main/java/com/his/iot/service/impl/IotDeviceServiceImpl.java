@@ -34,6 +34,7 @@ public class IotDeviceServiceImpl extends ServiceImpl<IotDeviceMapper, IotDevice
         IotDeviceVO vo = new IotDeviceVO();
         vo.setDeviceNo(d.getDeviceNo());
         vo.setDeviceType(d.getDeviceType());
+        vo.setPowerType(d.getPowerType());
         vo.setDeviceName(d.getDeviceName());
         vo.setDeptName(d.getDeptName());
         vo.setLocation(d.getLocation());

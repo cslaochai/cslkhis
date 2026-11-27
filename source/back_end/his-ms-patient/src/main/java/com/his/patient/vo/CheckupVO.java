@@ -22,9 +22,25 @@ public class CheckupVO {
         private String packageCode;
         private Integer genderLimit;
         /**
-         * 单价
+         * 套餐价（实收价）
          */
         private BigDecimal price;
+        /**
+         * 原价（明细项目价格合计快照）
+         */
+        private BigDecimal listPrice;
+        /**
+         * 折扣率（套餐价/原价，1.0000 表示不打折）
+         */
+        private BigDecimal discountRate;
+        /**
+         * 最低折扣率（价格底线）
+         */
+        private BigDecimal floorRate;
+        /**
+         * 价格底线金额（原价 × 最低折扣率），便于前端直接提示
+         */
+        private BigDecimal floorPrice;
         private String description;
         private Integer status;
         /**

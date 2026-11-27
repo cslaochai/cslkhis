@@ -885,16 +885,74 @@ public class SignCertServiceImpl extends ServiceImpl<SysSignCertMapper, SysSignC
         if (Objects.equals(CertStatusEnum.REVOKED.getCode(), cert.getCertStatus())) {
             throw new BusinessException("证书 " + cert.getCertNo() + " 已是吊销状态，不能重复吊销");
         }
+        SignCertRevokeTypeEnum revokeType = resolveRevokeType();
         cert.setCertStatus(CertStatusEnum.REVOKED.getCode());
         cert.setRevokeReason(dto.getReason());
         cert.setRevokeTime(TimeUtil.nowSeconds());
         cert.setRevokeByName(operatorName);
+        cert.setRevokeType(revokeType.getCode());
         sysSignCertMapper.updateById(cert);
         // 已由 CA 签发的证书必须同步吊销 CA 侧记录，否则 CA 那边仍是有效证书
         pushRevokeToCa(cert, dto.getReason());
-        log.info("吊销签名证书 certNo={} empId={} 原因={} 操作人={}",
-                cert.getCertNo(), cert.getEmpId(), dto.getReason(), operatorName);
+        log.info("吊销签名证书[{}] certNo={} empId={} 原因={} 操作人={}",
+                revokeType.getLabel(), cert.getCertNo(), cert.getEmpId(), dto.getReason(), operatorName);
+        notifyAfterRevoke(cert, revokeType, operatorName, dto.getReason());
         return toVO(cert, true);
+    }
+
+    /**
+     * 吊销类型按操作人当前权限判定：持有应急吊销码且不持业务吊销码 → 应急吊销；
+     * 两码都有（如超管）按业务吊销处理，走医务科口径的完整流程。
+     */
+    private SignCertRevokeTypeEnum resolveRevokeType() {
+        CurrentUser user = UserUtils.getCurrentUser();
+        List<String> permissions = user == null ? null : user.getPermissions();
+        if (permissions != null
+                && permissions.contains(PERM_CERT_REVOKE_EMERGENCY)
+                && !permissions.contains(PERM_CERT_REVOKE)) {
+            return SignCertRevokeTypeEnum.EMERGENCY;
+        }
+        return SignCertRevokeTypeEnum.BUSINESS;
+    }
+
+    /**
+     * 吊销后自动派单，把「吊销之后该谁办」推给对应部门：
+     * 业务吊销（医务科决定）→ 通知信息科重新签发；应急吊销（信息科处置）→ 通知医务科补备案。
+     *
+     * <p>通知失败只记日志、不回滚吊销：安全事件下吊销本身必须先行生效，站内信是二级动作。
+     */
+    private void notifyAfterRevoke(SysSignCert cert, SignCertRevokeTypeEnum revokeType,
+                                   String operatorName, String reason) {
+        try {
+            boolean business = revokeType == SignCertRevokeTypeEnum.BUSINESS;
+            List<Long> empIds = sysUserMapper.selectEmployeeIdsByPermission(
+                    business ? PERM_CERT_EDIT : PERM_CERT_REVOKE);
+            if (empIds == null || empIds.isEmpty()) {
+                log.warn("证书吊销通知无接收人 permission={} certNo={}",
+                        business ? PERM_CERT_EDIT : PERM_CERT_REVOKE, cert.getCertNo());
+                return;
+            }
+            List<SysEmployee> receivers = sysEmployeeMapper.selectList(new LambdaQueryWrapper<SysEmployee>()
+                    .in(SysEmployee::getId, empIds)
+                    .eq(SysEmployee::getStatus, EnableStatusEnum.ENABLED.getCode()));
+            String empName = TextUtil.hasText(cert.getEmpName()) ? cert.getEmpName() : ("员工" + cert.getEmpId());
+            String title = business ? "签名证书已吊销，请重新签发" : "签名证书应急吊销，请核实备案";
+            String content = business
+                    ? String.format("医务科 %s 以「%s」吊销了 %s（证书号 %s）的签名证书，该医师已无法电子签名。"
+                            + "请信息科核实后为其重新签发，并确认其待签病历/处方的补签安排。",
+                    operatorName, reason, empName, cert.getCertNo())
+                    : String.format("信息科 %s 因安全事件以「%s」应急吊销了 %s（证书号 %s）的签名证书。"
+                            + "请医务科核实吊销依据、补办备案，并决定是否恢复签名资格后重新签发。",
+                    operatorName, reason, empName, cert.getCertNo());
+            for (SysEmployee receiver : receivers) {
+                sysMessageService.sendSystemMessage(receiver.getId(), receiver.getEmpName(), title, content,
+                        BizTypeEnum.SIGN_CERT.getType(), cert.getId(), "warning", null, 0);
+            }
+            log.info("证书吊销通知已派发 type={} certNo={} 接收人={}", revokeType.getLabel(),
+                    cert.getCertNo(), receivers.size());
+        } catch (Exception e) {
+            log.warn("证书吊销通知发送失败 certNo={} type={}", cert.getCertNo(), revokeType.getLabel(), e);
+        }
     }
 
     /**

@@ -20,6 +20,10 @@ public class IotDeviceVO implements Serializable {
     @Schema(description = "设备类型", example = "coldchain")
     private String deviceType;
 
+    @Schema(description = "供电方式：mains 插电 / mains_backup 插电+后备电池 / battery 电池·换电 / battery_dock 电池·回桩充电",
+            example = "mains_backup")
+    private String powerType;
+
     @Schema(description = "设备名称")
     private String deviceName;
 

@@ -56,6 +56,14 @@
             <div class="text-[12px] text-gray-400">{{ row.deviceNo }}</div>
           </template>
         </el-table-column>
+        <el-table-column label="供电" width="110">
+          <template #default="{ row }">
+            <el-tooltip v-if="row.powerType" :content="powerTypeHint(row.powerType)" placement="top">
+              <el-tag size="small" :type="powerTypeTag(row.powerType)">{{ powerTypeText(row.powerType) }}</el-tag>
+            </el-tooltip>
+            <span v-else class="text-[12px] text-gray-400">—</span>
+          </template>
+        </el-table-column>
         <el-table-column label="最新读数" min-width="150">
           <template #default="{ row }">
             <span v-if="primaryMetric(row)" class="text-[13px]" :class="isAlarmRow(row) ? 'text-red-600' : 'text-gray-700'">
@@ -183,6 +191,20 @@ const statusOf = (row) => {
   return isOnline(row) ? {type: 'success', text: '在线'} : {type: 'info', text: '离线'};
 };
 
+/**
+ * 供电方式（411 台账列）：只区分"怎么供电"，不推断当前有没有电。
+ * 插电款的"没电"是插座/停电问题，派人接电；电池款才是派人换电池/回桩。
+ */
+const POWER_TYPE = {
+  mains: {text: '插电', tag: 'info', hint: '插电供电，断电即停机/离线，不涉及换电池'},
+  mains_backup: {text: '插电+后备电池', tag: 'success', hint: '常态插电满电，拔电才用后备电池，接回电源即回充'},
+  battery: {text: '电池·换电', tag: 'warning', hint: '电池供电，电量低需现场更换电池/腕带，绑定关系不变'},
+  battery_dock: {text: '电池·回桩', tag: 'warning', hint: '电池供电，电量低自动回充电桩充电'},
+};
+const powerTypeText = (t) => POWER_TYPE[t]?.text || t;
+const powerTypeTag = (t) => POWER_TYPE[t]?.tag || 'info';
+const powerTypeHint = (t) => POWER_TYPE[t]?.hint || '';
+
 // ============ 概览统计（基于全量设备，不受分组/搜索/只看告警影响） ============
 const kpi = computed(() => {
   const total = rows.value.length;
@@ -269,6 +291,7 @@ const loadLatest = async ({silent = false} = {}) => {
           deviceName: d.deviceName || '',
           deptName: d.deptName || '',
           location: d.location || '',
+          powerType: d.powerType || '',
           // 绑定主文案只留床位；绑定方式（扫码/手工/申领）收进 title 提示，不与床号并列重复
           bindText: b ? (b.bedNo ? `${b.bedNo} 床` : '已绑定') : '',
           bindSourceText: b?.bindSourceText || '',

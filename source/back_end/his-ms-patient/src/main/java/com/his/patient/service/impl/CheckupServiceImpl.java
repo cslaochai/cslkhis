@@ -28,6 +28,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -98,6 +99,9 @@ public class CheckupServiceImpl extends ServiceImpl<BizCheckupRecordMapper, BizC
         p.setPackageName(name);
         p.setGenderLimit(dto.getGenderLimit() == null ? 0 : dto.getGenderLimit());
         p.setPrice(dto.getPrice());
+        if (dto.getFloorRate() != null) {
+            p.setFloorRate(dto.getFloorRate());
+        }
         p.setDescription(dto.getDescription());
         p.setStatus(dto.getStatus() == null ? p.getStatus() : dto.getStatus());
         p.setRemark(dto.getRemark());
@@ -142,11 +146,32 @@ public class CheckupServiceImpl extends ServiceImpl<BizCheckupRecordMapper, BizC
             sysCheckupPackageItemMapper.insert(it);
             total = total.add(it.getAmount());
         }
-        // 套餐价未填时按明细合计兜底；填了按填的（允许打包优惠价低于明细合计）
-        if (p.getPrice() == null) {
-            p.setPrice(total);
-            sysCheckupPackageMapper.updateById(p);
+        // 定价收口：原价=明细合计快照；套餐价不得高于原价、不得低于价格底线（原价×最低折扣率）
+        BigDecimal price = p.getPrice() == null ? total : p.getPrice();
+        BigDecimal floorRate = p.getFloorRate() == null ? BigDecimal.ONE : p.getFloorRate();
+        if (total.signum() > 0) {
+            if (price.signum() <= 0) {
+                throw new BusinessException("套餐价必须大于 0");
+            }
+            if (price.compareTo(total) > 0) {
+                throw new BusinessException("套餐价 ¥" + price.toPlainString() + " 高于项目原价合计 ¥"
+                        + total.toPlainString() + "，套餐价不能高于原价");
+            }
+            BigDecimal floorPrice = total.multiply(floorRate).setScale(2, RoundingMode.HALF_UP);
+            if (price.compareTo(floorPrice) < 0) {
+                throw new BusinessException("套餐价 ¥" + price.toPlainString() + " 低于价格底线 ¥"
+                        + floorPrice.toPlainString() + "（最低折扣率 "
+                        + floorRate.multiply(new BigDecimal("100")).stripTrailingZeros().toPlainString()
+                        + "%），请调价或先下调价格底线");
+            }
+            p.setDiscountRate(price.divide(total, 4, RoundingMode.HALF_UP));
+        } else {
+            p.setDiscountRate(BigDecimal.ONE);
         }
+        p.setPrice(price);
+        p.setListPrice(total);
+        p.setFloorRate(floorRate);
+        sysCheckupPackageMapper.updateById(p);
         return toPackageVo(p);
     }
 
@@ -429,6 +454,12 @@ public class CheckupServiceImpl extends ServiceImpl<BizCheckupRecordMapper, BizC
         vo.setPackageCode(p.getPackageCode());
         vo.setGenderLimit(p.getGenderLimit());
         vo.setPrice(p.getPrice());
+        vo.setListPrice(p.getListPrice());
+        vo.setDiscountRate(p.getDiscountRate());
+        vo.setFloorRate(p.getFloorRate());
+        if (p.getListPrice() != null && p.getFloorRate() != null) {
+            vo.setFloorPrice(p.getListPrice().multiply(p.getFloorRate()).setScale(2, RoundingMode.HALF_UP));
+        }
         vo.setDescription(p.getDescription());
         vo.setStatus(p.getStatus());
         vo.setRemark(p.getRemark());
