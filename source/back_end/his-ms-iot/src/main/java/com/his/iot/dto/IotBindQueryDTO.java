@@ -14,7 +14,7 @@ import java.io.Serializable;
 public class IotBindQueryDTO implements Serializable {
 
     @Schema(description = "设备类型，空=全部", example = "infusion")
-    @AllowedValues(values = {"coldchain", "infusion", "asset", "env", "gas", "bed",
+    @AllowedValues(values = {"coldchain", "infusion", "asset", "env", "gas", "bed", "monitor",
             "dialysis", "cabinet", "uv", "robot"}, message = "设备类型取值不合法")
     private String deviceType;
 }

@@ -311,6 +311,11 @@ public interface RedisSequenceService {
     String generateLaboratoryRecordNo();
 
     /**
+     * 检验标本号：S + yyyyMMdd + 4 位序号（标本管维度，一管一码，贴管后扫码即回查）
+     */
+    String generateSpecimenNo();
+
+    /**
      * 报告单号：RPT + yyyyMMdd + 5 位序号（检查/检验/心电/放射共用同一张报告表，共用一个号段）
      */
     String generateReportNo();

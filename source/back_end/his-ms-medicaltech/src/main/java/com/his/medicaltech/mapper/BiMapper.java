@@ -102,9 +102,9 @@ public interface BiMapper {
             + "GROUP BY statDate ORDER BY statDate")
     List<BiDayAmountRowVO> revenueTrend();
 
-    @Select("SELECT IFNULL(f.dept_name, '未分配科室') deptName, ROUND(" + REVENUE_EXPR + ",2) amount FROM biz_fee_record f "
+    @Select("SELECT f.dept_id AS deptId, IFNULL(f.dept_name, '未分配科室') deptName, ROUND(" + REVENUE_EXPR + ",2) amount FROM biz_fee_record f "
             + "WHERE f.del_flag = 0 AND f.book_time >= DATE_SUB(CURDATE(), INTERVAL 30 DAY) "
-            + "GROUP BY f.dept_name ORDER BY amount DESC LIMIT 5")
+            + "GROUP BY f.dept_id, f.dept_name ORDER BY amount DESC LIMIT 5")
     List<BiDeptAmountRowVO> deptTop();
 
     /**
@@ -127,11 +127,11 @@ public interface BiMapper {
     List<BiOverviewVO.RevenueStructure> revenueStructure30d();
 
     /** 近 30 日出院人次 TOP5 科室（按当前科室 dept_id 归集，与住院列表口径一致）。 */
-    @Select("SELECT IFNULL(d.dept_name, '未分配科室') deptName, COUNT(*) count "
+    @Select("SELECT a.dept_id AS deptId, IFNULL(d.dept_name, '未分配科室') deptName, COUNT(*) count "
             + "FROM biz_admission a LEFT JOIN sys_department d ON d.id = a.dept_id AND d.del_flag = 0 "
             + "WHERE a.del_flag = 0 AND a.discharge_time IS NOT NULL "
             + "AND a.discharge_time >= DATE_SUB(CURDATE(), INTERVAL 30 DAY) "
-            + "GROUP BY deptName ORDER BY count DESC LIMIT 5")
+            + "GROUP BY a.dept_id, deptName ORDER BY count DESC LIMIT 5")
     List<BiDeptWorkloadRowVO> deptWorkloadTop();
 
     // 国考四指标（M5，统一「近 30 日」窗口）

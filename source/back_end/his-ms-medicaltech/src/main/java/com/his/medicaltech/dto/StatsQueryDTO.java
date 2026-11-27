@@ -20,4 +20,10 @@ public class StatsQueryDTO {
      */
     @Pattern(regexp = "^$|^\\d{4}-\\d{2}-\\d{2}$", message = "结束日期格式应为 yyyy-MM-dd")
     private String endDate;
+
+    /**
+     * 科室筛选（可空，空 = 全院口径）。仅对挂科室列的门诊/住院/费用/处方主表生效；
+     * 账单、支付流水、发药记录、床位快照不挂科室，维持全院口径。
+     */
+    private Long deptId;
 }

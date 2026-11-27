@@ -120,11 +120,16 @@
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column align="center" fixed="right" label="操作" width="200">
+        <el-table-column align="center" fixed="right" label="操作" width="270">
           <template #default="{row}">
             <el-button link size="small" type="primary"
                        @click.stop="openDetail(row)">
               详情
+            </el-button>
+            <!-- 打标签：采样时贴管，未发码的由后端先发码再落台账；退回标本不打 -->
+            <el-button v-if="row.specimenStatus !== 99" v-perm="'medtech:specimen:edit'" link size="small" type="primary"
+                       @click.stop="openLabelPrint(row)">
+              打标签
             </el-button>
             <template v-if="row.recordStatus === 1">
               <el-button v-if="!row.specimenNo" v-perm="'medtech:specimen:edit'" link size="small" type="primary"
@@ -162,6 +167,9 @@
     <!-- 详情弹窗 -->
     <SpecimenDetail v-model="showDetailDialog" :specimen="selectedSpecimen"/>
 
+    <!-- 标本标签打印：专用 50×25mm 尺寸，弹框内直接出纸并写打印台账 -->
+    <SpecimenLabelPrint v-model="showLabelDialog" :record-id="labelRecordId"/>
+
     <!-- 条码分配弹窗 -->
     <el-dialog v-model="showBarcodeDialog" destroy-on-close title="分配标本条码" width="400px">
       <div class="space-y-4">
@@ -192,6 +200,7 @@ import {patientGenderText} from '@/lib/patientGender';
 import {DEFAULT_PAGE_SIZE} from '@/lib/pagination';
 import {useTableMaxHeight} from '@/lib/useTableMaxHeight';
 import SpecimenDetail from './SpecimenDetail.vue';
+import SpecimenLabelPrint from './SpecimenLabelPrint.vue';
 
 const loading = ref(false);
 const specimens = ref([]);
@@ -200,6 +209,8 @@ const statusFilter = ref('all');
 const selectedSpecimen = ref(null);
 const showDetailDialog = ref(false);
 const showBarcodeDialog = ref(false);
+const showLabelDialog = ref(false);
+const labelRecordId = ref(null);
 const barcodeInput = ref('');
 const barcodeTarget = ref(null);
 const stats = ref({todayCount: 0, pendingSample: 0, sampled: 0, testing: 0, abnormal: 0});
@@ -293,6 +304,11 @@ const handleAssignBarcode = (row) => {
   barcodeTarget.value = row;
   barcodeInput.value = row.specimenNo || `SP${Date.now()}`;
   showBarcodeDialog.value = true;
+};
+/** 打标签：只传记录ID，标签字段与已打次数由弹框自己按 id 取（父页面不拼数据） */
+const openLabelPrint = (row) => {
+  labelRecordId.value = row.id;
+  showLabelDialog.value = true;
 };
 const confirmAssignBarcode = async () => {
   if (!barcodeInput.value.trim()) {

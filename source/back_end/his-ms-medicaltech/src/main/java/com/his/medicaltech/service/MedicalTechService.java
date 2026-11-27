@@ -4,6 +4,7 @@ import com.his.medicaltech.vo.BizReportVO;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.his.common.base.PageResult;
 import com.his.medicaltech.dto.LabResultSaveDTO;
+import com.his.medicaltech.dto.SpecimenLabelPrintDTO;
 import com.his.medicaltech.entity.BizInspectionRecord;
 import com.his.medicaltech.entity.BizLabResult;
 import com.his.medicaltech.entity.BizLaboratoryRecord;
@@ -202,6 +203,18 @@ public interface MedicalTechService extends IService<BizInspectionRecord> {
      * 标本退回
      */
     boolean rejectSpecimen(Long recordId, String reason);
+
+    /**
+     * 标本标签明细：取渲染所需字段与已打印次数。
+     * 用于标本管理页「打标签」弹框打开时回显（此时不写台账）。
+     */
+    SpecimenLabelVO getSpecimenLabel(Long recordId);
+
+    /**
+     * 打印标本标签：无码先发码，然后写一次打印台账并返回本次序号。
+     * 第 2 次及以后必须带补打原因。
+     */
+    SpecimenLabelVO printSpecimenLabel(SpecimenLabelPrintDTO printDTO);
 
     /**
      * 标本统计（各状态数量）

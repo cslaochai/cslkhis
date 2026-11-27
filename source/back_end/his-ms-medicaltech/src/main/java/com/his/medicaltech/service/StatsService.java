@@ -10,6 +10,8 @@ public interface StatsService {
     /**
      * 按日期区间聚合门诊、住院、收入与药事的总量指标。
      * 用于运营统计报表页选好时间范围后渲染顶部总览卡片。
+     *
+     * @param deptId 科室筛选，可空（空 = 全院）
      */
-    StatsOverviewVO overview(String startDate, String endDate);
+    StatsOverviewVO overview(String startDate, String endDate, Long deptId);
 }

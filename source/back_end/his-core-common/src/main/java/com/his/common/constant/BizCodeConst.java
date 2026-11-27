@@ -249,6 +249,10 @@ public interface BizCodeConst {
      */
     String LABORATORY_RECORD_NO_KEY_PREFIX = "LABORATORY_RECORD";
     /**
+     * 检验标本号（标本管维度，一管一码）
+     */
+    String SPECIMEN_NO_KEY_PREFIX = "SPECIMEN";
+    /**
      * 医技报告号
      */
     String REPORT_NO_KEY_PREFIX = "REPORT";
@@ -739,6 +743,10 @@ public interface BizCodeConst {
      * 检验记录号前缀（LR = Laboratory Record）
      */
     String LABORATORY_RECORD_NO_PREFIX = "LR";
+    /**
+     * 检验标本号前缀（S + 年月日 + 4 位序号，贴管码值）
+     */
+    String SPECIMEN_NO_PREFIX = "S";
     /**
      * 医技报告号前缀（RPT = Report）
      */

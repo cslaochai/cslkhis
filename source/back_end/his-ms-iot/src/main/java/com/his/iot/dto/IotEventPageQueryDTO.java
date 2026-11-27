@@ -19,7 +19,7 @@ import java.time.LocalDateTime;
 public class IotEventPageQueryDTO extends PageParam implements Serializable {
 
     @Schema(description = "设备类型，空=全部", example = "coldchain")
-    @AllowedValues(values = {"coldchain", "infusion", "asset", "env", "gas", "bed",
+    @AllowedValues(values = {"coldchain", "infusion", "asset", "env", "gas", "bed", "monitor",
             "dialysis", "cabinet", "uv", "robot"}, message = "设备类型取值不合法")
     private String deviceType;
 

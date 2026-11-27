@@ -102,7 +102,7 @@
         <p class="text-sm font-medium mb-3">近 30 日收入 TOP5 科室</p>
         <div class="space-y-2">
           <div v-for="d in deptBars" :key="d.name" class="flex items-center gap-2 cursor-pointer hover:bg-slate-50 rounded px-1 -mx-1"
-               @click="goReport('revenue')">
+               @click="goReport('revenue', d.deptId)">
             <span class="text-xs text-gray-600 w-24 truncate">{{ d.name }}</span>
             <div class="flex-1 h-5 bg-gray-50 rounded overflow-hidden">
               <div :style="{ width: d.w + 'px' }" class="h-5 rounded"
@@ -135,7 +135,7 @@
         <p class="text-sm font-medium mb-3">近 30 日出院人次 TOP5 科室</p>
         <div class="space-y-2">
           <div v-for="w in workloadBars" :key="w.name" class="flex items-center gap-2 cursor-pointer hover:bg-slate-50 rounded px-1 -mx-1"
-               @click="goReport('inpatient')">
+               @click="goReport('inpatient', w.deptId)">
             <span class="text-xs text-gray-600 w-24 truncate">{{ w.name }}</span>
             <div class="flex-1 h-5 bg-gray-50 rounded overflow-hidden">
               <div :style="{ width: w.w + 'px' }" class="h-5 rounded"
@@ -195,9 +195,12 @@ import {computed, onMounted, ref} from 'vue';
 import {useRouter} from 'vue-router';
 
 const router = useRouter();
-// 下钻：驾驶舱卡片/图表跳运营统计报表对应页签（首版仅回填页签，不带科室筛选）
-const goReport = (tab) => {
-  if (tab) router.push({path: '/reports', query: {tab, from: 'bi'}});
+// 下钻：驾驶舱卡片/图表跳运营统计报表对应页签；科室 TOP 条带 deptId 钻取该科室明细
+const goReport = (tab, deptId) => {
+  if (!tab) return;
+  const query = {tab, from: 'bi'};
+  if (deptId) query.deptId = deptId;
+  router.push({path: '/reports', query});
 };
 
 const data = ref(null);
@@ -347,7 +350,7 @@ const workloadBars = computed(() => {
   const rows = data.value?.deptWorkloadTop || [];
   const max = Math.max(1, ...rows.map(r => Number(r.count || 0)));
   return rows.map(r => ({
-    name: r.deptName, count: Number(r.count || 0),
+    deptId: r.deptId, name: r.deptName, count: Number(r.count || 0),
     w: Math.max(4, (Number(r.count || 0) / max) * 420),
   }));
 });
@@ -356,7 +359,7 @@ const deptBars = computed(() => {
   const rows = data.value?.deptTop || [];
   const max = Math.max(1, ...rows.map(r => Number(r.amount || 0)));
   return rows.map(r => ({
-    name: r.deptName, amount: Number(r.amount || 0),
+    deptId: r.deptId, name: r.deptName, amount: Number(r.amount || 0),
     w: Math.max(4, (Number(r.amount || 0) / max) * 420),
   }));
 });

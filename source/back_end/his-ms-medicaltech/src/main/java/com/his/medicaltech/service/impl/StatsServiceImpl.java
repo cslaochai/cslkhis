@@ -55,7 +55,7 @@ public class StatsServiceImpl implements StatsService {
     }
 
     @Override
-    public StatsOverviewVO overview(String startDate, String endDate) {
+    public StatsOverviewVO overview(String startDate, String endDate, Long deptId) {
         LocalDate end = parseDate(endDate);
         if (end == null) {
             end = LocalDate.now();
@@ -77,37 +77,37 @@ public class StatsServiceImpl implements StatsService {
         vo.setStartDate(s);
         vo.setEndDate(e);
 
-        fillOutpatient(vo, s, e);
-        fillInpatient(vo, s, e);
-        fillRevenue(vo, s, e);
-        fillPharmacy(vo, s, e);
+        fillOutpatient(vo, s, e, deptId);
+        fillInpatient(vo, s, e, deptId);
+        fillRevenue(vo, s, e, deptId);
+        fillPharmacy(vo, s, e, deptId);
         return vo;
     }
 
-    private void fillOutpatient(StatsOverviewVO vo, String s, String e) {
-        vo.setOpVisitTotal(z(statsMapper.countVisit(s, e)));
-        vo.setOpRegistTotal(z(statsMapper.countRegistTotal(s, e)));
-        vo.setOpRefundCount(z(statsMapper.countCancel(s, e)));
-        vo.setOpFirstVisitCount(z(statsMapper.countFirstVisit(s, e)));
-        vo.setOpRevisitCount(z(statsMapper.countRevisit(s, e)));
-        vo.setOpInsuranceCount(z(statsMapper.countInsurance(s, e)));
-        vo.setOpTrend(statsMapper.opTrend(s, e));
-        vo.setOpDeptTop(statsMapper.opDeptTop(s, e));
-        vo.setOpTypeDist(statsMapper.opTypeDist(s, e));
-        vo.setOpSourceDist(statsMapper.opSourceDist(s, e));
-        vo.setOpAgeDist(statsMapper.opAgeDist(s, e));
+    private void fillOutpatient(StatsOverviewVO vo, String s, String e, Long deptId) {
+        vo.setOpVisitTotal(z(statsMapper.countVisit(s, e, deptId)));
+        vo.setOpRegistTotal(z(statsMapper.countRegistTotal(s, e, deptId)));
+        vo.setOpRefundCount(z(statsMapper.countCancel(s, e, deptId)));
+        vo.setOpFirstVisitCount(z(statsMapper.countFirstVisit(s, e, deptId)));
+        vo.setOpRevisitCount(z(statsMapper.countRevisit(s, e, deptId)));
+        vo.setOpInsuranceCount(z(statsMapper.countInsurance(s, e, deptId)));
+        vo.setOpTrend(statsMapper.opTrend(s, e, deptId));
+        vo.setOpDeptTop(statsMapper.opDeptTop(s, e, deptId));
+        vo.setOpTypeDist(statsMapper.opTypeDist(s, e, deptId));
+        vo.setOpSourceDist(statsMapper.opSourceDist(s, e, deptId));
+        vo.setOpAgeDist(statsMapper.opAgeDist(s, e, deptId));
     }
 
-    private void fillInpatient(StatsOverviewVO vo, String s, String e) {
-        vo.setIpAdmitCount(z(statsMapper.countAdmit(s, e)));
-        long discharges = z(statsMapper.countDischarge(s, e));
+    private void fillInpatient(StatsOverviewVO vo, String s, String e, Long deptId) {
+        vo.setIpAdmitCount(z(statsMapper.countAdmit(s, e, deptId)));
+        long discharges = z(statsMapper.countDischarge(s, e, deptId));
         vo.setIpDischargeCount(discharges);
-        BigDecimal bedDays = NumUtil.orZero(statsMapper.sumBedDays(s, e));
+        BigDecimal bedDays = NumUtil.orZero(statsMapper.sumBedDays(s, e, deptId));
         vo.setIpBedDays(bedDays.setScale(0, RoundingMode.HALF_UP).longValue());
         vo.setIpAvgLosDays(discharges > 0
                 ? bedDays.divide(BigDecimal.valueOf(discharges), 1, RoundingMode.HALF_UP)
                 : BigDecimal.ZERO);
-        vo.setIpInCur(z(statsMapper.countInHospitalAt(s, e)));
+        vo.setIpInCur(z(statsMapper.countInHospitalAt(s, e, deptId)));
 
         StatsOverviewVO.BedStat bed = statsMapper.bedStat();
         if (bed != null) {
@@ -118,37 +118,39 @@ public class StatsServiceImpl implements StatsService {
             vo.setBedUseRate(rate(occupied, total));
         }
 
-        vo.setIpTrend(statsMapper.ipTrend(s, e));
-        vo.setIpDeptDist(statsMapper.ipDischargeDeptTop(s, e));
+        vo.setIpTrend(statsMapper.ipTrend(s, e, deptId));
+        vo.setIpDeptDist(statsMapper.ipDischargeDeptTop(s, e, deptId));
         vo.setIpSettle(statsMapper.ipSettle(s, e));
         vo.setIpInsuranceDist(statsMapper.ipInsuranceDist(s, e));
     }
 
-    private void fillRevenue(StatsOverviewVO vo, String s, String e) {
-        BigDecimal total = NumUtil.orZero(statsMapper.sumRevenue(s, e));
-        BigDecimal drug = NumUtil.orZero(statsMapper.sumDrugRevenue(s, e));
+    private void fillRevenue(StatsOverviewVO vo, String s, String e, Long deptId) {
+        BigDecimal total = NumUtil.orZero(statsMapper.sumRevenue(s, e, deptId));
+        BigDecimal drug = NumUtil.orZero(statsMapper.sumDrugRevenue(s, e, deptId));
         vo.setRevTotal(total);
         vo.setRevDrug(drug);
         vo.setDrugRatio(rate(drug, total));
-        vo.setRevMaterial(NumUtil.orZero(statsMapper.sumMaterialRevenue(s, e)));
-        vo.setRevOutpatient(NumUtil.orZero(statsMapper.sumOutpatientRevenue(s, e)));
-        vo.setRevInpatient(NumUtil.orZero(statsMapper.sumInpatientRevenue(s, e)));
-        vo.setRevTrend(statsMapper.revTrend(s, e));
-        vo.setRevTypeDist(statsMapper.revTypeDist(s, e));
-        vo.setRevDeptTop(statsMapper.revDeptTop(s, e));
+        vo.setRevMaterial(NumUtil.orZero(statsMapper.sumMaterialRevenue(s, e, deptId)));
+        vo.setRevOutpatient(NumUtil.orZero(statsMapper.sumOutpatientRevenue(s, e, deptId)));
+        vo.setRevInpatient(NumUtil.orZero(statsMapper.sumInpatientRevenue(s, e, deptId)));
+        vo.setRevTrend(statsMapper.revTrend(s, e, deptId));
+        vo.setRevTypeDist(statsMapper.revTypeDist(s, e, deptId));
+        vo.setRevDeptTop(statsMapper.revDeptTop(s, e, deptId));
+        // 支付流水不挂科室列，维持全院口径
         vo.setRevPayDist(statsMapper.revPayDist(s, e));
         vo.setRevRefundAmount(NumUtil.orZero(statsMapper.sumRefundAmount(s, e)));
         vo.setRevRefundCount(z(statsMapper.countRefundBill(s, e)));
     }
 
-    private void fillPharmacy(StatsOverviewVO vo, String s, String e) {
-        vo.setPhPrescCount(z(statsMapper.countPresc(s, e)));
-        vo.setPhPrescOutpatient(z(statsMapper.countPrescBySource(s, e, 1)));
-        vo.setPhPrescEmergency(z(statsMapper.countPrescBySource(s, e, 2)));
-        vo.setPhPrescInpatient(z(statsMapper.countPrescBySource(s, e, 3)));
-        vo.setPhPrescTypeDist(statsMapper.phPrescTypeDist(s, e));
-        vo.setPhAuditReturnCount(z(statsMapper.sumPrescReturnCount(s, e)));
-        vo.setPhDrugTop(statsMapper.phDrugTop(s, e));
+    private void fillPharmacy(StatsOverviewVO vo, String s, String e, Long deptId) {
+        vo.setPhPrescCount(z(statsMapper.countPresc(s, e, deptId)));
+        vo.setPhPrescOutpatient(z(statsMapper.countPrescBySource(s, e, 1, deptId)));
+        vo.setPhPrescEmergency(z(statsMapper.countPrescBySource(s, e, 2, deptId)));
+        vo.setPhPrescInpatient(z(statsMapper.countPrescBySource(s, e, 3, deptId)));
+        vo.setPhPrescTypeDist(statsMapper.phPrescTypeDist(s, e, deptId));
+        vo.setPhAuditReturnCount(z(statsMapper.sumPrescReturnCount(s, e, deptId)));
+        vo.setPhDrugTop(statsMapper.phDrugTop(s, e, deptId));
+        // 发药记录不挂科室列，维持全院口径
         vo.setPhDispTrend(statsMapper.phDispTrend(s, e));
         StatsOverviewVO.ReturnStat ret = statsMapper.phReturnStat(s, e);
         if (ret != null) {

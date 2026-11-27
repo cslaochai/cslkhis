@@ -109,6 +109,16 @@ export function rejectSpecimen(recordId, reason) {
   return request.post('/medicaltech/specimen/reject', { recordId, reason })
 }
 
+// 标本标签明细（打标签弹框回显，不写台账）
+export function getSpecimenLabel(id) {
+  return request.get('/medicaltech/specimen/label/getDetailById', { params: { id } })
+}
+
+// 打印标本标签（无码先发码，写一次打印台账）
+export function printSpecimenLabel(params) {
+  return request.post('/medicaltech/specimen/label/print', params)
+}
+
 // ========== 报告管理 ==========
 
 // 获取报告详情

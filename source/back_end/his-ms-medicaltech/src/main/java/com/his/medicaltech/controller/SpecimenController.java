@@ -3,11 +3,13 @@ package com.his.medicaltech.controller;
 import com.his.common.base.PageResult;
 import com.his.common.base.Result;
 import com.his.medicaltech.dto.SpecimenBarcodeDTO;
+import com.his.medicaltech.dto.SpecimenLabelPrintDTO;
 import com.his.medicaltech.dto.SpecimenQueryDTO;
 import com.his.medicaltech.dto.SpecimenRejectDTO;
 import com.his.medicaltech.dto.SpecimenSampleDTO;
 import com.his.medicaltech.service.MedicalTechService;
 import com.his.medicaltech.vo.BizLaboratoryRecordVO;
+import com.his.medicaltech.vo.SpecimenLabelVO;
 import com.his.medicaltech.vo.SpecimenStatsVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -84,5 +86,26 @@ public class SpecimenController {
     public Result<Void> rejectSpecimen(@Valid @RequestBody SpecimenRejectDTO rejectDTO) {
         boolean success = medicalTechService.rejectSpecimen(rejectDTO.getRecordId(), rejectDTO.getReason());
         return success ? Result.success("退回成功", null) : Result.error("操作失败");
+    }
+
+    /**
+     * 取标本标签渲染字段与已打印次数。
+     * 「打标签」弹框打开时调用，此时不写台账。
+     */
+    @Operation(summary = "标本标签明细")
+    @GetMapping("/label/getDetailById")
+    public Result<SpecimenLabelVO> labelDetail(@RequestParam Long id) {
+        return Result.success(medicalTechService.getSpecimenLabel(id));
+    }
+
+    /**
+     * 打印标本标签：无码先发码，写一次打印台账并返回本次序号。
+     * 第 2 次及以后必须带补打原因（服务端校验，缺原因报业务码）。
+     */
+    @PreAuthorize("hasAuthority('medtech:specimen:edit')")
+    @Operation(summary = "打印标本标签")
+    @PostMapping("/label/print")
+    public Result<SpecimenLabelVO> printLabel(@Valid @RequestBody SpecimenLabelPrintDTO printDTO) {
+        return Result.success("已记录打印", medicalTechService.printSpecimenLabel(printDTO));
     }
 }

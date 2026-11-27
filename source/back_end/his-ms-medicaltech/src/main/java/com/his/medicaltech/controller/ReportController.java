@@ -37,7 +37,7 @@ public class ReportController {
     @PostMapping("/statsOverview")
     @PreAuthorize("hasAuthority('report:stats:list')")
     public Result<StatsOverviewVO> statsOverview(@RequestBody @Valid StatsQueryDTO queryDTO) {
-        return Result.success(statsService.overview(queryDTO.getStartDate(), queryDTO.getEndDate()));
+        return Result.success(statsService.overview(queryDTO.getStartDate(), queryDTO.getEndDate(), queryDTO.getDeptId()));
     }
 
     /**

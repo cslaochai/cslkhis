@@ -3,6 +3,15 @@
     <div class="flex flex-wrap items-end justify-between gap-3">
       <div class="flex items-center gap-2">
         <el-button v-if="isFromBi" :icon="ArrowLeft" @click="backToBi">返回驾驶舱</el-button>
+        <el-select
+            v-model="deptId"
+            clearable
+            placeholder="全院科室"
+            style="width: 200px"
+            @change="loadData"
+        >
+          <el-option v-for="d in deptOptions" :key="d.id" :label="d.deptName" :value="String(d.id)"/>
+        </el-select>
         <el-date-picker
             v-model="range"
             :clearable="false"
@@ -417,6 +426,7 @@ import {computed, onMounted, ref, watch} from 'vue';
 import {useRoute, useRouter} from 'vue-router';
 import {ArrowLeft, DataLine, FirstAidKit, Money, Suitcase, Tickets, Timer, TrendCharts, User} from '@element-plus/icons-vue';
 import {getStatsOverview} from '@/api/report';
+import {flattenDeptTree, loadDeptTreeOptions} from '@/lib/deptOptions';
 
 const route = useRoute();
 const router = useRouter();
@@ -430,6 +440,12 @@ const activeTab = ref(tabFromQuery(route.query.tab));
 // 驾驶舱下钻跳转：页签已打开时随 query 切换
 watch(() => route.query.tab, (t) => {
   if (t) activeTab.value = tabFromQuery(t);
+});
+// 科室下钻：query.deptId 回填科室筛选；空串 = 全院口径
+const deptOptions = ref([]);
+const deptId = ref(route.query.deptId ? String(route.query.deptId) : '');
+watch(() => route.query.deptId, (id) => {
+  deptId.value = id ? String(id) : '';
 });
 const data = ref(null);
 const fmtDay = (d) => {
@@ -478,12 +494,22 @@ const opTrendSliced = computed(() => (d.value.opTrend || []).slice(-60));
 const revTrendSliced = computed(() => (d.value.revTrend || []).slice(-60));
 const dispTrendSliced = computed(() => (d.value.phDispTrend || []).slice(-60));
 const trendSlicedNote = (rows) => ((d.value.opTrend || []).length > 60 && rows.length <= 60 ? `（仅显示最近 ${rows.length} 天）` : '');
+const loadDeptOptions = async () => {
+  try {
+    const tree = await loadDeptTreeOptions({scope: 'CURRENT'});
+    deptOptions.value = flattenDeptTree(tree);
+  } catch (e) {
+    console.error('加载科室下拉失败', e);
+  }
+};
 const loadData = async () => {
   if (!range.value)
     return;
   loading.value = true;
   try {
-    const res = await getStatsOverview({startDate: range.value[0], endDate: range.value[1]});
+    const params = {startDate: range.value[0], endDate: range.value[1]};
+    if (deptId.value) params.deptId = deptId.value;
+    const res = await getStatsOverview(params);
     data.value = res.data || {};
   } catch (e) {
     /* 错误已由全局拦截器统一提示，无需在此弹窗；本地异常仍留日志便于排障 */
@@ -492,5 +518,8 @@ const loadData = async () => {
     loading.value = false;
   }
 };
-onMounted(loadData);
+onMounted(() => {
+  loadDeptOptions();
+  loadData();
+});
 </script>

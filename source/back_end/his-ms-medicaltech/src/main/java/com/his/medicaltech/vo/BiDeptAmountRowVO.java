@@ -1,5 +1,7 @@
 package com.his.medicaltech.vo;
 
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import lombok.Data;
 
 import java.io.Serializable;
@@ -10,6 +12,12 @@ import java.math.BigDecimal;
  */
 @Data
 public class BiDeptAmountRowVO implements Serializable {
+
+    /**
+     * 科室 ID（未分配科室为 null），供驾驶舱下钻到科室明细报表
+     */
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long deptId;
 
     /**
      * 科室名称（未分配时为「未分配科室」）

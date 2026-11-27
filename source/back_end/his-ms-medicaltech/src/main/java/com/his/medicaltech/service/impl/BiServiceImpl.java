@@ -70,6 +70,7 @@ public class BiServiceImpl implements BiService {
         List<BiOverviewVO.DeptRevenue> top = new ArrayList<>();
         for (BiDeptAmountRowVO m : biMapper.deptTop()) {
             BiOverviewVO.DeptRevenue d = new BiOverviewVO.DeptRevenue();
+            d.setDeptId(m.getDeptId());
             d.setDeptName(m.getDeptName());
             d.setAmount(NumUtil.orZero(m.getAmount()));
             top.add(d);
@@ -78,6 +79,7 @@ public class BiServiceImpl implements BiService {
         List<BiOverviewVO.DeptWorkload> workload = new ArrayList<>();
         for (BiDeptWorkloadRowVO m : biMapper.deptWorkloadTop()) {
             BiOverviewVO.DeptWorkload w = new BiOverviewVO.DeptWorkload();
+            w.setDeptId(m.getDeptId());
             w.setDeptName(m.getDeptName());
             w.setCount(NumUtil.orZero(m.getCount()));
             workload.add(w);

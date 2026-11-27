@@ -371,6 +371,11 @@ public class RedisSequenceServiceImpl implements RedisSequenceService {
     }
 
     @Override
+    public String generateSpecimenNo() {
+        return no(BizCodeConst.SPECIMEN_NO_PREFIX, BizCodeConst.SPECIMEN_NO_KEY_PREFIX, 4);
+    }
+
+    @Override
     public String generateReportNo() {
         return no(BizCodeConst.REPORT_NO_PREFIX, BizCodeConst.REPORT_NO_KEY_PREFIX, 5);
     }

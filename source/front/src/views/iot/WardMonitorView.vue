@@ -796,8 +796,8 @@ const loadBeds = async ({silent = false} = {}) => {
         bedLatest.value = bedLatestRes.data || [];
         monitorDevices.value = monDevRes.data || [];
         monitorLatest.value = monLatestRes.data || [];
-        // 波形窗按本科室在榜监护仪编号批量取；内存缓冲没有的设备自然不返回
-        const monNos = monitorLatest.value.map(d => d.deviceNo).filter(Boolean);
+        // 波形窗按台账编号批量取（波形在内存缓冲，独立于遥测是否已落库）；缓冲没有的设备自然不返回
+        const monNos = monitorDevices.value.map(d => d.deviceNo).filter(Boolean);
         const waveRes = monNos.length ? await iotWaveformList({deviceNos: monNos}).catch(() => null) : null;
         monitorWave.value = waveRes?.data || [];
         if (!beds.value.length) loadError.value = '该科室暂无床位';

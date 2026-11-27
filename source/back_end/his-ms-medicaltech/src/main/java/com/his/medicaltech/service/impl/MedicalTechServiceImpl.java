@@ -42,7 +42,14 @@ import com.his.common.entity.CurrentUser;
 import com.his.common.enums.BizTypeEnum;
 import com.his.spi.service.DeptScopeService;
 import com.his.spi.service.EmrSignatureFacadeService;
+import com.his.spi.service.PrintRecordFacadeService;
 import com.his.spi.service.RedisSequenceService;
+import com.his.spi.dto.PrintRecordSaveDTO;
+import com.his.medicaltech.dto.SpecimenLabelPrintDTO;
+import com.his.common.enums.PrintBizTypeEnum;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.commons.lang3.StringUtils;
 import com.his.spi.service.SysMessageService;
 import com.his.spi.service.SystemFacadeService;
 import com.his.common.utils.UserUtils;
@@ -55,7 +62,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -65,6 +74,13 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class MedicalTechServiceImpl extends ServiceImpl<BizInspectionRecordMapper, BizInspectionRecord> implements MedicalTechService {
+
+    /** 标签快照序列化：字段全是字符串/数字，单例复用即可 */
+    private static final ObjectMapper LABEL_SNAPSHOT_MAPPER = new ObjectMapper();
+    /** 标本管标签版式标识（版式写死在渲染端，台账只记标识便于对版） */
+    private static final String SPECIMEN_LABEL_RENDER_CODE = "specimen_v1";
+    /** 标本管标签纸张规格（50×25mm） */
+    private static final String SPECIMEN_LABEL_PAPER_SPEC = "50x25";
 
     private final BizInspectionRecordMapper bizInspectionRecordMapper;
     private final BizLaboratoryRecordMapper bizLaboratoryRecordMapper;
@@ -76,6 +92,7 @@ public class MedicalTechServiceImpl extends ServiceImpl<BizInspectionRecordMappe
     private final CriticalValueService criticalValueService;
     private final EmrSignatureFacadeService emrSignatureFacadeService;
     private final RedisSequenceService redisSequenceService;
+    private final PrintRecordFacadeService printRecordFacadeService;
     private final DeptScopeService deptScopeService;
     /**
      * 员工主数据只读取数端口（签名笔迹引用：审核医师档案预维护的笔迹）
@@ -929,6 +946,84 @@ public class MedicalTechServiceImpl extends ServiceImpl<BizInspectionRecordMappe
         record.setSuggestions(reason);
         bizLaboratoryRecordMapper.updateById(record);
         return true;
+    }
+
+    @Override
+    public SpecimenLabelVO getSpecimenLabel(Long recordId) {
+        BizLaboratoryRecord record = requireLaboratoryRecord(recordId);
+        SpecimenLabelVO labelVO = toSpecimenLabelVO(record);
+        // 没码就没打过标签，不必再查台账
+        labelVO.setPrintCount(StringUtils.isBlank(record.getSpecimenNo()) ? 0
+                : printRecordFacadeService.countByBiz(PrintBizTypeEnum.SPECIMEN_TUBE.getCode(), record.getId()));
+        return labelVO;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public SpecimenLabelVO printSpecimenLabel(SpecimenLabelPrintDTO printDTO) {
+        BizLaboratoryRecord record = requireLaboratoryRecord(printDTO.getRecordId());
+        // 无码先发码：码是标签的全部信息，没码打出来就是一张废纸
+        if (StringUtils.isBlank(record.getSpecimenNo())) {
+            record.setSpecimenNo(redisSequenceService.generateSpecimenNo());
+            record.setSpecimenStatus(1); // 已分配条码
+            bizLaboratoryRecordMapper.updateById(record);
+        }
+        PrintRecordSaveDTO saveDTO = new PrintRecordSaveDTO();
+        saveDTO.setBizType(PrintBizTypeEnum.SPECIMEN_TUBE.getCode());
+        saveDTO.setBizId(record.getId());
+        saveDTO.setCodeValue(record.getSpecimenNo());
+        saveDTO.setPatientId(record.getPatientId());
+        // 原因/打印机名按列宽截断，不靠 DTO 校验拦人（§3）
+        saveDTO.setPrintReason(StringUtils.left(StringUtils.defaultString(printDTO.getPrintReason()), 200));
+        saveDTO.setRenderCode(SPECIMEN_LABEL_RENDER_CODE);
+        saveDTO.setPaperSpec(SPECIMEN_LABEL_PAPER_SPEC);
+        saveDTO.setPrinterName(StringUtils.left(StringUtils.defaultString(printDTO.getPrinterName()), 64));
+        saveDTO.setSnapshotJson(specimenLabelSnapshot(record));
+        int printNo = printRecordFacadeService.record(saveDTO);
+
+        SpecimenLabelVO labelVO = toSpecimenLabelVO(record);
+        labelVO.setPrintNo(printNo);
+        labelVO.setPrintCount(printNo);
+        return labelVO;
+    }
+
+    private BizLaboratoryRecord requireLaboratoryRecord(Long recordId) {
+        if (recordId == null) {
+            throw new BusinessException("检验记录ID不能为空");
+        }
+        BizLaboratoryRecord record = bizLaboratoryRecordMapper.selectById(recordId);
+        if (record == null) {
+            throw new BusinessException("检验记录不存在");
+        }
+        return record;
+    }
+
+    private SpecimenLabelVO toSpecimenLabelVO(BizLaboratoryRecord record) {
+        SpecimenLabelVO labelVO = new SpecimenLabelVO();
+        BeanUtils.copyProperties(record, labelVO);
+        labelVO.setPaperSpec(SPECIMEN_LABEL_PAPER_SPEC);
+        labelVO.setRenderCode(SPECIMEN_LABEL_RENDER_CODE);
+        return labelVO;
+    }
+
+    private String specimenLabelSnapshot(BizLaboratoryRecord record) {
+        Map<String, Object> snapshot = new LinkedHashMap<>();
+        snapshot.put("specimenNo", record.getSpecimenNo());
+        snapshot.put("patientName", record.getPatientName());
+        snapshot.put("gender", record.getGender());
+        snapshot.put("age", record.getAge());
+        snapshot.put("patientNo", record.getPatientNo());
+        snapshot.put("applyDeptName", record.getApplyDeptName());
+        snapshot.put("laboratoryItemName", record.getLaboratoryItemName());
+        snapshot.put("specimenType", record.getSpecimenType());
+        snapshot.put("printedAt", LocalDateTime.now().toString());
+        try {
+            return LABEL_SNAPSHOT_MAPPER.writeValueAsString(snapshot);
+        } catch (JsonProcessingException e) {
+            // 快照是留痕的增强项，序列化失败不能挡住打印主线；字段全是字符串/数字，实际不会走到
+            log.warn("标本标签快照序列化失败 recordId={}", record.getId(), e);
+            return null;
+        }
     }
 
     @Override

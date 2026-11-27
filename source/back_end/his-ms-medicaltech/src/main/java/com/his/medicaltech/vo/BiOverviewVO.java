@@ -1,5 +1,7 @@
 package com.his.medicaltech.vo;
 
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import lombok.Data;
 
 import java.math.BigDecimal;
@@ -95,6 +97,9 @@ public class BiOverviewVO {
 
     @Data
     public static class DeptRevenue {
+        /** 科室 ID（未分配科室为 null），供下钻科室明细报表 */
+        @JsonSerialize(using = ToStringSerializer.class)
+        private Long deptId;
         /** 科室名称 */
         private String deptName;
         private BigDecimal amount;
@@ -102,6 +107,9 @@ public class BiOverviewVO {
 
     @Data
     public static class DeptWorkload {
+        /** 科室 ID（未分配科室为 null），供下钻科室明细报表 */
+        @JsonSerialize(using = ToStringSerializer.class)
+        private Long deptId;
         /** 科室名称 */
         private String deptName;
         /** 出院人数 */
