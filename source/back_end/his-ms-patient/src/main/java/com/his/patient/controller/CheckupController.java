@@ -61,6 +61,19 @@ public class CheckupController {
     }
 
     /**
+     * 体检套餐明细可选的项目目录：检验（sys_laboratory_item）/ 检查（sys_inspection_item）/
+     * 一般检查（sys_treatment_item）三段，可按编码或名称过滤。
+     * 套餐明细只能从这份目录里选，名称与价格以目录为准。
+     * 用于体检套餐编辑弹框的项目下拉。
+     */
+    @Operation(summary = "套餐项目目录下拉")
+    @GetMapping("/package/selectItemList")
+    public Result<List<ItemCatalogVO>> selectItemList(@RequestParam(required = false) Integer itemSource,
+                                                      @RequestParam(required = false) String keyword) {
+        return Result.success(checkupService.selectItemList(itemSource, keyword));
+    }
+
+    /**
      * 停用一份体检套餐，停用后不再出现在登记可选清单。
      * 用于体检套餐页操作列的停用动作。
      */
