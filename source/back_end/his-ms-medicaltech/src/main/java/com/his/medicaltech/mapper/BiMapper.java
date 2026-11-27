@@ -5,9 +5,13 @@ import com.his.medicaltech.vo.BiCodedSummaryRowVO;
 import com.his.medicaltech.vo.BiDayAmountRowVO;
 import com.his.medicaltech.vo.BiDayCountRowVO;
 import com.his.medicaltech.vo.BiDeptAmountRowVO;
+import com.his.medicaltech.vo.BiDeptWorkloadRowVO;
 import com.his.medicaltech.vo.BiDischargeWindowRowVO;
 import com.his.medicaltech.vo.BiDrgWeightRowVO;
+import com.his.medicaltech.vo.BiInsuranceRowVO;
+import com.his.medicaltech.vo.BiOpLevelRowVO;
 import com.his.medicaltech.vo.BiOverviewVO;
+import com.his.medicaltech.vo.BiSurveyRowVO;
 import com.his.medicaltech.vo.BiWindowRevenueRowVO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Select;
@@ -90,8 +94,11 @@ public interface BiMapper {
             + "GROUP BY statDate ORDER BY statDate")
     List<BiDayCountRowVO> appointmentTrend();
 
-    @Select("SELECT DATE_FORMAT(f.book_time, '%m-%d') statDate, ROUND(" + REVENUE_EXPR + ",2) amount FROM biz_fee_record f "
-            + "WHERE f.del_flag = 0 AND f.book_time >= DATE_SUB(CURDATE(), INTERVAL 6 DAY) "
+    @Select("SELECT DATE_FORMAT(f.book_time, '%m-%d') statDate, ROUND(" + REVENUE_EXPR + ",2) amount, "
+            + "ROUND(SUM(CASE WHEN f.encounter_type = 1 THEN f.amount ELSE 0 END),2) outpatientAmount, "
+            + "ROUND(SUM(CASE WHEN f.encounter_type = 2 THEN f.amount ELSE 0 END),2) inpatientAmount "
+            + "FROM biz_fee_record f WHERE f.del_flag = 0 "
+            + "AND f.book_time >= DATE_SUB(CURDATE(), INTERVAL 6 DAY) "
             + "GROUP BY statDate ORDER BY statDate")
     List<BiDayAmountRowVO> revenueTrend();
 
@@ -118,6 +125,14 @@ public interface BiMapper {
             + "GROUP BY f.item_type"
             + ") t GROUP BY code ORDER BY amount DESC")
     List<BiOverviewVO.RevenueStructure> revenueStructure30d();
+
+    /** 近 30 日出院人次 TOP5 科室（按当前科室 dept_id 归集，与住院列表口径一致）。 */
+    @Select("SELECT IFNULL(d.dept_name, '未分配科室') deptName, COUNT(*) count "
+            + "FROM biz_admission a LEFT JOIN sys_department d ON d.id = a.dept_id AND d.del_flag = 0 "
+            + "WHERE a.del_flag = 0 AND a.discharge_time IS NOT NULL "
+            + "AND a.discharge_time >= DATE_SUB(CURDATE(), INTERVAL 30 DAY) "
+            + "GROUP BY deptName ORDER BY count DESC LIMIT 5")
+    List<BiDeptWorkloadRowVO> deptWorkloadTop();
 
     // 国考四指标（M5，统一「近 30 日」窗口）
 
@@ -184,4 +199,39 @@ public interface BiMapper {
      */
     @Select("SELECT drg_code AS drgCode, weight FROM biz_drg_group WHERE del_flag = 0")
     List<BiDrgWeightRowVO> drgWeights();
+
+    /** 近 30 日主手术级别分布（is_main=1；operation_level 3-三级 4-四级）。 */
+    @Select("SELECT COUNT(*) total, "
+            + "IFNULL(SUM(CASE WHEN operation_level IN (3,4) THEN 1 ELSE 0 END),0) level34 "
+            + "FROM biz_inpatient_operation WHERE del_flag = 0 AND is_main = 1 "
+            + "AND operation_date >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)")
+    BiOpLevelRowVO operationLevel30d();
+
+    /**
+     * 近 30 日医保结算汇总：排除作废（bill_status=4）与住院中途结算（bill_type=3，避免与出院结算重复累计），
+     * 只取门诊诊间结算(2)与出院结算(4)；医保支付 = 统筹 pool_amount + 个账 account_amount；分母=费用总额 total_amount。
+     */
+    @Select("SELECT IFNULL(ROUND(SUM(IFNULL(pool_amount,0) + IFNULL(account_amount,0)),2),0) insurance, "
+            + "IFNULL(ROUND(SUM(total_amount),2),0) total "
+            + "FROM biz_settlement_bill WHERE del_flag = 0 AND bill_status <> 4 AND bill_type IN (2,4) "
+            + "AND bill_time >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)")
+    BiInsuranceRowVO insuranceSettle30d();
+
+    /** 近 30 日不良事件上报起数（按 report_time 窗口，不按结案状态收口）。 */
+    @Select("SELECT COUNT(*) FROM biz_adverse_event WHERE del_flag = 0 "
+            + "AND report_time >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)")
+    Long countAdverseEvent30d();
+
+    /** 近 30 日院内感染已确认病例（case_source=2 院内获得，case_status=2 已确认）。 */
+    @Select("SELECT COUNT(*) FROM biz_infection_case WHERE del_flag = 0 "
+            + "AND case_source = 2 AND case_status = 2 "
+            + "AND infect_date >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)")
+    Long countInfection30d();
+
+    /** 近 30 日有效满意度答卷（answer_status=1 有效）：份数、李克特均分、满意份数（avg_score >= 4）。 */
+    @Select("SELECT COUNT(*) count, IFNULL(ROUND(AVG(avg_score),2),0) avgScore, "
+            + "IFNULL(SUM(CASE WHEN avg_score >= 4 THEN 1 ELSE 0 END),0) satisfied "
+            + "FROM biz_survey_answer WHERE del_flag = 0 AND answer_status = 1 "
+            + "AND fill_time >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)")
+    BiSurveyRowVO survey30d();
 }

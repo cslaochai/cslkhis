@@ -7,15 +7,9 @@
   >
     <!-- 工具条 -->
     <div class="flex flex-wrap items-center gap-3 shrink-0">
-      <!-- 不受限账号的下拉是「所有有床位的科室」，几十条起步，不能靠翻页找 -->
-      <el-select v-model="deptId" class="!w-52" data-testid="bed-map-dept" filterable placeholder="科室">
-        <el-option
-            v-for="d in deptOptions"
-            :key="d.deptId"
-            :label="`${d.deptName}（${d.occupied}/${d.total}）`"
-            :value="String(d.deptId)"
-        />
-      </el-select>
+      <!-- 科室树形下拉：父节点按子树聚合，节点尾部带「占用/总数」统计 -->
+      <DeptTreeSelect v-model="deptId" mode="TREE" :stats="deptStats" width="208px"
+                       data-testid="bed-map-dept" placeholder="科室"/>
       <el-select v-model="wardId" class="!w-52" data-testid="bed-map-ward" placeholder="病区">
         <el-option label="全部病区" value=""/>
         <el-option
@@ -234,6 +228,7 @@ import {getBedMap} from '@/api/inpatient';
 import {explainDeterioration, scanWardDeterioration} from '@/api/ai';
 import {patientAgeText, patientGenderText} from '@/lib/patientGender';
 import PatientDetailDialog from '@/components/his/PatientDetailDialog.vue';
+import DeptTreeSelect from '@/components/his/DeptTreeSelect.vue';
 
 const loading = ref(false);
 const rootRef = ref(null);
@@ -297,6 +292,13 @@ const beds = computed(() => data.value?.beds || []);
 const summary = computed(() => data.value?.summary || {});
 const deptOptions = computed(() => data.value?.deptOptions || []);
 const wardOptions = computed(() => data.value?.wardOptions || []);
+/** 有床科室统计映射，供树形下拉节点尾部展示「占用/总数」，父节点由组件按子树汇总 */
+const deptStats = computed(() => {
+  const stats = {};
+  for (const d of deptOptions.value)
+    stats[String(d.deptId)] = { occupied: d.occupied, total: d.total, reserved: d.reserved };
+  return stats;
+});
 /** 按病区分组：同科多病区时混排看不出「哪张床在哪个病区」 */
 const groups = computed(() => {
   const map = new Map();

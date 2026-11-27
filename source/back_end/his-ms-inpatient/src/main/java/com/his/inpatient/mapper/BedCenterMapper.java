@@ -10,6 +10,7 @@ import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 
+import java.util.Collection;
 import java.util.List;
 
 /**
@@ -25,6 +26,7 @@ public interface BedCenterMapper extends BaseMapper<BizBedAllocate> {
      * 因为 dev 库存在一张床挂着多条 admit_status=1 的历史夹具，直接 JOIN 会让池里同一张床出多行。
      */
     @Select("""
+            <script>
             SELECT b.bed_id     AS bedId,
                    b.bed_no     AS bedNo,
                    b.bed_type   AS bedType,
@@ -57,16 +59,20 @@ public interface BedCenterMapper extends BaseMapper<BizBedAllocate> {
                            WHERE al2.bed_id = b.bed_id AND al2.del_flag = 0 AND al2.alloc_status = 1
                            ORDER BY al2.operate_time DESC LIMIT 1)
             WHERE b.del_flag = 0
-              AND (#{deptId} IS NULL OR b.dept_id = #{deptId})
+              <if test="deptIds != null and deptIds.size() > 0">
+                AND b.dept_id IN
+                <foreach collection="deptIds" item="did" open="(" separator="," close=")">#{did}</foreach>
+              </if>
               AND (#{wardId} IS NULL OR b.ward_id = #{wardId})
               AND (#{bedStatus} IS NULL OR b.bed_status = #{bedStatus})
               AND (#{bedType} IS NULL OR b.bed_type = #{bedType})
               AND (#{keyword} IS NULL OR b.bed_no LIKE CONCAT('%', #{keyword}, '%')
                    OR p.patient_name LIKE CONCAT('%', #{keyword}, '%'))
             ORDER BY b.dept_id, b.ward_id, LENGTH(b.bed_no), b.bed_no
+            </script>
             """)
     IPage<BedPoolVO.BedRow> selectBedPool(IPage<BedPoolVO.BedRow> page,
-                                          @Param("deptId") Long deptId,
+                                          @Param("deptIds") Collection<Long> deptIds,
                                           @Param("wardId") Long wardId,
                                           @Param("bedStatus") Integer bedStatus,
                                           @Param("bedType") String bedType,

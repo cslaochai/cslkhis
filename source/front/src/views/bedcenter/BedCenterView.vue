@@ -72,7 +72,7 @@
                 <el-option :value="2" label="已收治入院"/>
                 <el-option :value="3" label="已取消"/>
               </el-select>
-              <DeptTreeSelect v-model="query.applyDeptId" mode="LEAF" data-testid="bc-q-dept"
+              <DeptTreeSelect v-model="query.applyDeptId" mode="TREE" data-testid="bc-q-dept"
                               width="176px" placeholder="拟收治科室"/>
               <el-select v-model="query.priority" class="!w-28" clearable data-testid="bc-q-priority"
                          placeholder="优先级">
@@ -214,7 +214,7 @@
             </div>
 
             <div class="mb-2 flex flex-wrap items-center gap-2">
-              <DeptTreeSelect v-model="poolQuery.deptId" mode="LEAF" data-testid="bc-pool-dept"
+              <DeptTreeSelect v-model="poolQuery.deptId" mode="TREE" data-testid="bc-pool-dept"
                               width="176px" placeholder="科室"/>
               <el-select v-model="poolQuery.wardId" :fit-input-width="false" class="!w-44" clearable
                          data-testid="bc-pool-ward"
@@ -306,11 +306,9 @@
             </div>
 
             <div class="mb-2 flex flex-wrap items-center gap-2">
-              <el-select v-model="mapQuery.deptId" :fit-input-width="false" class="!w-56" data-testid="bc-map-dept"
-                         filterable placeholder="科室" @change="onMapDeptChange">
-                <el-option v-for="d in mapDeptOptions" :key="d.deptId" :label="`${d.deptName}（${d.occupied}/${d.total}）`"
-                           :value="d.deptId"/>
-              </el-select>
+              <DeptTreeSelect v-model="mapQuery.deptId" mode="TREE" scope="ALL" :stats="mapDeptStats"
+                              width="224px" data-testid="bc-map-dept" placeholder="科室"
+                              @change="onMapDeptChange"/>
               <el-select v-model="mapQuery.wardId" :fit-input-width="false" class="!w-48" clearable
                          data-testid="bc-map-ward" placeholder="全部病区" @change="loadMap">
                 <el-option v-for="w in mapWardOptions" :key="w.wardId" :label="`${w.wardName}（${w.occupied}/${w.total}）`"
@@ -705,6 +703,13 @@ const waitingRows = ref([]);
 const mapBeds = computed(() => mapData.value.beds || []);
 const mapDeptOptions = computed(() => mapData.value.deptOptions || []);
 const mapWardOptions = computed(() => mapData.value.wardOptions || []);
+/** 有床科室统计映射，供树形下拉节点尾部展示「占用/总数」，父节点由组件按子树汇总 */
+const mapDeptStats = computed(() => {
+  const stats = {};
+  for (const d of mapDeptOptions.value)
+    stats[String(d.deptId)] = { occupied: d.occupied, total: d.total, reserved: d.reserved };
+  return stats;
+});
 /** 按病区分组：不分组的话几十张床平铺一屏，看不出哪一片还空着 */
 const groupedBeds = computed(() => {
   const m = new Map();

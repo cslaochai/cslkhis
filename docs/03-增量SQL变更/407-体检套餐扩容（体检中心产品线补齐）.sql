@@ -10,6 +10,8 @@
 --   2) gender_limit 0-不限 1-男 2-女；item_type 1-检验 2-检查 3-一般。
 --   3) 幂等：按主键 INSERT ... ON DUPLICATE KEY UPDATE id = id，重复执行不产生重复套餐。
 -- 回滚：见 407-回滚.sql
+-- 后续：408 已把套餐明细由自由文本改为引用项目目录（item_source/item_id/item_code），
+--       本文件写入的 113 条文本明细已被 408 按目录重排，铺底基线以 408 后的导出为准。
 -- ============================================================
 SET NAMES utf8mb4;
 START TRANSACTION;

@@ -179,6 +179,9 @@ CREATE TABLE `biz_checkup_record` (
 CREATE TABLE `biz_checkup_result` (
   `id` bigint NOT NULL COMMENT '主键ID',
   `record_id` bigint NOT NULL DEFAULT '0' COMMENT '体检登记ID',
+  `item_source` tinyint COMMENT '项目来源（1-检验项目 2-检查项目 3-一般检查）',
+  `item_id` bigint COMMENT '来源目录项目ID',
+  `item_code` varchar(32) COMMENT '来源目录项目编码',
   `item_name` varchar(100) NOT NULL COMMENT '项目名称',
   `item_type` tinyint NOT NULL DEFAULT '1' COMMENT '项目类别（1-检验 2-检查 3-一般）',
   `ref_standard` varchar(200) COMMENT '参考范围',

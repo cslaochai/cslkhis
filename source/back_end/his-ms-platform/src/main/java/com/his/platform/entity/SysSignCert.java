@@ -107,6 +107,10 @@ public class SysSignCert extends BaseEntity {
      * 吊销操作人姓名
      */
     private String revokeByName;
+    /**
+     * 吊销类型（1-业务吊销 2-应急吊销）；历史行未回填时为 null
+     */
+    private Integer revokeType;
 
     /**
      * 最近一次使用时间

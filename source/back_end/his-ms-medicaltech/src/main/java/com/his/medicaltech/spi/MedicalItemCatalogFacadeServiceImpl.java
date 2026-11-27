@@ -58,7 +58,7 @@ public class MedicalItemCatalogFacadeServiceImpl implements MedicalItemCatalogFa
             vo.setItemType(r.getItemType());
             vo.setPrice(r.getPrice());
             vo.setUnit(r.getUnit());
-            vo.setRefStandard(buildRefStandard(r.getReferenceValue(), r.getUnit()));
+            vo.setRefStandard(buildRefStandard(r.getReferenceValue()));
             out.add(vo);
         }
         return out;
@@ -86,13 +86,13 @@ public class MedicalItemCatalogFacadeServiceImpl implements MedicalItemCatalogFa
     }
 
     /**
-     * 检验项目的参考范围由「参考值 + 单位」拼出：只有参考值就只出参考值，两者都有才带单位。
+     * 检验项目的参考范围直接取字典 reference_value（单位单列返回，不拼进范围文本：
+     * 字典 unit 常是「10^9/L, 10^12/L, g/L」这类多单位串，拼进范围反而读不通）。
      */
-    private String buildRefStandard(String referenceValue, String unit) {
+    private String buildRefStandard(String referenceValue) {
         if (StringUtils.isBlank(referenceValue)) {
             return null;
         }
-        String text = StringUtils.isBlank(unit) ? referenceValue : referenceValue + " " + unit;
-        return StringUtils.left(text, REF_STANDARD_MAX_LENGTH);
+        return StringUtils.left(referenceValue, REF_STANDARD_MAX_LENGTH);
     }
 }

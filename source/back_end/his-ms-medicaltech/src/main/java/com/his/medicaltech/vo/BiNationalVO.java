@@ -68,4 +68,43 @@ public class BiNationalVO {
 
     /** 住院次均费用（元/出院人次，2 位小数；出院人数为 0 时置 0） */
     private BigDecimal inpatientAvgCost;
+
+    // 手术结构（近 30 日主手术）
+
+    /** 主手术总台次 */
+    private Long operationTotal;
+
+    /** 三、四级手术台次 */
+    private Long operationLevel34;
+
+    /** 三四级手术占比（0~1，4 位小数；无主手术时置 0） */
+    private BigDecimal level34Ratio;
+
+    // 医保（近 30 日已结算非作废账单）
+
+    /** 医保支付金额（统筹 + 个账，元） */
+    private BigDecimal insuranceRevenue;
+
+    /** 结算费用总额（元） */
+    private BigDecimal settleRevenue;
+
+    /** 医保收入占比（0~1，4 位小数；总额为 0 时置 0） */
+    private BigDecimal insuranceRatio;
+
+    // 质量安全（近 30 日）
+
+    /** 不良事件上报起数 */
+    private Long adverseEventCount;
+
+    /** 院内感染已确认病例数 */
+    private Long infectionCount;
+
+    /** 满意度回收份数 */
+    private Long surveyCount;
+
+    /** 满意度李克特均分（1.00~5.00；无答卷时置 null） */
+    private BigDecimal avgScore;
+
+    /** 满意率（均分 >= 4 占比，0~1；无答卷时置 null） */
+    private BigDecimal satisfiedRatio;
 }

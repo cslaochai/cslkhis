@@ -36,6 +36,21 @@ public class SysCheckupPackage extends BaseEntity {
     private BigDecimal price;
 
     /**
+     * 原价（元）：保存时明细项目价格合计的快照。目录调价后仍保留当时的价格基线
+     */
+    private BigDecimal listPrice;
+
+    /**
+     * 套餐折扣率（套餐价/原价，1.0000 表示不打折）
+     */
+    private BigDecimal discountRate;
+
+    /**
+     * 最低折扣率（价格底线）：套餐价不得低于「原价 × 本值」
+     */
+    private BigDecimal floorRate;
+
+    /**
      * 套餐说明
      */
     private String description;

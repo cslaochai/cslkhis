@@ -76,6 +76,9 @@ public class BiOverviewVO {
     /** 收入 TOP5 科室（近 30 日） */
     private List<DeptRevenue> deptTop;
 
+    /** 出院人次 TOP5 科室（近 30 日） */
+    private List<DeptWorkload> deptWorkloadTop;
+
     /** 近 30 日收入结构（六类归并） */
     private List<RevenueStructure> revenueStructure;
 
@@ -84,6 +87,10 @@ public class BiOverviewVO {
         private String date;
         private Long count;
         private BigDecimal amount;
+        /** 当日门诊收入净额（encounter_type=1） */
+        private BigDecimal outpatientAmount;
+        /** 当日住院收入净额（encounter_type=2） */
+        private BigDecimal inpatientAmount;
     }
 
     @Data
@@ -91,6 +98,14 @@ public class BiOverviewVO {
         /** 科室名称 */
         private String deptName;
         private BigDecimal amount;
+    }
+
+    @Data
+    public static class DeptWorkload {
+        /** 科室名称 */
+        private String deptName;
+        /** 出院人数 */
+        private Long count;
     }
 
     /**

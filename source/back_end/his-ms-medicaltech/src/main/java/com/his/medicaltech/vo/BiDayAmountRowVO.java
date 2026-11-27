@@ -17,7 +17,17 @@ public class BiDayAmountRowVO implements Serializable {
     private String statDate;
 
     /**
-     * 当日收入净额
+     * 当日收入净额（门诊+住院）
      */
     private BigDecimal amount;
+
+    /**
+     * 当日门诊收入净额（encounter_type=1）
+     */
+    private BigDecimal outpatientAmount;
+
+    /**
+     * 当日住院收入净额（encounter_type=2）
+     */
+    private BigDecimal inpatientAmount;
 }

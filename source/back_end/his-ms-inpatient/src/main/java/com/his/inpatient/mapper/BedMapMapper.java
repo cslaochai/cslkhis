@@ -55,7 +55,7 @@ public interface BedMapMapper {
                    r.allocate_no  AS allocateNo,
                    r.alloc_type   AS allocType,
                    CASE WHEN r.use_dept_id IS NOT NULL AND r.own_dept_id IS NOT NULL
-                             AND r.use_dept_id <> r.own_dept_id THEN 1 ELSE 0 END AS crossDept,
+                             AND r.use_dept_id &lt;&gt; r.own_dept_id THEN 1 ELSE 0 END AS crossDept,
                    DATE_FORMAT(r.operate_time, '%Y-%m-%d %H:%i') AS reserveTime,
                    a.admission_id AS admissionId,
                    a.patient_id   AS patientId,

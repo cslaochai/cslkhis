@@ -1,7 +1,7 @@
 <template>
-  <!-- 套餐编辑（明细整单替换） -->
+  <!-- 套餐编辑（明细整单替换；项目只能从项目目录选，名称/价格/参考范围由目录带出） -->
   <el-dialog v-model="visible"
-             :title="form.id ? `编辑套餐 — ${form.packageName}` : '新增体检套餐'" width="880px">
+             :title="form.id ? `编辑套餐 — ${form.packageName}` : '新增体检套餐'" width="960px">
     <el-form label-width="100px">
       <div class="flex flex-wrap gap-x-6">
         <el-form-item label="套餐名称" required>
@@ -15,7 +15,8 @@
           </el-select>
         </el-form-item>
         <el-form-item label="价格(元)">
-          <el-input-number v-model="form.price" :controls="false" :min="0" :precision="2" style="width: 130px"/>
+          <el-input-number v-model="form.price" :controls="false" :min="0" :precision="2"
+                           style="width: 130px" @change="priceAuto = false"/>
         </el-form-item>
         <el-form-item label="状态">
           <el-radio-group v-model="form.status">
@@ -25,33 +26,34 @@
         </el-form-item>
       </div>
       <el-form-item label="说明">
-        <el-input v-model="form.description" style="width: 520px"/>
+        <el-input v-model="form.description" style="width: 620px"/>
       </el-form-item>
       <el-form-item label="项目明细" required>
         <div class="w-full">
-          <el-table :data="form.items" border max-height="320" size="small">
-            <el-table-column label="项目名称" min-width="220">
+          <el-table :data="form.items" border max-height="360" size="small">
+            <el-table-column label="项目" min-width="320">
               <template #default="{ row }">
-                <el-input v-model="row.itemName"/>
-              </template>
-            </el-table-column>
-            <el-table-column label="类型" width="120">
-              <template #default="{ row }">
-                <el-select v-model="row.itemType" style="width: 100%">
-                  <el-option v-for="t in itemTypeOptions" :key="t" :label="itemTypeMap[t]" :value="t"/>
+                <el-select v-model="row.key" clearable filterable placeholder="选择项目（检验 / 检查 / 一般）"
+                           style="width: 100%" @change="(key) => onPick(row, key)">
+                  <el-option-group v-for="g in optionGroups" :key="g.source" :label="g.label">
+                    <el-option v-for="o in g.items" :key="o.key" :label="o.itemName" :value="o.key">
+                      <span>{{ o.itemName }}</span>
+                      <span class="text-xs text-gray-400 ml-3">{{ o.itemCode }} ￥{{ fmtMoney(o.price) }}</span>
+                    </el-option>
+                  </el-option-group>
                 </el-select>
               </template>
             </el-table-column>
-            <el-table-column label="参考范围" width="180">
+            <el-table-column label="类型" width="80">
+              <template #default="{ row }">{{ sourceLabel[row.itemSource] }}</template>
+            </el-table-column>
+            <el-table-column label="参考范围" min-width="180">
               <template #default="{ row }">
-                <el-input v-model="row.refStandard"/>
+                <span class="text-xs">{{ row.refStandard }}</span>
               </template>
             </el-table-column>
-            <el-table-column label="单项金额(元)" width="140">
-              <template #default="{ row }">
-                <el-input-number v-model="row.amount" :controls="false" :min="0" :precision="2"
-                                 style="width: 120px"/>
-              </template>
+            <el-table-column align="right" label="单项金额(元)" width="110">
+              <template #default="{ row }">{{ fmtMoney(row.amount) }}</template>
             </el-table-column>
             <el-table-column align="center" label="" width="60">
               <template #default="{ $index }">
@@ -60,9 +62,11 @@
               </template>
             </el-table-column>
           </el-table>
-          <div class="flex items-center gap-3 mt-1">
-            <el-button :icon="Plus" link type="primary" @click="addItem">添加明细行</el-button>
-            <span class="text-xs text-gray-500">保存时按整单替换明细；体检登记时按这些项目预生成结果空行</span>
+          <div class="flex items-center gap-3 flex-wrap mt-1">
+            <el-button :icon="Plus" link type="primary" @click="addItem">添加项目</el-button>
+            <span class="text-xs text-gray-500">
+              项目与价格取自项目目录，此处只选不建；明细合计 ￥{{ fmtMoney(itemsTotal) }}
+            </span>
           </div>
         </div>
       </el-form-item>
@@ -82,11 +86,15 @@
  * 体检套餐新增/修改（后端同一个 checkupPackageSave，row 为空走新增、有值走修改）
  * 套餐保存是明细整单替换（Save DTO items 整删重插），编辑前必须回填全量明细，
  * 故打开时按 id 走 getCheckupPackage 取详情而不是直接用列表行。
+ *
+ * 明细项目只能从项目目录选（检验 sys_laboratory_item / 检查 sys_inspection_item /
+ * 一般检查 sys_treatment_item），选中即回填项目编码、分类、参考范围与目录价；
+ * 名称与金额不在这里手填，价格以价表为准，套餐价默认等于明细合计（可手工改打包价）。
  */
 import {computed, reactive, ref, watch} from 'vue';
 import {ElMessage} from 'element-plus';
 import {Delete, Plus} from '@element-plus/icons-vue';
-import {checkupPackageSave, getCheckupPackage} from '@/api/checkup';
+import {checkupPackageSave, getCheckupPackage, getCheckupItemOptions} from '@/api/checkup';
 
 const props = defineProps({
   modelValue: {type: Boolean, default: false},
@@ -100,24 +108,85 @@ const visible = computed({
   set: (v) => emit('update:modelValue', v),
 });
 
-const itemTypeMap = {1: '检验', 2: '检查', 3: '一般'};
-const itemTypeOptions = [1, 2, 3];
+const sourceLabel = {1: '检验', 2: '检查', 3: '一般'};
+const groupLabel = {1: '检验项目', 2: '检查项目', 3: '一般检查项目'};
+
 const saving = ref(false);
+// 套餐价是否跟随明细合计：手工改过价格就置 false
+const priceAuto = ref(true);
+// 项目目录全量（一次拉取，按来源分三组渲染下拉）
+const catalog = ref([]);
+const catalogMap = computed(() => {
+  const map = new Map();
+  catalog.value.forEach((o) => map.set(o.key, o));
+  return map;
+});
+const optionGroups = computed(() => [1, 2, 3].map((source) => ({
+  source,
+  label: groupLabel[source],
+  items: catalog.value.filter((o) => o.itemSource === source),
+})));
+
 const form = reactive({
   id: null, packageName: '', genderLimit: 0, price: null, description: '', status: 1, remark: '',
   items: [],
 });
-const blankItem = () => ({itemName: '', itemType: 3, refStandard: '', amount: null});
+
+const fmtMoney = (v) => (v == null || v === '' ? '' : Number(v).toFixed(2));
+
+const itemsTotal = computed(() => form.items.reduce((sum, i) => sum + Number(i.amount || 0), 0));
+
+const blankItem = () => ({
+  key: '', itemSource: null, itemId: null, itemCode: '', itemName: '', itemType: null,
+  refStandard: '', amount: null,
+});
+
+// 明细变动且仍是「自动」时，套餐价跟着合计走
+watch(itemsTotal, (total) => {
+  if (priceAuto.value) form.price = Number(total.toFixed(2));
+});
+
+const loadCatalog = async () => {
+  if (catalog.value.length) return;
+  try {
+    const res = await getCheckupItemOptions();
+    if (res.code !== 200) {
+      ElMessage.error(res.message || '项目目录加载失败');
+      return;
+    }
+    catalog.value = (res.data || []).map((o) => ({...o, key: `${o.itemSource}:${o.id}`}));
+  } catch (e) {
+    console.error(e);
+  }
+};
+
+const onPick = (row, key) => {
+  const picked = catalogMap.value.get(key);
+  if (!picked) {
+    // 清空选择：整行退回未选状态
+    Object.assign(row, blankItem());
+    return;
+  }
+  row.itemSource = picked.itemSource;
+  row.itemId = picked.id;
+  row.itemCode = picked.itemCode;
+  row.itemName = picked.itemName;
+  row.itemType = picked.itemSource;
+  row.refStandard = picked.refStandard || '';
+  row.amount = picked.price;
+};
 
 watch(
   () => props.modelValue,
   async (v) => {
     if (!v) return;
+    loadCatalog();
     if (!props.row) {
       Object.assign(form, {
         id: null, packageName: '', genderLimit: 0, price: null, description: '', status: 1, remark: '',
         items: [blankItem()],
       });
+      priceAuto.value = true;
       return;
     }
     try {
@@ -128,20 +197,27 @@ watch(
         return;
       }
       const d = res.data;
+      const items = (d.items || []).map((i) => ({
+        key: i.itemId ? `${i.itemSource}:${i.itemId}` : '',
+        itemSource: Number(i.itemSource ?? i.itemType ?? 3),
+        itemId: i.itemId ?? null,
+        itemCode: i.itemCode || '',
+        itemName: i.itemName || '',
+        itemType: Number(i.itemType ?? i.itemSource ?? 3),
+        refStandard: i.refStandard || '',
+        amount: i.amount ?? null,
+      }));
       Object.assign(form, {
         id: d.id, packageName: d.packageName, genderLimit: Number(d.genderLimit ?? 0),
         price: d.price ?? null, description: d.description || '', status: Number(d.status ?? 1),
         remark: d.remark || '',
-        items: (d.items || []).map((i) => ({
-          itemName: i.itemName, itemType: Number(i.itemType ?? 3), refStandard: i.refStandard || '',
-          amount: i.amount ?? null,
-        })),
+        items: items.length ? items : [blankItem()],
       });
-      if (!form.items.length)
-        form.items = [blankItem()];
+      // 已存档套餐价与合计一致时继续跟随，否则视为已手工定价
+      const total = items.reduce((sum, i) => sum + Number(i.amount || 0), 0);
+      priceAuto.value = d.price == null || Math.abs(Number(d.price) - total) < 0.01;
     } catch (e) {
       console.error(e);
-      
       visible.value = false;
     }
   }
@@ -149,14 +225,19 @@ watch(
 
 const addItem = () => form.items.push(blankItem());
 const removeItem = (idx) => form.items.splice(idx, 1);
+
 const save = async () => {
   if (!form.packageName.trim()) {
     ElMessage.warning('请填写套餐名称');
     return;
   }
-  const items = form.items.filter((i) => i.itemName.trim());
-  if (!items.length) {
+  const picked = form.items.filter((i) => i.itemId);
+  if (!picked.length) {
     ElMessage.warning('项目明细至少一条');
+    return;
+  }
+  if (picked.length !== form.items.filter((i) => i.key || i.itemName).length) {
+    ElMessage.warning('还有明细行没有选择项目');
     return;
   }
   saving.value = true;
@@ -165,14 +246,17 @@ const save = async () => {
       id: form.id ?? undefined,
       packageName: form.packageName.trim(),
       genderLimit: form.genderLimit,
-      price: form.price ?? undefined,
+      price: Number((priceAuto.value ? itemsTotal.value : form.price ?? itemsTotal.value).toFixed(2)),
       description: form.description.trim() || undefined,
       status: form.status,
       remark: form.remark.trim() || undefined,
-      items: items.map((i) => ({
-        itemName: i.itemName.trim(),
+      items: picked.map((i) => ({
+        itemSource: i.itemSource,
+        itemId: i.itemId,
+        itemName: i.itemName,
+        itemCode: i.itemCode,
         itemType: i.itemType,
-        refStandard: i.refStandard?.trim() || undefined,
+        refStandard: i.refStandard || undefined,
         amount: i.amount ?? undefined,
       })),
     });
@@ -180,10 +264,9 @@ const save = async () => {
       ElMessage.success(form.id ? '套餐已保存' : '套餐已创建');
       visible.value = false;
       emit('saved');
-    } 
+    }
   } catch (e) {
     console.error(e);
-    
   } finally {
     saving.value = false;
   }

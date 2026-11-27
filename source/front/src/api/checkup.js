@@ -22,6 +22,11 @@ export function checkupPackageDisable(id) {
   return request.post('/patient/checkup/package/disable', null, { params: { id } })
 }
 
+// 套餐项目目录（检验/检查/一般三段，套餐明细只能从这里选）
+export function getCheckupItemOptions(params) {
+  return request.get('/patient/checkup/package/selectItemList', { params })
+}
+
 // 体检登记（按套餐项目预生成结果空行）
 export function checkupRecordCreate(data) {
   return request.post('/patient/checkup/record/create', data)

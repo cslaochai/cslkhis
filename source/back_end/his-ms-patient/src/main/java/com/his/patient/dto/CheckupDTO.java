@@ -2,6 +2,7 @@ package com.his.patient.dto;
 
 import com.his.common.base.PageParam;
 import com.his.common.validation.AllowedValues;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
@@ -47,6 +48,7 @@ public class CheckupDTO {
          * 明细项集合
          */
         @NotEmpty(message = "套餐至少要有一个项目")
+        @Valid
         private List<Item> items;
 
         @Data

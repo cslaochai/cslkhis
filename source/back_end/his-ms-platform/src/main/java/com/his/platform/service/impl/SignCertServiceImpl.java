@@ -7,8 +7,11 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.constant.SystemConfigKeyConst;
 import com.his.common.entity.CurrentUser;
 import com.his.common.enums.CaApplyStatusEnum;
+import com.his.common.enums.BizTypeEnum;
 import com.his.common.enums.CertIssuedModeEnum;
 import com.his.common.enums.CertStatusEnum;
+import com.his.common.enums.EnableStatusEnum;
+import com.his.common.enums.SignCertRevokeTypeEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.DateFormats;
 import com.his.common.util.TextUtil;
@@ -24,10 +27,12 @@ import com.his.platform.entity.SysSignCert;
 import com.his.platform.mapper.SignConfigMapper;
 import com.his.platform.mapper.SysEmployeeMapper;
 import com.his.platform.mapper.SysSignCertMapper;
+import com.his.platform.mapper.SysUserMapper;
 import com.his.platform.service.RedisSequenceService;
 import com.his.platform.service.SignCaApplyService;
 import com.his.platform.service.SignCertService;
 import com.his.platform.service.SignPinSessionCache;
+import com.his.platform.service.SysMessageService;
 import com.his.platform.support.SignCaApiClient;
 import com.his.platform.utils.*;
 import com.his.platform.vo.SignCertVO;
@@ -78,9 +83,26 @@ public class SignCertServiceImpl extends ServiceImpl<SysSignCertMapper, SysSignC
      */
     private static final int DEFAULT_PIN_TTL_MINUTES = 30;
 
+    /**
+     * 业务吊销权（医务科）：因离职/转岗/违规/资质变化停用签名资格。
+     */
+    private static final String PERM_CERT_REVOKE = "sign:cert:revoke";
+    /**
+     * 应急吊销权（信息科）：UKey 丢失/私钥泄露等安全事件的即时处置。
+     */
+    private static final String PERM_CERT_REVOKE_EMERGENCY = "sign:cert:revoke:emergency";
+    /**
+     * 证书办理权（信息科）：签发/回填/重新签发。
+     */
+    private static final String PERM_CERT_EDIT = "sign:cert:edit";
+
     private final SysSignCertMapper sysSignCertMapper;
 
     private final SysEmployeeMapper sysEmployeeMapper;
+
+    private final SysUserMapper sysUserMapper;
+
+    private final SysMessageService sysMessageService;
 
     private final SignConfigMapper signConfigMapper;
 

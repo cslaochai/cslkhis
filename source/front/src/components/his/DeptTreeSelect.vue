@@ -20,6 +20,7 @@
     <template #default="{ data }">
       <span :title="data.disabledReason || data.deptName">
         {{ data.deptName }}{{ deptNodeTypeSuffix(data.nodeType) }}
+        <span v-if="stats" class="text-xs font-normal text-slate-400">（{{ data._occupied ?? 0 }}/{{ data._total ?? 0 }}）</span>
       </span>
     </template>
   </el-tree-select>
@@ -33,7 +34,7 @@
  *   · LEAF 仅末级业务科室；· TREE 父子均可（父节点按子树聚合）；· ORG 组织归属维护（除根外均可选）。
  * 组件只渲染出参，不自行判定片区/行政/停用等业务规则。
  */
-import { onMounted, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { loadDeptTreeOptions } from '@/lib/deptOptions'
 import { deptNodeTypeSuffix } from '@/lib/deptNodeType'
 
@@ -55,6 +56,8 @@ const props = defineProps({
   disabled: { type: Boolean, default: false },
   size: { type: String, default: 'default' },
   width: { type: String, default: '200px' },
+  /** 可选：科室统计映射 { [deptId]: { occupied, total, reserved } }，传入后节点尾部渲染「占用/总数」，父节点按子树求和 */
+  stats: { type: Object, default: null },
 })
 const emit = defineEmits(['update:modelValue', 'change', 'clear'])
 
@@ -62,6 +65,31 @@ const tree = ref([])
 const selected = ref(props.modelValue)
 
 const treeProps = { label: 'deptName', value: 'id', children: 'children', disabled: 'disabled' }
+
+const statMap = computed(() => {
+  const m = new Map()
+  if (props.stats) {
+    for (const [k, v] of Object.entries(props.stats)) m.set(String(k), v)
+  }
+  return m
+})
+
+/** 把叶子统计沿树向上汇总：父节点 occupied/total = 自身 + 全部后代之和 */
+const applyStats = (list) => {
+  let occupied = 0
+  let total = 0
+  for (const node of list || []) {
+    const child = applyStats(node.children)
+    const self = statMap.value.get(String(node.id))
+    const o = (self?.occupied ?? 0) + child.occupied
+    const t = (self?.total ?? 0) + child.total
+    node._occupied = o
+    node._total = t
+    occupied += o
+    total += t
+  }
+  return { occupied, total }
+}
 
 const load = async () => {
   try {
@@ -71,6 +99,7 @@ const load = async () => {
       nodeType: props.nodeType,
       mode: props.mode,
     })
+    if (props.stats) applyStats(tree.value)
   } catch (e) {
     console.error('加载科室树失败', e)
     tree.value = []
@@ -79,6 +108,7 @@ const load = async () => {
 
 watch(() => props.modelValue, (v) => { selected.value = v })
 watch(() => [props.scope, props.deptType, props.nodeType, props.mode], load)
+watch(() => props.stats, () => { if (props.stats) applyStats(tree.value) }, { deep: true })
 
 const onChange = (v) => {
   selected.value = v

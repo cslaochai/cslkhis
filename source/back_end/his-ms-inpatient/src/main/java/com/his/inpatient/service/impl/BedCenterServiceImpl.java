@@ -138,9 +138,13 @@ public class BedCenterServiceImpl extends ServiceImpl<BizBedWaitMapper, BizBedWa
     @Override
     public IPage<BedWaitVO> queuePage(BedWaitPageQueryDTO query) {
         LambdaQueryWrapper<BizBedWait> wrapper = new LambdaQueryWrapper<>();
+        // 选中父科室时按子树聚合：排队申请科室落在「自身 + 后代」集合内（纯层级展开，不做岗位收口）
+        Set<Long> applyDeptIds = query.getApplyDeptId() == null ? null
+                : deptScopeService.descendantDeptIds(query.getApplyDeptId());
         wrapper.eq(BizBedWait::getDelFlag, 0)
                 .eq(query.getWaitStatus() != null, BizBedWait::getWaitStatus, query.getWaitStatus())
-                .eq(query.getApplyDeptId() != null, BizBedWait::getApplyDeptId, query.getApplyDeptId())
+                .in(applyDeptIds != null && !applyDeptIds.isEmpty(), BizBedWait::getApplyDeptId, applyDeptIds)
+                .eq(applyDeptIds != null && applyDeptIds.isEmpty(), BizBedWait::getApplyDeptId, -1L)
                 .eq(query.getPriority() != null, BizBedWait::getPriority, query.getPriority())
                 .eq(query.getBedType() != null, BizBedWait::getBedType, query.getBedType())
                 .and(TextUtil.hasText(query.getKeyword()), w -> w
@@ -711,6 +715,8 @@ public class BedCenterServiceImpl extends ServiceImpl<BizBedWaitMapper, BizBedWa
     public BedPoolVO bedPool(BedPoolPageQueryDTO query) {
         Long deptId = query.getDeptId();
         Long wardId = query.getWardId();
+        // 选中父科室时按子树聚合：床位落在「自身 + 后代」科室集合内（纯层级展开，不做岗位收口）
+        Set<Long> deptIds = deptId == null ? null : deptScopeService.descendantDeptIds(deptId);
         // 三元表达式两边必须是同一个包装类型：写成 `? BedStatusEnum.FREE.getCode() : query.getBedStatus()` 时
         // 左边是 int 常量、右边是 Integer，Java 会把右边拆箱 —— 前端不传 bedStatus 时直接 NPE，
         // 被兜成 500，报错文案完全不指向这里（已踩过一次）
@@ -719,7 +725,7 @@ public class BedCenterServiceImpl extends ServiceImpl<BizBedWaitMapper, BizBedWa
         String keyword = TextUtil.hasText(query.getKeyword()) ? query.getKeyword().trim() : null;
 
         IPage<BedPoolVO.BedRow> paged = bedCenterMapper.selectBedPool(
-                new Page<>(query.getPageNum(), query.getPageSize()), deptId, wardId, bedStatus, bedType, keyword);
+                new Page<>(query.getPageNum(), query.getPageSize()), deptIds, wardId, bedStatus, bedType, keyword);
         List<BedPoolVO.BedRow> rows = paged.getRecords();
         for (BedPoolVO.BedRow row : rows) {
             row.setBedStatusText(BedStatusEnum.getLabel(row.getBedStatus()));

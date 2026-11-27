@@ -75,6 +75,14 @@ public class BiServiceImpl implements BiService {
             top.add(d);
         }
         vo.setDeptTop(top);
+        List<BiOverviewVO.DeptWorkload> workload = new ArrayList<>();
+        for (BiDeptWorkloadRowVO m : biMapper.deptWorkloadTop()) {
+            BiOverviewVO.DeptWorkload w = new BiOverviewVO.DeptWorkload();
+            w.setDeptName(m.getDeptName());
+            w.setCount(NumUtil.orZero(m.getCount()));
+            workload.add(w);
+        }
+        vo.setDeptWorkloadTop(workload);
         vo.setRevenueStructure(biMapper.revenueStructure30d());
         return vo;
     }
@@ -165,6 +173,39 @@ public class BiServiceImpl implements BiService {
         vo.setInpatientRevenue(inRevenue);
         vo.setInpatientAvgCost(dischargeCount > 0
                 ? inRevenue.divide(BigDecimal.valueOf(dischargeCount), 2, RoundingMode.HALF_UP) : BigDecimal.ZERO);
+
+        // 三四级手术占比（近 30 日主手术）
+        BiOpLevelRowVO op = biMapper.operationLevel30d();
+        long opTotal = NumUtil.orZero(op.getTotal());
+        long opLevel34 = NumUtil.orZero(op.getLevel34());
+        vo.setOperationTotal(opTotal);
+        vo.setOperationLevel34(opLevel34);
+        vo.setLevel34Ratio(opTotal > 0
+                ? BigDecimal.valueOf(opLevel34).divide(BigDecimal.valueOf(opTotal), 4, RoundingMode.HALF_UP)
+                : BigDecimal.ZERO);
+
+        // 医保收入占比（近 30 日已结算非作废账单；分母=费用总额）
+        BiInsuranceRowVO ins = biMapper.insuranceSettle30d();
+        BigDecimal insurance = NumUtil.orZero(ins.getInsurance());
+        BigDecimal insTotal = NumUtil.orZero(ins.getTotal());
+        vo.setInsuranceRevenue(insurance);
+        vo.setSettleRevenue(insTotal);
+        vo.setInsuranceRatio(insTotal.signum() > 0
+                ? insurance.divide(insTotal, 4, RoundingMode.HALF_UP) : BigDecimal.ZERO);
+
+        // 质量安全：不良事件上报、院内感染已确认
+        vo.setAdverseEventCount(NumUtil.orZero(biMapper.countAdverseEvent30d()));
+        vo.setInfectionCount(NumUtil.orZero(biMapper.countInfection30d()));
+
+        // 满意度：无有效答卷时均分与满意率整指标置 null（前端 —），不按 0 凑
+        BiSurveyRowVO survey = biMapper.survey30d();
+        long surveyCount = NumUtil.orZero(survey.getCount());
+        long satisfied = NumUtil.orZero(survey.getSatisfied());
+        vo.setSurveyCount(surveyCount);
+        vo.setAvgScore(surveyCount > 0 ? NumUtil.orZero(survey.getAvgScore()) : null);
+        vo.setSatisfiedRatio(surveyCount > 0
+                ? BigDecimal.valueOf(satisfied).divide(BigDecimal.valueOf(surveyCount), 4, RoundingMode.HALF_UP)
+                : null);
         return vo;
     }
 
@@ -200,6 +241,8 @@ public class BiServiceImpl implements BiService {
             p.setDate(m.getStatDate());
             p.setCount(0L);
             p.setAmount(NumUtil.orZero(m.getAmount()));
+            p.setOutpatientAmount(NumUtil.orZero(m.getOutpatientAmount()));
+            p.setInpatientAmount(NumUtil.orZero(m.getInpatientAmount()));
             list.add(p);
         }
         return list;

@@ -4,7 +4,8 @@
     <div class="bg-white rounded-lg shadow-sm px-4 py-3 mb-4 flex flex-wrap items-center gap-x-6 gap-y-3">
       <div class="flex items-center gap-2">
         <span class="text-[13px] text-gray-500">科室</span>
-        <DeptTreeSelect v-model="deptId" mode="TREE" placeholder="请选择科室" @change="onDeptChange"/>
+        <!-- 病区监护只看「住院」服务范围的科室：体检中心、门诊、医技、药房没有住院床位，不该出现在这里 -->
+        <DeptTreeSelect v-model="deptId" mode="LEAF" dept-type="4" placeholder="请选择科室" @change="onDeptChange"/>
         <span class="text-[13px] text-gray-500 ml-2">病区</span>
         <el-select v-model="wardId" :fit-input-width="false" style="width: 180px">
           <el-option label="全部病区" value="ALL"/>
@@ -14,8 +15,10 @@
 
       <div class="flex items-center gap-6 ml-auto">
         <div class="text-center">
-          <div class="text-[22px] font-bold leading-6">{{ stats.occupied }}</div>
-          <div class="text-[12px] text-gray-500">在院患者</div>
+          <div class="text-[22px] font-bold leading-6">
+            {{ stats.occupied }}<span class="text-[13px] font-normal text-gray-400">/{{ wardBeds.length }}</span>
+          </div>
+          <div class="text-[12px] text-gray-500">在院 / 床位</div>
         </div>
         <div class="text-center">
           <div class="text-[22px] font-bold leading-6 text-[#0E9488]">{{ stats.devices }}</div>
@@ -66,6 +69,8 @@
         <div class="flex items-center gap-2 px-3 py-2 border-b"
              :class="cardHeaderClass(bed)">
           <span class="text-[17px] font-bold">{{ bed.bedNo }} 床</span>
+          <!-- 看“全部病区”时床号会重复（每个病区都有 01 床），必须带病区名才分得清 -->
+          <span v-if="wardId === 'ALL' && bed.wardName" class="text-[12px] font-normal text-gray-500">{{ bed.wardName }}</span>
           <el-tag v-if="pumpsOf(bed).length" size="small" type="success" effect="plain">
             输液泵{{ pumpsOf(bed).length > 1 ? ' ×' + pumpsOf(bed).length : '' }}
           </el-tag>
