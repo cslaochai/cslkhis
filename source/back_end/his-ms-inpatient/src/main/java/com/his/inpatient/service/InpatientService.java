@@ -34,6 +34,16 @@ public interface InpatientService {
     InpatientDetailVO detail(Long admissionId);
 
     /**
+     * 住院腕带打印明细（入科后佩戴的身份腕带，版式写死 250x30mm）
+     */
+    WristbandVO getWristband(Long admissionId);
+
+    /**
+     * 打印住院腕带：写 sys_print_record 台账（biz_type=腕带），第 2 次起必须填补打原因
+     */
+    WristbandVO printWristband(WristbandPrintDTO dto);
+
+    /**
      * 入院登记（分床 + 占床 + 生成住院号 + 初始化首页草稿），返回入院ID
      */
     Long admit(InpatientAdmitDTO dto);

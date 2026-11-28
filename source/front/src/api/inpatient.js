@@ -103,3 +103,13 @@ export function endChargeNurse(id) {
 export function deleteChargeNurse(id) {
     return request.delete('/patient/inpatient/nurse/delete', { params: { id } })
 }
+
+// 住院腕带打印明细（姓名/性别年龄/住院号/科室床号/血型/过敏史 + 已打印次数）
+export function getWristband(admissionId) {
+    return request.get('/patient/inpatient/wristband/getDetailById', { params: { admissionId } })
+}
+
+// 打印住院腕带（写 sys_print_record 台账，第 2 次起必须填补打原因）
+export function printWristband(data) {
+    return request.post('/patient/inpatient/wristband/print', data)
+}

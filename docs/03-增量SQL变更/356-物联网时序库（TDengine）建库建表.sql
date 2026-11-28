@@ -106,6 +106,10 @@ CREATE STABLE IF NOT EXISTS iot_raw.st_robot (
   location NCHAR(64),
   battery INT,
   load_kg DOUBLE,
+  trip_load_kg DOUBLE,
+  box_count INT,
+  boxes_onboard INT,
+  priority NCHAR(16),
   odometer_m DOUBLE
 ) TAGS (device_no NCHAR(64), device_type NCHAR(32), dept_id BIGINT);
 

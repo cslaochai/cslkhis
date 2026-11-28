@@ -57,7 +57,7 @@ KEEP 是**库级**参数，到期由 TDengine 自动清理，不需要写清理�
 | `iot_raw.st_cabinet` | 智能药柜 | temp, humidity, door, stock_pct |
 | `iot_raw.st_baby` | 婴儿腕带 | area, rssi, battery, tamper |
 | `iot_raw.st_uv` | 空气消毒机 | running, lamp_hours, filter_pct, occupied |
-| `iot_raw.st_robot` | 送药机器人 | task_state, location, battery, load_kg, odometer_m |
+| `iot_raw.st_robot` | 送药机器人 | task_state, location, battery, load_kg, trip_load_kg, box_count, boxes_onboard, priority, odometer_m |
 | `iot_agg.st_metric_5m` | 通用聚合 | temp, rate, battery, sample_count, metrics(NCHAR JSON) |
 
 所有超级表标签统一为 `device_no / device_type / dept_id`，与 MQTT 主题 `his/iot/{type}/{id}/...` 和设备档案一一对应。

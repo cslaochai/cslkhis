@@ -522,7 +522,7 @@
                            data-testid="emg-doc-btn-handover" @click="openHandover">交班清零
                 </el-button>
                 <el-button :icon="Postcard" v-perm="'opd:emergencyDoctor:edit'"
-                           data-testid="emg-doc-btn-wristband" @click="openWristband">打印腕带
+                           data-testid="emg-doc-btn-wristband" @click="openWristband">打印留观腕带
                 </el-button>
                 <el-button type="danger" plain v-perm="'opd:emergencyDoctor:edit'"
                            data-testid="emg-doc-btn-greenchannel" @click="openGreenChannel">

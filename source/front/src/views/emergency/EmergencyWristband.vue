@@ -1,7 +1,7 @@
 <template>
   <el-dialog
       v-model="visible"
-      title="分诊腕带打印"
+      title="留观腕带打印"
       width="420px"
       append-to-body
       :close-on-click-modal="false">
@@ -34,7 +34,7 @@
           <span class="wb-v">{{ createTimeText }}</span>
         </div>
       </div>
-      <div class="wb-foot">长沙麓康医院 · 急诊分诊</div>
+      <div class="wb-foot">长沙麓康医院 · 急诊留观</div>
     </div>
     <template #footer>
       <el-button @click="visible = false">关闭</el-button>

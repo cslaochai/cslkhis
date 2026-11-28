@@ -4,19 +4,22 @@ import com.his.common.enums.IotEventLevelEnum;
 import com.his.common.exception.BusinessException;
 import com.his.iot.config.IotProperties;
 import com.his.iot.dto.IotColdChainRecordQueryDTO;
+import com.his.iot.dto.IotDeviceQueryDTO;
 import com.his.iot.dto.IotHistoryQueryDTO;
 import com.his.iot.dto.IotLatestQueryDTO;
 import com.his.iot.dto.IotWaveformQueryDTO;
 import com.his.iot.mapper.IotColdChainTempLogMapper;
-import com.his.iot.service.IotEventService;
+import com.his.iot.service.IotDeviceService;
 import com.his.iot.service.IotTelemetryService;
 import com.his.iot.support.DeviceTypeSchema;
+import com.his.iot.support.IotAlarmLevelReader;
 import com.his.iot.support.TsdbQuerySupport;
 import com.his.iot.support.TelemetrySqlBuilder;
 import com.his.iot.support.WaveformBuffer;
 import com.his.iot.vo.IotColdChainRecordVO;
 import com.his.iot.vo.IotColdChainSummaryVO;
 import com.his.iot.vo.IotDeviceTypeVO;
+import com.his.iot.vo.IotDeviceVO;
 import com.his.iot.vo.IotHistoryPointVO;
 import com.his.iot.vo.IotLatestVO;
 import com.his.iot.vo.IotMetricVO;
@@ -31,9 +34,12 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
+import java.util.stream.Collectors;
 
 /**
  * 遥测查询实现。
@@ -64,8 +70,11 @@ public class IotTelemetryServiceImpl implements IotTelemetryService {
     private final TsdbQuerySupport tsdb;
     private final IotProperties properties;
     private final IotColdChainTempLogMapper coldChainArchiveMapper;
-    private final IotEventService eventService;
+    /** 告警级别走叶子只读组件，别换回 IotEventService：那会成 Event→Dispatch→Telemetry→Event 的环 */
+    private final IotAlarmLevelReader alarmLevelReader;
     private final WaveformBuffer waveformBuffer;
+    /** 时序库无科室列：遥测白名单由档案表按授权科室收口后给出 */
+    private final IotDeviceService deviceService;
 
     @Override
     public List<IotDeviceTypeVO> deviceTypes() {
@@ -87,7 +96,13 @@ public class IotTelemetryServiceImpl implements IotTelemetryService {
         List<List<Map<String, Object>>> batches =
                 tsdb.queryBatch(schemas.stream().map(this::latestSql).toList());
         // 告警状态以事件中心为准：存在未处理且级别≥2 的事件才算告警，前端不拿遥测快照二次推断
-        Map<String, Integer> alarmLevels = eventService.activeAlarmDeviceLevels();
+        Map<String, Integer> alarmLevels = alarmLevelReader.activeAlarmDeviceLevels();
+        // 数据权限收口：时序库不带科室列，先按档案表授权科室取出可见设备号白名单，遥测只回白名单内设备
+        IotDeviceQueryDTO deviceQuery = new IotDeviceQueryDTO();
+        deviceQuery.setDeviceType(query.getDeviceType());
+        deviceQuery.setDeptId(query.getDeptId());
+        Set<String> allowedNos = deviceService.selectList(deviceQuery).stream()
+                .map(IotDeviceVO::getDeviceNo).collect(Collectors.toCollection(HashSet::new));
         List<IotLatestVO> result = new ArrayList<>();
         for (int i = 0; i < schemas.size(); i++) {
             DeviceTypeSchema.Schema schema = schemas.get(i);
@@ -96,10 +111,14 @@ public class IotTelemetryServiceImpl implements IotTelemetryService {
                 if (deviceNo == null) {
                     continue;
                 }
+                String deviceNoStr = String.valueOf(deviceNo);
+                if (!allowedNos.contains(deviceNoStr)) {
+                    continue;
+                }
                 IotLatestVO vo = new IotLatestVO();
                 vo.setDeviceType(schema.deviceType());
                 vo.setDeviceTypeLabel(schema.label());
-                vo.setDeviceNo(String.valueOf(deviceNo));
+                vo.setDeviceNo(deviceNoStr);
                 vo.setTs(parseTs(row.get("ts")));
                 vo.setMetrics(metrics(schema, row));
                 Integer alarmLevel = alarmLevels.get(vo.getDeviceNo());

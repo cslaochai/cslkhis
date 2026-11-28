@@ -13,6 +13,9 @@ import java.util.List;
  *
  * <p>科室下钻：deptId 可空，空 = 全院口径。仅对挂科室列的主表（挂号/住院/费用/处方）按 dept_id 收窄；
  * 结算账单、支付流水、发药记录、床位快照不挂科室列，维持全院口径，不加科室条件。
+ *
+ * <p>注意：包进 {@code <script>} 的语句按 XML 解析，比较符须转义（{@code &lt;&gt;} / {@code &lt;=} / {@code &lt;}）；
+ * 未包 {@code <script>} 的纯文本语句保持裸符号，不转义。
  */
 @Mapper
 public interface StatsMapper {
@@ -21,13 +24,13 @@ public interface StatsMapper {
 
     String FEE_FROM = "FROM biz_fee_record f WHERE f.del_flag = 0 ";
     String FEE_RANGE = "AND f.book_time >= CONCAT(#{start}, ' 00:00:00') "
-            + "AND f.book_time <= CONCAT(#{end}, ' 23:59:59') ";
+            + "AND f.book_time &lt;= CONCAT(#{end}, ' 23:59:59') ";
 
     // 门诊（挂号信息，时间轴 visit_date）
     // 口径：regist_status 5-已退号不计入门诊量；初/复诊只认 visit_type（revisit_type 已废弃全 NULL）
-    String DISCHARGE_WHERE = "a.del_flag = 0 AND a.admit_status <> 7 AND a.discharge_time IS NOT NULL "
+    String DISCHARGE_WHERE = "a.del_flag = 0 AND a.admit_status &lt;&gt; 7 AND a.discharge_time IS NOT NULL "
             + "AND a.discharge_time >= CONCAT(#{start}, ' 00:00:00') "
-            + "AND a.discharge_time <= CONCAT(#{end}, ' 23:59:59') ";
+            + "AND a.discharge_time &lt;= CONCAT(#{end}, ' 23:59:59') ";
 
     // 可选科室条件片段（<script> 内 <if> 解析；deptId 为空时整段不拼入）
     String DEPT_OP = "<if test=\"deptId != null\"> AND dept_id = #{deptId} </if>";
@@ -41,7 +44,7 @@ public interface StatsMapper {
     Long countRegistTotal(@Param("start") String start, @Param("end") String end, @Param("deptId") Long deptId);
 
     @Select("<script>SELECT COUNT(*) FROM biz_appoint_info "
-            + "WHERE del_flag = 0 AND visit_date BETWEEN #{start} AND #{end} AND regist_status <> 5 " + DEPT_OP + "</script>")
+            + "WHERE del_flag = 0 AND visit_date BETWEEN #{start} AND #{end} AND regist_status &lt;&gt; 5 " + DEPT_OP + "</script>")
     Long countVisit(@Param("start") String start, @Param("end") String end, @Param("deptId") Long deptId);
 
     @Select("<script>SELECT COUNT(*) FROM biz_appoint_info "
@@ -49,23 +52,23 @@ public interface StatsMapper {
     Long countCancel(@Param("start") String start, @Param("end") String end, @Param("deptId") Long deptId);
 
     @Select("<script>SELECT COUNT(*) FROM biz_appoint_info "
-            + "WHERE del_flag = 0 AND visit_date BETWEEN #{start} AND #{end} AND regist_status <> 5 AND visit_type = 1 "
+            + "WHERE del_flag = 0 AND visit_date BETWEEN #{start} AND #{end} AND regist_status &lt;&gt; 5 AND visit_type = 1 "
             + DEPT_OP + "</script>")
     Long countFirstVisit(@Param("start") String start, @Param("end") String end, @Param("deptId") Long deptId);
 
     @Select("<script>SELECT COUNT(*) FROM biz_appoint_info "
-            + "WHERE del_flag = 0 AND visit_date BETWEEN #{start} AND #{end} AND regist_status <> 5 AND visit_type = 2 "
+            + "WHERE del_flag = 0 AND visit_date BETWEEN #{start} AND #{end} AND regist_status &lt;&gt; 5 AND visit_type = 2 "
             + DEPT_OP + "</script>")
     Long countRevisit(@Param("start") String start, @Param("end") String end, @Param("deptId") Long deptId);
 
     @Select("<script>SELECT COUNT(*) FROM biz_appoint_info "
-            + "WHERE del_flag = 0 AND visit_date BETWEEN #{start} AND #{end} AND regist_status <> 5 "
-            + "AND medical_insurance_type IS NOT NULL AND medical_insurance_type <> '自费' "
+            + "WHERE del_flag = 0 AND visit_date BETWEEN #{start} AND #{end} AND regist_status &lt;&gt; 5 "
+            + "AND medical_insurance_type IS NOT NULL AND medical_insurance_type &lt;&gt; '自费' "
             + "AND medical_insurance_type NOT LIKE '%商业%' " + DEPT_OP + "</script>")
     Long countInsurance(@Param("start") String start, @Param("end") String end, @Param("deptId") Long deptId);
 
     @Select("<script>SELECT DATE_FORMAT(visit_date, '%m-%d') AS d, "
-            + "SUM(CASE WHEN regist_status <> 5 THEN 1 ELSE 0 END) AS n, "
+            + "SUM(CASE WHEN regist_status &lt;&gt; 5 THEN 1 ELSE 0 END) AS n, "
             + "SUM(CASE WHEN regist_status = 5 THEN 1 ELSE 0 END) AS cancels "
             + "FROM biz_appoint_info WHERE del_flag = 0 AND visit_date BETWEEN #{start} AND #{end} "
             + DEPT_OP + " GROUP BY visit_date ORDER BY visit_date</script>")
@@ -73,31 +76,31 @@ public interface StatsMapper {
 
     @Select("<script>SELECT IFNULL(dept_name, '未分配科室') AS name, COUNT(*) AS cnt "
             + "FROM biz_appoint_info WHERE del_flag = 0 AND visit_date BETWEEN #{start} AND #{end} "
-            + "AND regist_status <> 5 " + DEPT_OP + " GROUP BY name ORDER BY cnt DESC LIMIT 10</script>")
+            + "AND regist_status &lt;&gt; 5 " + DEPT_OP + " GROUP BY name ORDER BY cnt DESC LIMIT 10</script>")
     List<StatsOverviewVO.NameCountRow> opDeptTop(@Param("start") String start, @Param("end") String end, @Param("deptId") Long deptId);
 
     @Select("<script>SELECT regist_type AS code, COUNT(*) AS cnt FROM biz_appoint_info "
-            + "WHERE del_flag = 0 AND visit_date BETWEEN #{start} AND #{end} AND regist_status <> 5 "
+            + "WHERE del_flag = 0 AND visit_date BETWEEN #{start} AND #{end} AND regist_status &lt;&gt; 5 "
             + DEPT_OP + " GROUP BY code ORDER BY code</script>")
     List<StatsOverviewVO.CodeCountRow> opTypeDist(@Param("start") String start, @Param("end") String end, @Param("deptId") Long deptId);
 
     @Select("<script>SELECT regist_source AS code, COUNT(*) AS cnt FROM biz_appoint_info "
-            + "WHERE del_flag = 0 AND visit_date BETWEEN #{start} AND #{end} AND regist_status <> 5 "
+            + "WHERE del_flag = 0 AND visit_date BETWEEN #{start} AND #{end} AND regist_status &lt;&gt; 5 "
             + DEPT_OP + " GROUP BY code ORDER BY code</script>")
     List<StatsOverviewVO.CodeCountRow> opSourceDist(@Param("start") String start, @Param("end") String end, @Param("deptId") Long deptId);
 
     // 住院（入院记录）
 
-    @Select("<script>SELECT CASE WHEN age IS NULL THEN '未填' WHEN age < 1 THEN '婴儿(<1)' "
-            + "WHEN age <= 14 THEN '儿童(1-14)' WHEN age <= 40 THEN '青年(15-40)' "
-            + "WHEN age <= 65 THEN '中年(41-65)' ELSE '老年(65+)' END AS name, COUNT(*) AS cnt "
+    @Select("<script>SELECT CASE WHEN age IS NULL THEN '未填' WHEN age &lt; 1 THEN '婴儿(&lt;1)' "
+            + "WHEN age &lt;= 14 THEN '儿童(1-14)' WHEN age &lt;= 40 THEN '青年(15-40)' "
+            + "WHEN age &lt;= 65 THEN '中年(41-65)' ELSE '老年(65+)' END AS name, COUNT(*) AS cnt "
             + "FROM biz_appoint_info WHERE del_flag = 0 AND visit_date BETWEEN #{start} AND #{end} "
-            + "AND regist_status <> 5 " + DEPT_OP + " GROUP BY name ORDER BY cnt DESC</script>")
+            + "AND regist_status &lt;&gt; 5 " + DEPT_OP + " GROUP BY name ORDER BY cnt DESC</script>")
     List<StatsOverviewVO.NameCountRow> opAgeDist(@Param("start") String start, @Param("end") String end, @Param("deptId") Long deptId);
 
     @Select("<script>SELECT COUNT(*) FROM biz_admission a "
             + "WHERE a.del_flag = 0 AND a.admit_time >= CONCAT(#{start}, ' 00:00:00') "
-            + "AND a.admit_time <= CONCAT(#{end}, ' 23:59:59') " + DEPT_IP + "</script>")
+            + "AND a.admit_time &lt;= CONCAT(#{end}, ' 23:59:59') " + DEPT_IP + "</script>")
     Long countAdmit(@Param("start") String start, @Param("end") String end, @Param("deptId") Long deptId);
 
     @Select("<script>SELECT COUNT(*) FROM biz_admission a WHERE " + DISCHARGE_WHERE + DEPT_IP + "</script>")
@@ -108,7 +111,7 @@ public interface StatsMapper {
     BigDecimal sumBedDays(@Param("start") String start, @Param("end") String end, @Param("deptId") Long deptId);
 
     @Select("<script>SELECT COUNT(*) FROM biz_admission a WHERE a.del_flag = 0 "
-            + "AND a.admit_time <= CONCAT(#{end}, ' 23:59:59') "
+            + "AND a.admit_time &lt;= CONCAT(#{end}, ' 23:59:59') "
             + "AND (a.discharge_time IS NULL OR a.discharge_time > CONCAT(#{end}, ' 23:59:59')) "
             + DEPT_IP + "</script>")
     Long countInHospitalAt(@Param("start") String start, @Param("end") String end, @Param("deptId") Long deptId);
@@ -124,7 +127,7 @@ public interface StatsMapper {
     @Select("<script>SELECT DATE_FORMAT(d.dt, '%m-%d') AS d, SUM(d.admits) AS admits, SUM(d.discharges) AS discharges "
             + "FROM (SELECT DATE(a.admit_time) dt, COUNT(*) admits, 0 discharges FROM biz_admission a "
             + "WHERE a.del_flag = 0 AND a.admit_time >= CONCAT(#{start}, ' 00:00:00') "
-            + "AND a.admit_time <= CONCAT(#{end}, ' 23:59:59') " + DEPT_IP + " GROUP BY dt "
+            + "AND a.admit_time &lt;= CONCAT(#{end}, ' 23:59:59') " + DEPT_IP + " GROUP BY dt "
             + "UNION ALL "
             + "SELECT DATE(a.discharge_time) dt, 0 admits, COUNT(*) discharges FROM biz_admission a "
             + "WHERE " + DISCHARGE_WHERE + DEPT_IP + " GROUP BY DATE(a.discharge_time)) d "
@@ -133,7 +136,7 @@ public interface StatsMapper {
 
     @Select("<script>SELECT IFNULL(d.dept_name, '未分配科室') AS dept_name, "
             + "SUM(CASE WHEN a.admit_time >= CONCAT(#{start}, ' 00:00:00') "
-            + "AND a.admit_time <= CONCAT(#{end}, ' 23:59:59') THEN 1 ELSE 0 END) AS admits, "
+            + "AND a.admit_time &lt;= CONCAT(#{end}, ' 23:59:59') THEN 1 ELSE 0 END) AS admits, "
             + "COUNT(*) AS discharges, "
             + "ROUND(AVG(GREATEST(TIMESTAMPDIFF(MINUTE, a.admit_time, a.discharge_time), 0) / 1440), 1) AS avg_los "
             + "FROM biz_admission a LEFT JOIN sys_department d ON d.id = a.dept_id AND d.del_flag = 0 "
@@ -236,12 +239,12 @@ public interface StatsMapper {
 
     @Select("<script>SELECT COUNT(*) FROM biz_prescription "
             + "WHERE del_flag = 0 AND visit_date BETWEEN #{start} AND #{end} "
-            + "AND prescription_status >= 2 AND prescription_status <> 5 " + DEPT_PRES + "</script>")
+            + "AND prescription_status >= 2 AND prescription_status &lt;&gt; 5 " + DEPT_PRES + "</script>")
     Long countPresc(@Param("start") String start, @Param("end") String end, @Param("deptId") Long deptId);
 
     @Select("<script>SELECT COUNT(*) FROM biz_prescription "
             + "WHERE del_flag = 0 AND visit_date BETWEEN #{start} AND #{end} "
-            + "AND prescription_status >= 2 AND prescription_status <> 5 AND prescription_source = #{source} "
+            + "AND prescription_status >= 2 AND prescription_status &lt;&gt; 5 AND prescription_source = #{source} "
             + DEPT_PRES + "</script>")
     Long countPrescBySource(@Param("start") String start, @Param("end") String end,
                             @Param("source") Integer source, @Param("deptId") Long deptId);
@@ -249,7 +252,7 @@ public interface StatsMapper {
     @Select("<script>SELECT prescription_type AS code, COUNT(*) AS cnt, IFNULL(SUM(total_amount), 0) AS amt "
             + "FROM biz_prescription "
             + "WHERE del_flag = 0 AND visit_date BETWEEN #{start} AND #{end} "
-            + "AND prescription_status >= 2 AND prescription_status <> 5 " + DEPT_PRES
+            + "AND prescription_status >= 2 AND prescription_status &lt;&gt; 5 " + DEPT_PRES
             + " GROUP BY code ORDER BY code</script>")
     List<StatsOverviewVO.CodeCountAmountRow> phPrescTypeDist(@Param("start") String start, @Param("end") String end, @Param("deptId") Long deptId);
 
@@ -262,8 +265,8 @@ public interface StatsMapper {
             + "FROM biz_prescription_detail d JOIN biz_prescription p "
             + "ON p.id = d.prescription_id AND p.del_flag = 0 "
             + "WHERE d.del_flag = 0 AND p.visit_date BETWEEN #{start} AND #{end} "
-            + "AND p.prescription_status >= 2 AND p.prescription_status <> 5 "
-            + "AND IFNULL(d.detail_status, 1) <> 3 " + DEPT_PRES_P
+            + "AND p.prescription_status >= 2 AND p.prescription_status &lt;&gt; 5 "
+            + "AND IFNULL(d.detail_status, 1) &lt;&gt; 3 " + DEPT_PRES_P
             + " GROUP BY d.drug_name, specification, unit ORDER BY amt DESC LIMIT 10</script>")
     List<StatsOverviewVO.DrugRankRow> phDrugTop(@Param("start") String start, @Param("end") String end, @Param("deptId") Long deptId);
 

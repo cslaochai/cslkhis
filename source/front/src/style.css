@@ -397,6 +397,40 @@ body {
     border-top: 2px solid var(--his-primary);
 }
 
+/* ---------- 模块中心页内页签（.module-tabs）----------
+   检验/检查/输血/病历评阅/公共卫生/专科质控/医疗安全/透析/档案/检查预约 这 10 个入口
+   原来用 el-tabs 的 type="border-card"：灰底方框 + 内容区自带内边距，和站内其它页签
+   （系统管理 → 日志审计那种白底下划线）两副面孔，且与页内自己的 query-card/table-card 嵌套。
+   统一收成一条白色卡片条：只框住页签行，内容区留给页面自己的卡片。 */
+.module-tabs .el-tabs__header {
+    margin: 0 0 12px;
+    padding: 0 8px;
+    background: #fff;
+    border: 1px solid var(--his-card-border);
+    border-radius: var(--his-radius);
+    box-shadow: var(--his-shadow-sm);
+}
+
+.module-tabs .el-tabs__nav-wrap::after {
+    height: 1px;
+    background: var(--his-card-border);
+}
+
+.module-tabs .el-tabs__item {
+    height: 44px;
+    font-size: 14px;
+    line-height: 44px;
+    color: #4B5B6B;
+}
+
+.module-tabs .el-tabs__item.is-active {
+    color: var(--his-primary);
+}
+
+.module-tabs .el-tabs__item:hover {
+    color: var(--his-primary);
+}
+
 /* ---------- 标签 ---------- */
 .el-tag {
     border-radius: 4px;

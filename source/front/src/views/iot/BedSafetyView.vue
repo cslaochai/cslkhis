@@ -404,10 +404,13 @@ const loadDepts = async () => {
   try {
     const tree = await loadDeptTreeOptions({mode: 'TREE'});
     deptOptions.value = flattenDeptTree(tree).map(d => ({id: d.id, name: d.deptName, deptType: d.deptType, parentId: d.parentId}));
-    // 默认当前岗位所在科室；没有岗位科室时退第一个住院类科室，不再硬编码演示科室
+    if (!deptOptions.value.length) {
+      loadError.value = '当前岗位没有被授权任何科室';
+      return;
+    }
+    // 默认当前岗位所在科室（须落在授权清单内）；不在清单内时退授权科室第一项，不硬编码演示科室
     const own = deptOptions.value.find(d => String(d.id) === String(localStorage.getItem('deptId')));
-    const firstIpd = deptOptions.value.find(d => String(d.deptType || '').includes('4'));
-    deptId.value = String((own || firstIpd || deptOptions.value[0])?.id || '');
+    deptId.value = String((own || deptOptions.value[0])?.id || '');
   } catch (e) {
     console.error('加载科室下拉失败', e);
     loadError.value = '科室下拉加载失败，请检查权限或网络';
@@ -423,8 +426,8 @@ const loadData = async ({silent = false} = {}) => {
   try {
     const [bedRes, devRes, latestRes] = await Promise.all([
       getBedMap({deptId: deptId.value, wardId: wardId.value === 'ALL' ? undefined : wardId.value}),
-      iotDeviceSelectList({deviceType: 'bed'}),
-      iotLatestList({deviceType: 'bed'}),
+      iotDeviceSelectList({deviceType: 'bed', deptId: deptId.value}),
+      iotLatestList({deviceType: 'bed', deptId: deptId.value}),
     ]);
     const map = bedRes.data || {};
     beds.value = (map.beds || []).filter(b => b.bedNo);

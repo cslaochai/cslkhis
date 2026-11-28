@@ -1,5 +1,5 @@
 <template>
-  <el-tabs v-model="active" type="border-card">
+  <el-tabs v-model="active" class="module-tabs">
     <el-tab-pane v-if="hasPermission('qc:clinicalPath:list')" label="临床路径" lazy name="path">
       <ClinicalPathView/>
     </el-tab-pane>

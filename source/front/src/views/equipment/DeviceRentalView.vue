@@ -1,16 +1,6 @@
 <template>
   <div class="p-4 space-y-4">
     <div class="bg-white rounded-lg shadow-sm px-5 py-4 flex flex-wrap items-center gap-5">
-      <div class="min-w-[280px]">
-        <div class="flex items-center gap-2">
-          <h2 class="text-[18px] font-semibold text-gray-800">设备共享调配</h2>
-          <el-tag size="small" effect="plain">设备科共享池</el-tag>
-        </div>
-        <div class="text-[12px] text-gray-500 mt-1">
-          临床科室申请 → 护士长/设备科审批 → 设备科发放并绑定 → 使用后归还 → 设备科验收
-        </div>
-      </div>
-
       <div class="flex items-center gap-3">
         <span class="text-[13px] text-gray-500">状态</span>
         <el-select v-model="query.status" clearable :fit-input-width="false" style="width: 130px"

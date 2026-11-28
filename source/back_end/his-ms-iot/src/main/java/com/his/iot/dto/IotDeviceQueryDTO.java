@@ -20,4 +20,7 @@ public class IotDeviceQueryDTO implements Serializable {
 
     @Schema(description = "设备编号，空=全部", example = "FRIDGE-01")
     private String deviceNo;
+
+    @Schema(description = "归属科室ID，空=按当前岗位授权科室收口；越权科室直接拒绝")
+    private Long deptId;
 }

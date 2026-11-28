@@ -87,25 +87,13 @@ const truncated = ref(false);
 const chartRef = ref(null);
 let chart = null;
 
-/**
- * 物流机器人的专属视图：电量(%) 与 载重(kg) 双轴一张图。
- * 运维看机器人只关心两件事——还能跑多久（电量）、这趟拉了多少（载重）；
- * 拆成两个下拉各看一条曲线，等于让人自己脑补两条线的时间关系，故并在一条时间轴上。
- */
-const COMBO_KEY = '__power_load';
-const COMBO_LABEL = '电量 + 载重（双轴）';
 const isRobot = computed(() => props.device?.deviceType === 'robot');
 
 const metricOptions = computed(() => {
   const first = points.value[0];
   if (!first) return [];
-  const single = (first.metrics || []).filter(m => m.numeric != null)
+  return (first.metrics || []).filter(m => m.numeric != null)
       .map(m => ({key: m.key, label: m.label, unit: m.unit}));
-  if (!isRobot.value) return single;
-  const has = (k) => (first.metrics || []).some(m => m.key === k && m.numeric != null);
-  return has('battery') || has('loadKg')
-      ? [{key: COMBO_KEY, label: COMBO_LABEL, unit: ''}, ...single]
-      : single;
 });
 const currentUnit = computed(() => metricOptions.value.find(m => m.key === metricKey.value)?.unit || '');
 /** 四舍五入两位小数，去尾零；非有限值返回 null */
@@ -132,11 +120,6 @@ const tooltipFormatter = (params) => {
 const latestText = computed(() => {
   const last = points.value[points.value.length - 1];
   if (!last) return '';
-  if (metricKey.value === COMBO_KEY) {
-    const b = lastNum(last, 'battery');
-    const l = lastNum(last, 'loadKg');
-    return `电量 ${b == null ? '—' : b}% / 载重 ${l == null ? '—' : l}kg`;
-  }
   const v = lastNum(last, metricKey.value);
   return v == null ? '' : `${v}${currentUnit.value}`;
 });
@@ -222,31 +205,6 @@ const renderChart = () => {
     return;
   }
   const zoom = [{type: 'inside'}, {type: 'slider', height: 18, bottom: 8}];
-
-  // 机器人双轴：左轴电量 0~100 固定刻度（掉 2% 才看得懂幅度），右轴载重随数据缩放
-  if (metricKey.value === COMBO_KEY) {
-    const pick = (key) => points.value.map(p => {
-      const m = (p.metrics || []).find(x => x.key === key);
-      return [String(p.ts || '').replace(' ', 'T'), m?.numeric ?? null];
-    });
-    chart.setOption({
-      animation: false,
-      grid: {left: 56, right: 56, top: 40, bottom: 44},
-      tooltip: {trigger: 'axis', formatter: tooltipFormatter},
-      legend: {top: 4, itemWidth: 14, itemHeight: 8, textStyle: {fontSize: 11}},
-      xAxis: {type: 'time'},
-      yAxis: [
-        {type: 'value', name: '电量(%)', min: 0, max: 100, scale: false},
-        {type: 'value', name: '载重(kg)', min: 0, scale: true, splitLine: {show: false}},
-      ],
-      dataZoom: zoom,
-      series: [
-        {name: '电量(%)', type: 'line', yAxisIndex: 0, showSymbol: false, color: '#0E9488', data: pick('battery')},
-        {name: '载重(kg)', type: 'bar', yAxisIndex: 1, barMaxWidth: 8, color: '#1269B5', data: pick('loadKg')},
-      ],
-    }, true);
-    return;
-  }
 
   const opt = metricOptions.value.find(m => m.key === metricKey.value);
   const series = points.value.map(p => {

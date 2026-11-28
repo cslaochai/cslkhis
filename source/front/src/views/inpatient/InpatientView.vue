@@ -277,11 +277,18 @@
         <el-table-column align="right" label="总费用" width="110">
           <template #default="{ row }">{{ money(row.totalAmount) }}</template>
         </el-table-column>
-        <el-table-column label="操作" width="220">
+        <el-table-column label="操作" width="270">
           <template #default="{ row }">
             <el-button :icon="View" link size="small" type="primary" @click="openDetail(row)">详情</el-button>
             <el-button v-perm="'ipd:inpatient:edit'" :icon="Document" link size="small" type="primary"
                        @click="openSummary(row)">病案首页
+            </el-button>
+            <el-button
+                v-perm="'ipd:inpatient:edit'"
+                :disabled="row.admitStatus !== 1" :icon="Printer" link size="small"
+                type="primary"
+                @click="openWristband(row)"
+            >腕带
             </el-button>
             <el-button
                 v-perm="'ipd:inpatient:edit'"
@@ -331,6 +338,9 @@
 
     <!-- ================= 病案首页 ================= -->
     <InpatientSummaryEdit v-model="summaryVisible" :id="summaryId" @saved="onSummarySaved"/>
+
+    <!-- ================= 住院腕带打印 ================= -->
+    <InpatientWristband v-model="wristbandVisible" :admission-id="wristbandAdmissionId"/>
   </div>
 </template>
 
@@ -344,6 +354,7 @@ import {
   Clock,
   Document,
   Plus,
+  Printer,
   Refresh,
   Search,
   Suitcase,
@@ -364,6 +375,7 @@ import InpatientAdmitEdit from './InpatientAdmitEdit.vue';
 import InpatientBedTransferEdit from './InpatientBedTransferEdit.vue';
 import InpatientDischargeEdit from './InpatientDischargeEdit.vue';
 import InpatientSummaryEdit from './InpatientSummaryEdit.vue';
+import InpatientWristband from '@/components/his/InpatientWristband.vue';
 import {getEmployeeList} from '@/api/system';
 import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination';
 import {admitWayMap, money, orderStatusMap, summaryStatusMap, textOf} from '@/lib/inpatient';
@@ -555,6 +567,14 @@ const openSummary = (row) => {
 };
 const onSummarySaved = async () => {
   await loadList();
+};
+
+// 住院腕带：入科后佩戴的身份腕带，只在住院侧出（门诊/急诊分诊不打）
+const wristbandVisible = ref(false);
+const wristbandAdmissionId = ref(null);
+const openWristband = (row) => {
+  wristbandAdmissionId.value = row.admissionId;
+  wristbandVisible.value = true;
 };
 const confirmDischargeFromList = (row) => {
   ElMessageBox.confirm(`确认为「${row.patientName}」办理出院？出院会释放床位并把住院天数、离院方式回写到病案首页。`, '出院确认', {

@@ -36,6 +36,11 @@ public class LabItemVO implements Serializable {
     private Long deptId;
 
     /**
+     * 归属科室名称（申请单科室名快照来源）
+     */
+    private String deptName;
+
+    /**
      * 项目单价（元）
      */
     private BigDecimal price;

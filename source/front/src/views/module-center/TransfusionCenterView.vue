@@ -1,5 +1,5 @@
 <template>
-  <el-tabs v-model="active" type="border-card">
+  <el-tabs v-model="active" class="module-tabs">
     <el-tab-pane v-if="hasPermission('medtech:transfusion:list')" label="输血管理" lazy name="transfusion">
       <TransfusionView/>
     </el-tab-pane>

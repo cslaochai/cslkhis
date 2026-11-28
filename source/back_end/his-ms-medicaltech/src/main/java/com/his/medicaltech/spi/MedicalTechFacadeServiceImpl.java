@@ -26,6 +26,8 @@ import com.his.medicaltech.mapper.BizLaboratoryRecordMapper;
 import com.his.medicaltech.mapper.SysInspectionItemMapper;
 import com.his.medicaltech.mapper.SysLaboratoryItemMapper;
 import com.his.medicaltech.service.MedicalTechService;
+import com.his.spi.service.SystemFacadeService;
+import com.his.spi.vo.DeptBriefVO;
 import com.his.spi.vo.LabItemVO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -60,6 +62,7 @@ public class MedicalTechFacadeServiceImpl implements MedicalTechFacadeService {
     private final SysLaboratoryItemMapper sysLaboratoryItemMapper;
     private final SysInspectionItemMapper sysInspectionItemMapper;
     private final MedicalTechService medicalTechService;
+    private final SystemFacadeService systemFacadeService;
 
     @Override
     public List<LaboratoryRecordBriefVO> listLaboratoryRecords(Long patientId, LocalDate visitDate) {
@@ -310,6 +313,7 @@ public class MedicalTechFacadeServiceImpl implements MedicalTechFacadeService {
         vo.setItemCode(item.getItemCode());
         vo.setItemName(item.getItemName());
         vo.setDeptId(item.getDeptId());
+        vo.setDeptName(deptNameOf(item.getDeptId()));
         vo.setPrice(item.getPrice());
         vo.setSpecimenType(item.getSpecimenType());
         return vo;
@@ -329,8 +333,17 @@ public class MedicalTechFacadeServiceImpl implements MedicalTechFacadeService {
         vo.setItemCode(item.getItemCode());
         vo.setItemName(item.getItemName());
         vo.setDeptId(item.getDeptId());
+        vo.setDeptName(deptNameOf(item.getDeptId()));
         vo.setPrice(item.getPrice());
         return vo;
+    }
+
+    private String deptNameOf(Long deptId) {
+        if (deptId == null) {
+            return null;
+        }
+        DeptBriefVO dept = systemFacadeService.findDepartment(deptId);
+        return dept == null ? null : dept.getDeptName();
     }
 
     /**

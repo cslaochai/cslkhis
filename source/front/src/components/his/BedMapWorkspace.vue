@@ -141,6 +141,11 @@
                 <span v-if="bed.newToday" class="rounded bg-[#1269B5] px-1 text-white">新入</span>
                 <span v-if="bed.activeOrderCount"
                       class="rounded bg-slate-100 px-1 text-slate-700">医嘱{{ bed.activeOrderCount }}</span>
+                <!-- 住院腕带：入科后佩戴的身份腕带，卡片上直接出；点卡片本身是开患者详情，这里必须 @click.stop -->
+                <span v-if="bed.admissionId != null" v-perm="'ipd:inpatient:edit'"
+                      class="cursor-pointer rounded bg-[#1269B5]/10 px-1 text-[#1269B5]"
+                      data-testid="bed-card-wristband"
+                      @click.stop="openWristband(bed)">腕带</span>
               </div>
             </template>
             <div v-else class="mt-1 text-sm text-slate-500">{{ bed.bedStatusText }}</div>
@@ -150,6 +155,9 @@
     </div>
 
     <PatientDetailDialog v-model="detailVisible" :patient-id="detailPatientId"/>
+
+    <!-- 住院腕带打印：与入出院管理页共用同一个组件/接口/台账 -->
+    <InpatientWristband v-model="wristbandVisible" :admission-id="wristbandAdmissionId"/>
 
     <!-- 危重预警详情：只读信息弹框，点遮罩可关 -->
     <el-dialog v-model="alertVisible" data-testid="mews-dialog" title="危重预警详情" width="560px">
@@ -229,6 +237,7 @@ import {explainDeterioration, scanWardDeterioration} from '@/api/ai';
 import {patientAgeText, patientGenderText} from '@/lib/patientGender';
 import PatientDetailDialog from '@/components/his/PatientDetailDialog.vue';
 import DeptTreeSelect from '@/components/his/DeptTreeSelect.vue';
+import InpatientWristband from '@/components/his/InpatientWristband.vue';
 
 const loading = ref(false);
 const rootRef = ref(null);
@@ -349,6 +358,14 @@ const openPatient = (bed) => {
     return;
   detailPatientId.value = String(bed.patientId);
   detailVisible.value = true;
+};
+
+// 住院腕带：床位卡直出，走与入出院管理页同一套接口和打印台账
+const wristbandVisible = ref(false);
+const wristbandAdmissionId = ref(null);
+const openWristband = (bed) => {
+  wristbandAdmissionId.value = bed.admissionId;
+  wristbandVisible.value = true;
 };
 /** 预警详情：评分是代码事实先展示，advice 由 /explain 现拉（仅预警级≥1 才有模型参与）。 */
 const alertVisible = ref(false);

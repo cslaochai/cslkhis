@@ -5,6 +5,7 @@ import com.his.common.entity.CurrentUser;
 import com.his.common.enums.LabAbnormalFlagEnum;
 import com.his.common.enums.SysGenderEnum;
 import com.his.common.utils.UserUtils;
+import com.his.common.util.DateFormats;
 import com.his.common.util.TextUtil;
 import com.his.medicaltech.dto.ReportPdfFileVO;
 import com.his.medicaltech.dto.ReportPdfVerifyVO;
@@ -14,6 +15,8 @@ import com.his.medicaltech.entity.BizLaboratoryRecord;
 import com.his.medicaltech.service.ReportPdfService;
 import com.his.spi.service.SignCertFacadeService;
 import com.his.spi.service.SystemFacadeService;
+import com.his.spi.vo.DeptBriefVO;
+import com.his.spi.vo.EmployeeBriefVO;
 import com.his.spi.vo.SignCertBriefVO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -26,11 +29,16 @@ import java.nio.file.Paths;
 import java.security.MessageDigest;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
  * 报告签名 PDF 实现：openpdf 渲染（与引导单同栈，simsun 中文字体），
  * 文件级数字签名 = 对 PDF 字节 SHA-256 后用审核医师证书（SHA256withRSA）签名，签名元数据落报告记录表。
+ *
+ * <p>患者面口径：报告单落款只展示报告医师 / 审核医师的手写笔迹（未预维护笔迹时打印姓名），
+ * 不出现「电子签名 / 数字签名 / 验签」等后台证据链字样；CA 签名与文件级哈希属于后台法律效力留存，
+ * 由签名记录与验签接口承载，不上患者面。
  */
 @Slf4j
 @Service
@@ -118,23 +126,25 @@ public class ReportPdfServiceImpl implements ReportPdfService {
         com.lowagie.text.Font titleFont = titleFont();
         com.lowagie.text.Font headerFont = headerFont();
         com.lowagie.text.Font normalFont = normalFont();
-        com.lowagie.text.Font smallFont = smallFont();
 
         com.lowagie.text.Paragraph title = new com.lowagie.text.Paragraph("医学影像检查报告", titleFont);
         title.setAlignment(com.lowagie.text.Element.ALIGN_CENTER);
         title.setSpacingAfter(16);
         document.add(title);
 
-        document.add(paragraph("患者姓名：" + nullToDash(record.getPatientName()), normalFont));
-        document.add(paragraph("病历号：" + nullToDash(record.getRecordNo()), normalFont));
-        document.add(paragraph("性别：" + SysGenderEnum.getLabel(record.getGender()), normalFont));
-        document.add(paragraph("年龄：" + (record.getAge() != null ? record.getAge() + "岁" : "-"), normalFont));
-        document.add(paragraph("检查项目：" + nullToDash(record.getInspectionItemName())
-                + (TextUtil.hasText(record.getBodyPart()) ? "（部位：" + record.getBodyPart() + "）" : ""), normalFont));
-        document.add(paragraph("检查科室：" + nullToDash(record.getInspectionDeptName()), normalFont));
-        document.add(paragraph("检查时间：" + (record.getExecuteTime() != null ? record.getExecuteTime() : "-"), normalFont));
-        document.add(paragraph(" ", normalFont));
+        String itemName = record.getInspectionItemName()
+                + (TextUtil.hasText(record.getBodyPart()) ? "（部位：" + record.getBodyPart() + "）" : "");
+        List<String[]> pairs = new ArrayList<>();
+        pairs.add(new String[]{"患者姓名", nullToDash(record.getPatientName())});
+        pairs.add(new String[]{"病历号", nullToDash(record.getRecordNo())});
+        pairs.add(new String[]{"性别", SysGenderEnum.getLabel(record.getGender())});
+        pairs.add(new String[]{"年龄", record.getAge() != null ? record.getAge() + "岁" : "-"});
+        pairs.add(new String[]{"检查项目", nullToDash(itemName)});
+        pairs.add(new String[]{"检查科室", deptName(record.getInspectionDeptId(), record.getInspectionDeptName())});
+        pairs.add(new String[]{"检查时间", fmtTime(record.getExecuteTime())});
+        addInfoGrid(document, pairs, normalFont);
 
+        document.add(paragraph(" ", normalFont));
         document.add(paragraph("【检查所见】", headerFont));
         document.add(paragraph(nullToDash(record.getResultDescription()), normalFont));
         document.add(paragraph(" ", normalFont));
@@ -143,16 +153,9 @@ public class ReportPdfServiceImpl implements ReportPdfService {
         document.add(paragraph(nullToDash(record.getResultConclusion()), normalFont));
         document.add(paragraph(" ", normalFont));
 
-        addSignArea(document, headerFont, normalFont, smallFont,
-                "报告医师：" + nullToDash(record.getReportBy()),
-                record.getReportSignedTime() != null ? "（电子签名 · " + record.getReportSignedTime() + "）" : "",
-                null,
-                "审核医师：" + nullToDash(record.getAuditBy()),
-                record.getAuditSignedTime() != null ? "（电子签名 · " + record.getAuditSignedTime() + "）" : "",
-                currentAuditSignImage());
-
-        document.add(paragraph(" ", normalFont));
-        document.add(paragraph("本报告已加盖审核医师数字签名（文件级），可扫码验签。", smallFont));
+        addSignArea(document, normalFont,
+                record.getReportBy(), signImageByName(record.getReportBy()),
+                record.getAuditBy(), auditorSignImage(record.getAuditBy()));
 
         document.close();
         return baos.toByteArray();
@@ -167,43 +170,42 @@ public class ReportPdfServiceImpl implements ReportPdfService {
         com.lowagie.text.Font titleFont = titleFont();
         com.lowagie.text.Font headerFont = headerFont();
         com.lowagie.text.Font normalFont = normalFont();
-        com.lowagie.text.Font smallFont = smallFont();
 
         com.lowagie.text.Paragraph title = new com.lowagie.text.Paragraph("检 验 报 告", titleFont);
         title.setAlignment(com.lowagie.text.Element.ALIGN_CENTER);
         title.setSpacingAfter(16);
         document.add(title);
 
-        document.add(paragraph("患者姓名：" + nullToDash(record.getPatientName()), normalFont));
-        document.add(paragraph("病历号：" + nullToDash(record.getRecordNo()), normalFont));
-        document.add(paragraph("性别：" + SysGenderEnum.getLabel(record.getGender()), normalFont));
-        document.add(paragraph("年龄：" + (record.getAge() != null ? record.getAge() + "岁" : "-"), normalFont));
-        document.add(paragraph("检验项目：" + nullToDash(record.getLaboratoryItemName()), normalFont));
-        document.add(paragraph("检验科室：" + nullToDash(record.getLaboratoryDeptName()), normalFont));
-        document.add(paragraph("标本：" + nullToDash(record.getSpecimenType()), normalFont));
-        document.add(paragraph("检验时间：" + (record.getExecuteTime() != null ? record.getExecuteTime() : "-"), normalFont));
-        document.add(paragraph(" ", normalFont));
+        List<String[]> pairs = new ArrayList<>();
+        pairs.add(new String[]{"患者姓名", nullToDash(record.getPatientName())});
+        pairs.add(new String[]{"病历号", nullToDash(record.getRecordNo())});
+        pairs.add(new String[]{"性别", SysGenderEnum.getLabel(record.getGender())});
+        pairs.add(new String[]{"年龄", record.getAge() != null ? record.getAge() + "岁" : "-"});
+        pairs.add(new String[]{"检验项目", nullToDash(record.getLaboratoryItemName())});
+        pairs.add(new String[]{"检验科室", deptName(record.getLaboratoryDeptId(), record.getLaboratoryDeptName())});
+        pairs.add(new String[]{"标本", nullToDash(record.getSpecimenType())});
+        pairs.add(new String[]{"检验时间", fmtTime(record.getExecuteTime())});
+        addInfoGrid(document, pairs, normalFont);
 
+        document.add(paragraph(" ", normalFont));
         document.add(paragraph("【检验结果】", headerFont));
         if (results.isEmpty()) {
             document.add(paragraph("（无检验结果明细）", normalFont));
         } else {
-            com.lowagie.text.pdf.PdfPTable table = new com.lowagie.text.pdf.PdfPTable(6);
+            com.lowagie.text.pdf.PdfPTable table = new com.lowagie.text.pdf.PdfPTable(5);
             table.setWidthPercentage(100);
-            table.setWidths(new float[]{2.8f, 1.6f, 1.2f, 2.2f, 1.0f, 2.0f});
+            table.setWidths(new float[]{3.4f, 1.8f, 1.6f, 2.8f, 1.2f});
             addCell(table, "项目名称", headerFont);
             addCell(table, "结果", headerFont);
             addCell(table, "单位", headerFont);
             addCell(table, "参考区间", headerFont);
             addCell(table, "标志", headerFont);
-            addCell(table, "备注", headerFont);
             for (BizLabResult r : results) {
                 addCell(table, nullToDash(r.getLaboratoryItemName()), normalFont);
                 addCell(table, nullToDash(r.getResultValue()), normalFont);
                 addCell(table, nullToDash(r.getResultUnit()), normalFont);
                 addCell(table, nullToDash(r.getReferenceRange()), normalFont);
                 addCell(table, abnormalLabel(r.getAbnormalFlag()), normalFont);
-                addCell(table, nullToDash(r.getAbnormalDesc()), normalFont);
             }
             document.add(table);
         }
@@ -213,57 +215,130 @@ public class ReportPdfServiceImpl implements ReportPdfService {
         document.add(paragraph(nullToDash(record.getDiagnosis()), normalFont));
         document.add(paragraph(" ", normalFont));
 
-        addSignArea(document, headerFont, normalFont, smallFont,
-                "报告医师：" + nullToDash(record.getReportBy()),
-                record.getReportSignedTime() != null ? "（电子签名 · " + record.getReportSignedTime() + "）" : "",
-                null,
-                "审核医师：" + nullToDash(record.getAuditBy()),
-                record.getAuditSignedTime() != null ? "（电子签名 · " + record.getAuditSignedTime() + "）" : "",
-                currentAuditSignImage());
-
-        document.add(paragraph(" ", normalFont));
-        document.add(paragraph("本报告已加盖审核医师数字签名（文件级），可扫码验签。", smallFont));
+        addSignArea(document, normalFont,
+                record.getReportBy(), signImageByName(record.getReportBy()),
+                record.getAuditBy(), auditorSignImage(record.getAuditBy()));
 
         document.close();
         return baos.toByteArray();
     }
 
     /**
-     * 签名区：报告医师（姓名 + 电子签名时刻）+ 审核医师（姓名 + 电子签名时刻 + 手写笔迹）。
+     * 基本信息网格：一行三对「标签 + 值」，无边框，紧凑排版。
      */
-    private void addSignArea(com.lowagie.text.Document document, com.lowagie.text.Font headerFont,
-                             com.lowagie.text.Font normalFont, com.lowagie.text.Font smallFont,
-                             String reporterLine, String reporterSignSuffix, String reporterImage,
-                             String auditorLine, String auditorSignSuffix, String auditorImage) {
-        document.add(paragraph("【医师签名】", headerFont));
-        document.add(paragraph(reporterLine + reporterSignSuffix, normalFont));
-        document.add(paragraph(auditorLine + auditorSignSuffix, normalFont));
-        if (TextUtil.hasText(auditorImage)) {
-            try {
-                com.lowagie.text.Image signImg = imageOf(auditorImage, 160, 60);
-                if (signImg != null) {
-                    signImg.setSpacingBefore(6);
-                    document.add(signImg);
-                }
-            } catch (Exception e) {
-                log.warn("审核医师笔迹渲染失败，仅保留文字签名", e);
+    private void addInfoGrid(com.lowagie.text.Document document, List<String[]> pairs,
+                             com.lowagie.text.Font normalFont) throws Exception {
+        com.lowagie.text.pdf.PdfPTable table = new com.lowagie.text.pdf.PdfPTable(6);
+        table.setWidthPercentage(100);
+        table.setWidths(new float[]{1.5f, 1.9f, 1.5f, 1.9f, 1.5f, 1.9f});
+        int size = pairs.size();
+        int rows = (size + 2) / 3;
+        for (int row = 0; row < rows; row++) {
+            for (int col = 0; col < 3; col++) {
+                int idx = row * 3 + col;
+                String label = idx < size ? pairs.get(idx)[0] : "";
+                String value = idx < size ? pairs.get(idx)[1] : "";
+                addGridCell(table, label, normalFont, true);
+                addGridCell(table, value, normalFont, false);
             }
+        }
+        document.add(table);
+    }
+
+    /**
+     * 落款签名区：左右两列，分别为报告医师（签名）、审核医师（签名）。
+     * 有手写笔迹渲染笔迹；未预维护笔迹时打印姓名占位，不出现电子签名字样。
+     */
+    private void addSignArea(com.lowagie.text.Document document, com.lowagie.text.Font normalFont,
+                             String reporterName, String reporterImage,
+                             String auditorName, String auditorImage) throws Exception {
+        com.lowagie.text.pdf.PdfPTable table = new com.lowagie.text.pdf.PdfPTable(2);
+        table.setWidthPercentage(100);
+        table.setWidths(new float[]{5.0f, 5.0f});
+
+        com.lowagie.text.pdf.PdfPCell reporterCell = new com.lowagie.text.pdf.PdfPCell();
+        fillSignCell(reporterCell, "报告医师（签名）", reporterName, reporterImage, normalFont);
+        com.lowagie.text.pdf.PdfPCell auditorCell = new com.lowagie.text.pdf.PdfPCell();
+        fillSignCell(auditorCell, "审核医师（签名）", auditorName, auditorImage, normalFont);
+        table.addCell(reporterCell);
+        table.addCell(auditorCell);
+        document.add(table);
+    }
+
+    private void fillSignCell(com.lowagie.text.pdf.PdfPCell cell, String label, String name,
+                              String image, com.lowagie.text.Font normalFont) throws Exception {
+        cell.setBorder(com.lowagie.text.Rectangle.NO_BORDER);
+        cell.setPadding(6);
+        com.lowagie.text.Paragraph labelP = new com.lowagie.text.Paragraph(label + "：", normalFont);
+        labelP.setSpacingAfter(10);
+        cell.addElement(labelP);
+        if (TextUtil.hasText(image)) {
+            try {
+                com.lowagie.text.Image signImg = imageOf(image, 130, 46);
+                cell.addElement(signImg);
+            } catch (Exception e) {
+                log.warn("医师笔迹渲染失败，仅保留姓名落款", e);
+                cell.addElement(new com.lowagie.text.Paragraph(nullToDash(name), normalFont));
+            }
+        } else {
+            cell.addElement(new com.lowagie.text.Paragraph(nullToDash(name), normalFont));
         }
     }
 
     /**
-     * 审核医师手写笔迹：引用登录人（生成时刻的审核人）员工档案预维护笔迹。
+     * 审核医师笔迹：PDF 在审核通过时刻生成，取当前登录人（即审核医师）员工档案笔迹；
+     * 取不到登录态时退回按姓名回捞员工档案。
      */
-    private String currentAuditSignImage() {
+    private String auditorSignImage(String auditByName) {
         try {
             CurrentUser user = UserUtils.getCurrentUser();
-            if (user == null || user.getEmployeeId() == null) {
+            if (user != null && user.getEmployeeId() != null) {
+                String image = systemFacadeService.getEmployeeSignImage(user.getEmployeeId());
+                if (TextUtil.hasText(image)) {
+                    return image;
+                }
+            }
+        } catch (Exception e) {
+            log.warn("取当前登录医师档案笔迹失败，退回按姓名回捞", e);
+        }
+        return signImageByName(auditByName);
+    }
+
+    /**
+     * 按姓名回捞员工档案手写笔迹（报告医师在结果录入时签署，PDF 生成时刻其登录态已不在）。
+     */
+    private String signImageByName(String empName) {
+        if (!TextUtil.hasText(empName)) {
+            return null;
+        }
+        try {
+            List<EmployeeBriefVO> employees = systemFacadeService.listEmployeesByName(empName.trim());
+            if (employees == null || employees.isEmpty()) {
                 return null;
             }
-            return systemFacadeService.getEmployeeSignImage(user.getEmployeeId());
+            return systemFacadeService.getEmployeeSignImage(employees.get(0).getId());
         } catch (Exception e) {
-            log.warn("取审核医师档案笔迹失败，PDF 仅保留文字签名", e);
+            log.warn("按姓名 {} 取档案笔迹失败", empName, e);
             return null;
+        }
+    }
+
+    /**
+     * 科室名快照为空时按科室 ID 回查主数据兜底（历史申请单只落了科室 ID 的情形）。
+     */
+    private String deptName(Long deptId, String snapshotName) {
+        if (TextUtil.hasText(snapshotName)) {
+            return snapshotName;
+        }
+        if (deptId == null) {
+            return "-";
+        }
+        try {
+            DeptBriefVO dept = systemFacadeService.findDepartment(deptId);
+            return dept != null && TextUtil.hasText(dept.getDeptName()) ? dept.getDeptName() : "-";
+        } catch (Exception e) {
+            log.warn("按科室 ID {} 回查科室名失败", deptId, e);
+            return "-";
         }
     }
 
@@ -326,10 +401,6 @@ public class ReportPdfServiceImpl implements ReportPdfService {
         return new com.lowagie.text.Font(baseFont(), 10, com.lowagie.text.Font.NORMAL);
     }
 
-    private com.lowagie.text.Font smallFont() throws Exception {
-        return new com.lowagie.text.Font(baseFont(), 8, com.lowagie.text.Font.NORMAL);
-    }
-
     private com.lowagie.text.pdf.BaseFont baseFont() throws Exception {
         return com.lowagie.text.pdf.BaseFont.createFont(
                 "C:/Windows/Fonts/simsun.ttc,0", "Identity-H", com.lowagie.text.pdf.BaseFont.EMBEDDED);
@@ -346,6 +417,15 @@ public class ReportPdfServiceImpl implements ReportPdfService {
         com.lowagie.text.pdf.PdfPCell cell = new com.lowagie.text.pdf.PdfPCell(new com.lowagie.text.Phrase(
                 text == null ? "" : text, font));
         cell.setPadding(4);
+        table.addCell(cell);
+    }
+
+    private void addGridCell(com.lowagie.text.pdf.PdfPTable table, String text,
+                             com.lowagie.text.Font font, boolean boldLabel) {
+        com.lowagie.text.pdf.PdfPCell cell = new com.lowagie.text.pdf.PdfPCell(new com.lowagie.text.Phrase(
+                text == null ? "" : text, font));
+        cell.setBorder(com.lowagie.text.Rectangle.NO_BORDER);
+        cell.setPadding(3);
         table.addCell(cell);
     }
 
@@ -366,6 +446,10 @@ public class ReportPdfServiceImpl implements ReportPdfService {
 
     private String nullToDash(String value) {
         return TextUtil.hasText(value) ? value : "-";
+    }
+
+    private String fmtTime(LocalDateTime time) {
+        return time != null ? time.format(DateFormats.DATETIME) : "-";
     }
 
     private String abnormalLabel(Integer flag) {

@@ -3,11 +3,6 @@
     <!-- 页头操作 -->
     <div class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
       <div class="flex items-center justify-between">
-        <div>
-          <h2 class="text-base font-semibold text-slate-700">物资耗材管理</h2>
-          <p class="mt-0.5 text-xs text-slate-400">耗材域独立于药品域：批次库存 + 出入库流水 +
-            科室领用（领用即扣库存，先过期先出）；耗材基础档案在「耗材字典」（菜单 2921，sql/177）维护</p>
-        </div>
         <div class="flex gap-2">
           <el-button v-perm="'asset:supplies:add'" :icon="Plus" type="primary" @click="openAddDialog">建批入库
           </el-button>

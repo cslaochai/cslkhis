@@ -1,5 +1,5 @@
 <template>
-  <el-tabs v-model="active" type="border-card">
+  <el-tabs v-model="active" class="module-tabs">
     <el-tab-pane v-if="hasPermission('medtech:dialysis:list')" label="净化中心" lazy name="dialysis">
       <DialysisView/>
     </el-tab-pane>

@@ -22,6 +22,11 @@ import com.his.medicaltech.entity.BizInspectionRecord;
 import com.his.medicaltech.entity.BizLabResult;
 import com.his.medicaltech.entity.BizLaboratoryRecord;
 import com.his.medicaltech.entity.BizReport;
+import com.his.medicaltech.entity.SysLaboratoryItem;
+import com.his.medicaltech.entity.SysLaboratoryItemDetail;
+import com.his.medicaltech.mapper.SysLaboratoryItemDetailMapper;
+import com.his.medicaltech.mapper.SysLaboratoryItemMapper;
+import com.his.spi.vo.DeptBriefVO;
 import com.his.common.enums.InsRecordStatusEnum;
 import com.his.common.enums.LabAbnormalFlagEnum;
 import com.his.common.enums.LabRecordStatusEnum;
@@ -86,6 +91,8 @@ public class MedicalTechServiceImpl extends ServiceImpl<BizInspectionRecordMappe
     private final BizLaboratoryRecordMapper bizLaboratoryRecordMapper;
     private final BizLabResultMapper bizLabResultMapper;
     private final BizReportMapper bizReportMapper;
+    private final SysLaboratoryItemMapper sysLaboratoryItemMapper;
+    private final SysLaboratoryItemDetailMapper sysLaboratoryItemDetailMapper;
     private final EmrApplyFacadeService emrApplyFacadeService;
     private final SysMessageService sysMessageService;
     private final LabReferenceRangeResolver labReferenceRangeResolver;
@@ -248,6 +255,8 @@ public class MedicalTechServiceImpl extends ServiceImpl<BizInspectionRecordMappe
         }
         record.setExecuteTime(LocalDateTime.now());
         record.setExecuteBy(executeBy);
+        // 报告医师取当前登录签名人（与 signInspectionReport 的签名人同一口径），供报告单落款
+        record.setReportBy(UserUtils.getCurrentUser().getRealName());
         record.setResultDescription(resultDescription);
         record.setResultConclusion(resultConclusion);
         record.setRecordStatus(InsRecordStatusEnum.RESULTED.getCode()); // 已出结果
@@ -598,6 +607,8 @@ public class MedicalTechServiceImpl extends ServiceImpl<BizInspectionRecordMappe
         deptScopeService.assertDeptAccessible(record.getLaboratoryDeptId());
         record.setExecuteTime(LocalDateTime.now());
         record.setExecuteBy(executeBy);
+        // 报告医师取当前登录签名人（与 signLabReport 的签名人同一口径），供报告单落款
+        record.setReportBy(UserUtils.getCurrentUser().getRealName());
         record.setDiagnosis(diagnosis);
         record.setSuggestions(suggestions);
         record.setRecordStatus(LabRecordStatusEnum.RESULTED.getCode());
@@ -613,6 +624,7 @@ public class MedicalTechServiceImpl extends ServiceImpl<BizInspectionRecordMappe
             if (result.getLaboratoryItemName() == null) {
                 result.setLaboratoryItemName(record.getLaboratoryItemName());
             }
+            backfillLabMaster(result, record);
             judgeAbnormal(result, record);
             bizLabResultMapper.insert(result);
         }
@@ -677,6 +689,69 @@ public class MedicalTechServiceImpl extends ServiceImpl<BizInspectionRecordMappe
                     result.getLaboratoryItemName(), ex);
             result.setJudgeNote("自动判定异常，保留原值");
         }
+    }
+
+    /**
+     * 结果行单位 / 参考区间主数据回填：前端未带时按明细编码/名称匹配组套明细，
+     * 匹配不到再退回大项目主数据。报告上单位与参考区间不允许整列空着。
+     */
+    private void backfillLabMaster(BizLabResult result, BizLaboratoryRecord record) {
+        if (StringUtils.isNotBlank(result.getResultUnit()) && StringUtils.isNotBlank(result.getReferenceRange())) {
+            return;
+        }
+        SysLaboratoryItemDetail detail = null;
+        if (StringUtils.isNotBlank(result.getLaboratoryItemCode())) {
+            detail = sysLaboratoryItemDetailMapper.selectOne(new LambdaQueryWrapper<SysLaboratoryItemDetail>()
+                    .eq(SysLaboratoryItemDetail::getItemCode, result.getLaboratoryItemCode().trim().toUpperCase())
+                    .eq(SysLaboratoryItemDetail::getStatus, 1)
+                    .last("LIMIT 1"));
+        }
+        if (detail == null && StringUtils.isNotBlank(result.getLaboratoryItemName())) {
+            detail = sysLaboratoryItemDetailMapper.selectOne(new LambdaQueryWrapper<SysLaboratoryItemDetail>()
+                    .eq(SysLaboratoryItemDetail::getItemName, result.getLaboratoryItemName().trim())
+                    .eq(SysLaboratoryItemDetail::getStatus, 1)
+                    .last("LIMIT 1"));
+        }
+        if (detail != null) {
+            if (StringUtils.isBlank(result.getResultUnit())) {
+                result.setResultUnit(detail.getUnit());
+            }
+            if (StringUtils.isBlank(result.getReferenceRange())) {
+                result.setReferenceRange(detail.getReferenceRange());
+            }
+            return;
+        }
+        SysLaboratoryItem master = null;
+        if (result.getLaboratoryItemId() != null) {
+            master = sysLaboratoryItemMapper.selectById(result.getLaboratoryItemId());
+        }
+        if (master == null && StringUtils.isNotBlank(record.getLaboratoryItemCode())) {
+            master = sysLaboratoryItemMapper.selectOne(new LambdaQueryWrapper<SysLaboratoryItem>()
+                    .eq(SysLaboratoryItem::getItemCode, record.getLaboratoryItemCode())
+                    .last("LIMIT 1"));
+        }
+        if (master != null) {
+            if (StringUtils.isBlank(result.getResultUnit())) {
+                result.setResultUnit(master.getUnit());
+            }
+            if (StringUtils.isBlank(result.getReferenceRange())) {
+                result.setReferenceRange(master.getReferenceValue());
+            }
+        }
+    }
+
+    /**
+     * 科室名快照为空时按科室 ID 回查主数据兜底（历史申请单只落了科室 ID 的情形）。
+     */
+    private String deptNameOf(Long deptId, String snapshotName) {
+        if (StringUtils.isNotBlank(snapshotName)) {
+            return snapshotName;
+        }
+        if (deptId == null) {
+            return snapshotName;
+        }
+        DeptBriefVO dept = systemFacadeService.findDepartment(deptId);
+        return dept != null && StringUtils.isNotBlank(dept.getDeptName()) ? dept.getDeptName() : snapshotName;
     }
 
     @Override
@@ -1117,7 +1192,7 @@ public class MedicalTechServiceImpl extends ServiceImpl<BizInspectionRecordMappe
         record.setInspectionItemCode(apply.getInspectionItemCode());
         record.setInspectionItemName(apply.getInspectionItemName());
         record.setInspectionDeptId(apply.getInspectionDeptId());
-        record.setInspectionDeptName(apply.getInspectionDeptName());
+        record.setInspectionDeptName(deptNameOf(apply.getInspectionDeptId(), apply.getInspectionDeptName()));
         record.setBodyPart(apply.getBodyPart());
         record.setInspectionPurpose(apply.getInspectionPurpose());
         record.setClinicalDiagnosis(apply.getClinicalDiagnosis());
@@ -1183,7 +1258,7 @@ public class MedicalTechServiceImpl extends ServiceImpl<BizInspectionRecordMappe
         record.setLaboratoryItemCode(apply.getLaboratoryItemCode());
         record.setLaboratoryItemName(apply.getLaboratoryItemName());
         record.setLaboratoryDeptId(apply.getLaboratoryDeptId());
-        record.setLaboratoryDeptName(apply.getLaboratoryDeptName());
+        record.setLaboratoryDeptName(deptNameOf(apply.getLaboratoryDeptId(), apply.getLaboratoryDeptName()));
         record.setSpecimenType(apply.getSpecimenType());
         record.setPrice(apply.getPrice());
         record.setRecordStatus(LabRecordStatusEnum.REGISTERED.getCode()); // 1-已登记

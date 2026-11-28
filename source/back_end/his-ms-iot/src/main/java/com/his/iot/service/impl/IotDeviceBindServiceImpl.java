@@ -19,6 +19,7 @@ import com.his.iot.service.IotDeviceBindService;
 import com.his.iot.vo.IotBindCandidateDeviceVO;
 import com.his.iot.vo.IotDeviceBindVO;
 import com.his.spi.service.AdmissionQueryFacadeService;
+import com.his.spi.service.DeptScopeService;
 import com.his.spi.service.InpatientFacadeService;
 import com.his.spi.vo.AdmissionActiveBriefVO;
 import lombok.RequiredArgsConstructor;
@@ -28,6 +29,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * 设备—患者绑定实现。
@@ -46,10 +49,18 @@ public class IotDeviceBindServiceImpl extends ServiceImpl<IotDeviceBindMapper, I
     private final IotDeviceMapper iotDeviceMapper;
     private final AdmissionQueryFacadeService admissionQueryFacadeService;
     private final InpatientFacadeService inpatientFacadeService;
+    private final DeptScopeService deptScopeService;
 
     @Override
     public List<IotDeviceBindVO> listActiveBinds(IotBindQueryDTO query) {
         List<IotDeviceBindVO> binds = baseMapper.selectActiveBinds(query.getDeviceType());
+        // 数据权限收口：受限角色只看授权科室的在用绑定；全院角色不加科室条件
+        if (deptScopeService.isScoped()) {
+            Set<Long> allowed = deptScopeService.allowedDeptIds();
+            binds = binds.stream()
+                    .filter(b -> b.getDeptId() != null && allowed.contains(b.getDeptId()))
+                    .collect(Collectors.toList());
+        }
         for (IotDeviceBindVO vo : binds) {
             vo.setBindSourceText(IotBindSourceEnum.getLabel(vo.getBindSource()));
         }

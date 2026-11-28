@@ -1,5 +1,5 @@
 <template>
-  <el-tabs v-model="active" type="border-card">
+  <el-tabs v-model="active" class="module-tabs">
     <el-tab-pane v-if="hasPermission('medtech:examAppoint:list')" label="检查预约" lazy name="appointment">
       <ExamAppointmentView/>
     </el-tab-pane>

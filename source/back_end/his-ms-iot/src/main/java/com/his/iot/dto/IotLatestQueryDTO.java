@@ -20,4 +20,7 @@ public class IotLatestQueryDTO implements Serializable {
     @AllowedValues(values = {"coldchain", "infusion", "asset", "env", "gas", "bed",
             "dialysis", "cabinet", "uv", "robot", "monitor"}, message = "设备类型取值不合法")
     private String deviceType;
+
+    @Schema(description = "归属科室ID，空=按当前岗位授权科室收口；越权科室直接拒绝")
+    private Long deptId;
 }

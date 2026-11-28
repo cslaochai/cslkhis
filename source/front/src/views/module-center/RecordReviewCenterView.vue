@@ -1,5 +1,5 @@
 <template>
-  <el-tabs v-model="active" type="border-card">
+  <el-tabs v-model="active" class="module-tabs">
     <el-tab-pane v-if="hasPermission('emr:medicalRecord:list')" label="病历查阅" lazy name="record">
       <MedicalRecordView/>
     </el-tab-pane>

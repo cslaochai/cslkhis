@@ -4,7 +4,7 @@
     当前岗位未开通病案管理权限（病案归档 / 借阅复印 / 编码任务池）。
     请管理员在「系统管理 → 角色管理 → 菜单权限」里为本岗位勾选对应模块。
   </div>
-  <el-tabs v-else v-model="active" type="border-card">
+  <el-tabs v-else v-model="active" class="module-tabs">
     <el-tab-pane v-if="hasPermission('emr:archive:list')" label="病案归档" lazy name="archive">
       <MedicalRecordArchiveView/>
     </el-tab-pane>

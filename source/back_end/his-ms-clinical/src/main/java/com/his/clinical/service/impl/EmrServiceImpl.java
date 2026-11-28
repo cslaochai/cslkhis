@@ -701,6 +701,7 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
         apply.setInspectionItemCode(item.getItemCode());
         apply.setInspectionItemName(item.getItemName());
         apply.setInspectionDeptId(item.getDeptId());
+        apply.setInspectionDeptName(item.getDeptName());
         apply.setPrice(item.getPrice() == null ? BigDecimal.ZERO : item.getPrice());
         apply.setBodyPart(dto.getBodyPart());
         apply.setInspectionPurpose(dto.getInspectionPurpose());
@@ -749,6 +750,7 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
         apply.setLaboratoryItemCode(item.getItemCode());
         apply.setLaboratoryItemName(item.getItemName());
         apply.setLaboratoryDeptId(item.getDeptId());
+        apply.setLaboratoryDeptName(item.getDeptName());
         apply.setPrice(item.getPrice() == null ? BigDecimal.ZERO : item.getPrice());
         // 标本类型：字典优先（同一个项目固定同一种标本），医生传了才用医生的，都没有给「血液」
         apply.setSpecimenType(TextUtil.hasText(item.getSpecimenType()) ? item.getSpecimenType()
@@ -1353,6 +1355,7 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
         apply.setInspectionItemCode(item.getItemCode());
         apply.setInspectionItemName(item.getItemName());
         apply.setInspectionDeptId(item.getDeptId());
+        apply.setInspectionDeptName(item.getDeptName());
         apply.setPrice(item.getPrice() == null ? BigDecimal.ZERO : item.getPrice());
         apply.setBodyPart(dto.getBodyPart());
         apply.setInspectionPurpose(dto.getPurpose());
@@ -1429,6 +1432,7 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
         apply.setLaboratoryItemCode(item.getItemCode());
         apply.setLaboratoryItemName(item.getItemName());
         apply.setLaboratoryDeptId(item.getDeptId());
+        apply.setLaboratoryDeptName(item.getDeptName());
         apply.setPrice(item.getPrice() == null ? BigDecimal.ZERO : item.getPrice());
         apply.setSpecimenType(TextUtil.hasText(dto.getSpecimenType()) ? dto.getSpecimenType()
                 : (TextUtil.hasText(item.getSpecimenType()) ? item.getSpecimenType() : "血液"));

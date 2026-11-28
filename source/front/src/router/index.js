@@ -110,6 +110,12 @@ const routes = [
                 meta: {title: '医疗设备监控'}
             },
             {
+                path: 'iot-robot-dispatch',
+                name: 'IotRobotDispatch',
+                component: () => import('@/views/iot/RobotDispatchView.vue'),
+                meta: {title: '机器人调度'}
+            },
+            {
                 path: 'pharmacy-coldchain',
                 name: 'PharmacyColdChain',
                 component: () => import('@/views/iot/ColdChainView.vue'),

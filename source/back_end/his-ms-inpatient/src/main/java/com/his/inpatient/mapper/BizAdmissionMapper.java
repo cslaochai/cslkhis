@@ -6,6 +6,7 @@ import com.his.inpatient.dto.InpatientPageQueryDTO;
 import com.his.inpatient.entity.BizAdmission;
 import com.his.inpatient.vo.InpatientDetailVO;
 import com.his.inpatient.vo.InpatientVO;
+import com.his.inpatient.vo.WristbandVO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
@@ -170,4 +171,33 @@ public interface BizAdmissionMapper extends BaseMapper<BizAdmission> {
             WHERE a.del_flag = 0 AND a.admission_id = #{admissionId}
             """)
     InpatientDetailVO.AdmissionInfo selectAdmissionInfo(@Param("admissionId") Long admissionId);
+
+    /**
+     * 住院腕带打印用的患者身份快照（姓名/性别年龄/住院号/科室床号/血型/过敏史）。
+     * <p>列取自 biz_admission + biz_patient + sys_department + sys_ward + sys_bed，与住院列表同源，
+     * 不额外维护腕带数据表。</p>
+     */
+    @Select("""
+            SELECT a.admission_id     AS admissionId,
+                   a.admission_no     AS admissionNo,
+                   a.patient_id       AS patientId,
+                   p.patient_no       AS patientNo,
+                   p.patient_name     AS patientName,
+                   p.gender           AS gender,
+                   p.age              AS age,
+                   d.dept_name        AS deptName,
+                   w.ward_name        AS wardName,
+                   b.bed_no           AS bedNo,
+                   p.blood_type       AS bloodType,
+                   p.allergy_history  AS allergyHistory,
+                   a.admit_status     AS admitStatus,
+                   DATE_FORMAT(a.admit_time, '%Y-%m-%d %H:%i') AS admitTime
+            FROM biz_admission a
+                     LEFT JOIN biz_patient p ON p.id = a.patient_id AND p.del_flag = 0
+                     LEFT JOIN sys_department d ON d.id = a.dept_id AND d.del_flag = 0
+                     LEFT JOIN sys_ward w ON w.ward_id = a.ward_id
+                     LEFT JOIN sys_bed b ON b.bed_id = a.bed_id AND b.del_flag = 0
+            WHERE a.del_flag = 0 AND a.admission_id = #{admissionId}
+            """)
+    WristbandVO selectWristband(@Param("admissionId") Long admissionId);
 }

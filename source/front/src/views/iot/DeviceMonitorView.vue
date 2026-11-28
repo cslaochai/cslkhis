@@ -77,7 +77,7 @@
                 </span>
               </div>
               <div class="text-[12px] text-gray-500">
-                电量 {{ metricText(row, 'battery', '%') }} · 载重 {{ metricText(row, 'loadKg', 'kg') }}
+                电量 {{ metricText(row, 'battery', '%') }} · 载重 {{ robotLoadText(row) }}
               </div>
             </template>
             <span v-else-if="primaryMetric(row)" class="text-[13px]" :class="isAlarmRow(row) ? 'text-red-600' : 'text-gray-700'">
@@ -232,6 +232,22 @@ const robotState = (row) => {
   if (code == null) return {code: '—', text: '无读数', tag: 'info'};
   const hit = ROBOT_STATE[String(code).toUpperCase()];
   return {code: String(code), text: hit?.text || String(code), tag: hit?.tag || 'info'};
+};
+
+/**
+ * 机器人载重：只报一个 kg 看不出"货装到哪一步了"。车上一箱一箱装、一箱一箱卸，
+ * 所以显示成「4.4/9.0kg（2/4 箱）」——装货中能看到数字往上爬，签收中能看到往下落。
+ */
+const robotLoadText = (row) => {
+  const load = metricVal(row, 'loadKg');
+  if (load == null) return '—';
+  const trip = metricVal(row, 'tripLoadKg');
+  const on = metricVal(row, 'boxesOnboard');
+  const cnt = metricVal(row, 'boxCount');
+  if (trip != null && Number(cnt) > 0) {
+    return `${Number(load).toFixed(1)}/${Number(trip).toFixed(1)}kg（${on ?? 0}/${cnt} 箱）`;
+  }
+  return `${load}kg`;
 };
 
 const statusOf = (row) => {

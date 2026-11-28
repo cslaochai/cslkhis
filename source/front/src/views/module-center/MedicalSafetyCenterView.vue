@@ -1,5 +1,5 @@
 <template>
-  <el-tabs v-model="active" type="border-card">
+  <el-tabs v-model="active" class="module-tabs">
     <el-tab-pane v-if="hasPermission('emr:adverseEvent:list')" label="不良事件" lazy name="adverse">
       <AdverseEventView/>
     </el-tab-pane>

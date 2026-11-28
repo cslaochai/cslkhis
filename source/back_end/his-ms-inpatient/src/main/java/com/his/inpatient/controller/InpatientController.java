@@ -76,6 +76,27 @@ public class InpatientController {
     }
 
     /**
+     * 住院腕带打印明细：姓名/性别年龄/住院号/科室床号/血型/过敏史，条码码值取住院号。
+     * 腕带是入科后佩戴的身份标识，只在住院侧出，门诊与急诊分诊不打印。
+     */
+    @PreAuthorize("hasAuthority('ipd:inpatient:edit')")
+    @Operation(summary = "住院腕带打印明细")
+    @GetMapping("/wristband/getDetailById")
+    public Result<WristbandVO> getWristband(@RequestParam Long admissionId) {
+        return Result.success(inpatientService.getWristband(admissionId));
+    }
+
+    /**
+     * 打印住院腕带：写 sys_print_record 台账，第 2 次起必须填补打原因。
+     */
+    @PreAuthorize("hasAuthority('ipd:inpatient:edit')")
+    @Operation(summary = "打印住院腕带")
+    @PostMapping("/wristband/print")
+    public Result<WristbandVO> printWristband(@RequestBody @Valid WristbandPrintDTO dto) {
+        return Result.success(inpatientService.printWristband(dto));
+    }
+
+    /**
      * 住院规模统计：在院、今日入出院、待收治住院证与床位占用及使用率。
      * 用于入出院管理页顶部统计卡片。
      */

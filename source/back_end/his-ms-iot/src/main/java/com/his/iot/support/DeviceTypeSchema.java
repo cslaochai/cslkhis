@@ -102,6 +102,9 @@ public final class DeviceTypeSchema {
         reg("robot", "物流机器人", "st_robot",
                 s("task_state", "state", "任务状态", ""), s("location", "location", "位置", ""),
                 i("battery", "battery", "电量", "%"), d("load_kg", "loadKg", "载重", "kg"),
+                d("trip_load_kg", "tripLoadKg", "本单货物", "kg"),
+                i("box_count", "boxCount", "本单箱数", "箱"), i("boxes_onboard", "boxesOnboard", "车上箱数", "箱"),
+                s("priority", "priority", "优先级", ""),
                 d("odometer_m", "odometerM", "里程", "m"));
     }
 

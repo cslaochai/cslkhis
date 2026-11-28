@@ -4,6 +4,8 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.his.common.entity.CurrentUser;
 import com.his.common.enums.IotEventCodeEnum;
 import com.his.common.enums.IotEventHandleStatusEnum;
@@ -17,6 +19,7 @@ import com.his.iot.entity.IotEvent;
 import com.his.iot.mapper.IotEventMapper;
 import com.his.iot.service.IotDeviceBindService;
 import com.his.iot.service.IotEventService;
+import com.his.iot.service.RobotDispatchService;
 import com.his.iot.support.IotAlarmPushService;
 import com.his.iot.vo.IotEventVO;
 import com.his.spi.service.DeptScopeService;
@@ -55,6 +58,8 @@ public class IotEventServiceImpl extends ServiceImpl<IotEventMapper, IotEvent> i
     private final IotAlarmPushService alarmPushService;
     private final IotDeviceBindService deviceBindService;
     private final DeptScopeService deptScopeService;
+    private final RobotDispatchService robotDispatchService;
+    private final ObjectMapper json = new ObjectMapper();
 
     @Override
     public void saveDeviceEvent(String deviceNo, String deviceType, String eventCode, Integer level, String detail,
@@ -84,6 +89,26 @@ public class IotEventServiceImpl extends ServiceImpl<IotEventMapper, IotEvent> i
             return;
         }
         pushAlarm(event, bind);
+        syncDispatchOrder(event, dataJson);
+    }
+
+    /**
+     * 机器人执行事件回写配送任务单：TASK_START 推到配送中，TASK_COMPLETE 回填签收人与行程回执。
+     * 事件报文解析失败不影响事件落库本身，只记日志。
+     */
+    private void syncDispatchOrder(IotEvent event, String dataJson) {
+        if (!"robot".equals(event.getDeviceType()) || dataJson == null || dataJson.isBlank()) {
+            return;
+        }
+        try {
+            JsonNode data = json.readTree(dataJson);
+            String orderNo = data.path("orderNo").asText(null);
+            robotDispatchService.syncFromEvent(event.getEventCode(), orderNo, data,
+                    event.getDeviceNo(), event.getTs());
+        } catch (Exception e) {
+            log.warn("配送任务单状态回写失败 deviceNo={} eventCode={}：{}",
+                    event.getDeviceNo(), event.getEventCode(), e.getMessage());
+        }
     }
 
     /**
@@ -146,8 +171,9 @@ public class IotEventServiceImpl extends ServiceImpl<IotEventMapper, IotEvent> i
     @Override
     public IPage<IotEventVO> listPage(IotEventPageQueryDTO query) {
         Page<IotEvent> page = new Page<>(query.getPageNum(), query.getPageSize());
-        // 选中父科室时按子树聚合：先过授权门禁，再展开「自身 + 后代」，受限角色与授权集合交一次
-        Set<Long> deptIds = null;
+        // 选中父科室时按子树聚合：先过授权门禁，再展开「自身 + 后代」，受限角色与授权集合交一次；
+        // 不传科室时受限角色直接落授权集合，不能退化成不加科室条件=全院
+        Set<Long> deptIds;
         if (query.getDeptId() != null) {
             Long target = deptScopeService.resolveDeptId(query.getDeptId());
             if (target == null) {
@@ -160,6 +186,10 @@ public class IotEventServiceImpl extends ServiceImpl<IotEventMapper, IotEvent> i
                     deptIds.retainAll(allowed);
                 }
             }
+        } else if (deptScopeService.isScoped()) {
+            deptIds = new HashSet<>(deptScopeService.allowedDeptIds());
+        } else {
+            deptIds = null;
         }
         boolean hasScope = deptIds != null && !deptIds.isEmpty();
         page(page, Wrappers.<IotEvent>lambdaQuery()
@@ -188,6 +218,12 @@ public class IotEventServiceImpl extends ServiceImpl<IotEventMapper, IotEvent> i
         if (operator == null) {
             throw new BusinessException(401, "未获取到登录用户，不能处理告警");
         }
+        IotEvent event = getById(dto.getId());
+        if (event == null) {
+            throw new BusinessException(400, "事件不存在或已处理，不能重复处理");
+        }
+        // 数据权限门禁：非授权科室的告警不能在本岗位闭环
+        deptScopeService.assertDeptAccessible(event.getDeptId());
         // 条件更新：两个护士同时点「已处理」时，第二次受影响行数为 0。
         // 原来先 select 再判状态再 update，并发下两边都能改，状态还能被改写一遍
         boolean updated = update(Wrappers.<IotEvent>lambdaUpdate()
@@ -201,20 +237,6 @@ public class IotEventServiceImpl extends ServiceImpl<IotEventMapper, IotEvent> i
         if (!updated) {
             throw new BusinessException(400, "事件不存在或已处理，不能重复处理");
         }
-    }
-
-    @Override
-    public Map<String, Integer> activeAlarmDeviceLevels() {
-        Map<String, Integer> map = new HashMap<>();
-        for (Map<String, Object> row : baseMapper.selectActiveAlarmLevels()) {
-            Object no = row.get("deviceNo");
-            Object lv = row.get("maxLevel");
-            if (no == null || lv == null) {
-                continue;
-            }
-            map.put(String.valueOf(no), ((Number) lv).intValue());
-        }
-        return map;
     }
 
     private IotEventVO toVO(IotEvent e) {

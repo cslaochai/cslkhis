@@ -295,10 +295,11 @@
                 <el-button v-perm="'opd:emergency:edit'" link size="small" type="primary" data-testid="emg-btn-transfer"
                            @click="openTransfer(row)">转归
                 </el-button>
-                <!-- 腕带属登记建档环节（纯前端打印、无后端接口），权限随 add；接诊/转归才随 edit -->
-                <el-button v-perm="'opd:emergency:add'" link size="small" type="default"
+                <!-- 留观腕带：只在留观（emergencyStatus=3）的患者身上出。
+                     住院入科后佩戴的身份腕带在住院侧打（入出院管理/护士站），门诊分诊不打印 -->
+                <el-button v-if="row.emergencyStatus === 3" v-perm="'opd:emergency:add'" link size="small" type="default"
                            data-testid="emg-btn-wristband"
-                           @click="openWristband(row)">腕带
+                           @click="openWristband(row)">留观腕带
                 </el-button>
               </div>
               <!-- 展开区：就诊时间轴 + MEWS 趋势（真实 HIS 急诊患者详情面板标配） -->
@@ -474,9 +475,9 @@
                        @click="handleStatusChange(row, 6)">
               死亡
             </el-button>
-            <el-button v-perm="'opd:emergency:add'" link size="small" type="default"
+            <el-button v-if="row.emergencyStatus === 3" v-perm="'opd:emergency:add'" link size="small" type="default"
                        data-testid="emg-btn-wristband-list"
-                       @click="openWristband(row)">腕带
+                       @click="openWristband(row)">留观腕带
             </el-button>
           </template>
         </el-table-column>
@@ -505,7 +506,7 @@
         @saved="reloadAfterSave"
     />
 
-    <!-- 分诊腕带打印（纯前端，零后端改动） -->
+    <!-- 留观腕带打印（纯前端，零后端改动；住院身份腕带走住院侧） -->
     <EmergencyWristband
         v-model="wristbandVisible"
         :row="wristbandRow"

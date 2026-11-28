@@ -28,7 +28,10 @@ import com.his.inpatient.entity.*;
 import com.his.common.enums.BedStatusEnum;
 import com.his.common.enums.BedTypeEnum;
 import com.his.common.enums.DischargeWayEnum;
+import com.his.common.enums.PrintBizTypeEnum;
 import com.his.common.enums.SummaryStatusEnum;
+import com.his.spi.dto.PrintRecordSaveDTO;
+import com.his.spi.service.PrintRecordFacadeService;
 import com.his.spi.service.PatientFacadeService;
 import com.his.spi.service.PatientVisitFacadeService;
 import com.his.spi.vo.PatientMasterVO;
@@ -99,6 +102,8 @@ public class InpatientServiceImpl extends ServiceImpl<BizInpatientSummaryMapper,
     private final DeathCertificateService deathCertificateService;
 
     private final DictCacheService dictCacheService;
+
+    private final PrintRecordFacadeService printRecordFacadeService;
 
     /**
      * 住院结算状态与预交金余额端口（实现在 his-charge）
@@ -231,6 +236,73 @@ public class InpatientServiceImpl extends ServiceImpl<BizInpatientSummaryMapper,
         }
         vo.setOperations(operations);
         return vo;
+    }
+
+    // 住院腕带打印
+
+    /** 腕带版式标识（写死在 250x30mm 渲染器里，不做模板表） */
+    private static final String WRISTBAND_RENDER_CODE = "wristband_v1";
+
+    /** 腕带纸张规格 */
+    private static final String WRISTBAND_PAPER_SPEC = "250x30";
+
+    @Override
+    public WristbandVO getWristband(Long admissionId) {
+        WristbandVO vo = bizAdmissionMapper.selectWristband(admissionId);
+        if (vo == null) {
+            throw new BusinessException("入院记录不存在");
+        }
+        vo.setPrintCount(printRecordFacadeService.countByBiz(PrintBizTypeEnum.WRISTBAND.getCode(), admissionId));
+        vo.setRenderCode(WRISTBAND_RENDER_CODE);
+        vo.setPaperSpec(WRISTBAND_PAPER_SPEC);
+        return vo;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public WristbandVO printWristband(WristbandPrintDTO dto) {
+        WristbandVO vo = getWristband(dto.getAdmissionId());
+        if (!Objects.equals(AdmitStatusEnum.IN_HOSPITAL.getCode(), vo.getAdmitStatus())) {
+            throw new BusinessException("该患者已出院，不能打印腕带");
+        }
+        if (vo.getAdmissionNo() == null || vo.getAdmissionNo().isBlank()) {
+            throw new BusinessException("该入院记录没有住院号，不能生成腕带条码");
+        }
+
+        PrintRecordSaveDTO saveDTO = new PrintRecordSaveDTO();
+        saveDTO.setBizType(PrintBizTypeEnum.WRISTBAND.getCode());
+        saveDTO.setBizId(dto.getAdmissionId());
+        saveDTO.setCodeValue(vo.getAdmissionNo());
+        saveDTO.setPatientId(vo.getPatientId());
+        saveDTO.setPrintReason(dto.getPrintReason());
+        saveDTO.setPrinterName(dto.getPrinterName());
+        saveDTO.setRenderCode(WRISTBAND_RENDER_CODE);
+        saveDTO.setPaperSpec(WRISTBAND_PAPER_SPEC);
+        saveDTO.setSnapshotJson(wristbandSnapshot(vo));
+        printRecordFacadeService.record(saveDTO);
+
+        vo.setPrintCount(printRecordFacadeService.countByBiz(PrintBizTypeEnum.WRISTBAND.getCode(), dto.getAdmissionId()));
+        return vo;
+    }
+
+    /**
+     * 打印当时的字段快照（事后追溯「纸上印的是什么」，不随患者信息变更漂移）
+     */
+    private String wristbandSnapshot(WristbandVO vo) {
+        Map<String, Object> snapshot = new LinkedHashMap<>();
+        snapshot.put("admissionNo", vo.getAdmissionNo());
+        snapshot.put("patientName", vo.getPatientName());
+        snapshot.put("gender", vo.getGender());
+        snapshot.put("age", vo.getAge());
+        snapshot.put("patientNo", vo.getPatientNo());
+        snapshot.put("deptName", vo.getDeptName());
+        snapshot.put("wardName", vo.getWardName());
+        snapshot.put("bedNo", vo.getBedNo());
+        snapshot.put("bloodType", vo.getBloodType());
+        snapshot.put("allergyHistory", vo.getAllergyHistory());
+        snapshot.put("admitTime", vo.getAdmitTime());
+        snapshot.put("printedAt", LocalDateTime.now().toString());
+        return JSONUtil.toJsonStr(snapshot);
     }
 
     @Override

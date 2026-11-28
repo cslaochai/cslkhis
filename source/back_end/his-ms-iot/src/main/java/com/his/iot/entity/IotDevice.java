@@ -40,6 +40,11 @@ public class IotDevice extends BaseEntity {
     private String deviceName;
 
     /**
+     * 归属科室ID（台账登记用，不随患者转科变化）。数据权限按此列 IN 授权科室集合收口
+     */
+    private Long deptId;
+
+    /**
      * 归属科室名称（台账登记用，不随患者转科变化）
      */
     private String deptName;

@@ -7,7 +7,11 @@
             <span class="lb-name">{{ label.patientName || '' }}</span>
             <span class="lb-dept">{{ genderText }} {{ ageText }}<span v-if="label.applyDeptName"> · {{ label.applyDeptName }}</span></span>
           </div>
-          <div class="lb-code" v-html="barcodeHtml"></div>
+          <div class="lb-code">
+            <div v-if="barcodeHtml" v-html="barcodeHtml"></div>
+            <!-- 未发码的记录：这里只能画占位框。码由后端在点「打印」时分配，预览期不许前端自己编 -->
+            <div v-else class="lb-code-empty">点「打印」时生成条码</div>
+          </div>
           <div class="lb-bottom">
             <span class="lb-no">{{ label.specimenNo || '未分配' }}</span>
             <span class="lb-item">{{ label.laboratoryItemName || '' }}</span>
@@ -174,6 +178,17 @@ window.addEventListener('afterprint', () => {
 
 .lb-code {
   margin: 0.6mm 0;
+}
+
+.lb-code-empty {
+  height: 9mm;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 0.3mm dashed #94a3b8;
+  border-radius: 1mm;
+  font-size: 2.6mm;
+  color: #64748b;
 }
 
 .lb-bottom {

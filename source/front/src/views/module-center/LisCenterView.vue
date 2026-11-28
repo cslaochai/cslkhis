@@ -5,7 +5,7 @@
     请管理员在「系统管理 → 角色管理 → 菜单权限」里为本岗位勾选对应模块；来自统一待办的检验报告，
     也可在待办弹框里直接查看详情。
   </div>
-  <el-tabs v-else v-model="active" type="border-card">
+  <el-tabs v-else v-model="active" class="module-tabs">
     <el-tab-pane v-if="hasPermission('medtech:laboratoryWorkstation:list')" label="检验" lazy name="lab">
       <LaboratoryView/>
     </el-tab-pane>
