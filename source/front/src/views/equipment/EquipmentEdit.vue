@@ -24,6 +24,14 @@
       <el-form-item label="品牌">
         <el-input v-model="form.brand" maxlength="40"/>
       </el-form-item>
+      <el-form-item label="厂商">
+        <el-select v-model="form.supplierId" :fit-input-width="false" clearable filterable
+                   placeholder="选供货厂商（与药品/耗材共用供应商档案）" style="width: 100%"
+                   @change="onSupplierChange">
+          <el-option v-for="s in suppliers" :key="s.supplierId" :label="s.supplierName"
+                     :value="String(s.supplierId)"/>
+        </el-select>
+      </el-form-item>
       <el-form-item label="型号">
         <el-input v-model="form.model" maxlength="40"/>
       </el-form-item>
@@ -76,6 +84,7 @@ import {computed, reactive, ref, watch} from 'vue';
 import {ElMessage} from 'element-plus';
 import DeptTreeSelect from '@/components/his/DeptTreeSelect.vue';
 import {equipmentUpsert} from '@/api/equipment';
+import {getSupplierSelectList} from '@/api/purchase';
 import {loadDeptTreeOptions, flattenDeptTree} from '@/lib/deptOptions';
 
 const props = defineProps({
@@ -97,11 +106,31 @@ const LOGISTICS_CATEGORY = 8;
 
 const blankForm = () => ({
   id: null, equipmentCode: '', equipmentName: '', category: 5, deptId: null, deptName: '',
-  brand: '', model: '', purchaseDate: '', purchasePrice: null, status: 1,
+  brand: '', model: '', supplierId: null, supplierName: '', purchaseDate: '', purchasePrice: null, status: 1,
   maintainCycleDays: 180, lastMaintainDate: '', rentable: 0, remark: '',
 });
 const form = reactive(blankForm());
 const isLogistics = computed(() => Number(form.category) === LOGISTICS_CATEGORY);
+
+// 厂商下拉：全院供应商档案只取一次（同一次会话里多个弹框复用）
+const suppliers = ref([]);
+let suppliersLoaded = false;
+const loadSuppliers = async () => {
+  if (suppliersLoaded) return;
+  try {
+    const res = await getSupplierSelectList();
+    suppliers.value = res?.data || [];
+    suppliersLoaded = true;
+  } catch (e) {
+    // 供应商档案取不到不影响建/改设备档案，厂商一栏留空即可
+    console.error('加载供应商下拉失败', e);
+  }
+};
+// 选中厂商后落名称快照：档案不跨模块联查，供应商改名也不动历史档案
+const onSupplierChange = (supplierId) => {
+  const hit = suppliers.value.find((s) => String(s.supplierId) === String(supplierId));
+  form.supplierName = hit ? hit.supplierName : '';
+};
 
 // 科室 id → 名称：档案存科室名快照，避免跨模块联查
 const deptNames = ref({});
@@ -129,6 +158,8 @@ watch(visible, async (open) => {
         deptName: row.deptName || '',
         brand: row.brand || '',
         model: row.model || '',
+        supplierId: row.supplierId != null ? String(row.supplierId) : null,
+        supplierName: row.supplierName || '',
         purchaseDate: row.purchaseDate || '',
         purchasePrice: row.purchasePrice != null ? Number(row.purchasePrice) : null,
         status: row.status ?? 1,
@@ -138,7 +169,7 @@ watch(visible, async (open) => {
         remark: row.remark || '',
       }
       : blankForm());
-  await loadDeptNames();
+  await Promise.all([loadDeptNames(), loadSuppliers()]);
 });
 
 const onDeptChange = (deptId) => {
@@ -158,6 +189,8 @@ const submit = async () => {
       // 「不限/未填」不发后端，DTO 侧按 null 处理
       deptId: form.deptId ?? undefined,
       deptName: form.deptName || undefined,
+      supplierId: form.supplierId || undefined,
+      supplierName: form.supplierName || undefined,
       purchaseDate: form.purchaseDate || undefined,
       purchasePrice: form.purchasePrice ?? undefined,
       lastMaintainDate: form.lastMaintainDate || undefined,

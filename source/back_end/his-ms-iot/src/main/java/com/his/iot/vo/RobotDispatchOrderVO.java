@@ -22,14 +22,24 @@ public class RobotDispatchOrderVO {
     private String sourceDeptName;
 
     @JsonSerialize(using = ToStringSerializer.class)
+    private Long applyStationId;
+
+    @JsonSerialize(using = ToStringSerializer.class)
     private Long requesterId;
     private String requesterName;
 
     private String goodsType;
     private String goodsName;
     private String fromStation;
+
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long fromStationId;
+
     private Integer toFloor;
     private String toStation;
+
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long toStationId;
 
     private Integer priority;
     private String priorityLabel;

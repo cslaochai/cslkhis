@@ -17,8 +17,8 @@ import java.util.List;
  */
 public interface RobotDispatchService {
 
-    /** 新建配送任务单；autoAssign=true 时落单后立即派车。 */
-    Long create(RobotDispatchCreateDTO dto);
+    /** 新建配送任务单；autoAssign=true 时落单后立即派车。返回落单后的单据（含单号、站点快照、总重）。 */
+    RobotDispatchOrderVO create(RobotDispatchCreateDTO dto);
 
     /** 任务单分页。 */
     IPage<RobotDispatchOrderVO> listPage(RobotDispatchPageQueryDTO query);

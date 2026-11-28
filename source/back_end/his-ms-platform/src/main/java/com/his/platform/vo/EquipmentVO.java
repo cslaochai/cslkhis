@@ -55,6 +55,17 @@ public class EquipmentVO {
     private String model;
 
     /**
+     * 供应商ID
+     */
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long supplierId;
+
+    /**
+     * 供应商名称（建档时快照）
+     */
+    private String supplierName;
+
+    /**
      * 购置日期
      */
     @JsonFormat(pattern = "yyyy-MM-dd")

@@ -8,15 +8,19 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
+import com.his.common.enums.DelFlagEnum;
 import com.his.common.enums.SignBizTypeEnum;
 import com.his.common.enums.SignSceneEnum;
 import com.his.common.exception.BusinessException;
+import com.his.common.support.SystemOperatorContext;
+import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
 import com.his.spi.service.EmrApplyFacadeService;
 import com.his.spi.vo.InspectionApplyBriefVO;
 import com.his.spi.vo.LaboratoryApplyBriefVO;
 import com.his.medicaltech.dto.LabResultItemSaveDTO;
 import com.his.medicaltech.dto.LabResultSaveDTO;
+import com.his.medicaltech.dto.SimInspectionResultDTO;
 import com.his.medicaltech.dto.ReportPdfFileVO;
 import com.his.medicaltech.entity.BizInspectionRecord;
 import com.his.medicaltech.entity.BizLabResult;
@@ -41,6 +45,7 @@ import com.his.medicaltech.service.MedicalTechService;
 import com.his.medicaltech.support.LabAbnormalJudge;
 import com.his.medicaltech.support.LabReferenceRange;
 import com.his.medicaltech.support.LabReferenceRangeResolver;
+import com.his.medicaltech.support.SimlabNotifyClient;
 import com.his.medicaltech.vo.*;
 import com.his.spi.dto.SignCommandDTO;
 import com.his.common.entity.CurrentUser;
@@ -121,6 +126,10 @@ public class MedicalTechServiceImpl extends ServiceImpl<BizInspectionRecordMappe
      * 报告签名 PDF：审核通过时自动生成（含医师笔迹 + 文件级数字签名）
      */
     private final com.his.medicaltech.service.ReportPdfService reportPdfService;
+    /**
+     * 仿真平台下发客户端：缴费建单 / 签到后把检查单快照推给 cssimlab，失败不阻断主流程
+     */
+    private final SimlabNotifyClient simlabNotifyClient;
 
     private static String truncateForNote(String text) {
         if (text == null) {
@@ -214,6 +223,7 @@ public class MedicalTechServiceImpl extends ServiceImpl<BizInspectionRecordMappe
         record.setCheckInTime(LocalDateTime.now());
         record.setRecordStatus(2);
         this.updateById(record);
+        simlabNotifyClient.notifyArrived(record);
         // 批次E（E4 口径收口）：这里原本回写申请单 apply_status=2 并注释「已签到」，
         // 而收费侧同一个 2 的语义是「已缴费」—— 同一个码值被两个模块当成两件事写。
         // 现在执行进度只由本表的 record_status 表达，医技侧不再回写申请单。
@@ -1246,6 +1256,7 @@ public class MedicalTechServiceImpl extends ServiceImpl<BizInspectionRecordMappe
                         .set(BizInspectionRecord::getCancelReason, null));
                 log.info("[检查记录] 申请单 {} 的检查记录 {} 曾被取消，本次缴费将其复活为「已登记」",
                         applyId, exists.getRecordNo());
+                simlabNotifyClient.notifyAssigned(exists);
                 return exists.getId();
             }
             log.info("[检查记录] 申请单 {} 已存在检查记录 {}（id={}），跳过重复生成",
@@ -1285,7 +1296,93 @@ public class MedicalTechServiceImpl extends ServiceImpl<BizInspectionRecordMappe
         record.setCreateBy(operatorUser.getRealName());
         record.setCreateTime(LocalDateTime.now());
         bizInspectionRecordMapper.insert(record);
+        simlabNotifyClient.notifyAssigned(record);
         return record.getId();
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void applySimInspectionResult(SimInspectionResultDTO dto) {
+        BizInspectionRecord record = this.getById(dto.getRecordId());
+        if (record == null || (record.getDelFlag() != null
+                && record.getDelFlag() == DelFlagEnum.DELETED.getCode())) {
+            throw new BusinessException("检查记录不存在");
+        }
+        Integer status = record.getRecordStatus();
+        if (InsRecordStatusEnum.REVIEWED.is(status) || InsRecordStatusEnum.PUBLISHED.is(status)
+                || InsRecordStatusEnum.CANCELLED.is(status)) {
+            throw new BusinessException("检查记录当前状态不允许回写仿真结果");
+        }
+        // 幂等：同一检查所见被重复回调时直接返回，不重复建报告
+        if (InsRecordStatusEnum.RESULTED.is(status)
+                && TextUtil.hasText(record.getResultDescription())
+                && record.getResultDescription().equals(dto.getResultDescription())) {
+            return;
+        }
+
+        // 外部回调无登录态：绑系统任务身份填审计四列；业务操作人列记仿真通道，留痕可追溯
+        SystemOperatorContext.bindSystemTask();
+        try {
+            LocalDateTime now = LocalDateTime.now();
+            String operator = "system:deviceSim";
+            record.setExecuteTime(now);
+            record.setExecuteBy(operator);
+            record.setReportBy(operator);
+            record.setResultDescription(dto.getResultDescription());
+            record.setResultConclusion(dto.getResultConclusion());
+            record.setRecordStatus(InsRecordStatusEnum.RESULTED.getCode());
+            this.updateById(record);
+
+            BizReport report = ensureSimReport(record);
+            report.setReportContent(dto.getResultDescription());
+            report.setConclusion(dto.getResultConclusion());
+            report.setSuggestions(TextUtil.cutToNull(dto.getSuggestions(), 1000));
+            report.setPositiveFlag(dto.getPositiveFlag() == null ? 3 : dto.getPositiveFlag());
+            report.setIsCritical(0);
+            report.setWriteBy(operator);
+            report.setWriteById(1L);
+            report.setWriteTime(now);
+            report.setReportStatus(ReportStatusEnum.PENDING_REVIEW.getCode());
+            if (report.getId() == null) {
+                report.setReportNo(redisSequenceService.generateReportNo());
+                report.setReportVersion(1);
+                report.setFilmCount(0);
+                bizReportMapper.insert(report);
+            } else {
+                bizReportMapper.updateById(report);
+            }
+        } finally {
+            SystemOperatorContext.clear();
+        }
+    }
+
+    /** 取该检查单已有的检查报告；没有则按记录快照新建（待审核，不签 CA）。 */
+    private BizReport ensureSimReport(BizInspectionRecord record) {
+        BizReport exists = bizReportMapper.selectOne(new LambdaQueryWrapper<BizReport>()
+                .eq(BizReport::getRecordId, record.getId())
+                .eq(BizReport::getReportType, ReportTypeEnum.INSPECTION.getCode())
+                .orderByDesc(BizReport::getId)
+                .last("LIMIT 1"));
+        if (exists != null) {
+            return exists;
+        }
+        BizReport report = new BizReport();
+        report.setReportType(ReportTypeEnum.INSPECTION.getCode());
+        report.setRecordId(record.getId());
+        report.setRecordNo(record.getRecordNo());
+        report.setPatientId(record.getPatientId());
+        report.setPatientNo(record.getPatientNo());
+        report.setPatientName(record.getPatientName());
+        report.setGender(record.getGender());
+        report.setAge(record.getAge());
+        report.setVisitDate(record.getVisitDate());
+        report.setItemName(record.getInspectionItemName());
+        report.setExamDeptName(record.getInspectionDeptName());
+        report.setApplyDeptName(record.getApplyDeptName());
+        report.setApplyDoctorId(record.getApplyDoctorId());
+        report.setApplyDoctorName(record.getApplyDoctorName());
+        report.setClinicalDiagnosis(record.getClinicalDiagnosis());
+        return report;
     }
 
     @Override

@@ -945,6 +945,9 @@ const loadUserInfo = async () => {
         deptId: res.data.deptId,
         deptName: res.data.deptName || '',
       }
+      // 当前岗位科室落 localStorage：全局浮窗（叫车预填发起站点）等非 Header 组件只认这里
+      localStorage.setItem('deptId', String(res.data.deptId ?? ''))
+      localStorage.setItem('deptName', res.data.deptName || '')
       // 获取用户角色列表（带角色名称）
       userRoleCodes.value = res.data.roles || []
       // 我自己的角色码→名称，顶栏标签与切换角色弹窗都用它（不用再请求全院角色字典）

@@ -13,6 +13,7 @@ import com.his.medicaltech.entity.BizInspectionRecord;
 import com.his.medicaltech.entity.BizLabResult;
 import com.his.medicaltech.entity.BizLaboratoryRecord;
 import com.his.medicaltech.service.ReportPdfService;
+import com.his.medicaltech.support.LabAbnormalJudge;
 import com.his.spi.service.SignCertFacadeService;
 import com.his.spi.service.SystemFacadeService;
 import com.his.spi.vo.DeptBriefVO;
@@ -202,13 +203,13 @@ public class ReportPdfServiceImpl implements ReportPdfService {
             addCell(table, "结果", headerFont);
             addCell(table, "单位", headerFont);
             addCell(table, "参考区间", headerFont);
-            addCell(table, "标志", headerFont);
+            addCenterCell(table, "提示", headerFont);
             for (BizLabResult r : results) {
                 addCell(table, nullToDash(r.getLaboratoryItemName()), normalFont);
                 addCell(table, nullToDash(r.getResultValue()), normalFont);
                 addCell(table, nullToDash(r.getResultUnit()), normalFont);
                 addCell(table, nullToDash(r.getReferenceRange()), normalFont);
-                addCell(table, abnormalLabel(r.getAbnormalFlag()), normalFont);
+                addCenterCell(table, abnormalMark(r), normalFont);
             }
             document.add(table);
         }
@@ -426,6 +427,17 @@ public class ReportPdfServiceImpl implements ReportPdfService {
         table.addCell(cell);
     }
 
+    /**
+     * 居中对齐单元格：提示列只有一个箭头，左对齐会贴着左边框显得偏。
+     */
+    private void addCenterCell(com.lowagie.text.pdf.PdfPTable table, String text, com.lowagie.text.Font font) {
+        com.lowagie.text.pdf.PdfPCell cell = new com.lowagie.text.pdf.PdfPCell(new com.lowagie.text.Phrase(
+                text == null ? "" : text, font));
+        cell.setPadding(3);
+        cell.setHorizontalAlignment(com.lowagie.text.Element.ALIGN_CENTER);
+        table.addCell(cell);
+    }
+
     private void addGridCell(com.lowagie.text.pdf.PdfPTable table, String text,
                              com.lowagie.text.Font font) {
         com.lowagie.text.pdf.PdfPCell cell = new com.lowagie.text.pdf.PdfPCell(new com.lowagie.text.Phrase(
@@ -458,11 +470,26 @@ public class ReportPdfServiceImpl implements ReportPdfService {
         return time != null ? time.format(DateFormats.DATETIME) : "-";
     }
 
-    private String abnormalLabel(Integer flag) {
-        if (flag == null) {
-            return "-";
+    /**
+     * 报告单「提示」列：只标异常方向，正常留空。
+     * <p>
+     * 纸质检验报告通行写法是高值 ↑、低值 ↓，定性结果不符（分不清高低）给「异常」；
+     * 正常项不印任何字样，未判定/无标志同样留空——不能把「不知道」印成「正常」。
+     */
+    private String abnormalMark(BizLabResult result) {
+        Integer flag = result.getAbnormalFlag();
+        if (flag == null || LabAbnormalJudge.isUnjudged(result.getJudgeNote())) {
+            return "";
         }
-        String label = LabAbnormalFlagEnum.getLabel(flag);
-        return TextUtil.hasText(label) ? label : "-";
+        if (LabAbnormalFlagEnum.HIGH.is(flag)) {
+            return "↑";
+        }
+        if (LabAbnormalFlagEnum.LOW.is(flag)) {
+            return "↓";
+        }
+        if (LabAbnormalFlagEnum.ABNORMAL.is(flag)) {
+            return "异常";
+        }
+        return "";
     }
 }

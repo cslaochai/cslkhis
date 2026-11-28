@@ -11,6 +11,8 @@ import com.his.common.entity.CurrentUser;
 import com.his.common.enums.RobotDispatchPriorityEnum;
 import com.his.common.enums.RobotDispatchSourceEnum;
 import com.his.common.enums.RobotDispatchStatusEnum;
+import com.his.common.enums.RobotGoodsTypeEnum;
+import com.his.common.enums.RobotStationTypeEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.TextUtil;
 import com.his.common.utils.UserUtils;
@@ -21,12 +23,15 @@ import com.his.iot.dto.RobotDispatchCreateDTO;
 import com.his.iot.dto.RobotDispatchPageQueryDTO;
 import com.his.iot.entity.IotDevice;
 import com.his.iot.entity.IotRobotDispatchOrder;
+import com.his.iot.entity.RobotStation;
 import com.his.iot.mapper.IotDeviceMapper;
 import com.his.iot.mapper.IotRobotDispatchOrderMapper;
 import com.his.iot.service.IotDeviceService;
 import com.his.iot.service.IotTelemetryService;
 import com.his.iot.service.RobotDispatchService;
+import com.his.iot.service.RobotStationService;
 import com.his.iot.support.IotMqttPublisher;
+import com.his.iot.support.RobotDispatchConst;
 import com.his.iot.vo.IotDeviceVO;
 import com.his.iot.vo.IotLatestVO;
 import com.his.iot.vo.IotMetricVO;
@@ -71,9 +76,7 @@ public class RobotDispatchServiceImpl extends ServiceImpl<IotRobotDispatchOrderM
     private static final Set<String> DISPATCHABLE_STATES = Set.of("IDLE");
     /** 派单最低电量(%)：低于此值车要回桩补能，不接新单。 */
     private static final double MIN_DISPATCH_BATTERY = 30d;
-    /** 单车额定载重(kg)：仿真 4 箱 × 3.6kg ≈ 14.4kg，额定留 15kg 余量。 */
-    private static final double NOMINAL_PAYLOAD_KG = 15.0d;
-    /** 楼层文本解析：B1 → -1，2F → 2，12F → 12。 */
+    /** 楼层文本解析：B1 → -1，2F → 2，12F → 12。存量单据没有站点ID时兜底用。 */
     private static final Pattern FLOOR_PATTERN = Pattern.compile("^(B?)(\\d+)");
 
     private final IotDeviceMapper iotDeviceMapper;
@@ -81,28 +84,53 @@ public class RobotDispatchServiceImpl extends ServiceImpl<IotRobotDispatchOrderM
     private final IotTelemetryService iotTelemetryService;
     private final IotMqttPublisher publisher;
     private final RedisSequenceService redisSequenceService;
+    private final RobotStationService stationService;
     private final ObjectMapper json = new ObjectMapper();
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public Long create(RobotDispatchCreateDTO dto) {
+    public RobotDispatchOrderVO create(RobotDispatchCreateDTO dto) {
         CurrentUser user = requireUser();
+
+        // 站点主数据是唯一事实：名称、楼栋楼层、来源都由站点带出，下单人不再手填
+        RobotStation apply = stationService.requireEnabled(dto.getApplyStationId());
+        RobotStation from = stationService.requireStation(dto.getFromStationId(), true);
+        RobotStation to = stationService.requireStation(dto.getToStationId(), false);
+        if (Objects.equals(from.getId(), to.getId())) {
+            throw new BusinessException(400, "取货点与收货点不能是同一站点");
+        }
+
+        // 重量 = 品类单箱基准重量 × 箱数（品类口径见 RobotGoodsTypeEnum，不接受手填总重）
+        Double unitKg = RobotGoodsTypeEnum.unitWeightOf(dto.getGoodsType());
+        if (unitKg == null) {
+            throw new BusinessException(400, "物品品类不合法：" + dto.getGoodsType());
+        }
+        int boxes = dto.getBoxCount();
+        int maxBox = (int) Math.floor(RobotDispatchConst.NOMINAL_PAYLOAD_KG / unitKg);
+        if (boxes > maxBox) {
+            throw new BusinessException(400, dto.getGoodsType() + "单趟最多 " + maxBox
+                    + " 箱（单车额定 " + (int) RobotDispatchConst.NOMINAL_PAYLOAD_KG + "kg）");
+        }
+
         IotRobotDispatchOrder order = new IotRobotDispatchOrder();
         order.setOrderNo(nextOrderNo());
-        order.setSourceType(dto.getSourceType());
-        order.setSourceDeptName(TextUtil.hasText(dto.getSourceDeptName()) ? dto.getSourceDeptName() : user.getDeptName());
+        order.setSourceType(RobotStationTypeEnum.sourceTypeOf(apply.getStationType()));
+        order.setSourceDeptName(apply.getStationName());
+        order.setApplyStationId(apply.getId());
         order.setRequesterId(user.getEmployeeId());
         order.setRequesterName(TextUtil.hasText(user.getRealName()) ? user.getRealName() : user.getUsername());
         order.setGoodsType(dto.getGoodsType());
-        order.setGoodsName(dto.getGoodsName());
-        order.setFromStation(dto.getFromStation());
-        order.setToFloor(dto.getToFloor());
-        order.setToStation(dto.getToStation());
+        order.setGoodsName(TextUtil.cut(dto.getGoodsName(), 200));
+        order.setFromStationId(from.getId());
+        order.setFromStation(from.getStationName());
+        order.setToStationId(to.getId());
+        order.setToStation(to.getStationName());
+        order.setToFloor(to.getFloorNo());
         order.setPriority(dto.getPriority());
-        order.setBoxCount(dto.getBoxCount() == null || dto.getBoxCount() < 1 ? 1 : dto.getBoxCount());
-        order.setLoadKg(dto.getLoadKg() == null ? 0d : dto.getLoadKg());
+        order.setBoxCount(boxes);
+        order.setLoadKg(round1(unitKg * boxes));
         order.setStatus(RobotDispatchStatusEnum.PENDING_DISPATCH.getCode());
-        order.setRemark(dto.getRemark());
+        order.setRemark(TextUtil.cut(dto.getRemark(), 500));
         baseMapper.insert(order);
 
         if (Boolean.TRUE.equals(dto.getAutoAssign())) {
@@ -116,7 +144,7 @@ public class RobotDispatchServiceImpl extends ServiceImpl<IotRobotDispatchOrderM
                 log.warn("任务单 {} 自动派车未成功，留在待调度队列：{}", order.getOrderNo(), e.getMessage());
             }
         }
-        return order.getId();
+        return toVo(baseMapper.selectById(order.getId()), robotNameMap());
     }
 
     @Override
@@ -218,7 +246,7 @@ public class RobotDispatchServiceImpl extends ServiceImpl<IotRobotDispatchOrderM
             publisher.publishCommand("robot", order.getRobotNo(), "CANCEL_TASK", order.getOrderNo(), null);
         }
         order.setStatus(RobotDispatchStatusEnum.CANCELLED.getCode());
-        order.setCancelReason(dto.getCancelReason());
+        order.setCancelReason(TextUtil.cut(dto.getCancelReason(), 500));
         baseMapper.updateById(order);
     }
 
@@ -345,7 +373,7 @@ public class RobotDispatchServiceImpl extends ServiceImpl<IotRobotDispatchOrderM
         Map<String, IotLatestVO> latestByNo = iotTelemetryService.latestList(latestQuery).stream()
                 .collect(Collectors.toMap(IotLatestVO::getDeviceNo, v -> v, (a, b) -> a));
 
-        int fromFloor = floorOf(order.getFromStation());
+        int fromFloor = fromFloorOf(order);
         double needKg = order.getLoadKg() == null ? 0d : order.getLoadKg();
 
         List<Candidate> candidates = new ArrayList<>();
@@ -376,7 +404,7 @@ public class RobotDispatchServiceImpl extends ServiceImpl<IotRobotDispatchOrderM
                 rejectReasons.merge("低电", 1, Integer::sum);
                 continue;
             }
-            double freeKg = NOMINAL_PAYLOAD_KG - (onboardKg == null ? 0d : onboardKg);
+            double freeKg = RobotDispatchConst.NOMINAL_PAYLOAD_KG - (onboardKg == null ? 0d : onboardKg);
             if (freeKg < needKg) {
                 rejectReasons.merge("超载", 1, Integer::sum);
                 continue;
@@ -414,6 +442,20 @@ public class RobotDispatchServiceImpl extends ServiceImpl<IotRobotDispatchOrderM
         double capacityRatio = needKg <= 0 ? 1d : Math.max(0d, Math.min(1d, freeKg / needKg));
         score += capacityRatio * 20d;
         return score;
+    }
+
+    /**
+     * 取货楼层：有站点ID就直接读站点 floor_no（站点是唯一事实），
+     * 存量单据没有站点ID时才退回从文本抠楼层。
+     */
+    private int fromFloorOf(IotRobotDispatchOrder order) {
+        if (order.getFromStationId() != null) {
+            RobotStation station = stationService.findById(order.getFromStationId());
+            if (station != null && station.getFloorNo() != null) {
+                return station.getFloorNo();
+            }
+        }
+        return floorOf(order.getFromStation());
     }
 
     /** 从站点/位置文本解析楼层：B1 → -1，2F → 2，12F → 12；解析不出返回 MIN_VALUE。 */
@@ -493,6 +535,15 @@ public class RobotDispatchServiceImpl extends ServiceImpl<IotRobotDispatchOrderM
         p.put("priority", order.getPriority());
         p.put("boxCount", order.getBoxCount());
         p.put("loadKg", order.getLoadKg());
+        // 真机认停靠点位码，不认站点名：站点维护里对过码就下发，车辆据此精确定位停靠
+        RobotStation from = stationService.findById(order.getFromStationId());
+        if (from != null && TextUtil.hasText(from.getDockCode())) {
+            p.put("fromDockCode", from.getDockCode());
+        }
+        RobotStation to = stationService.findById(order.getToStationId());
+        if (to != null && TextUtil.hasText(to.getDockCode())) {
+            p.put("toDockCode", to.getDockCode());
+        }
         if (TextUtil.hasText(order.getRequesterName())) {
             p.put("requesterName", order.getRequesterName());
         }
@@ -511,13 +562,16 @@ public class RobotDispatchServiceImpl extends ServiceImpl<IotRobotDispatchOrderM
         vo.setSourceType(order.getSourceType());
         vo.setSourceTypeLabel(RobotDispatchSourceEnum.getLabel(order.getSourceType()));
         vo.setSourceDeptName(order.getSourceDeptName());
+        vo.setApplyStationId(order.getApplyStationId());
         vo.setRequesterId(order.getRequesterId());
         vo.setRequesterName(order.getRequesterName());
         vo.setGoodsType(order.getGoodsType());
         vo.setGoodsName(order.getGoodsName());
         vo.setFromStation(order.getFromStation());
+        vo.setFromStationId(order.getFromStationId());
         vo.setToFloor(order.getToFloor());
         vo.setToStation(order.getToStation());
+        vo.setToStationId(order.getToStationId());
         vo.setPriority(order.getPriority());
         vo.setPriorityLabel(RobotDispatchPriorityEnum.getLabel(order.getPriority()));
         vo.setBoxCount(order.getBoxCount());
@@ -560,6 +614,11 @@ public class RobotDispatchServiceImpl extends ServiceImpl<IotRobotDispatchOrderM
     private String nextOrderNo() {
         long seq = redisSequenceService.next("ROBOT_DISPATCH");
         return "RB" + LocalDate.now().format(DAY) + String.format("%05d", seq % 100000);
+    }
+
+    /** 载重留一位小数：3.6kg × 3 箱 = 10.8kg，不出现 10.799999 这种浮点尾巴。 */
+    private static double round1(double v) {
+        return Math.round(v * 10.0) / 10.0;
     }
 
     private static String stateLabel(String state) {

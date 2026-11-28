@@ -116,6 +116,13 @@ const routes = [
                 meta: {title: '机器人调度'}
             },
             {
+                // 设备管理 900 → 430 菜单；站点是基础数据，不在调度台里维护
+                path: 'iot-robot-station',
+                name: 'IotRobotStation',
+                component: () => import('@/views/equipment/RobotStationView.vue'),
+                meta: {title: '机器人站点'}
+            },
+            {
                 path: 'pharmacy-coldchain',
                 name: 'PharmacyColdChain',
                 component: () => import('@/views/iot/ColdChainView.vue'),

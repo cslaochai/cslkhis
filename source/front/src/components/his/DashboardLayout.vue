@@ -1,5 +1,7 @@
 <template>
   <div class="min-h-screen bg-slate-50">
+    <!-- 全局叫车浮窗：有 iot:robotDispatch:apply 的岗位常驻右下角，一键发起配送 -->
+    <RobotCallFloat/>
     <!-- 顶部 Header（包含 logo、企业名、面包屑、搜索等） -->
     <Header/>
     <!-- 下方区域 -->
@@ -25,5 +27,6 @@
 import Sidebar from './Sidebar.vue';
 import Header from './Header.vue';
 import MsgDeeplinkBar from './MsgDeeplinkBar.vue';
+import RobotCallFloat from './RobotCallFloat.vue';
 import {sidebarCollapsed} from '@/lib/sidebarState';
 </script>

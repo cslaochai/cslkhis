@@ -28,6 +28,9 @@ public class IotRobotDispatchOrder extends BaseEntity {
     /** 发起科室/站点名称快照 */
     private String sourceDeptName;
 
+    /** 发起站点ID */
+    private Long applyStationId;
+
     /** 发起人员工ID */
     private Long requesterId;
 
@@ -43,11 +46,17 @@ public class IotRobotDispatchOrder extends BaseEntity {
     /** 取货点 */
     private String fromStation;
 
+    /** 取货站点ID */
+    private Long fromStationId;
+
     /** 目标楼层 */
     private Integer toFloor;
 
     /** 收货站点（护士站） */
     private String toStation;
+
+    /** 收货站点ID */
+    private Long toStationId;
 
     /** 优先级：1-常规 2-批量补货 3-急送 */
     private Integer priority;

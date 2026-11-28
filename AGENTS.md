@@ -523,7 +523,7 @@ public enum XxxEnum {
   `username` 是账号拼音，混进操作人列会让按人名检索直接漏。
 - **禁塞默认值**：`"system"`/`"未知操作人"`/`"系统"`/`String.valueOf(empId)`/`try-catch-return-null` 全禁。取不到就是**报错
   **（NPE 兜 500，或自己抛 BusinessException），不继续执行。塞假值 = 「谁干的」被藏进库，零报错。
-- **五处定时任务豁免**（唯一允许落系统值）：
+- **七处无登录态入口豁免**（唯一允许落系统值）：
 
   | 位置 | 值 | 触发 |
     |---|---|---|
@@ -532,6 +532,7 @@ public enum XxxEnum {
   | `FollowupTaskServiceImpl` | `system:autoFollowup` | `DischargeFollowupTrigger` 每 10 分钟 |
   | `QualityControlServiceImpl.autoRescanOutpatientQc` | `system:qcAutoRescan`（employeeId `0L`） | `QcAutoRescanTrigger` 每 10 分钟 |
   | `RobotDispatchQueueTask.dispatchPending` | `system:robotDispatch`（employeeId `0L`） | `@Scheduled` 每 10 秒补派待调度机器人任务单 |
+  | 仿真平台检查结果回调（`SimInspectionCallbackController` → `MedicalTechService.applySimInspectionResult`） | `system:deviceSim`；身份走 `SystemOperatorContext.bindSystemTask()` | simlab 延时出结果后 REST 回调，无登录态 |
 
   前四处里，除 `QcAutoRescan` 外都是方法加 operator 参数由调用方显式传，**不是**方法内判空回落；
   `RobotDispatchQueueTask` 走的是 `RobotDispatchService.assignAs(orderId, robotNo, operatorName, operatorId)` 的显式传参，

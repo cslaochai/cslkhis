@@ -4,6 +4,7 @@ import com.his.medicaltech.vo.BizReportVO;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.his.common.base.PageResult;
 import com.his.medicaltech.dto.LabResultSaveDTO;
+import com.his.medicaltech.dto.SimInspectionResultDTO;
 import com.his.medicaltech.dto.SpecimenLabelPrintDTO;
 import com.his.medicaltech.entity.BizInspectionRecord;
 import com.his.medicaltech.entity.BizLabResult;
@@ -238,6 +239,16 @@ public interface MedicalTechService extends IService<BizInspectionRecord> {
      * @return 检查记录 ID（已存在则返回既有那条的 ID）
      */
     Long ensureInspectionRecordFromApply(Long applyId);
+
+    /**
+     * 接收仿真平台回传的检查结果：落检查所见 / 结论，记录置「已出结果」，
+     * 并建或更新一张「待审核」报告。不签 CA、不自动审核定稿。
+     *
+     * <p>状态闸门：已审核 / 已发布 / 已取消的记录拒绝覆盖；同一结果重复回调幂等返回。
+     *
+     * @param dto 仿真平台回传结果
+     */
+    void applySimInspectionResult(SimInspectionResultDTO dto);
 
     /**
      * 按检验申请单**幂等**生成检验记录（患者缴费时调用），语义同

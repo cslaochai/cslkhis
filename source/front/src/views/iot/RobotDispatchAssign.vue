@@ -6,7 +6,7 @@
       <el-descriptions-item label="物品">
         {{ row?.goodsName }}（{{ row?.boxCount }} 箱 {{ row?.loadKg }}kg）
       </el-descriptions-item>
-      <el-descriptions-item label="路线">{{ row?.fromStation }} → {{ row?.toFloor }}F {{ row?.toStation }}</el-descriptions-item>
+      <el-descriptions-item label="路线">{{ row?.fromStation }} → {{ floorText(row?.toFloor) }} {{ row?.toStation }}</el-descriptions-item>
     </el-descriptions>
     <el-form class="mt-4" label-width="90px">
       <el-form-item label="机器人">
@@ -38,6 +38,8 @@ const emit = defineEmits(['update:modelValue', 'saved']);
 const visible = computed({get: () => props.modelValue, set: (v) => emit('update:modelValue', v)});
 
 const submitting = ref(false);
+/** 楼层文本：-1 → B1，12 → 12F */
+const floorText = (n) => (n == null ? '—' : n < 0 ? `B${Math.abs(n)}` : `${n}F`);
 // 空串 = 后端派单算法自动选车（不能绑 null，el-option 的 value 禁 null）
 const robotNo = ref('');
 

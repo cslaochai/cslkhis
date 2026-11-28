@@ -1,6 +1,5 @@
 <template>
-  <!-- embedded=true：被「设备管理」页当 Tab 内嵌，去掉外层 p-4（外层已有卡片留白） -->
-  <div :class="embedded ? 'space-y-4' : 'p-4 space-y-4'">
+  <div class="p-4 space-y-4">
     <div class="bg-white rounded-lg shadow-sm px-5 py-4 flex flex-wrap items-center gap-5">
       <div class="min-w-[280px]">
         <div class="flex items-center gap-2">
@@ -8,7 +7,7 @@
           <el-tag size="small" effect="plain">全院共享车队</el-tag>
         </div>
         <div class="text-[12px] text-gray-500 mt-1">
-          站点/科室发起配送单 → 设备科选空闲机器人派车 → 装车配送 → 到站签收；急送插队，常规排队
+          站点用右下角「叫机器人」发单，后端自动选车；本台做车队监控与异常改派，急送插队、常规排队
         </div>
       </div>
 
@@ -19,7 +18,7 @@
         </el-select>
         <el-select v-model="query.priority" clearable :fit-input-width="false" style="width: 130px"
                    placeholder="优先级" @change="query.pageNum = 1; loadOrders()">
-          <el-option v-for="p in priorityOptions" :key="p.value" :label="p.label" :value="p.value"/>
+          <el-option v-for="p in PRIORITY_OPTIONS" :key="p.value" :label="p.label" :value="p.value"/>
         </el-select>
         <el-input v-model="query.keyword" clearable placeholder="单号/物品/站点/发起人"
                   style="width: 220px" @keyup.enter="query.pageNum = 1; loadOrders()"/>
@@ -91,7 +90,7 @@
         <el-table-column label="路线" min-width="190">
           <template #default="{row}">
             <div>{{ row.fromStation }}</div>
-            <div class="text-[12px] text-gray-400">→ {{ row.toFloor }}F {{ row.toStation }}</div>
+            <div class="text-[12px] text-gray-400">→ {{ floorText(row.toFloor) }} {{ row.toStation }}</div>
           </template>
         </el-table-column>
         <el-table-column label="优先级" width="90">
@@ -131,9 +130,8 @@
       </div>
     </div>
 
-    <!-- 新建派单 -->
-    <RobotDispatchAdd v-model="createVisible" :goods-type-options="goodsTypeOptions"
-                      :priority-options="priorityOptions" :source-options="sourceOptions" @saved="refreshAll"/>
+    <!-- 新建派单：候选项由弹窗自己按 /options 拉，设备科派单不预填科室站点 -->
+    <RobotDispatchAdd v-model="createVisible" @saved="refreshAll"/>
 
     <!-- 派车 -->
     <RobotDispatchAssign v-model="assignVisible" :free-fleet="freeFleet" :row="assignRow" @saved="refreshAll"/>
@@ -150,7 +148,7 @@
         <el-descriptions-item label="品类">{{ detailRow.goodsType }}</el-descriptions-item>
         <el-descriptions-item label="物品">{{ detailRow.goodsName }}</el-descriptions-item>
         <el-descriptions-item label="取货点">{{ detailRow.fromStation }}</el-descriptions-item>
-        <el-descriptions-item label="收货站点">{{ detailRow.toFloor }}F {{ detailRow.toStation }}</el-descriptions-item>
+        <el-descriptions-item label="收货站点">{{ floorText(detailRow.toFloor) }} {{ detailRow.toStation }}</el-descriptions-item>
         <el-descriptions-item label="优先级">{{ detailRow.priorityLabel }}</el-descriptions-item>
         <el-descriptions-item label="箱数/重量">{{ detailRow.boxCount }} 箱 / {{ detailRow.loadKg }}kg</el-descriptions-item>
         <el-descriptions-item label="机器人">{{ detailRow.robotName || '—' }}（{{ detailRow.robotNo || '未分配' }}）</el-descriptions-item>
@@ -179,11 +177,11 @@ import {
   robotDispatchListPage,
 } from '@/api/robotDispatch';
 import {DEFAULT_PAGE_SIZE} from '@/lib/pagination';
-import RobotDispatchAdd from './RobotDispatchAdd.vue';
+import {PRIORITY_OPTIONS} from '@/lib/robotDispatchOptions';
+import RobotDispatchAdd from '@/components/his/RobotDispatchAdd.vue';
 import RobotDispatchAssign from './RobotDispatchAssign.vue';
 
-/** 被设备管理页内嵌时传 true，仅去掉外层页面留白 */
-defineProps({embedded: {type: Boolean, default: false}});
+/** 设备科的调度台（车队监控 + 派车/改派），叫车入口在全局浮窗 RobotCallFloat */
 
 const loading = ref(false);
 const loadError = ref('');
@@ -207,21 +205,6 @@ const statusOptions = [
   {value: 5, label: '已取消'},
   {value: 6, label: '异常'},
 ];
-const priorityOptions = [
-  {value: 1, label: '常规'},
-  {value: 2, label: '批量补货'},
-  {value: 3, label: '急送'},
-];
-const sourceOptions = [
-  {value: 'PIVAS', label: '静配中心'},
-  {value: 'PHARMACY', label: '住院药房'},
-  {value: 'LAB', label: '检验科'},
-  {value: 'WAREHOUSE', label: '中心库房'},
-  {value: 'CSSD', label: '消毒供应中心'},
-  {value: 'LAUNDRY', label: '洗涤中心'},
-  {value: 'MANUAL', label: '手工派单'},
-];
-const goodsTypeOptions = ['药品', '标本', '耗材', '器械包', '被服'];
 
 const statusTagType = (s) => (s === 1 ? 'warning' : s === 2 ? 'info' : s === 3 ? 'primary'
     : s === 4 ? 'success' : s === 6 ? 'danger' : 'info');
@@ -230,6 +213,8 @@ const stateTagType = (s) => (s === 'IDLE' ? 'success' : ['DELIVERING', 'LOADING'
     ? 'primary' : s === 'CHARGING' ? 'warning' : s === 'ALARM' ? 'danger' : 'info');
 const batteryColor = (b) => (b == null ? '#C0C4CC' : b < 20 ? '#F56C6C' : b < 50 ? '#E6A23C' : '#0E9488');
 const shortTime = (t) => (t ? String(t).replace('T', ' ').slice(0, 16) : '—');
+/** 楼层文本：-1 → B1（地下层），12 → 12F；空值给 — */
+const floorText = (n) => (n == null ? '—' : n < 0 ? `B${Math.abs(n)}` : `${n}F`);
 const durationText = (sec) => {
   if (sec == null) return '—';
   const m = Math.floor(sec / 60);

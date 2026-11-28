@@ -261,7 +261,7 @@
             <h4 class="mb-2 text-sm font-bold text-slate-700">审核者签名</h4>
             <div v-if="auditSignLoading" class="text-xs text-slate-400">正在加载当前登录人的签名笔迹…</div>
             <div v-else-if="auditSignImage" class="flex items-center gap-3">
-              <img :src="auditSignImage" alt="审核者签名笔迹" class="h-12 rounded border border-slate-200 bg-white"/>
+              <img :src="auditSignImage" alt="审核者签名笔迹" class="h-12 rounded border border-slate-200 bg-slate-100"/>
               <span class="text-xs text-slate-500">将引用当前登录人（员工档案）预维护的签名笔迹完成审核</span>
             </div>
             <div v-else class="text-xs text-amber-600">

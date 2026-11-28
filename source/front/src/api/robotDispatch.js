@@ -18,8 +18,9 @@ export function robotDispatchDetail(id) {
   return request.get('/iot/robotDispatch/getDetailById', {params: {id}})
 }
 
-// 新建配送任务单：{sourceType, sourceDeptName, goodsType, goodsName, fromStation, toFloor, toStation,
-//                  priority, boxCount, loadKg, autoAssign, robotNo, remark}
+// 新建配送任务单：{applyStationId, fromStationId, toStationId, goodsType, goodsName,
+//                  priority, boxCount, autoAssign, robotNo, remark}
+// 楼层、来源、总重全部由后端按站点与品类推导，前端不再上送
 export function robotDispatchCreate(data) {
   return request.post('/iot/robotDispatch/create', data)
 }

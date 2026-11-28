@@ -64,6 +64,16 @@ public class EquipmentUpsertDTO implements Serializable {
     private String model;
 
     /**
+     * 供应商ID（下拉取 /supplier/selectList，全院共用一张供应商档案）
+     */
+    private Long supplierId;
+
+    /**
+     * 供应商名称快照（随 supplierId 由前端带入；档案留快照避免跨模块联查）
+     */
+    private String supplierName;
+
+    /**
      * 购置日期
      */
     @JsonFormat(pattern = "yyyy-MM-dd")

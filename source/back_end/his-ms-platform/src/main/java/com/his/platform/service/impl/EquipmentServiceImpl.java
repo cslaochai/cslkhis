@@ -2,6 +2,7 @@ package com.his.platform.service.impl;
 
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -123,6 +124,8 @@ public class EquipmentServiceImpl extends ServiceImpl<SysEquipmentMapper, SysEqu
         e.setDeptName(TextUtil.trim(dto.getDeptName()));
         e.setBrand(TextUtil.trim(dto.getBrand()));
         e.setModel(TextUtil.trim(dto.getModel()));
+        e.setSupplierId(dto.getSupplierId());
+        e.setSupplierName(TextUtil.trim(dto.getSupplierName()));
         e.setPurchaseDate(dto.getPurchaseDate());
         e.setPurchasePrice(dto.getPurchasePrice());
         e.setStatus(dto.getStatus());
@@ -138,6 +141,14 @@ public class EquipmentServiceImpl extends ServiceImpl<SysEquipmentMapper, SysEqu
             save(e);
         } else {
             updateById(e);
+            // updateById 默认忽略 null：把厂商清空再保存会变成「界面上没了、库里还留着」，
+            // 这两列是可选档案，选了才能清，故显式置空
+            if (dto.getSupplierId() == null) {
+                update(new LambdaUpdateWrapper<SysEquipment>()
+                        .eq(SysEquipment::getId, dto.getId())
+                        .set(SysEquipment::getSupplierId, null)
+                        .set(SysEquipment::getSupplierName, null));
+            }
         }
         syncRobotDevice(e, logistics);
     }
@@ -313,6 +324,8 @@ public class EquipmentServiceImpl extends ServiceImpl<SysEquipmentMapper, SysEqu
         vo.setDeptName(e.getDeptName());
         vo.setBrand(e.getBrand());
         vo.setModel(e.getModel());
+        vo.setSupplierId(e.getSupplierId());
+        vo.setSupplierName(e.getSupplierName());
         vo.setPurchaseDate(e.getPurchaseDate());
         vo.setPurchasePrice(e.getPurchasePrice());
         vo.setStatus(e.getStatus());

@@ -99,6 +99,8 @@ public class SecurityConfig {
      *   <li>{@code /emr/signCert/caCallback}：先 SignCaCallbackRateLimitFilter 按来源 IP 限次（超出 429），
      *       再 SignCaCallbackSignatureFilter 校验 HMAC-SHA256 + 时间戳 + nonce 去重。
      *       顺序固定为「先计数再验签」，否则验签失败的伪造请求不进分钟桶，限流形同虚设。</li>
+     *   <li>{@code /medicaltech/sim/**}：仿真平台结果回调，端点内校验 HMAC-SHA256 签名头
+     *       （X-Sim-Timestamp / X-Sim-Nonce / X-Sim-Signature）+ 时间戳偏差 + nonce 去重，密钥取 his.simlab.secret。</li>
      * </ul>
      *
      * <p>本组只允许「第三方服务器主动推送」的端点；需要登录态的业务接口、内部服务间调用一律不许放进来。
@@ -107,6 +109,7 @@ public class SecurityConfig {
     private static final String[] EXTERNAL_CALLBACK_WHITE_LIST = {
             "/pay/notify/**",
             "/emr/signCert/caCallback",
+            "/medicaltech/sim/**",
     };
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
 

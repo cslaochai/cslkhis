@@ -52,6 +52,15 @@ public class SysEquipment extends BaseEntity {
      * 型号
      */
     private String model;
+
+    /**
+     * 供应商ID（复用全院 sys_supplier；同一家公司既供药品也供设备）
+     */
+    private Long supplierId;
+    /**
+     * 供应商名称快照（建档时点，供应商改名不动历史档案）
+     */
+    private String supplierName;
     /**
      * 购置日期（编辑时可清空，故 updateStrategy=ALWAYS 让 null 也写回库）
      */

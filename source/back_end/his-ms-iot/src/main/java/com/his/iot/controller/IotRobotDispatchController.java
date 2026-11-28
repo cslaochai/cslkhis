@@ -55,8 +55,8 @@ public class IotRobotDispatchController {
     @Operation(summary = "新建配送任务单")
     @PreAuthorize("hasAuthority('iot:robotDispatch:apply')")
     @PostMapping("/create")
-    public Result<String> create(@Valid @RequestBody RobotDispatchCreateDTO dto) {
-        return Result.success(String.valueOf(dispatchService.create(dto)));
+    public Result<RobotDispatchOrderVO> create(@Valid @RequestBody RobotDispatchCreateDTO dto) {
+        return Result.success(dispatchService.create(dto));
     }
 
     @Operation(summary = "派车分配机器人")

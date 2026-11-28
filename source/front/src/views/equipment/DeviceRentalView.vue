@@ -1,6 +1,5 @@
 <template>
-  <!-- embedded=true：被「设备管理」页当 Tab 内嵌，去掉外层 p-4（外层已有卡片留白） -->
-  <div :class="embedded ? 'space-y-4' : 'p-4 space-y-4'">
+  <div class="p-4 space-y-4">
     <div class="bg-white rounded-lg shadow-sm px-5 py-4 flex flex-wrap items-center gap-5">
       <div class="flex items-center gap-3">
         <span class="text-[13px] text-gray-500">状态</span>
@@ -53,9 +52,10 @@
     <div class="bg-white rounded-lg shadow-sm">
       <el-tabs v-model="tab" class="px-4 pt-2">
         <el-tab-pane label="申请单" name="orders">
+          <!-- 本页是设备科的调配台：申请单在这里只做审批/发放/验收与流水留存，
+               发起申请不属于设备科（临床在护士工作站发起），别把按钮挂回来 -->
           <div class="flex items-center gap-3 pb-3">
-            <el-button v-perm="'asset:deviceRental:apply'" type="primary" @click="openApply()">发起申请</el-button>
-            <span class="text-[12px] text-gray-400">申请只登记设备类别/用途；具体泵号/资产编号由设备科发放时分配</span>
+            <span class="text-[12px] text-gray-400">申请由临床科室在护士工作站/住院医生站发起；本页只做审批、发放、验收与留存</span>
           </div>
 
           <el-table v-loading="loading" :data="orders" max-height="560" row-key="id">
@@ -136,6 +136,7 @@
                            size="small" @click="approve(row, false)">驳回</el-button>
                 <el-button v-if="row.status === 2" v-perm="'asset:deviceRental:issue'" link type="primary"
                            size="small" @click="issue(row)">发放</el-button>
+                <!-- 归还同样由临床发起；临床入口建成前暂留此处，入口上线后跟着搬走 -->
                 <el-button v-if="row.status === 3" v-perm="'asset:deviceRental:return'" link type="warning"
                            size="small" @click="markReturn(row)">归还</el-button>
                 <el-button v-if="row.status === 4" v-perm="'asset:deviceRental:accept'" link type="success"
@@ -179,21 +180,13 @@
             <el-table-column label="状态" width="84">
               <template #default="{row}"><el-tag size="small" type="success" effect="plain">在用</el-tag></template>
             </el-table-column>
-            <el-table-column label="操作" width="94">
-              <template #default="{row}">
-                <el-button v-perm="'asset:deviceRental:apply'" link type="primary" size="small"
-                           :disabled="!row.availableCount" @click="openApply(row.id)">申请</el-button>
-              </template>
-            </el-table-column>
           </el-table>
           <div class="px-2 py-3 text-[12px] text-gray-400">
-            共享池目录由设备科在「设备管理 · 共享池」维护；当前可借 = 总数 − 已绑定/已借出。
+            共享池 = 设备台账里勾了「共享」的在用设备，入池/出池在「设备管理」页维护；当前可借 = 总数 − 已绑定/已借出。
           </div>
         </el-tab-pane>
       </el-tabs>
     </div>
-
-    <DeviceRentalApply v-model="applyVisible" :preset-equipment-id="presetEquipmentId" @saved="refreshAll"/>
 
     <el-dialog v-model="detailVisible" title="设备借用申请详情" width="760px" append-to-body>
       <template v-if="detailRow">
@@ -220,13 +213,15 @@
 
 <script setup>
 /**
- * 设备共享调配（物资设备 · 设备共享调配，菜单 380）。
+ * 设备共享调配（物资设备 · 设备共享调配，菜单 380）—— 设备科的调配台。
  *
  * 业务口径对齐设备科共享调配中心：
- *  - 共享池 = sys_equipment 中 rentable=1 的在用设备；不是所有 IoT 基础设施。
- *  - 临床按设备类型/数量发起申请，设备科审批后发放具体设备；
+ *  - 共享池 = sys_equipment 中 rentable=1 的在用设备；不是所有 IoT 基础设施，入池/出池在「设备管理」页做。
+ *  - 临床按设备类别/数量发起申请（护士工作站/住院医生站发起），设备科审批后发放具体设备；
  *  - IoT 泵发放时同时绑定患者（biz_iot_device_bind），普通设备只登记资产编号；
- *  - 归还由临床发起，设备科验收后恢复可借库存。
+ *  - 归还由临床发起（入口上线后续搬走），设备科验收后恢复可借库存。
+ *
+ * 本页不做的事：**不发申请**（设备科没有发起权），申请单在这里是待办队列 + 审计流水。
  */
 import {onMounted, onUnmounted, reactive, ref} from 'vue';
 import {ElMessage, ElMessageBox} from 'element-plus';
@@ -238,11 +233,9 @@ import {
   deviceRentalListPage,
   deviceRentalReturn,
 } from '@/api/deviceRental';
-import DeviceRentalApply from './DeviceRentalApply.vue';
 import {DEFAULT_PAGE_SIZE} from '@/lib/pagination';
 
-/** 被设备管理页内嵌时传 true，仅去掉外层页面留白 */
-defineProps({embedded: {type: Boolean, default: false}});
+/** 独立页面（不再被设备管理当 Tab 内嵌） */
 
 const tab = ref('orders');
 const loading = ref(false);
@@ -256,8 +249,6 @@ const catalogKeyword = ref('');
 const query = reactive({status: null, keyword: '', pageNum: 1, pageSize: DEFAULT_PAGE_SIZE});
 const stats = reactive({pending: 0, toIssue: 0, inUse: 0, pendingAccept: 0, available: 0});
 
-const applyVisible = ref(false);
-const presetEquipmentId = ref(null);
 const detailVisible = ref(false);
 const detailRow = ref(null);
 
@@ -338,11 +329,6 @@ const resetQuery = () => {
   query.keyword = '';
   query.pageNum = 1;
   loadOrders();
-};
-
-const openApply = (equipmentId = null) => {
-  presetEquipmentId.value = equipmentId;
-  applyVisible.value = true;
 };
 
 const openDetail = (row) => {
