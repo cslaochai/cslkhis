@@ -12,6 +12,11 @@
       <el-form-item label="名称" required>
         <el-input v-model="form.supplierName" placeholder="供应商名称"/>
       </el-form-item>
+      <el-form-item label="经营范围">
+        <el-select v-model="form.supplierType" :fit-input-width="false" style="width: 100%">
+          <el-option v-for="o in supplierTypeOptions" :key="o.value" :label="o.label" :value="o.value"/>
+        </el-select>
+      </el-form-item>
       <el-form-item label="联系人">
         <el-input v-model="form.contactPerson"/>
       </el-form-item>
@@ -19,7 +24,7 @@
         <el-input v-model="form.phone"/>
       </el-form-item>
       <el-form-item label="经营许可证">
-        <el-input v-model="form.businessLicense"/>
+        <el-input v-model="form.licenseNo"/>
       </el-form-item>
       <el-form-item label="证照有效期">
         <el-date-picker v-model="form.licenseExpiry" style="width: 100%" type="date" value-format="YYYY-MM-DD"/>
@@ -71,10 +76,18 @@ const emit = defineEmits(['update:modelValue', 'saved']);
 const visible = computed({ get: () => props.modelValue, set: (v) => emit('update:modelValue', v) });
 
 const saving = ref(false);
+// 经营范围：与 SupplierTypeEnum 逐字一致；本页在药事管理下，新增默认「药品」
+const supplierTypeOptions = [
+  { label: '药品', value: 1 },
+  { label: '器械设备', value: 2 },
+  { label: '耗材', value: 3 },
+  { label: '后勤物资', value: 4 },
+];
 const form = reactive({
   supplierId: null,
   supplierCode: '',
   supplierName: '',
+  supplierType: 1,
   contactPerson: '',
   phone: '',
   address: '',
@@ -92,6 +105,7 @@ watch(visible, (open) => {
     form.supplierId = row.supplierId;
     form.supplierCode = row.supplierCode || '';
     form.supplierName = row.supplierName || '';
+    form.supplierType = Number(row.supplierType ?? 1);
     form.contactPerson = row.contactPerson || '';
     form.phone = row.phone || '';
     form.address = row.address || '';
@@ -104,6 +118,7 @@ watch(visible, (open) => {
     form.supplierId = null;
     form.supplierCode = '';
     form.supplierName = '';
+    form.supplierType = 1;
     form.contactPerson = '';
     form.phone = '';
     form.address = '';
@@ -126,6 +141,7 @@ const save = async () => {
       supplierId: form.supplierId || undefined,
       supplierCode: form.supplierCode.trim() || undefined,
       supplierName: form.supplierName.trim(),
+      supplierType: form.supplierType,
       contactPerson: form.contactPerson.trim() || undefined,
       phone: form.phone.trim() || undefined,
       address: form.address.trim() || undefined,

@@ -30,14 +30,14 @@ public class DrgSimController {
 
     private final DrgSchemeConfig drgSchemeConfig;
 
-    @PreAuthorize("hasAuthority('report:drg:list')")
+    @PreAuthorize("hasAuthority('report:drg:sim')")
     @Operation(summary = "单条模拟（首页主诊断为空时补传 icdCode）")
     @PostMapping("/simulate")
     public Result<DrgSimVO.SimResult> simulate(@Valid @RequestBody DrgSimDTO.Simulate dto) {
         return Result.success("模拟完成", drgSimService.simulate(dto));
     }
 
-    @PreAuthorize("hasAuthority('report:drg:list')")
+    @PreAuthorize("hasAuthority('report:drg:sim')")
     @Operation(summary = "批量模拟（不传 ids 默认最近 50 条）")
     @PostMapping("/simulateBatch")
     public Result<DrgSimVO.SummaryListVO> simulateBatch(@Valid @RequestBody DrgSimDTO.SimulateBatch dto) {

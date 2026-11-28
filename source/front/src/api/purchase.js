@@ -14,9 +14,12 @@ export function getSupplierList(params) {
   return request.post('/supplier/listPage', params)
 }
 
-/** 供应商下拉（只含启用中的） */
-export function getSupplierSelectList() {
-  return request.post('/supplier/selectList')
+/**
+ * 供应商下拉（只含启用中的）
+ * @param supplierType 经营范围过滤：1-药品 2-器械设备 3-耗材 4-后勤物资；不传=全部
+ */
+export function getSupplierSelectList(supplierType) {
+  return request.post('/supplier/selectList', null, {params: supplierType ? {supplierType} : {}})
 }
 
 /** 新增/修改供应商 */

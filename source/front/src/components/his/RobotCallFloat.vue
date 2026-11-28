@@ -29,7 +29,7 @@
  *
  * - 显隐按 `iot:robotDispatch:apply`：护士/护士长/科护士长/设备科/管理员都能发起；
  *   集合没拉到前 fail-open（先渲染，拉完再收敛），与 v-perm 同一口径。
- * - 预填按当前岗位：发起站点/取货点取登录时落到 localStorage 的 deptName，避免每次都手填本科室。
+ * - 预填按当前岗位：只把取货点预填成本科室站点（发起站点不让下单人选，由后端按岗位科室归因）。
  * - 车队空闲数是提示，不是权限：拉不到就整条隐藏，不影响叫车。
  */
 import {computed, onMounted, onUnmounted, ref} from 'vue';
@@ -43,7 +43,7 @@ const fleet = ref([]);
 const fleetLoaded = ref(false);
 const idleCount = computed(() => fleet.value.filter((r) => !r.currentOrderNo && r.state !== 'OFFLINE').length);
 
-// 岗位默认起点：护士站/医生站叫车时，发起站点一般就是本科室站点。
+// 岗位默认起点：护士站/医生站叫车时，取货点一般就是本科室站点（发起站点由后端按岗位科室归因）。
 // 点击时现读 localStorage —— Header 拉到 /auth/info 才写入，computed 在挂载时算会拿到空值。
 const deptName = ref('');
 const openDialog = () => {

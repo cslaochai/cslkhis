@@ -19,7 +19,7 @@ public interface SysSupplierMapper extends BaseMapper<SysSupplier> {
      * 排序：正常状态优先 → 评级高优先 → 主键兜底（分页必须补唯一二级键，否则同秒插入的行在翻页时会重复或丢失）
      */
     @Select("<script>" +
-            "SELECT supplier_id, supplier_code, supplier_name, contact_person, phone, address, " +
+            "SELECT supplier_id, supplier_code, supplier_name, supplier_type, contact_person, phone, address, " +
             "       license_no, license_expiry, rating, status, remark, " +
             "       create_by, create_time, update_by, update_time " +
             "FROM sys_supplier " +
@@ -28,11 +28,13 @@ public interface SysSupplierMapper extends BaseMapper<SysSupplier> {
             "     OR supplier_code LIKE CONCAT('%', #{keyword}, '%') " +
             "     OR contact_person LIKE CONCAT('%', #{keyword}, '%')) </if> " +
             "<if test='status != null'> AND status = #{status} </if> " +
+            "<if test='supplierType != null'> AND supplier_type = #{supplierType} </if> " +
             "ORDER BY status DESC, rating DESC, supplier_id ASC" +
             "</script>")
     Page<SysSupplierVO> selectSupplierPage(Page<SysSupplierVO> page,
                                            @Param("keyword") String keyword,
-                                           @Param("status") Integer status);
+                                           @Param("status") Integer status,
+                                           @Param("supplierType") Integer supplierType);
 
     /**
      * 供应商编码唯一性校验（编辑时排除自身）
@@ -52,7 +54,7 @@ public interface SysSupplierMapper extends BaseMapper<SysSupplier> {
     /**
      * 供应商详情（下拉/详情共用）
      */
-    @Select("SELECT supplier_id, supplier_code, supplier_name, contact_person, phone, address, " +
+    @Select("SELECT supplier_id, supplier_code, supplier_name, supplier_type, contact_person, phone, address, " +
             "       license_no, license_expiry, rating, status, remark, " +
             "       create_by, create_time, update_by, update_time " +
             "FROM sys_supplier WHERE del_flag = 0 AND supplier_id = #{supplierId}")

@@ -35,6 +35,9 @@
         <el-table-column label="申领科室" prop="deptName" width="110">
           <template #default="{ row }">{{ row.deptName || '' }}</template>
         </el-table-column>
+        <el-table-column label="申请人" width="100">
+          <template #default="{ row }">{{ row.applyBy || '' }}</template>
+        </el-table-column>
         <el-table-column label="灭菌方式" width="100">
           <template #default="{ row }">{{ methodText(row.sterilizeMethod) }}</template>
         </el-table-column>
@@ -52,10 +55,14 @@
             <el-tag :type="cssdStatusTag(row.status)">{{ statusText(row.status) }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column fixed="right" label="操作" width="140">
+        <el-table-column fixed="right" label="操作" width="190">
           <template #default="{ row }">
-            <el-button v-if="row.status < 6" v-perm="'asset:cssd:edit'" link size="small" type="primary"
-                       @click="openAdvance(row)">流转
+            <!-- 0-待回收 只有「回收确认」，不能直接流转；1..5 才是供应室的逐环节流转 -->
+            <el-button v-if="row.status === 0" v-perm="'asset:cssd:edit'" link size="small" type="warning"
+                       @click="confirmReceive(row)">回收确认
+            </el-button>
+            <el-button v-if="row.status >= 1 && row.status <= 5" v-perm="'asset:cssd:edit'" link size="small"
+                       type="primary" @click="openAdvance(row)">流转
             </el-button>
             <el-button link size="small" @click="openDetail(row)">追溯链</el-button>
           </template>
@@ -90,9 +97,9 @@
  * 回收登记的包名下拉照旧走 cssdTemplateSelectList（仅启用模板），选包带出默认灭菌方式与组成清单。
  */
 import {onMounted, reactive, ref} from 'vue';
-import {ElMessage} from 'element-plus';
+import {ElMessage, ElMessageBox} from 'element-plus';
 import {Refresh, Search} from '@element-plus/icons-vue';
-import {cssdListPage} from '@/api/cssd';
+import {cssdListPage, cssdReceiveConfirm} from '@/api/cssd';
 import CssdReceiveAdd from './CssdReceiveAdd.vue';
 import CssdAdvanceEdit from './CssdAdvanceEdit.vue';
 import CssdTraceDetail from './CssdTraceDetail.vue';
@@ -157,6 +164,26 @@ const advanceRow = ref(null);
 const openAdvance = (row) => {
   advanceRow.value = row;
   advanceVisible.value = true;
+};
+// ---------------- 回收确认（临床科室申请过来的 0-待回收） ----------------
+// 无表单的纯动作，按规范留页面（ElMessageBox 确认），不另拆弹框
+const confirmReceive = async (row) => {
+  try {
+    await ElMessageBox.confirm(
+        `确认回收器械包「${row.packName}」（${row.deptName || '未填科室'} 申请）？确认后进入清洗流程。`,
+        '回收确认', {type: 'warning', confirmButtonText: '确认回收', cancelButtonText: '取消'});
+  } catch {
+    return; // 用户点了取消
+  }
+  try {
+    const res = await cssdReceiveConfirm({packId: row.id});
+    if (res.code === 200) {
+      ElMessage.success('已确认回收');
+      loadList();
+    }
+  } catch (e) {
+    console.error('确认回收失败', e);
+  }
 };
 // ---------------- 详情（追溯链） ----------------
 const detailVisible = ref(false);

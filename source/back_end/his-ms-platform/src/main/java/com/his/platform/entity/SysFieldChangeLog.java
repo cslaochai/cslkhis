@@ -9,19 +9,15 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 import java.time.LocalDateTime;
-import com.baomidou.mybatisplus.annotation.TableLogic;
 
 
 /**
- * 字段级修改日志（字段级修改日志，建表见 sql/159）。
+ * 字段级修改日志（字段级修改日志，建表见 sql/159；按月分区，主键 id + change_time；append-only，无逻辑删除）。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)
 @TableName("sys_field_change_log")
 public class SysFieldChangeLog extends BaseEntity {
-    /** 逻辑删除标志（0 未删除 1 已删除） */
-    @TableLogic
-    private Integer delFlag;
 
     /** 备注 */
     private String remark;
@@ -77,6 +73,11 @@ public class SysFieldChangeLog extends BaseEntity {
      * 批次号：同一次保存的多个字段共用一个
      */
     private String batchNo;
+
+    /**
+     * 请求追踪号（TraceIdFilter 写进 MDC 的 traceId，用于关联 sys_oper_log）
+     */
+    private String traceId;
 
     /**
      * 操作人ID

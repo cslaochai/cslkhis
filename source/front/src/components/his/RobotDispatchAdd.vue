@@ -22,7 +22,12 @@
       </el-form-item>
       <el-form-item label="物品品类" prop="goodsType">
         <el-select v-model="form.goodsType" :fit-input-width="false" class="w-full" @change="onGoodsChange">
-          <el-option v-for="g in goodsTypes" :key="g.code" :value="g.code" :label="g.label"/>
+          <el-option v-for="g in goodsTypes" :key="g.code" :value="g.code" :label="g.label">
+            <div class="flex items-center justify-between gap-3">
+              <span>{{ g.label }}</span>
+              <span class="text-[12px] text-gray-400">{{ g.spec }}</span>
+            </div>
+          </el-option>
         </el-select>
       </el-form-item>
       <el-form-item label="物品明细" prop="goodsName">
@@ -39,7 +44,7 @@
           <span class="text-[13px] text-gray-500">
             预计总重 <b class="text-gray-800">{{ estWeight }}</b> kg
             <span class="text-[12px] text-gray-400">
-              · 单箱 {{ selectedGoods?.unitWeightKg ?? '—' }}kg，单趟最多 {{ maxBox }} 箱
+              · 1 箱 {{ selectedGoods?.unitWeightKg ?? '—' }}kg，单趟最多 {{ maxBox }} 箱
             </span>
           </span>
         </div>

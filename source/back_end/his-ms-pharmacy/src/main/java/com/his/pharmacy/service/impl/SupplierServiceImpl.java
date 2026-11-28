@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
+import com.his.common.enums.SupplierTypeEnum;
 import com.his.pharmacy.dto.SupplierPageQueryDTO;
 import com.his.pharmacy.dto.SupplierUpsertDTO;
 import com.his.pharmacy.entity.SysSupplier;
@@ -32,14 +33,16 @@ public class SupplierServiceImpl extends ServiceImpl<SysSupplierMapper, SysSuppl
     public PageResult<SysSupplierVO> page(SupplierPageQueryDTO queryDTO) {
         Page<SysSupplierVO> page = sysSupplierMapper.selectSupplierPage(
                 new Page<>(queryDTO.getPageNum(), queryDTO.getPageSize()),
-                queryDTO.getKeyword(), queryDTO.getStatus());
+                queryDTO.getKeyword(), queryDTO.getStatus(), queryDTO.getSupplierType());
+        page.getRecords().forEach(vo -> vo.setSupplierTypeLabel(SupplierTypeEnum.getLabel(vo.getSupplierType())));
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(), page.getRecords());
     }
 
     @Override
-    public List<SysSupplierSelectListVO> selectList() {
+    public List<SysSupplierSelectListVO> selectList(Integer supplierType) {
         List<SysSupplier> list = this.lambdaQuery()
                 .eq(SysSupplier::getStatus, 1)
+                .eq(supplierType != null, SysSupplier::getSupplierType, supplierType)
                 .orderByAsc(SysSupplier::getSupplierCode)
                 .list();
         return list.stream().map(s -> {
@@ -55,6 +58,7 @@ public class SupplierServiceImpl extends ServiceImpl<SysSupplierMapper, SysSuppl
         if (vo == null) {
             throw new BusinessException("供应商不存在或已删除");
         }
+        vo.setSupplierTypeLabel(SupplierTypeEnum.getLabel(vo.getSupplierType()));
         return vo;
     }
 
@@ -68,6 +72,7 @@ public class SupplierServiceImpl extends ServiceImpl<SysSupplierMapper, SysSuppl
 
         Integer rating = dto.getRating() == null ? 3 : dto.getRating();
         Integer status = dto.getStatus() == null ? 1 : dto.getStatus();
+        Integer supplierType = dto.getSupplierType() == null ? SupplierTypeEnum.LOGISTICS.getCode() : dto.getSupplierType();
 
         String operator = UserUtils.getCurrentUser().getRealName();
 
@@ -77,6 +82,7 @@ public class SupplierServiceImpl extends ServiceImpl<SysSupplierMapper, SysSuppl
             entity.setSupplierId(null);
             entity.setSupplierCode(code);
             entity.setSupplierName(dto.getSupplierName().trim());
+            entity.setSupplierType(supplierType);
             entity.setRating(rating);
             entity.setStatus(status);
             entity.setCreateBy(operator);
@@ -97,6 +103,7 @@ public class SupplierServiceImpl extends ServiceImpl<SysSupplierMapper, SysSuppl
                 .eq(SysSupplier::getSupplierId, dto.getSupplierId())
                 .set(SysSupplier::getSupplierCode, code)
                 .set(SysSupplier::getSupplierName, dto.getSupplierName().trim())
+                .set(SysSupplier::getSupplierType, supplierType)
                 .set(SysSupplier::getContactPerson, dto.getContactPerson())
                 .set(SysSupplier::getPhone, dto.getPhone())
                 .set(SysSupplier::getAddress, dto.getAddress())

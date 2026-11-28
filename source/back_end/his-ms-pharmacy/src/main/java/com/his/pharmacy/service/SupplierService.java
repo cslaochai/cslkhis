@@ -16,8 +16,13 @@ public interface SupplierService {
     /** 分页查询 */
     PageResult<SysSupplierVO> page(SupplierPageQueryDTO queryDTO);
 
-    /** 下拉选择（只返回启用中的供应商） */
-    List<SysSupplierSelectListVO> selectList();
+    /**
+     * 下拉选择（只返回启用中的供应商）
+     *
+     * @param supplierType 经营范围过滤（1-药品 2-器械设备 3-耗材 4-后勤物资），null = 全部。
+     *                     药品采购只传 1，设备建档只传 2，避免把药企混进设备厂商下拉。
+     */
+    List<SysSupplierSelectListVO> selectList(Integer supplierType);
 
     /**
      * 详情

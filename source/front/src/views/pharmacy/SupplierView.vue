@@ -33,6 +33,18 @@
             <el-option v-for="o in ratingOptions" :key="o.value" :label="o.label" :value="o.value"/>
           </el-select>
         </el-form-item>
+        <el-form-item label="经营范围">
+          <el-select
+              v-model="query.supplierType"
+              :fit-input-width="false"
+              clearable
+              data-testid="supplier-type-filter"
+              placeholder="经营范围"
+              style="width: 130px"
+          >
+            <el-option v-for="o in supplierTypeOptions" :key="o.value" :label="o.label" :value="o.value"/>
+          </el-select>
+        </el-form-item>
         <el-form-item label="状态">
           <el-select
               v-model="query.status"
@@ -56,6 +68,13 @@
       <el-table v-loading="loading" :data="rows" :max-height="tableMaxHeight" data-testid="supplier-table" stripe>
         <el-table-column label="编码" prop="supplierCode" width="130"/>
         <el-table-column label="名称" min-width="180" prop="supplierName" show-overflow-tooltip/>
+        <el-table-column align="center" label="经营范围" width="110">
+          <template #default="{ row }">
+            <el-tag :type="row.supplierType === 1 ? 'warning' : row.supplierType === 2 ? 'success' : 'info'">
+              {{ row.supplierTypeLabel || '—' }}
+            </el-tag>
+          </template>
+        </el-table-column>
         <el-table-column label="联系人" prop="contactPerson" width="100"/>
         <el-table-column label="联系电话" prop="phone" width="130"/>
         <el-table-column label="证照有效期" width="120">
@@ -126,10 +145,19 @@ const rows = ref([]);
 const total = ref(0);
 const query = reactive({
   keyword: '',
+  rating: null,
   status: null,
+  supplierType: null,
   pageNum: 1,
   pageSize: DEFAULT_PAGE_SIZE,
 });
+// 经营范围：与 SupplierTypeEnum 逐字一致（1-药品 2-器械设备 3-耗材 4-后勤物资）
+const supplierTypeOptions = [
+  {label: '药品', value: 1},
+  {label: '器械设备', value: 2},
+  {label: '耗材', value: 3},
+  {label: '后勤物资', value: 4},
+];
 // 两卡式列表页：表格只设最大高度，超高内部滚动（口径参照 views/system/user/UserView.vue）
 const {queryCardRef, footerRef, tableMaxHeight} = useTableMaxHeight();
 // 字典：供应商评级 / 启停用
@@ -155,6 +183,7 @@ const loadList = async () => {
       keyword: query.keyword?.trim() || undefined,
       rating: query.rating ?? undefined,
       status: query.status ?? undefined,
+      supplierType: query.supplierType ?? undefined,
       pageNum: query.pageNum,
       pageSize: query.pageSize,
     });
@@ -173,7 +202,9 @@ const loadList = async () => {
 };
 const resetQuery = () => {
   query.keyword = '';
+  query.rating = null;
   query.status = null;
+  query.supplierType = null;
   query.pageNum = 1;
   loadList();
 };

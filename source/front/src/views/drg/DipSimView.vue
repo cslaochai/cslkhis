@@ -36,8 +36,8 @@
     <div class="bg-white rounded-lg border border-gray-100 p-4 shadow-sm mb-3">
       <div class="flex items-center gap-2 mb-3">
         <p class="text-sm font-medium">病案首页（最近 50 条）</p>
-        <el-button :icon="VideoPlay" :loading="batchLoading" class="ml-auto" data-testid="dip-batch-btn" plain
-                   size="small" type="primary" @click="runBatch">批量模拟
+        <el-button v-perm="'report:dip:sim'" :icon="VideoPlay" :loading="batchLoading" class="ml-auto"
+                   data-testid="dip-batch-btn" plain size="small" type="primary" @click="runBatch">批量模拟
         </el-button>
       </div>
       <el-table :data="summaries" border data-testid="dip-summary-table" max-height="320" stripe>
@@ -61,7 +61,7 @@
         </el-table-column>
         <el-table-column fixed="right" label="操作" width="90">
           <template #default="{ row }">
-            <el-button link size="small" type="primary" @click="openSim(row)">模拟</el-button>
+            <el-button v-perm="'report:dip:sim'" link size="small" type="primary" @click="openSim(row)">模拟</el-button>
           </template>
         </el-table-column>
       </el-table>

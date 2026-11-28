@@ -24,6 +24,12 @@ public class SysSupplierVO {
     /** 供应商名称 */
     private String supplierName;
 
+    /** 经营范围（1-药品 2-器械设备 3-耗材 4-后勤物资） */
+    private Integer supplierType;
+
+    /** 经营范围文案（由 SupplierTypeEnum 填，列表直接渲染） */
+    private String supplierTypeLabel;
+
     /** 联系人 */
     private String contactPerson;
 

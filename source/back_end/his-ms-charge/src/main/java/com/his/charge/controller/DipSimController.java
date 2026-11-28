@@ -70,14 +70,14 @@ public class DipSimController {
         return Result.success("医保付费参数已保存", null);
     }
 
-    @PreAuthorize("hasAuthority('report:dip:list')")
+    @PreAuthorize("hasAuthority('report:dip:sim')")
     @Operation(summary = "单条模拟（首页主诊断为空时补传 icdCode，手术操作为空时补传 operCode）")
     @PostMapping("/simulate")
     public Result<DipSimVO.SimResult> simulate(@Valid @RequestBody DipSimDTO.Simulate dto) {
         return Result.success("模拟完成", dipSimService.simulate(dto));
     }
 
-    @PreAuthorize("hasAuthority('report:dip:list')")
+    @PreAuthorize("hasAuthority('report:dip:sim')")
     @Operation(summary = "批量模拟（不传 ids 默认最近 50 条）")
     @PostMapping("/simulateBatch")
     public Result<DipSimVO.SummaryListVO> simulateBatch(@Valid @RequestBody DipSimDTO.SimulateBatch dto) {

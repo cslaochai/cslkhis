@@ -13,6 +13,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.MDC;
 import org.springframework.core.annotation.AnnotationUtils;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
@@ -262,6 +263,8 @@ public class OperLogInterceptor implements HandlerInterceptor {
             row.setOperIp(RequestInfoUtils.clientIp(request));
             row.setOperLocation(RequestInfoUtils.isPrivateIp(row.getOperIp()) ? "内网" : "外网");
             row.setOperTime(LocalDateTime.now());
+            // 与 TraceIdFilter 的 MDC 键同名：审计查询时靠它把接口日志和字段留痕串成一条链
+            row.setTraceId(MDC.get("traceId"));
             request.setAttribute(ATTR_PENDING, row);
             request.setAttribute(ATTR_START, System.currentTimeMillis());
         } catch (Exception e) {

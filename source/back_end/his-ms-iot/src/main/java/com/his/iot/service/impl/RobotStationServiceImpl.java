@@ -141,6 +141,7 @@ public class RobotStationServiceImpl extends ServiceImpl<RobotStationMapper, Rob
             g.setCode(type.getCode());
             g.setLabel(type.getLabel());
             g.setUnitWeightKg(type.getUnitWeightKg());
+            g.setSpec(type.getSpec());
             g.setMaxBoxCount((int) Math.floor(RobotDispatchConst.NOMINAL_PAYLOAD_KG / type.getUnitWeightKg()));
             goods.add(g);
         }

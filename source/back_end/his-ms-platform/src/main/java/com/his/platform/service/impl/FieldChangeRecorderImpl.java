@@ -12,6 +12,7 @@ import com.his.common.support.FieldSpec;
 import com.his.common.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.MDC;
 import org.springframework.stereotype.Service;
 
 import java.beans.Introspector;
@@ -42,6 +43,10 @@ public class FieldChangeRecorderImpl implements FieldChangeRecorder {
      * 值列宽（与表 VARCHAR(500) 对齐）
      */
     private static final int VALUE_MAX = 500;
+    /**
+     * 与 TraceIdFilter 的 MDC 键逐字一致（那边是 private，不能引，只能同名）
+     */
+    private static final String TRACE_ID_KEY = "traceId";
     /**
      * 类 → (属性名 → getter)，反射一次缓存住，别每次保存都 Introspector 一遍
      */
@@ -211,7 +216,9 @@ public class FieldChangeRecorderImpl implements FieldChangeRecorder {
         row.setChangeType(changeType);
         row.setRemark(TextUtil.cut(remark, 500));
         row.setChangeTime(LocalDateTime.now());
-        row.setDelFlag(0);
+        // 追踪号与 TraceIdFilter 写进 MDC 的键同名；无登录态的定时任务里为空，允许为 null。
+        // 有它才能把「这次保存改的字段」和 sys_oper_log 里那条接口日志对上号。
+        row.setTraceId(TextUtil.cut(MDC.get(TRACE_ID_KEY), 64));
         // 操作人一律服务端取，不接受调用方传 —— 传进来的可以被伪造，等于没有审计
         CurrentUser user = UserUtils.getCurrentUser();
         if (user != null) {

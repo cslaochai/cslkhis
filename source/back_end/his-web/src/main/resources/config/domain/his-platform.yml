@@ -1,5 +1,13 @@
 # 电子签名配置
 his:
+  # 审计流水归档（sys_oper_log / sys_field_change_log，见 sql 增量 438）
+  audit:
+    archive:
+      # 是否把超出保留期的已闭月分区导出后删掉。默认关：DROP PARTITION 不可回滚，
+      # 先把 archive-dir 纳入备份/对象存储，确认能取回来再打开。分区预建不受此开关影响。
+      enabled: ${HIS_AUDIT_ARCHIVE_ENABLED:false}
+      # 归档文件目录（CSV.gz），相对路径按进程工作目录解析
+      dir: ${HIS_AUDIT_ARCHIVE_DIR:upload/audit-archive}
   sign:
     # 主口令随环境变，不在这里声明：dev 落内联真值，生产用环境变量 HIS_SIGN_SECRET 注入；
     # 缺失时签发入口直接拒绝（见 KeyProtectorUtil）

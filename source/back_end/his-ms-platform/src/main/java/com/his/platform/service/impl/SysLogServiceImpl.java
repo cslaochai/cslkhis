@@ -146,8 +146,7 @@ public class SysLogServiceImpl implements SysLogService {
         String module = TextUtil.trimToNull(query.getModule());
         String keyword = TextUtil.trimToNull(query.getKeyword());
         LambdaQueryWrapper<SysOperLog> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(SysOperLog::getDelFlag, 0)
-                .like(operator != null, SysOperLog::getOperName, operator)
+        wrapper.like(operator != null, SysOperLog::getOperName, operator)
                 .like(module != null, SysOperLog::getTitle, module)
                 .eq(query.getBusinessType() != null, SysOperLog::getBusinessType, query.getBusinessType())
                 .eq(query.getStatus() != null, SysOperLog::getStatus, query.getStatus());
@@ -167,7 +166,7 @@ public class SysLogServiceImpl implements SysLogService {
     @Override
     public OperLogDetailVO operLogDetail(Long id) {
         SysOperLog row = sysOperLogMapper.selectById(id);
-        if (row == null || (row.getDelFlag() != null && row.getDelFlag() == 1)) {
+        if (row == null) {
             throw new BusinessException("操作日志不存在：" + id);
         }
         OperLogDetailVO vo = new OperLogDetailVO();
@@ -268,8 +267,7 @@ public class SysLogServiceImpl implements SysLogService {
         String operator = TextUtil.trimToNull(query.getOperator());
         String keyword = TextUtil.trimToNull(query.getKeyword());
         LambdaQueryWrapper<SysFieldChangeLog> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(SysFieldChangeLog::getDelFlag, 0)
-                .eq(bizType != null, SysFieldChangeLog::getBizType, bizType)
+        wrapper.eq(bizType != null, SysFieldChangeLog::getBizType, bizType)
                 .eq(bizId != null, SysFieldChangeLog::getBizId, bizId)
                 .like(operator != null, SysFieldChangeLog::getOperatorName, operator);
         if (field != null) {
@@ -302,8 +300,7 @@ public class SysLogServiceImpl implements SysLogService {
             throw new BusinessException("批次号不能为空");
         }
         LambdaQueryWrapper<SysFieldChangeLog> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(SysFieldChangeLog::getDelFlag, 0)
-                .eq(SysFieldChangeLog::getBatchNo, batchNo.trim())
+        wrapper.eq(SysFieldChangeLog::getBatchNo, batchNo.trim())
                 .orderByAsc(SysFieldChangeLog::getId);
         return sysFieldChangeLogMapper.selectList(wrapper).stream().map(this::toFieldChangeVO).toList();
     }
@@ -316,12 +313,12 @@ public class SysLogServiceImpl implements SysLogService {
         LocalDateTime weekStart = TimeUtil.dayStart(today.minusDays(6));
 
         LogStatVO vo = new LogStatVO();
-        vo.setOperTotal(count(new LambdaQueryWrapper<SysOperLog>().eq(SysOperLog::getDelFlag, 0), sysOperLogMapper));
-        vo.setOperToday(count(new LambdaQueryWrapper<SysOperLog>().eq(SysOperLog::getDelFlag, 0)
+        vo.setOperTotal(count(new LambdaQueryWrapper<SysOperLog>(), sysOperLogMapper));
+        vo.setOperToday(count(new LambdaQueryWrapper<SysOperLog>()
                 .ge(SysOperLog::getOperTime, dayStart), sysOperLogMapper));
-        vo.setOperFailToday(count(new LambdaQueryWrapper<SysOperLog>().eq(SysOperLog::getDelFlag, 0)
+        vo.setOperFailToday(count(new LambdaQueryWrapper<SysOperLog>()
                 .eq(SysOperLog::getStatus, 1).ge(SysOperLog::getOperTime, dayStart), sysOperLogMapper));
-        vo.setOper7d(count(new LambdaQueryWrapper<SysOperLog>().eq(SysOperLog::getDelFlag, 0)
+        vo.setOper7d(count(new LambdaQueryWrapper<SysOperLog>()
                 .ge(SysOperLog::getOperTime, weekStart), sysOperLogMapper));
 
         vo.setLoginTotal(count(new LambdaQueryWrapper<SysLoginLog>().eq(SysLoginLog::getDelFlag, 0), sysLoginLogMapper));
@@ -340,13 +337,10 @@ public class SysLogServiceImpl implements SysLogService {
         vo.setAudit7d(count(new LambdaQueryWrapper<SysAuditLog>().eq(SysAuditLog::getDelFlag, 0)
                 .ge(SysAuditLog::getCreateTime, weekStart), sysAuditLogMapper));
 
-        vo.setFieldChangeTotal(count(new LambdaQueryWrapper<SysFieldChangeLog>()
-                .eq(SysFieldChangeLog::getDelFlag, 0), sysFieldChangeLogMapper));
+        vo.setFieldChangeTotal(count(new LambdaQueryWrapper<SysFieldChangeLog>(), sysFieldChangeLogMapper));
         vo.setFieldChangeToday(count(new LambdaQueryWrapper<SysFieldChangeLog>()
-                .eq(SysFieldChangeLog::getDelFlag, 0)
                 .ge(SysFieldChangeLog::getChangeTime, dayStart), sysFieldChangeLogMapper));
         vo.setFieldChange7d(count(new LambdaQueryWrapper<SysFieldChangeLog>()
-                .eq(SysFieldChangeLog::getDelFlag, 0)
                 .ge(SysFieldChangeLog::getChangeTime, weekStart), sysFieldChangeLogMapper));
 
         vo.setRiskyAccounts(riskyAccounts(now.minusHours(24)));

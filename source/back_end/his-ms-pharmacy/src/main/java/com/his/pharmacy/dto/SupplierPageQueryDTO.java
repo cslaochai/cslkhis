@@ -20,4 +20,9 @@ public class SupplierPageQueryDTO extends PageParam {
      * 状态：0-停用 1-正常（不传=全部）
      */
     private Integer status;
+
+    /**
+     * 经营范围：1-药品 2-器械设备 3-耗材 4-后勤物资（不传=全部）
+     */
+    private Integer supplierType;
 }

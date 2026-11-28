@@ -42,9 +42,18 @@ public class BizCssdPack extends BaseEntity {
     private Integer sterilizeMethod;
 
     /**
-     * 包状态（1-已回收 2-清洗中 3-已打包 4-灭菌中 5-待发放 6-已发放）
+     * 包状态（0-待回收 1-已回收 2-清洗中 3-已打包 4-灭菌中 5-待发放 6-已发放 7-已签收）
      */
     private Integer status;
+
+    /** 申请人（临床科室发起回收的护士） */
+    private String applyBy;
+    /** 申请时间 */
+    private LocalDateTime applyTime;
+    /** 签收人（申领科室收到无菌包后签收的护士） */
+    private String signBy;
+    /** 签收时间 */
+    private LocalDateTime signTime;
 
     /**
      * 最近灭菌锅次

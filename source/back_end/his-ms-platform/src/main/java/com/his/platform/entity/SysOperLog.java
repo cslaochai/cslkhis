@@ -9,19 +9,15 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 import java.time.LocalDateTime;
-import com.baomidou.mybatisplus.annotation.TableLogic;
 
 
 /**
- * 操作日志
+ * 操作日志（按月分区，主键 id + oper_time；append-only，无逻辑删除）。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)
 @TableName("sys_oper_log")
 public class SysOperLog extends BaseEntity {
-    /** 逻辑删除标志（0 未删除 1 已删除） */
-    @TableLogic
-    private Integer delFlag;
 
     /** 备注 */
     private String remark;
@@ -110,6 +106,11 @@ public class SysOperLog extends BaseEntity {
      */
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime operTime;
+
+    /**
+     * 请求追踪号（TraceIdFilter 写进 MDC 的 traceId，与字段留痕表同值）
+     */
+    private String traceId;
 
     /**
      * 消耗时间（毫秒）

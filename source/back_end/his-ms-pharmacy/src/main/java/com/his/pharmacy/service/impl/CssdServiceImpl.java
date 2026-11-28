@@ -4,12 +4,17 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.his.common.entity.CurrentUser;
 import com.his.common.constant.DictTypeConst;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.DateFormats;
 import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
 import com.his.pharmacy.dto.CssdDTO;
+import com.his.pharmacy.dto.CssdPackApplyDTO;
+import com.his.pharmacy.dto.CssdPackConfirmDTO;
+import com.his.pharmacy.dto.CssdPackMyPageQueryDTO;
+import com.his.pharmacy.dto.CssdPackSignDTO;
 import com.his.pharmacy.entity.BizCssdPack;
 import com.his.pharmacy.entity.BizCssdTrace;
 import com.his.common.enums.QualifiedResultEnum;
@@ -133,6 +138,98 @@ public class CssdServiceImpl extends ServiceImpl<BizCssdPackMapper, BizCssdPack>
                 .convert(p -> toVo(p, null));
     }
 
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public CssdPackVO apply(CssdPackApplyDTO dto) {
+        CurrentUser user = UserUtils.getCurrentUser();
+        Long deptId = dto.getDeptId() != null ? dto.getDeptId() : user.getDeptId();
+        if (deptId == null) {
+            throw new BusinessException("当前岗位未绑定科室，无法发起回收申请");
+        }
+        deptScopeService.assertDeptAccessible(deptId);
+
+        BizCssdPack p = new BizCssdPack();
+        p.setPackNo(nextPackNo());
+        p.setPackName(dto.getPackName().trim());
+        p.setDeptId(deptId);
+        p.setDeptName(TextUtil.hasText(dto.getDeptName()) ? dto.getDeptName().trim() : user.getDeptName());
+        p.setSterilizeMethod(dto.getSterilizeMethod());
+        p.setStatus(CssdNodeStatusEnum.PENDING.getCode());
+        p.setApplyBy(user.getRealName());
+        p.setApplyTime(TimeUtil.nowSeconds());
+        p.setLastNodeTime(TimeUtil.nowSeconds());
+        p.setCreateBy(user.getRealName());
+        bizCssdPackMapper.insert(p);
+
+        insertTrace(p, CssdNodeStatusEnum.PENDING.getCode(), dto.getRemark(), null, null,
+                QualifiedResultEnum.OK.getCode(), user.getRealName());
+        return toVo(p, loadTraces(p.getId()));
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public CssdPackVO receiveConfirm(CssdPackConfirmDTO dto) {
+        BizCssdPack p = requirePack(dto.getPackId());
+        if (!CssdNodeStatusEnum.PENDING.is(p.getStatus())) {
+            throw new BusinessException("当前状态【" + CssdNodeStatusEnum.getLabel(p.getStatus())
+                    + "】不是待回收，不能确认回收");
+        }
+        String operator = UserUtils.getCurrentUser().getRealName();
+        p.setStatus(CssdNodeStatusEnum.RECEIVED.getCode());
+        p.setLastNodeTime(TimeUtil.nowSeconds());
+        p.setUpdateBy(operator);
+        bizCssdPackMapper.updateById(p);
+        insertTrace(p, CssdNodeStatusEnum.RECEIVED.getCode(), dto.getRemark(), null, null,
+                QualifiedResultEnum.OK.getCode(), operator);
+        return toVo(p, loadTraces(p.getId()));
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public CssdPackVO sign(CssdPackSignDTO dto) {
+        BizCssdPack p = requirePack(dto.getPackId());
+        if (!CssdNodeStatusEnum.ISSUED.is(p.getStatus())) {
+            throw new BusinessException("当前状态【" + CssdNodeStatusEnum.getLabel(p.getStatus())
+                    + "】不是已发放，不能签收");
+        }
+        CurrentUser user = UserUtils.getCurrentUser();
+        // 签收只能由申领科室本人做：包的归属科室就是签收方，跨科室代签会让「谁收的」失真
+        if (p.getDeptId() != null && user.getDeptId() != null
+                && !Objects.equals(p.getDeptId(), user.getDeptId())) {
+            throw new BusinessException("这不是本科室申领的器械包，不能签收");
+        }
+        p.setStatus(CssdNodeStatusEnum.SIGNED.getCode());
+        p.setSignBy(user.getRealName());
+        p.setSignTime(TimeUtil.nowSeconds());
+        p.setLastNodeTime(TimeUtil.nowSeconds());
+        p.setUpdateBy(user.getRealName());
+        bizCssdPackMapper.updateById(p);
+        insertTrace(p, CssdNodeStatusEnum.SIGNED.getCode(), dto.getRemark(), null, null,
+                QualifiedResultEnum.OK.getCode(), user.getRealName());
+        return toVo(p, loadTraces(p.getId()));
+    }
+
+    @Override
+    public IPage<CssdPackVO> myListPage(CssdPackMyPageQueryDTO q) {
+        CurrentUser user = UserUtils.getCurrentUser();
+        Long deptId = user == null ? null : user.getDeptId();
+        if (deptId == null) {
+            // 收口取不到科室就不给看：放宽成 null 条件等于本科室护士能看到全院器械包
+            throw new BusinessException("当前岗位未绑定科室，无法查看本科室器械包");
+        }
+        String kw = TextUtil.trim(q.getKeyword());
+        LambdaQueryWrapper<BizCssdPack> w = new LambdaQueryWrapper<BizCssdPack>()
+                .eq(BizCssdPack::getDeptId, deptId)
+                .eq(q.getStatus() != null, BizCssdPack::getStatus, q.getStatus())
+                .and(TextUtil.hasText(kw), x -> x
+                        .like(BizCssdPack::getPackNo, kw)
+                        .or().like(BizCssdPack::getPackName, kw))
+                .orderByDesc(BizCssdPack::getLastNodeTime)
+                .orderByDesc(BizCssdPack::getId);
+        return bizCssdPackMapper.selectPage(new Page<>(q.getPageNum(), q.getPageSize()), w)
+                .convert(p -> toVo(p, null));
+    }
+
     public CssdPackVO getDetailById(Long packId) {
         BizCssdPack p = requirePack(packId);
         return toVo(p, loadTraces(packId));
@@ -196,6 +293,10 @@ public class CssdServiceImpl extends ServiceImpl<BizCssdPackMapper, BizCssdPack>
         vo.setSterilizeMethodText(dictCacheService.getDicDataLabel(DictTypeConst.CSSD_STERIL_METHOD, p.getSterilizeMethod()));
         vo.setStatus(p.getStatus());
         vo.setStatusText(CssdNodeStatusEnum.getLabel(p.getStatus()));
+        vo.setApplyBy(p.getApplyBy());
+        vo.setApplyTime(p.getApplyTime());
+        vo.setSignBy(p.getSignBy());
+        vo.setSignTime(p.getSignTime());
         vo.setSterilizerNo(p.getSterilizerNo());
         vo.setBatchNo(p.getBatchNo());
         vo.setLastNodeTime(p.getLastNodeTime());

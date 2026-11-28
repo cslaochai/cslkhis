@@ -32,11 +32,19 @@
         </el-icon>
         床旁结算
       </el-radio-button>
+      <!-- 消毒供应：科室发起器械包回收申请 / 签收 / 医废登记，按 asset:cssd:apply 收口 -->
+      <el-radio-button v-perm="'asset:cssd:apply'" value="cssd">
+        <el-icon class="mr-1">
+          <Box/>
+        </el-icon>
+        消毒供应
+      </el-radio-button>
     </el-radio-group>
     <InpatientOrderWorkspace v-if="view === 'order'" mode="nurse"/>
     <NursingRecordWorkspace v-else-if="view === 'nursing'"/>
     <BedMapWorkspace v-else-if="view === 'bedmap'"/>
     <BedsideSettlementWorkspace v-else-if="view === 'bedside'"/>
+    <CssdWorkspace v-else-if="view === 'cssd'"/>
     <NursingHandoverWorkspace v-else/>
   </div>
 </template>
@@ -56,12 +64,13 @@
  * 自动化验证与"默认落在待校对页签"这个口径都会被外层抢走。
  */
 import {ref} from 'vue';
-import {ChatDotRound, EditPen, FirstAidKit, Grid, Wallet} from '@element-plus/icons-vue';
+import {Box, ChatDotRound, EditPen, FirstAidKit, Grid, Wallet} from '@element-plus/icons-vue';
 import BedsideSettlementWorkspace from '@/components/his/BedsideSettlementWorkspace.vue';
 import InpatientOrderWorkspace from '@/components/his/InpatientOrderWorkspace.vue';
 import NursingRecordWorkspace from '@/components/his/NursingRecordWorkspace.vue';
 import BedMapWorkspace from '@/components/his/BedMapWorkspace.vue';
 import NursingHandoverWorkspace from '@/components/his/NursingHandoverWorkspace.vue';
+import CssdWorkspace from '@/views/nurse/CssdWorkspace.vue';
 
 const view = ref('order');
 </script>

@@ -33,6 +33,12 @@ public class SupplierUpsertDTO {
     private String supplierName;
 
     /**
+     * 经营范围：1-药品 2-器械设备 3-耗材 4-后勤物资（空则默认 4）
+     */
+    @AllowedValues(values = {"1", "2", "3", "4"}, message = "供应商经营范围取值不合法")
+    private Integer supplierType;
+
+    /**
      * 联系人
      */
     @Size(max = 32, message = "联系人最长 32 位")

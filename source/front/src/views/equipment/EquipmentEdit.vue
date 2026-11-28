@@ -112,13 +112,13 @@ const blankForm = () => ({
 const form = reactive(blankForm());
 const isLogistics = computed(() => Number(form.category) === LOGISTICS_CATEGORY);
 
-// 厂商下拉：全院供应商档案只取一次（同一次会话里多个弹框复用）
+// 厂商下拉：全院供应商主档按经营范围取「器械设备」一类（2），与药品采购的供应商下拉共用一张表但互不串类
 const suppliers = ref([]);
 let suppliersLoaded = false;
 const loadSuppliers = async () => {
   if (suppliersLoaded) return;
   try {
-    const res = await getSupplierSelectList();
+    const res = await getSupplierSelectList(2);
     suppliers.value = res?.data || [];
     suppliersLoaded = true;
   } catch (e) {

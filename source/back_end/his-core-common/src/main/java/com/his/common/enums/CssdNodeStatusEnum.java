@@ -9,12 +9,14 @@ import org.apache.commons.lang3.StringUtils;
 @Getter
 public enum CssdNodeStatusEnum {
 
+    PENDING(0, "待回收", "申请回收"),
     RECEIVED(1, "已回收", "回收"),
     WASHING(2, "清洗中", "清洗"),
     PACKED(3, "已打包", "打包"),
     STERILIZING(4, "灭菌中", "灭菌"),
     STORED(5, "待发放", "储存"),
-    ISSUED(6, "已发放", "发放");
+    ISSUED(6, "已发放", "发放"),
+    SIGNED(7, "已签收", "科室签收");
 
     private final int code;
     private final String label;

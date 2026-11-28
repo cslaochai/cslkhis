@@ -41,12 +41,15 @@ public class SupplierController {
     /**
      * 供应商下拉：只返回启用中的档案，不分页一次给全。
      * 采购建单、库存建批、供应商退货选供应商时共用同一参照数据，因此只要求登录、不挂页面权限码。
+     * supplierType 是「这家供什么」的过滤（1-药品 2-器械设备 3-耗材 4-后勤物资）：
+     * 院内一张往来单位主档，两个场景各自按经营范围收窄，不传=全部。
      */
     @Operation(summary = "供应商下拉列表（只含启用中的）")
     @PreAuthorize("isAuthenticated()")
     @PostMapping("/selectList")
-    public Result<List<SysSupplierSelectListVO>> selectList() {
-        return Result.success(supplierService.selectList());
+    public Result<List<SysSupplierSelectListVO>> selectList(
+            @RequestParam(required = false) Integer supplierType) {
+        return Result.success(supplierService.selectList(supplierType));
     }
 
     /**
