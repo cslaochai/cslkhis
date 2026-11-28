@@ -93,7 +93,10 @@ public class RobotDispatchServiceImpl extends ServiceImpl<IotRobotDispatchOrderM
         CurrentUser user = requireUser();
 
         // 站点主数据是唯一事实：名称、楼栋楼层、来源都由站点带出，下单人不再手填
-        RobotStation apply = stationService.requireEnabled(dto.getApplyStationId());
+        // 发起站点前端不选：显式传入（仿真/直连）才校验，否则按当前岗位科室定位，定位不到记手工派单
+        RobotStation apply = dto.getApplyStationId() == null
+                ? stationService.findApplyStation(user.getDeptId(), user.getDeptName())
+                : stationService.requireEnabled(dto.getApplyStationId());
         RobotStation from = stationService.requireStation(dto.getFromStationId(), true);
         RobotStation to = stationService.requireStation(dto.getToStationId(), false);
         if (Objects.equals(from.getId(), to.getId())) {
@@ -114,9 +117,12 @@ public class RobotDispatchServiceImpl extends ServiceImpl<IotRobotDispatchOrderM
 
         IotRobotDispatchOrder order = new IotRobotDispatchOrder();
         order.setOrderNo(nextOrderNo());
-        order.setSourceType(RobotStationTypeEnum.sourceTypeOf(apply.getStationType()));
-        order.setSourceDeptName(apply.getStationName());
-        order.setApplyStationId(apply.getId());
+        order.setSourceType(apply == null
+                ? RobotDispatchSourceEnum.MANUAL.getCode()
+                : RobotStationTypeEnum.sourceTypeOf(apply.getStationType()));
+        order.setSourceDeptName(TextUtil.cut(
+                apply != null ? apply.getStationName() : user.getDeptName(), 100, ""));
+        order.setApplyStationId(apply == null ? null : apply.getId());
         order.setRequesterId(user.getEmployeeId());
         order.setRequesterName(TextUtil.hasText(user.getRealName()) ? user.getRealName() : user.getUsername());
         order.setGoodsType(dto.getGoodsType());

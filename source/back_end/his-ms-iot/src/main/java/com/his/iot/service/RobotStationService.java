@@ -34,6 +34,12 @@ public interface RobotStationService {
     /** 只校验存在与启用（发起站点用，不受取货/收货能力限制） */
     RobotStation requireEnabled(Long id);
 
+    /**
+     * 叫车人不选发起站点时，按当前岗位科室自动定位他所在的站点（先按科室ID，再按科室名）。
+     * 匹配不到返回 null —— 由调用方按手工派单归因，不塞假默认。
+     */
+    RobotStation findApplyStation(Long deptId, String deptName);
+
     /** 按ID取站点，不存在返回 null（派单选车读楼层用，不做抛异常） */
     RobotStation findById(Long id);
 }

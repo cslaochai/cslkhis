@@ -8,6 +8,7 @@ import com.his.common.enums.EnableStatusEnum;
 import com.his.common.enums.RobotDispatchPriorityEnum;
 import com.his.common.enums.RobotGoodsTypeEnum;
 import com.his.common.enums.RobotStationTypeEnum;
+import com.his.common.enums.YesOrNoEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.TextUtil;
 import com.his.iot.dto.RobotStationPageQueryDTO;
@@ -176,6 +177,30 @@ public class RobotStationServiceImpl extends ServiceImpl<RobotStationMapper, Rob
     @Override
     public RobotStation findById(Long id) {
         return id == null ? null : baseMapper.selectById(id);
+    }
+
+    @Override
+    public RobotStation findApplyStation(Long deptId, String deptName) {
+        if (deptId != null) {
+            RobotStation byDept = baseMapper.selectOne(baseQuery()
+                    .eq(RobotStation::getDeptId, deptId).last("LIMIT 1"));
+            if (byDept != null) {
+                return byDept;
+            }
+        }
+        if (TextUtil.hasText(deptName)) {
+            return baseMapper.selectOne(baseQuery()
+                    .eq(RobotStation::getDeptName, TextUtil.trim(deptName)).last("LIMIT 1"));
+        }
+        return null;
+    }
+
+    /** 发起站点候选：启用 + 可取货（叫车人站的地方必须能装货），排序取第一条 */
+    private LambdaQueryWrapper<RobotStation> baseQuery() {
+        return new LambdaQueryWrapper<RobotStation>()
+                .eq(RobotStation::getEnabled, EnableStatusEnum.ENABLED.getCode())
+                .eq(RobotStation::getPickupEnabled, YesOrNoEnum.YES.getCode())
+                .orderByAsc(RobotStation::getSortOrder);
     }
 
     private RobotStation requireEnabled(Long id, String usage) {
