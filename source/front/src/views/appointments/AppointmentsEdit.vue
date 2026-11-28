@@ -5,7 +5,7 @@
         <el-form-item label="选择科室" required>
           <el-select v-model="editForm.deptId" class="w-full" placeholder="选择科室" @change="handleEditDeptChange">
             <el-option v-for="d in departments" :key="d.id"
-                       :label="d.parentDeptName ? `${d.parentDeptName} / ${d.deptName}` : d.deptName"
+                       :label="d.fullPath || d.deptName"
                        :value="d.id ?? d.deptName"/>
           </el-select>
         </el-form-item>

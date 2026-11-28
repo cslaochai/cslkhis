@@ -17,6 +17,7 @@ import com.his.platform.mapper.SysDepartmentMapper;
 import com.his.platform.mapper.SysEmployeeMapper;
 import com.his.platform.mapper.SysWardDeptMapper;
 import com.his.platform.mapper.SysWardMapper;
+import com.his.platform.service.DeptScopeService;
 import com.his.platform.service.SysWardService;
 import com.his.platform.vo.WardDeptVO;
 import com.his.platform.vo.WardVO;
@@ -49,6 +50,7 @@ public class SysWardServiceImpl extends ServiceImpl<SysWardMapper, SysWard> impl
     private final SysDepartmentMapper sysDepartmentMapper;
     private final SysEmployeeMapper sysEmployeeMapper;
     private final InpatientFacadeService inpatientFacadeService;
+    private final DeptScopeService deptScopeService;
 
     @Override
     public PageResult<WardVO> listPage(WardQueryDTO queryDTO) {
@@ -78,8 +80,14 @@ public class SysWardServiceImpl extends ServiceImpl<SysWardMapper, SysWard> impl
             wards = sysWardMapper.selectList(new LambdaQueryWrapper<SysWard>()
                     .eq(SysWard::getStatus, 1)
                     .orderByAsc(SysWard::getWardCode));
+            // 下拉候选按本位科室做数据范围收口：全院角色恒放行，受限角色只留授权科室所属病区。
+            // 病区权限折算口径与 6 处既有判定一致，统一认 sys_ward.dept_id 本位科室列。
+            wards = wards.stream()
+                    .filter(w -> deptScopeService.canAccessDept(w.getDeptId()))
+                    .collect(Collectors.toList());
         } else {
-            // 走多对多：该科室能收治的病区，含跨科收治的病区（原来按 sys_ward.dept_id 单值过滤会漏掉）
+            // 指定科室先过越权门禁，再走多对多取该科室可收治的病区
+            deptScopeService.resolveDeptId(deptId);
             List<Long> wardIds = sysWardDeptMapper.selectWardIdsByDeptId(deptId);
             if (wardIds.isEmpty()) {
                 return Collections.emptyList();

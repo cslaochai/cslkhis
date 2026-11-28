@@ -1,5 +1,6 @@
 <template>
-  <div class="p-4 space-y-4">
+  <!-- embedded=true：被「设备管理」页当 Tab 内嵌，去掉外层 p-4（外层已有卡片留白） -->
+  <div :class="embedded ? 'space-y-4' : 'p-4 space-y-4'">
     <div class="bg-white rounded-lg shadow-sm px-5 py-4 flex flex-wrap items-center gap-5">
       <div class="min-w-[280px]">
         <div class="flex items-center gap-2">
@@ -131,75 +132,11 @@
     </div>
 
     <!-- 新建派单 -->
-    <el-dialog v-model="createVisible" title="新建配送任务单" width="560px" @closed="resetForm">
-      <el-form ref="createFormRef" :model="form" :rules="rules" label-width="100px">
-        <el-form-item label="发起来源" prop="sourceType">
-          <el-select v-model="form.sourceType" style="width: 100%">
-            <el-option v-for="s in sourceOptions" :key="s.value" :label="s.label" :value="s.value"/>
-          </el-select>
-        </el-form-item>
-        <el-form-item label="发起站点" prop="sourceDeptName">
-          <el-input v-model="form.sourceDeptName" placeholder="如 B1 静配中心 / 住院药房"/>
-        </el-form-item>
-        <el-form-item label="物品品类" prop="goodsType">
-          <el-select v-model="form.goodsType" style="width: 100%">
-            <el-option v-for="g in goodsTypeOptions" :key="g" :label="g" :value="g"/>
-          </el-select>
-        </el-form-item>
-        <el-form-item label="物品明细" prop="goodsName">
-          <el-input v-model="form.goodsName" placeholder="如 0.9%氯化钠注射液 250ml×24 瓶"/>
-        </el-form-item>
-        <el-form-item label="取货点" prop="fromStation">
-          <el-input v-model="form.fromStation" placeholder="如 B1 中心药房"/>
-        </el-form-item>
-        <el-form-item label="目标楼层" prop="toFloor">
-          <el-input-number v-model="form.toFloor" :min="1" :max="20" style="width: 100%"/>
-        </el-form-item>
-        <el-form-item label="收货站点" prop="toStation">
-          <el-input v-model="form.toStation" placeholder="如 12F 护士站"/>
-        </el-form-item>
-        <el-form-item label="优先级" prop="priority">
-          <el-radio-group v-model="form.priority">
-            <el-radio v-for="p in priorityOptions" :key="p.value" :value="p.value">{{ p.label }}</el-radio>
-          </el-radio-group>
-        </el-form-item>
-        <el-form-item label="箱数" prop="boxCount">
-          <el-input-number v-model="form.boxCount" :min="1" :max="4"/>
-        </el-form-item>
-        <el-form-item label="总重(kg)" prop="loadKg">
-          <el-input-number v-model="form.loadKg" :min="0" :max="50" :step="0.5"/>
-        </el-form-item>
-        <el-form-item label="备注">
-          <el-input v-model="form.remark" type="textarea" :rows="2"/>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="createVisible = false">取消</el-button>
-        <el-button type="primary" :loading="submitting" @click="submitCreate">提交并派车</el-button>
-      </template>
-    </el-dialog>
+    <RobotDispatchAdd v-model="createVisible" :goods-type-options="goodsTypeOptions"
+                      :priority-options="priorityOptions" :source-options="sourceOptions" @saved="refreshAll"/>
 
     <!-- 派车 -->
-    <el-dialog v-model="assignVisible" title="调度派车" width="480px">
-      <el-descriptions :column="1" border>
-        <el-descriptions-item label="单号">{{ assignRow?.orderNo }}</el-descriptions-item>
-        <el-descriptions-item label="物品">{{ assignRow?.goodsName }}（{{ assignRow?.boxCount }} 箱 {{ assignRow?.loadKg }}kg）</el-descriptions-item>
-        <el-descriptions-item label="路线">{{ assignRow?.fromStation }} → {{ assignRow?.toFloor }}F {{ assignRow?.toStation }}</el-descriptions-item>
-      </el-descriptions>
-      <el-form class="mt-4" label-width="90px">
-        <el-form-item label="机器人">
-          <el-select v-model="assignRobotNo" clearable placeholder="自动选择空闲车辆" style="width: 100%">
-            <el-option label="自动选车（空闲 + 电量最高）" value=""/>
-            <el-option v-for="r in freeFleet" :key="r.robotNo"
-                       :label="`${r.deviceName || r.robotNo}（电量 ${r.battery ?? '—'}%）`" :value="r.robotNo"/>
-          </el-select>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="assignVisible = false">取消</el-button>
-        <el-button type="primary" :loading="submitting" @click="confirmAssign">确认派车</el-button>
-      </template>
-    </el-dialog>
+    <RobotDispatchAssign v-model="assignVisible" :free-fleet="freeFleet" :row="assignRow" @saved="refreshAll"/>
 
     <!-- 详情 -->
     <el-dialog v-model="detailVisible" title="任务单详情" width="600px">
@@ -237,16 +174,18 @@
 import {onMounted, onUnmounted, reactive, ref} from 'vue';
 import {ElMessage, ElMessageBox} from 'element-plus';
 import {
-  robotDispatchAssign,
   robotDispatchCancel,
-  robotDispatchCreate,
   robotDispatchFleet,
   robotDispatchListPage,
 } from '@/api/robotDispatch';
 import {DEFAULT_PAGE_SIZE} from '@/lib/pagination';
+import RobotDispatchAdd from './RobotDispatchAdd.vue';
+import RobotDispatchAssign from './RobotDispatchAssign.vue';
+
+/** 被设备管理页内嵌时传 true，仅去掉外层页面留白 */
+defineProps({embedded: {type: Boolean, default: false}});
 
 const loading = ref(false);
-const submitting = ref(false);
 const loadError = ref('');
 const fleet = ref([]);
 const orders = ref([]);
@@ -258,9 +197,7 @@ const createVisible = ref(false);
 const assignVisible = ref(false);
 const detailVisible = ref(false);
 const assignRow = ref(null);
-const assignRobotNo = ref('');
 const detailRow = ref(null);
-const createFormRef = ref(null);
 
 const statusOptions = [
   {value: 1, label: '待调度'},
@@ -285,26 +222,6 @@ const sourceOptions = [
   {value: 'MANUAL', label: '手工派单'},
 ];
 const goodsTypeOptions = ['药品', '标本', '耗材', '器械包', '被服'];
-
-const form = reactive({
-  sourceType: 'MANUAL',
-  sourceDeptName: '',
-  goodsType: '药品',
-  goodsName: '',
-  fromStation: 'B1 中心药房',
-  toFloor: 12,
-  toStation: '护士站',
-  priority: 1,
-  boxCount: 1,
-  loadKg: 3,
-  remark: '',
-});
-
-const rules = {
-  goodsName: [{required: true, message: '请填写物品明细', trigger: 'blur'}],
-  fromStation: [{required: true, message: '请填写取货点', trigger: 'blur'}],
-  toStation: [{required: true, message: '请填写收货站点', trigger: 'blur'}],
-};
 
 const statusTagType = (s) => (s === 1 ? 'warning' : s === 2 ? 'info' : s === 3 ? 'primary'
     : s === 4 ? 'success' : s === 6 ? 'danger' : 'info');
@@ -365,61 +282,13 @@ const resetQuery = () => {
   loadOrders();
 };
 
-const resetForm = () => {
-  form.sourceType = 'MANUAL';
-  form.sourceDeptName = '';
-  form.goodsType = '药品';
-  form.goodsName = '';
-  form.fromStation = 'B1 中心药房';
-  form.toFloor = 12;
-  form.toStation = '护士站';
-  form.priority = 1;
-  form.boxCount = 1;
-  form.loadKg = 3;
-  form.remark = '';
-  createFormRef.value?.clearValidate();
-};
-
 const openCreate = () => {
-  resetForm();
   createVisible.value = true;
-};
-
-const submitCreate = async () => {
-  await createFormRef.value.validate();
-  submitting.value = true;
-  try {
-    await robotDispatchCreate({...form, autoAssign: true});
-    ElMessage.success('任务单已提交并派车');
-    createVisible.value = false;
-    await refreshAll();
-  } catch (e) {
-    console.error('新建配送任务单失败', e);
-    ElMessage.error(e?.response?.data?.message || '提交失败');
-  } finally {
-    submitting.value = false;
-  }
 };
 
 const openAssign = (row) => {
   assignRow.value = row;
-  assignRobotNo.value = '';
   assignVisible.value = true;
-};
-
-const confirmAssign = async () => {
-  submitting.value = true;
-  try {
-    await robotDispatchAssign({id: assignRow.value.id, robotNo: assignRobotNo.value || null});
-    ElMessage.success('已派车，指令下发至机器人');
-    assignVisible.value = false;
-    await refreshAll();
-  } catch (e) {
-    console.error('派车失败', e);
-    ElMessage.error(e?.response?.data?.message || '派车失败');
-  } finally {
-    submitting.value = false;
-  }
 };
 
 const cancelOrder = async (row) => {

@@ -1,6 +1,7 @@
 package com.his.platform.entity;
 
 import com.baomidou.mybatisplus.annotation.FieldFill;
+import com.baomidou.mybatisplus.annotation.FieldStrategy;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
@@ -30,7 +31,7 @@ public class SysEquipment extends BaseEntity {
     private String equipmentName;
 
     /**
-     * 设备类别（字典 his_equipment_category，1~7）
+     * 设备类别（字典 his_equipment_category，1~8；8-物流设备）
      */
     private Integer category;
 
@@ -52,12 +53,14 @@ public class SysEquipment extends BaseEntity {
      */
     private String model;
     /**
-     * 购置日期
+     * 购置日期（编辑时可清空，故 updateStrategy=ALWAYS 让 null 也写回库）
      */
+    @TableField(updateStrategy = FieldStrategy.ALWAYS)
     private LocalDate purchaseDate;
     /**
-     * 购置价格(元)
+     * 购置价格(元)（编辑时可清空）
      */
+    @TableField(updateStrategy = FieldStrategy.ALWAYS)
     private BigDecimal purchasePrice;
 
     /**
@@ -71,8 +74,9 @@ public class SysEquipment extends BaseEntity {
     private Integer rentable;
 
     /**
-     * 维保周期(天)
+     * 维保周期(天)（编辑时可清空）
      */
+    @TableField(updateStrategy = FieldStrategy.ALWAYS)
     private Integer maintainCycleDays;
     /**
      * 最近维保日期

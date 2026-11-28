@@ -89,11 +89,6 @@ public class CriticalNoticeServiceImpl extends ServiceImpl<BizCriticalNoticeMapp
     }
 
     @Override
-    public List<CriticalNoticeVO.DoctorOption> doctorOptions() {
-        return bizCriticalNoticeMapper.selectDoctorOptions();
-    }
-
-    @Override
     public CriticalNoticeVO.Stats stats() {
         CriticalNoticeVO.Stats stats = bizCriticalNoticeMapper.selectStats(scopedDeptIds(null));
         return stats == null ? new CriticalNoticeVO.Stats() : stats;

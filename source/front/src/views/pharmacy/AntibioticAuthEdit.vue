@@ -79,7 +79,8 @@
 import { computed, reactive, ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { ANTIBIOTIC_LEVEL } from '@/lib/antibiotic'
-import { getAntibioticDoctorSelectList, upsertAntibioticAuth } from '@/api/antibiotic'
+import { upsertAntibioticAuth } from '@/api/antibiotic'
+import { getEmployeeList } from '@/api/system'
 
 const props = defineProps({
   modelValue: { type: Boolean, default: false },
@@ -100,8 +101,10 @@ const authForm = reactive({
 async function searchDoctors(keyword) {
   doctorLoading.value = true
   try {
-    const res = await getAntibioticDoctorSelectList(keyword || '')
-    doctorOptions.value = res?.data || []
+    const res = await getEmployeeList({empType: 1, status: 1, empName: keyword || ''})
+    doctorOptions.value = (res?.data || []).map(e => ({
+      id: e.id, doctorName: e.empName, deptName: e.deptName, title: e.title
+    }))
   } finally {
     doctorLoading.value = false
   }

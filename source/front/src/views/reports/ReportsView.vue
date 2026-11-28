@@ -10,7 +10,7 @@
             style="width: 200px"
             @change="loadData"
         >
-          <el-option v-for="d in deptOptions" :key="d.id" :label="d.deptName" :value="String(d.id)"/>
+          <el-option v-for="d in deptOptions" :key="d.id" :label="d.fullPath || d.deptName" :value="String(d.id)"/>
         </el-select>
         <el-date-picker
             v-model="range"

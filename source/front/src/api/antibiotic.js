@@ -18,10 +18,6 @@ export function getAntibioticDrugSelectList() {
     return request.get('/antibiotic/antibioticDrugSelectList')
 }
 
-export function getAntibioticDoctorSelectList(keyword) {
-    return request.get('/antibiotic/doctorSelectList', {params: {keyword}})
-}
-
 // ========== 医嘱别名（住院医嘱名 → 药品目录的精确匹配键）==========
 
 export function listAntibioticAlias(drugId) {

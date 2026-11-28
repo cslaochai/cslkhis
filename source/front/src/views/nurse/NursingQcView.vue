@@ -460,7 +460,6 @@ import {
   getQcMonthMetrics,
   getQcTrend,
   getQcWardCompare,
-  getQcWardSelectList,
   listQcCheckPage,
   listQcLedgerPage,
   recalcQcLedger,
@@ -468,6 +467,7 @@ import {
   updateQcCheckStatus,
   upsertQcCheck,
 } from '@/api/nursingQc';
+import {getWardSelectList} from '@/api/system';
 /** 展示用格式化（fmt/intFmt）与详情弹框共用，见 @/lib/nursingQc */
 import {fmt, intFmt} from '@/lib/nursingQc';
 import NursingQcDetail from './NursingQcDetail.vue';
@@ -512,10 +512,10 @@ const wardLabel = computed(() => {
 });
 const loadWards = async () => {
   try {
-    const res = await getQcWardSelectList();
+    const res = await getWardSelectList();
     wards.value = res.data || [];
   } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{
-    
+
   }
 };
 // ---------------- 看板：KPI + 趋势 + 病区对比 ----------------

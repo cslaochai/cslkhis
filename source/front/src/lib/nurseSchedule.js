@@ -2,6 +2,51 @@
 // （出参 filingStatusText），这里只补「能不能走这一步」的判定，码值常量与 isPublishEffective 一律
 // 从 publishStatus.js / 本文件取。
 import {PUBLISH_DRAFT, PUBLISH_PENDING, isPublishEffective} from './publishStatus'
+import {getWardSelectList} from '@/api/system'
+import {loadDeptTreeOptions, flattenDeptTree} from './deptOptions'
+import {getNurseUnitNurseCounts} from '@/api/nurseSchedule'
+
+/** 护理排班单元类型：1-病区 2-门诊科室（与后端 biz_schedule.org_type 口径对齐） */
+export const NURSE_UNIT_WARD = 1
+export const NURSE_UNIT_DEPT = 2
+
+/**
+ * 护理排班候选单元：病区走病区宿主下拉、科室走科室宿主 selectTree，护理在册人数由业务接口叠加。
+ *
+ * <p>候选清单归属各自宿主模块，护理模块只补「在册 N 人」统计后缀；已设病区的科室由该病区代表，
+ * 不再重复作为科室单元。返回结构与旧混合接口一致：
+ * {@code {unitType, wardId, wardName, deptId, deptName, nurseCount}}。
+ */
+export async function loadNurseUnitOptions() {
+  const [wardRes, deptTree, countRes] = await Promise.all([
+    getWardSelectList().catch(() => ({data: []})),
+    loadDeptTreeOptions({mode: 'LEAF'}).catch(() => []),
+    getNurseUnitNurseCounts().catch(() => ({data: []})),
+  ])
+  const countMap = new Map()
+  ;(countRes?.data || []).forEach((c) => countMap.set(String(c.deptId), Number(c.nurseCount) || 0))
+
+  const wardList = (wardRes?.data || []).map((w) => ({
+    unitType: NURSE_UNIT_WARD,
+    wardId: w.wardId,
+    wardName: w.wardName,
+    deptId: w.deptId,
+    deptName: w.deptName,
+    nurseCount: countMap.get(String(w.deptId)) || 0,
+  }))
+  const wardDeptIds = new Set(wardList.map((w) => String(w.deptId)))
+  const deptList = flattenDeptTree(deptTree)
+    .filter((d) => !wardDeptIds.has(String(d.id)))
+    .map((d) => ({
+      unitType: NURSE_UNIT_DEPT,
+      wardId: d.id,
+      wardName: d.fullPath || d.deptName,
+      deptId: d.id,
+      deptName: d.deptName,
+      nurseCount: countMap.get(String(d.id)) || 0,
+    }))
+  return [...wardList, ...deptList]
+}
 
 /**
  * 护理排班（菜单 32x）按钮权限码与发布态流转判定 —— 页面与其拆出的弹框组件共用同一份，

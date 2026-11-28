@@ -153,21 +153,6 @@ public interface BizCriticalNoticeMapper extends BaseMapper<BizCriticalNotice> {
                                                                @Param("limit") int limit);
 
     /**
-     * 医师候选（有医生角色的在职员工，告知/见证医师下拉）
-     */
-    @Select("""
-            SELECT e.id AS employeeId, e.emp_name AS empName, e.dept_name AS deptName
-              FROM sys_employee e
-             WHERE e.del_flag = 0 AND e.status = 1
-               AND EXISTS (SELECT 1 FROM sys_employee_post ep
-                            JOIN sys_role r ON r.id = ep.role_id
-                           WHERE ep.employee_id = e.id AND r.role_code = '10013')
-             ORDER BY e.id
-             LIMIT 200
-            """)
-    List<CriticalNoticeVO.DoctorOption> selectDoctorOptions();
-
-    /**
      * 员工职称码（签名人 signerTitle，电子签名证据留档）
      */
     @Select("SELECT title FROM sys_employee WHERE id = #{employeeId} AND del_flag = 0")

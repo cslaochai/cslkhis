@@ -45,6 +45,15 @@ public class IotDeviceServiceImpl extends ServiceImpl<IotDeviceMapper, IotDevice
                 .stream().map(this::toVO).toList();
     }
 
+    @Override
+    public List<IotDeviceVO> listSharedFleet(String deviceType) {
+        return list(Wrappers.<IotDevice>lambdaQuery()
+                .eq(IotDevice::getEnabled, 1)
+                .eq(IotDevice::getDeviceType, deviceType)
+                .orderByAsc(IotDevice::getDeviceNo))
+                .stream().map(this::toVO).toList();
+    }
+
     /**
      * 解析进 SQL 的科室集合：门禁 → 子树展开 → 与授权集合交集。全院角色返回空集合（不加 IN 条件）。
      */

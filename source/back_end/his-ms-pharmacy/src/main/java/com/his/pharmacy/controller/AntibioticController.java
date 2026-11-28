@@ -60,18 +60,6 @@ public class AntibioticController {
     }
 
     /**
-     * 医师下拉候选，可按姓名或工号关键字过滤。
-     * 用于处方权授权弹框选择被授权医师。
-     */
-    @Operation(summary = "医师下拉（selectList）")
-    @PreAuthorize("hasAuthority('pharmacy:antibiotic:catalog')")
-    @GetMapping("/doctorSelectList")
-    public Result<List<AntibioticDoctorSelectListVO>> doctorSelectList(
-            @RequestParam(required = false) String keyword) {
-        return Result.success(antibioticService.doctorSelectList(keyword));
-    }
-
-    /**
      * 查抗菌药物的医嘱别名清单；药品ID为空时返回全部别名。
      * 用于分级目录页「医嘱别名」页签的维护列表。
      */

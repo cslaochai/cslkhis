@@ -35,6 +35,16 @@ public class DeptBriefVO {
     private String deptName;
 
     /**
+     * 科室位置（楼层 / 房间号，如「医技楼2楼」）；未维护时为空白，调用方不得自行编造楼层
+     */
+    private String location;
+
+    /**
+     * 科室联系电话；未维护时为空白
+     */
+    private String contactPhone;
+
+    /**
      * 科室类型（1-门诊科室 2-医技科室 3-药房 4-住院科室 5-其他），多个类型逗号分隔
      */
     private String deptType;

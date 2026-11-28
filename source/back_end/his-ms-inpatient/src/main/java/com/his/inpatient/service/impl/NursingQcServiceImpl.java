@@ -139,11 +139,6 @@ public class NursingQcServiceImpl extends ServiceImpl<BizNursingQcCheckMapper, B
     // 台账与看板
 
     @Override
-    public List<NurseQcVO.Ward> wardSelectList(String keyword) {
-        return bizNursingQcCheckMapper.selectWardOptions(scopedDeptIds(null), TextUtil.trimToNull(keyword));
-    }
-
-    @Override
     public List<NurseQcVO.Inspector> inspectorSelectList(Long wardId, String keyword) {
         NurseQcVO.Ward ward = requireWard(wardId);
         return bizNursingQcCheckMapper.selectInspectors(ward.getDeptId(), TextUtil.trimToNull(keyword), INSPECTOR_LIMIT);

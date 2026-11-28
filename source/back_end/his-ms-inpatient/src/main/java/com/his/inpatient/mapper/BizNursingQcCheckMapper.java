@@ -28,29 +28,6 @@ public interface BizNursingQcCheckMapper extends BaseMapper<BizNursingQcCheck> {
             DATE_FORMAT(c.create_time, '%Y-%m-%d %H:%i:%s') AS createTime""";
 
     /**
-     * 病区下拉（护理质控页的病区筛选：只列当前岗位可见科室下的启用病区，附床位看得到规模）
-     */
-    @Select("""
-            <script>
-            SELECT w.ward_id AS wardId, w.ward_code AS wardCode, w.ward_name AS wardName,
-                   w.dept_id AS deptId, d.dept_name AS deptName,
-                   w.total_beds AS totalBeds, w.occupied_beds AS occupiedBeds
-              FROM sys_ward w
-              LEFT JOIN sys_department d ON d.id = w.dept_id
-             WHERE w.status = 1
-            <if test="deptIds != null">
-              AND w.dept_id IN <foreach collection="deptIds" item="x" open="(" separator="," close=")">#{x}</foreach>
-            </if>
-            <if test="keyword != null and keyword != ''">
-              AND (w.ward_name LIKE CONCAT('%', #{keyword}, '%') OR w.ward_code LIKE CONCAT('%', #{keyword}, '%'))
-            </if>
-             ORDER BY w.dept_id, w.ward_code, w.ward_id
-            </script>
-            """)
-    List<NurseQcVO.Ward> selectWardOptions(@Param("deptIds") List<Long> deptIds,
-                                           @Param("keyword") String keyword);
-
-    /**
      * 病区快照（写检查单前必查：存在且启用，并用它的 dept 做数据范围收口）
      */
     @Select("""

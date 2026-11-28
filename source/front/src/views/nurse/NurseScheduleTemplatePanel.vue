@@ -382,13 +382,13 @@ import {ref, reactive, computed, onMounted, nextTick} from 'vue'
 import {ElMessage, ElMessageBox} from 'element-plus'
 import {Plus, Search, MagicStick} from '@element-plus/icons-vue'
 import {PAGE_SIZES, DEFAULT_PAGE_SIZE} from '@/lib/pagination'
-import {PERM_ADD, PERM_EDIT, PERM_DELETE} from '@/lib/nurseSchedule'
+import {PERM_ADD, PERM_EDIT, PERM_DELETE, loadNurseUnitOptions} from '@/lib/nurseSchedule'
 import {
   getTemplateStats, pageTemplates, getTemplateDetail, upsertTemplate, deleteTemplate,
   updateTemplateStatus, listTemplateRules, upsertTemplateRule, deleteTemplateRule,
   applyTemplateToWeek, pageApplies, getNurseShiftOptions
 } from '@/api/nurseScheduleTemplate'
-import {getNurseUnitSelectList, getNurseSelectList} from '@/api/nurseSchedule'
+import {getNurseSelectList} from '@/api/nurseSchedule'
 
 const activeInnerTab = ref('rules')
 
@@ -478,8 +478,7 @@ onMounted(async () => {
 async function loadUnits() {
   unitLoading.value = true
   try {
-    const res = await getNurseUnitSelectList({})
-    units.value = res.data || []
+    units.value = await loadNurseUnitOptions()
   } finally {
     unitLoading.value = false
   }

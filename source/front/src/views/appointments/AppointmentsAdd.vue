@@ -127,7 +127,7 @@
             <el-select v-model="newAppointment.deptId" class="w-full" filterable placeholder="选择科室"
                        @change="handleDeptChange">
               <el-option v-for="d in departments" :key="d.id"
-                         :label="d.parentDeptName ? `${d.parentDeptName} / ${d.deptName}` : d.deptName"
+                         :label="d.fullPath || d.deptName"
                          :value="d.id ?? d.deptName"/>
             </el-select>
           </el-form-item>

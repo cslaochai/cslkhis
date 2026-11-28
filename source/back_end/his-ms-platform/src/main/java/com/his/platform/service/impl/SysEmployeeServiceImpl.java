@@ -90,7 +90,8 @@ public class SysEmployeeServiceImpl extends ServiceImpl<SysEmployeeMapper, SysEm
     public List<EmployeeVO> selectList(EmployeeQueryDTO queryDTO) {
         LambdaQueryWrapper<SysEmployee> wrapper = new LambdaQueryWrapper<>();
         wrapper.like(TextUtil.hasText(queryDTO.getEmpName()), SysEmployee::getEmpName, queryDTO.getEmpName())
-                .eq(queryDTO.getEmpType() != null, SysEmployee::getEmpType, queryDTO.getEmpType());
+                .eq(queryDTO.getEmpType() != null, SysEmployee::getEmpType, queryDTO.getEmpType())
+                .eq(queryDTO.getStatus() != null, SysEmployee::getStatus, queryDTO.getStatus());
         if (Boolean.TRUE.equals(queryDTO.getOnlyScheduled())) {
             applyScheduledFilter(wrapper, queryDTO);
         } else {

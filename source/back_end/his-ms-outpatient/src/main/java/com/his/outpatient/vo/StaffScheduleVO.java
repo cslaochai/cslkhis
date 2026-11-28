@@ -148,30 +148,4 @@ public class StaffScheduleVO {
 
     /** 备注 */
     private String remark;
-
-    /**
-     * 排班单元候选（页面按单元过滤 / 整周提交审核时选单元用）。
-     */
-    @Data
-    public static class UnitOption {
-
-        /** 单元ID（科室=科室ID；病区=病区ID；全院=0） */
-        @JsonSerialize(using = ToStringSerializer.class)
-        private Long id;
-
-        /** 单元名称 */
-        private String name;
-
-        /** 所属科室名称（病区有、科室无） */
-        private String deptName;
-
-        public UnitOption() {
-        }
-
-        public UnitOption(Long id, String name, String deptName) {
-            this.id = id;
-            this.name = name;
-            this.deptName = deptName;
-        }
-    }
 }

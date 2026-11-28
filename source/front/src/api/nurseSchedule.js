@@ -9,15 +9,10 @@ import request from './request'
 
 // ========== 参照数据（跨岗位下拉，后端只要求登录） ==========
 
-// 病区下拉：只含当前岗位可见科室下的启用病区，附在册护士数（旧接口，只列病区）
-export function getNurseWardSelectList(params) {
-  return request.get('/nursing/schedule/wardSelectList', { params })
-}
-
-// 护理排班单元下拉（sql/209）：病区 + 有护理编制的门诊科室，附在册护士数
-// unitType 1-病区 2-门诊科室；两种单元的 id 不在同一个空间，请求必须带着类型一起走
-export function getNurseUnitSelectList(params) {
-  return request.get('/nursing/schedule/unitSelectList', { params })
+// 各科室在册护理序列人数（候选行的业务统计后缀）。
+// 病区候选走 /system/ward/selectList、科室候选走 /system/department/selectTree，本接口只回护士数叠加标注。
+export function getNurseUnitNurseCounts() {
+  return request.get('/nursing/schedule/unitNurseCounts')
 }
 
 // 该排班单元所属科室的在册护士（护士/护师）候选下拉，供排班模板明细行选护士用

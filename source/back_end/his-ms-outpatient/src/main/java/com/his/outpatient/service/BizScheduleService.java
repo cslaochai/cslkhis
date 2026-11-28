@@ -5,6 +5,7 @@ import com.his.common.base.PageResult;
 import com.his.outpatient.dto.NurseScheduleDTO;
 import com.his.outpatient.dto.NurseScheduleFileRejectDTO;
 import com.his.outpatient.entity.BizSchedule;
+import com.his.outpatient.vo.DeptNurseCountVO;
 import com.his.outpatient.vo.NurseScheduleVO;
 
 import java.time.LocalDate;
@@ -16,15 +17,11 @@ import java.util.List;
 public interface BizScheduleService extends IService<BizSchedule> {
 
     /**
-     * 病区下拉：只列当前岗位可见科室下的启用病区
+     * 各科室在册护理序列人数（候选行的业务统计后缀；病区/科室候选清单分别走病区、科室宿主接口）。
+     *
+     * @return deptId → 在册护士/护师人数，按当前岗位授权科室收口
      */
-    List<NurseScheduleVO.Ward> wardSelectList(String keyword);
-
-    /** 护士下拉：病区所属科室的在册护士（emp_type 5-护士 6-护师） */
-    /**
-     * 单元候选（sql/209 起含病区 + 门诊科室；只列病区的旧接口保留兼容）
-     */
-    List<NurseScheduleVO.Ward> unitSelectList(String keyword);
+    List<DeptNurseCountVO> unitNurseCounts();
 
     /**
      * 在册护士候选下拉：取指定排班单元（病区/门诊科室）所属科室的护士与护师，支持按姓名模糊搜。

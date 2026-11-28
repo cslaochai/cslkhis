@@ -6,6 +6,8 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.constant.DictTypeConst;
+import com.his.common.enums.EquipmentCategoryEnum;
+import com.his.common.enums.EquipmentStatusEnum;
 import com.his.common.enums.MaintainTypeEnum;
 import com.his.common.enums.MeteringTypeEnum;
 import com.his.common.enums.QualifiedResultEnum;
@@ -21,6 +23,7 @@ import com.his.platform.mapper.BizEquipmentMeteringMapper;
 import com.his.platform.mapper.SysEquipmentMapper;
 import com.his.platform.service.DictCacheService;
 import com.his.platform.service.EquipmentService;
+import com.his.spi.service.IotRobotDeviceService;
 import com.his.common.utils.UserUtils;
 import com.his.platform.vo.EquipmentVO;
 import com.his.platform.vo.MaintainVO;
@@ -48,6 +51,8 @@ public class EquipmentServiceImpl extends ServiceImpl<SysEquipmentMapper, SysEqu
     private final BizEquipmentMeteringMapper bizEquipmentMeteringMapper;
 
     private final DictCacheService dictCacheService;
+
+    private final IotRobotDeviceService iotRobotDeviceService;
 
     public IPage<EquipmentVO> listPage(EquipmentPageQueryDTO q) {
         String kw = TextUtil.trim(q.getKeyword());
@@ -90,6 +95,73 @@ public class EquipmentServiceImpl extends ServiceImpl<SysEquipmentMapper, SysEqu
         SysEquipment e = requireEquipment(dto.getId());
         e.setRentable(dto.getRentable());
         sysEquipmentMapper.updateById(e);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void equipmentUpsert(EquipmentUpsertDTO dto) {
+        String code = TextUtil.trim(dto.getEquipmentCode());
+        String name = TextUtil.trim(dto.getEquipmentName());
+        // 资产编号全库唯一：同一台设备建两份档案，维保/计量记录会挂到不同行，台账再也对不上实物
+        long duplicated = count(new LambdaQueryWrapper<SysEquipment>()
+                .eq(SysEquipment::getEquipmentCode, code)
+                .ne(dto.getId() != null, SysEquipment::getId, dto.getId()));
+        if (duplicated > 0) {
+            throw new BusinessException(400, "设备编码已存在：" + code);
+        }
+        SysEquipment e = dto.getId() == null ? new SysEquipment() : requireEquipment(dto.getId());
+        // 资产编号建档后不可改：改编号等于换一台设备，维保/计量历史与物联网接入行都会对不上
+        if (dto.getId() != null && !code.equals(e.getEquipmentCode())) {
+            throw new BusinessException(400, "设备编码建档后不可修改（原编码 " + e.getEquipmentCode() + "）");
+        }
+        boolean logistics = EquipmentCategoryEnum.isLogistics(dto.getCategory());
+
+        e.setEquipmentCode(code);
+        e.setEquipmentName(name);
+        e.setCategory(dto.getCategory());
+        e.setDeptId(dto.getDeptId());
+        e.setDeptName(TextUtil.trim(dto.getDeptName()));
+        e.setBrand(TextUtil.trim(dto.getBrand()));
+        e.setModel(TextUtil.trim(dto.getModel()));
+        e.setPurchaseDate(dto.getPurchaseDate());
+        e.setPurchasePrice(dto.getPurchasePrice());
+        e.setStatus(dto.getStatus());
+        // 机器人不进共享池：共享池是"闲置可借"的医疗设备，车由派单驱动，不对外借
+        e.setRentable(logistics ? 0 : (dto.getRentable() == null ? 0 : dto.getRentable()));
+        e.setMaintainCycleDays(dto.getMaintainCycleDays());
+        if (dto.getLastMaintainDate() != null) {
+            e.setLastMaintainDate(dto.getLastMaintainDate());
+        }
+        e.setRemark(TextUtil.trim(dto.getRemark()));
+
+        if (dto.getId() == null) {
+            save(e);
+        } else {
+            updateById(e);
+        }
+        syncRobotDevice(e, logistics);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void updateStatus(EquipmentStatusDTO dto) {
+        SysEquipment e = requireEquipment(dto.getId());
+        e.setStatus(dto.getStatus());
+        updateById(e);
+        syncRobotDevice(e, EquipmentCategoryEnum.isLogistics(e.getCategory()));
+    }
+
+    /**
+     * 物流设备与接入台账（biz_iot_device）的绑定同步：在用=启用，其余状态=停用；类别改走则解绑停用。
+     * 非物流设备不碰接入台账。
+     */
+    private void syncRobotDevice(SysEquipment e, boolean logistics) {
+        if (!logistics) {
+            iotRobotDeviceService.detachByEquipmentId(e.getId());
+            return;
+        }
+        iotRobotDeviceService.syncRobot(e.getEquipmentCode(), e.getEquipmentName(), e.getDeptId(), e.getDeptName(),
+                EquipmentStatusEnum.isInService(e.getStatus()) ? 1 : 0, e.getId());
     }
 
     public IPage<MaintainVO> maintainListPage(MaintainPageQueryDTO q) {

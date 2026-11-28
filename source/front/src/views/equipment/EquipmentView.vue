@@ -1,107 +1,163 @@
 <template>
   <div>
-    <el-card ref="queryCardRef" class="query-card mb-3" shadow="never">
-      <el-form :model="query" inline @submit.prevent>
-        <el-form-item label="关键字">
-          <el-input v-model="query.keyword" clearable placeholder="设备编码/名称/型号/科室" style="width: 220px"
-                    @keyup.enter="query.pageNum = 1; loadList()"/>
-        </el-form-item>
-        <el-form-item label="设备类别">
-          <el-select v-model="query.category" :fit-input-width="false" clearable placeholder="设备类别"
-                     style="width: 150px">
-            <el-option v-for="d in categoryDict" :key="d.dictValue" :label="d.dictLabel" :value="Number(d.dictValue)"/>
-          </el-select>
-        </el-form-item>
-        <el-form-item label="状态">
-          <el-select v-model="query.status" :fit-input-width="false" clearable placeholder="状态" style="width: 110px">
-            <el-option v-for="d in statusDict" :key="d.dictValue" :label="d.dictLabel" :value="Number(d.dictValue)"/>
-          </el-select>
-        </el-form-item>
-        <el-form-item label="共享池">
-          <el-select v-model="query.rentable" :fit-input-width="false" clearable placeholder="不限" style="width: 100px">
-            <el-option label="是" :value="1"/>
-            <el-option label="否" :value="0"/>
-          </el-select>
-        </el-form-item>
-        <el-form-item>
-          <el-button :icon="Search" type="primary" @click="query.pageNum = 1; loadList()">查询</el-button>
-          <el-button :icon="Refresh" @click="reset">重置</el-button>
-        </el-form-item>
-      </el-form>
-    </el-card>
+    <el-tabs v-model="activeTab" class="equipment-tabs" data-testid="equipment-tabs">
+      <el-tab-pane label="设备台账" name="ledger">
+        <el-card ref="queryCardRef" class="query-card mb-3" shadow="never">
+          <div class="flex items-start justify-between gap-4">
+            <el-form :model="query" inline @submit.prevent>
+              <el-form-item label="关键字">
+                <el-input v-model="query.keyword" clearable placeholder="设备编码/名称/型号/科室" style="width: 220px"
+                          @keyup.enter="query.pageNum = 1; loadList()"/>
+              </el-form-item>
+              <el-form-item label="设备类别">
+                <el-select v-model="query.category" :fit-input-width="false" clearable placeholder="设备类别"
+                           style="width: 150px">
+                  <el-option v-for="d in categoryDict" :key="d.dictValue" :label="d.dictLabel"
+                             :value="Number(d.dictValue)"/>
+                </el-select>
+              </el-form-item>
+              <el-form-item label="状态">
+                <el-select v-model="query.status" :fit-input-width="false" clearable placeholder="状态"
+                           style="width: 110px">
+                  <el-option v-for="d in statusDict" :key="d.dictValue" :label="d.dictLabel"
+                             :value="Number(d.dictValue)"/>
+                </el-select>
+              </el-form-item>
+              <el-form-item label="共享池">
+                <el-select v-model="query.rentable" :fit-input-width="false" clearable placeholder="不限"
+                           style="width: 100px">
+                  <el-option label="是" :value="1"/>
+                  <el-option label="否" :value="0"/>
+                </el-select>
+              </el-form-item>
+              <el-form-item>
+                <el-button :icon="Search" type="primary" @click="query.pageNum = 1; loadList()">查询</el-button>
+                <el-button :icon="Refresh" @click="reset">重置</el-button>
+              </el-form-item>
+            </el-form>
+            <div class="flex shrink-0 items-start">
+              <el-button v-perm="'asset:equipment:add'" :icon="Plus" plain type="primary" @click="openEdit(null)">
+                新增设备
+              </el-button>
+            </div>
+          </div>
+        </el-card>
 
-    <el-card class="table-card" shadow="never">
-      <el-table v-loading="loading" :data="rows" :max-height="tableMaxHeight" data-testid="equipment-table" stripe>
-        <el-table-column label="资产编号" prop="equipmentCode" width="120"/>
-        <el-table-column label="设备名称" min-width="140" prop="equipmentName" show-overflow-tooltip/>
-        <el-table-column label="型号" prop="model" show-overflow-tooltip width="100"/>
-        <el-table-column label="使用科室" prop="deptName" width="90"/>
-        <el-table-column label="类别" prop="category" width="100">
-          <template #default="{ row }">{{ categoryText(row.category) }}</template>
-        </el-table-column>
-        <el-table-column align="right" label="原值(元)" prop="purchasePrice" width="90">
-          <template #default="{ row }">{{
-              row.purchasePrice != null ? Number(row.purchasePrice).toLocaleString() : ''
-            }}
-          </template>
-        </el-table-column>
-        <el-table-column label="最近维保" width="100">
-          <template #default="{ row }">{{ fmtDate(row.lastMaintainDate) }}</template>
-        </el-table-column>
-        <el-table-column label="下次维保" width="100">
-          <template #default="{ row }">
-            <span :class="{ 'text-red-500 font-bold': row.nextMaintainDate && row.nextMaintainDate < today }">
-              {{ fmtDate(row.nextMaintainDate) }}
-            </span>
-          </template>
-        </el-table-column>
-        <el-table-column label="计量有效期至" width="110">
-          <template #default="{ row }">
-            <span v-if="row.meteringValidUntil" :class="{ 'text-red-500 font-bold': meteringExpired(row) }">
-              {{ fmtDate(row.meteringValidUntil) }}{{ meteringExpired(row) ? '（过期）' : '' }}
-            </span>
-            <span v-else class="text-gray-400">—</span>
-          </template>
-        </el-table-column>
-        <el-table-column align="center" label="状态" prop="status" width="80">
-          <template #default="{ row }">
-            <el-tag :type="statusTag(row.status)">{{ statusText(row.status) }}</el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column align="center" label="共享池" width="80">
-          <template #default="{ row }">
-            <el-button v-perm="'asset:deviceRental:manage'" link size="small"
-                       :type="row.rentable ? 'danger' : 'primary'" @click="toggleRentable(row)">
-              {{ row.rentable ? '移出' : '加入' }}
-            </el-button>
-            <span v-if="row.rentable" class="text-[11px] text-green-600">共享</span>
-          </template>
-        </el-table-column>
-        <el-table-column fixed="right" label="操作" width="200">
-          <template #default="{ row }">
-            <el-button v-perm="'asset:equipment:add'" link size="small" type="primary" @click="openMaintain(row)">
-              维保登记
-            </el-button>
-            <el-button v-perm="'asset:equipment:add'" link size="small" type="success" @click="openMetering(row)">
-              计量登记
-            </el-button>
-            <el-button link size="small" @click="openDetail(row)">记录</el-button>
-          </template>
-        </el-table-column>
-      </el-table>
-      <div ref="footerRef" class="list-footer flex items-center justify-end">
-        <el-pagination v-model:current-page="query.pageNum" :page-size="query.pageSize" :total="total"
-                       layout="total, prev, pager, next" @current-change="loadList"/>
-      </div>
-    </el-card>
+        <el-card class="table-card" shadow="never">
+          <el-table v-loading="loading" :data="rows" :max-height="tableMaxHeight" data-testid="equipment-table"
+                    stripe>
+            <el-table-column label="资产编号" prop="equipmentCode" width="120"/>
+            <el-table-column label="设备名称" min-width="140" prop="equipmentName" show-overflow-tooltip/>
+            <el-table-column label="型号" prop="model" show-overflow-tooltip width="100"/>
+            <el-table-column label="使用科室" prop="deptName" width="90"/>
+            <el-table-column label="类别" prop="category" width="100">
+              <template #default="{ row }">{{ categoryText(row.category) }}</template>
+            </el-table-column>
+            <el-table-column label="接入状态" width="140">
+              <template #default="{ row }">
+                <template v-if="isRobot(row)">
+                  <el-tag v-if="fleetMap[row.equipmentCode]"
+                          :type="fleetMap[row.equipmentCode].online ? 'success' : 'info'"
+                          size="small">
+                    {{ fleetMap[row.equipmentCode].online ? '在线' : '离线' }}
+                  </el-tag>
+                  <el-tag v-else size="small" type="warning">未接入</el-tag>
+                  <span v-if="fleetMap[row.equipmentCode]?.battery != null" class="ml-1 text-xs text-slate-600">
+                    {{ Math.round(fleetMap[row.equipmentCode].battery) }}%
+                  </span>
+                  <div class="text-[11px] text-slate-400">{{ fleetMap[row.equipmentCode]?.stateLabel || '—' }}</div>
+                </template>
+                <span v-else class="text-gray-400">—</span>
+              </template>
+            </el-table-column>
+            <el-table-column align="right" label="原值(元)" prop="purchasePrice" width="90">
+              <template #default="{ row }">{{
+                  row.purchasePrice != null ? Number(row.purchasePrice).toLocaleString() : ''
+                }}
+              </template>
+            </el-table-column>
+            <el-table-column label="最近维保" width="100">
+              <template #default="{ row }">{{ fmtDate(row.lastMaintainDate) }}</template>
+            </el-table-column>
+            <el-table-column label="下次维保" width="100">
+              <template #default="{ row }">
+                <span :class="{ 'text-red-500 font-bold': row.nextMaintainDate && row.nextMaintainDate < today }">
+                  {{ fmtDate(row.nextMaintainDate) }}
+                </span>
+              </template>
+            </el-table-column>
+            <el-table-column label="计量有效期至" width="110">
+              <template #default="{ row }">
+                <span v-if="row.meteringValidUntil" :class="{ 'text-red-500 font-bold': meteringExpired(row) }">
+                  {{ fmtDate(row.meteringValidUntil) }}{{ meteringExpired(row) ? '（过期）' : '' }}
+                </span>
+                <span v-else class="text-gray-400">—</span>
+              </template>
+            </el-table-column>
+            <el-table-column align="center" label="状态" prop="status" width="80">
+              <template #default="{ row }">
+                <el-tag :type="statusTag(row.status)">{{ statusText(row.status) }}</el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column align="center" label="共享池" width="80">
+              <template #default="{ row }">
+                <span v-if="isRobot(row)" class="text-[11px] text-slate-400">不参与</span>
+                <template v-else>
+                  <el-button v-perm="'asset:deviceRental:manage'" link size="small"
+                             :type="row.rentable ? 'danger' : 'primary'" @click="toggleRentable(row)">
+                    {{ row.rentable ? '移出' : '加入' }}
+                  </el-button>
+                  <span v-if="row.rentable" class="text-[11px] text-green-600">共享</span>
+                </template>
+              </template>
+            </el-table-column>
+            <el-table-column fixed="right" label="操作" width="300">
+              <template #default="{ row }">
+                <el-button v-perm="'asset:equipment:add'" link size="small" type="primary" @click="openEdit(row)">
+                  编辑
+                </el-button>
+                <el-button v-perm="'asset:equipment:add'" link size="small"
+                           :type="Number(row.status) === 1 ? 'warning' : 'success'" @click="toggleStatus(row)">
+                  {{ Number(row.status) === 1 ? '停用' : '启用' }}
+                </el-button>
+                <el-button v-perm="'asset:equipment:add'" link size="small" type="primary" @click="openMaintain(row)">
+                  维保登记
+                </el-button>
+                <el-button v-perm="'asset:equipment:add'" link size="small" type="success" @click="openMetering(row)">
+                  计量登记
+                </el-button>
+                <el-button link size="small" @click="openDetail(row)">记录</el-button>
+              </template>
+            </el-table-column>
+          </el-table>
+          <div ref="footerRef" class="list-footer flex items-center justify-end">
+            <el-pagination v-model:current-page="query.pageNum" :page-size="query.pageSize" :total="total"
+                           layout="total, prev, pager, next" @current-change="loadList"/>
+          </div>
+        </el-card>
+      </el-tab-pane>
+
+      <!-- 共享调配/机器人调度原是两个一级菜单，业务上都属「设备管理」：收成本页 Tab，侧栏不再单列 -->
+      <el-tab-pane v-if="showRentalTab" label="共享调配" name="rental" lazy>
+        <DeviceRentalView v-if="activeTab === 'rental'" embedded/>
+      </el-tab-pane>
+
+      <el-tab-pane v-if="showRobotTab" label="机器人调度" name="robot" lazy>
+        <RobotDispatchView v-if="activeTab === 'robot'" embedded/>
+      </el-tab-pane>
+    </el-tabs>
+
+    <!-- 新增/编辑设备档案 -->
+    <EquipmentEdit v-model="editVisible" :row="editRow" :category-dict="categoryDict" :status-dict="statusDict"
+                   @saved="onSaved"/>
 
     <!-- 维保登记 -->
     <EquipmentMaintainAdd v-model="maintainVisible" :maintain-type-dict="maintainTypeDict" :row="maintainRow"
-                          @saved="loadList"/>
+                          @saved="onSaved"/>
 
     <!-- 计量登记 -->
     <EquipmentMeteringAdd v-model="meteringVisible" :metering-type-dict="meteringTypeDict" :row="meteringRow"
-                          @saved="loadList"/>
+                          @saved="onSaved"/>
 
     <!-- 记录详情 -->
     <EquipmentRecordsDetail v-model="detailVisible" :id="detailId" :maintain-type-dict="maintainTypeDict"
@@ -113,24 +169,49 @@
 /**
  * 设备管理（G22，菜单 902）
  *
- * 台账 = sys_equipment（49 号铺底 90 行）；本页聚焦维保/计量：
+ * 台账 = sys_equipment：本页管设备档案（新增/编辑/停用）+ 维保/计量：
+ * - 设备编码 = 资产编号，建档后不可改；8-物流设备（机器人）的编码同时是物联网接入编号
  * - 维保登记成功回写档案「最近维保日期」，下次维保日期 = 最近维保 + 维保周期（前端只展示，计算在后端 VO）
  * - 计量（强检/校准）有效期至过期即台账亮红
  * - 维保/计量记录录错可删（后端会按剩余记录重算最近维保日期）
+ * - 物流机器人的「接入状态」列取机器人车队的在线/电量，按设备编码对齐接入编号
+ *
+ * 三个 Tab 的关系（2026-11-28 合并，原来是三个并列一级菜单）：
+ * - 设备台账：固定资产档案（含物流机器人 8-物流设备）
+ * - 共享调配：临床试验设备借用单据流（申请→审批→发放→验收→归还），共享池就是本页 rentable 标记
+ * - 机器人调度：全院共享车队的派单台（建单→派车→配送→签收），派单算法在后端 RobotDispatchServiceImpl
+ * 后两个 Tab 各自按权限码显隐；本角色没有该码时不渲染 Tab，避免进去一片 403。
  */
 import {onMounted, reactive, ref} from 'vue';
 import {ElMessage, ElMessageBox} from 'element-plus';
-import {Refresh, Search} from '@element-plus/icons-vue';
-import {equipmentListPage, updateEquipmentRentable} from '@/api/equipment';
+import {Plus, Refresh, Search} from '@element-plus/icons-vue';
+import {equipmentListPage, updateEquipmentRentable, updateEquipmentStatus} from '@/api/equipment';
+import {robotDispatchFleet} from '@/api/robotDispatch';
+import {hasPerm} from '@/lib/perm';
+import EquipmentEdit from './EquipmentEdit.vue';
 import EquipmentMaintainAdd from './EquipmentMaintainAdd.vue';
 import EquipmentMeteringAdd from './EquipmentMeteringAdd.vue';
 import EquipmentRecordsDetail from './EquipmentRecordsDetail.vue';
+import DeviceRentalView from './DeviceRentalView.vue';
+import RobotDispatchView from '@/views/iot/RobotDispatchView.vue';
 import {getDictDataMapList} from '@/api/system';
 import {DICT_TYPE} from '@/lib/dict-cache';
 import {dictLabelText} from '@/lib/utils';
 import {fmtDate} from '@/lib/equipment';
 import {DEFAULT_PAGE_SIZE} from '@/lib/pagination';
 import {useTableMaxHeight} from '@/lib/useTableMaxHeight';
+// ---------------- Tab ----------------
+const showRentalTab = ref(true);
+const showRobotTab = ref(true);
+const activeTab = ref('ledger');
+const resolveTabs = () => {
+  showRentalTab.value = hasPerm('asset:deviceRental:list');
+  showRobotTab.value = hasPerm('iot:robotDispatch:list');
+  // 本角色连台账都没有（只被授了共享调配/调度）时，默认落在第一个可见 Tab 上
+  if (activeTab.value === 'ledger' && !hasPerm('asset:equipment:list')) {
+    activeTab.value = showRentalTab.value ? 'rental' : (showRobotTab.value ? 'robot' : 'ledger');
+  }
+};
 // ---------------- 字典 ----------------
 const statusDict = ref([]);
 const categoryDict = ref([]);
@@ -174,10 +255,9 @@ const loadList = async () => {
     if (res.code === 200) {
       rows.value = res.data?.records || [];
       total.value = Number(res.data?.total || 0);
-    } 
+    }
   } catch (e) {
     console.error(e);
-    
   } finally {
     loading.value = false;
   }
@@ -187,6 +267,60 @@ const reset = () => {
   loadList();
 };
 const statusTag = (v) => ({1: 'success', 2: 'info', 3: 'warning', 4: 'danger'}[v] || 'info');
+
+// ---------------- 机器人接入状态（8-物流设备按设备编码对齐接入编号） ----------------
+const LOGISTICS_CATEGORY = 8;
+const isRobot = (row) => Number(row.category) === LOGISTICS_CATEGORY;
+const fleetMap = ref({});
+const loadFleet = async () => {
+  try {
+    const res = await robotDispatchFleet();
+    const map = {};
+    (res?.data || []).forEach((car) => { map[car.robotNo] = car; });
+    fleetMap.value = map;
+  } catch (e) {
+    // 没有调度权限的岗位看不到车队，接入状态列留「未接入」不影响设备台账本身
+    console.error('加载机器人车队状态失败', e);
+    fleetMap.value = {};
+  }
+};
+
+// ---------------- 新增 / 编辑 / 停用 ----------------
+const editVisible = ref(false);
+const editRow = ref(null);
+const openEdit = (row) => {
+  editRow.value = row;
+  editVisible.value = true;
+};
+
+const onSaved = async () => {
+  await loadList();
+  await loadFleet();
+};
+
+const toggleStatus = async (row) => {
+  const target = Number(row.status) === 1 ? 2 : 1;
+  const robotTip = isRobot(row) ? '，停用后不再参与机器人派单' : '';
+  try {
+    await ElMessageBox.confirm(
+        target === 2
+            ? `停用「${row.equipmentName}」？${robotTip}`
+            : `启用「${row.equipmentName}」？`,
+        target === 2 ? '停用设备' : '启用设备',
+        {confirmButtonText: target === 2 ? '停用' : '启用', cancelButtonText: '取消',
+          type: target === 2 ? 'warning' : 'info'},
+    );
+  } catch (e) {
+    return;
+  }
+  try {
+    await updateEquipmentStatus({id: row.id, status: target});
+    ElMessage.success(target === 2 ? '设备已停用' : '设备已启用');
+    await onSaved();
+  } catch (e) {
+    console.error('变更设备状态失败', e);
+  }
+};
 
 const toggleRentable = async (row) => {
   const target = row.rentable ? 0 : 1;
@@ -236,7 +370,9 @@ const today = (() => {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 })();
 onMounted(() => {
+  resolveTabs();
   loadDicts();
   loadList();
+  loadFleet();
 });
 </script>

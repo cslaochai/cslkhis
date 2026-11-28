@@ -1,5 +1,6 @@
 <template>
-  <div class="p-4 space-y-4">
+  <!-- embedded=true：被「设备管理」页当 Tab 内嵌，去掉外层 p-4（外层已有卡片留白） -->
+  <div :class="embedded ? 'space-y-4' : 'p-4 space-y-4'">
     <div class="bg-white rounded-lg shadow-sm px-5 py-4 flex flex-wrap items-center gap-5">
       <div class="flex items-center gap-3">
         <span class="text-[13px] text-gray-500">状态</span>
@@ -239,6 +240,9 @@ import {
 } from '@/api/deviceRental';
 import DeviceRentalApply from './DeviceRentalApply.vue';
 import {DEFAULT_PAGE_SIZE} from '@/lib/pagination';
+
+/** 被设备管理页内嵌时传 true，仅去掉外层页面留白 */
+defineProps({embedded: {type: Boolean, default: false}});
 
 const tab = ref('orders');
 const loading = ref(false);

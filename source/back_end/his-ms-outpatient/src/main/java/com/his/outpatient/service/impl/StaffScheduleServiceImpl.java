@@ -1948,67 +1948,6 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, Biz
         return moved;
     }
 
-    @Override
-    public List<StaffScheduleVO.UnitOption> unitSelectList(Integer orgType, Integer scope) {
-        List<StaffScheduleVO.UnitOption> options = new ArrayList<>();
-        boolean all = orgType == null;
-        // 域收口：急诊排班页(scope=ER)只出急诊叶子科室；员工排班页(scope=STAFF)排除急诊科室。
-        // 叶子口径（去虚父级）与值班公开表一致：排班排到虚父级上没有意义。
-        Set<Long> erInclude = null;
-        Set<Long> erExclude = null;
-        if (StaffScheduleScopeEnum.ER.getCode().equals(scope)) {
-            erInclude = erLeafDeptIds();
-        } else if (StaffScheduleScopeEnum.STAFF.getCode().equals(scope)
-                || StaffScheduleScopeEnum.OPD.getCode().equals(scope)) {
-            erExclude = erDeptIds();
-        }
-        if (all || OrgUnitTypeEnum.HOSPITAL.getCode() == orgType) {
-            options.add(new StaffScheduleVO.UnitOption(0L, "全院", null));
-        }
-        if (all || OrgUnitTypeEnum.DEPT.getCode() == orgType) {
-            for (DeptBriefVO dept : systemFacadeService.listEnabledDepartments()) {
-                // 管理片区（内科系统等）与行政后勤不是真人上班的地方：选成排班单元后，整周排班挂在虚拟节点上、
-                // 提交审核也找不到归属科室。node_type 未回填的历史行按「可排班」放行，避免升级瞬间下拉变空。
-                if (TextUtil.hasText(dept.getNodeType()) && !DeptNodeTypeEnum.isBusinessDept(dept.getNodeType())) {
-                    continue;
-                }
-                if (erExclude != null && erExclude.contains(dept.getId())) {
-                    continue;
-                }
-                if (erInclude != null && !erInclude.contains(dept.getId())) {
-                    continue;
-                }
-                options.add(new StaffScheduleVO.UnitOption(dept.getId(), dept.getDeptName(), null));
-            }
-        }
-        if (all || OrgUnitTypeEnum.WARD.getCode() == orgType) {
-            List<WardBriefVO> wards = systemFacadeService.listEnabledWards();
-            Map<Long, String> deptNames = deptNameMapOf(wards);
-            for (WardBriefVO ward : wards) {
-                options.add(new StaffScheduleVO.UnitOption(ward.getWardId(), ward.getWardName(),
-                        deptNames.get(ward.getDeptId())));
-            }
-        }
-        return options;
-    }
-
-    /**
-     * 病区所属科室名（一次批量查，避免 N+1）
-     */
-    private Map<Long, String> deptNameMapOf(List<WardBriefVO> wards) {
-        Set<Long> deptIds = new HashSet<>();
-        for (WardBriefVO ward : wards) {
-            if (ward.getDeptId() != null) {
-                deptIds.add(ward.getDeptId());
-            }
-        }
-        if (deptIds.isEmpty()) {
-            return Map.of();
-        }
-        return systemFacadeService.listDepartmentsByIds(deptIds).stream()
-                .collect(Collectors.toMap(DeptBriefVO::getId, DeptBriefVO::getDeptName, (a, b) -> a));
-    }
-
     /**
      * 全院岗位排班审核人校验：系统管理员(10012)全局豁免；
      * 其余当前登录人必须是该科室在科室主档指定的全院岗位排班审核人(schedule_auditor_id)。

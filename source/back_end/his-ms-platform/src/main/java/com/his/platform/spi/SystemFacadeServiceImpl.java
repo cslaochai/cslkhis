@@ -1,6 +1,8 @@
 package com.his.platform.spi;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.his.common.enums.DeptNodeTypeEnum;
+import com.his.common.enums.DeptTypeEnum;
 import com.his.common.enums.EnableStatusEnum;
 import com.his.common.enums.YesOrNoEnum;
 import com.his.spi.dto.PatientAccountCreateDTO;
@@ -32,6 +34,7 @@ import com.his.platform.mapper.SysEmployeeMapper;
 import com.his.platform.mapper.SysRoleMapper;
 import com.his.platform.mapper.SysUserMapper;
 import com.his.platform.mapper.SysWardMapper;
+import com.his.platform.service.DeptCacheService;
 import com.his.platform.service.DictCacheService;
 import com.his.platform.service.Icd10Service;
 import com.his.platform.service.SysUserService;
@@ -74,29 +77,36 @@ public class SystemFacadeServiceImpl implements SystemFacadeService {
 
     private final DictCacheService dictCacheService;
 
+    private final DeptCacheService deptCacheService;
+
     private final Icd10Service icd10Service;
 
     @Override
     public DeptBriefVO findDepartment(Long deptId) {
-        return deptId == null ? null : toDeptBrief(sysDepartmentMapper.selectById(deptId));
+        return deptId == null ? null : deptCacheService.findBrief(deptId);
     }
 
     @Override
-    public List<DeptBriefVO> listEnabledDepartments() {
-        List<SysDepartment> departments = sysDepartmentMapper.selectList(
+    public DeptBriefVO findOutpatientPharmacy(Boolean herbal) {
+        List<SysDepartment> pharmacies = sysDepartmentMapper.selectList(
                 new LambdaQueryWrapper<SysDepartment>()
-                        .eq(SysDepartment::getStatus, EnableStatusEnum.ENABLED.getCode())
-                        .orderByAsc(SysDepartment::getSortOrder)
-                        .orderByAsc(SysDepartment::getId));
-        return toDeptBriefList(departments);
-    }
-
-    @Override
-    public List<DeptBriefVO> listDepartmentsByIds(Collection<Long> deptIds) {
-        if (deptIds == null || deptIds.isEmpty()) {
-            return List.of();
+                        .eq(SysDepartment::getStatus, EnableStatusEnum.ENABLED.getCode()))
+                .stream()
+                .filter(d -> DeptTypeEnum.contains(d.getDeptType(), DeptTypeEnum.PHARMACY))
+                .filter(d -> !DeptNodeTypeEnum.isArea(d.getNodeType()))
+                .toList();
+        if (pharmacies.isEmpty()) {
+            return null;
         }
-        return toDeptBriefList(sysDepartmentMapper.selectBatchIds(deptIds));
+        // 系统未维护处方类别→药房的显式映射列：饮片方按名称含「中药」匹配，西药/中成药方按含「西药」匹配；
+        // 匹配不上返回 null，由调用方给通用提示，不猜测楼层房间。
+        boolean wantHerbal = Boolean.TRUE.equals(herbal);
+        SysDepartment hit = pharmacies.stream()
+                .filter(d -> TextUtil.hasText(d.getDeptName())
+                        && (wantHerbal ? d.getDeptName().contains("中药") : d.getDeptName().contains("西药")))
+                .findFirst()
+                .orElse(null);
+        return toDeptBrief(hit);
     }
 
     @Override
@@ -166,19 +176,6 @@ public class SystemFacadeServiceImpl implements SystemFacadeService {
     @Override
     public WardBriefVO findWard(Long wardId) {
         return wardId == null ? null : toWardBrief(sysWardMapper.selectById(wardId));
-    }
-
-    @Override
-    public List<WardBriefVO> listEnabledWards() {
-        List<SysWard> wards = sysWardMapper.selectList(new LambdaQueryWrapper<SysWard>()
-                .eq(SysWard::getStatus, EnableStatusEnum.ENABLED.getCode())
-                .orderByAsc(SysWard::getWardCode)
-                .orderByAsc(SysWard::getWardId));
-        List<WardBriefVO> result = new ArrayList<>(wards.size());
-        for (SysWard ward : wards) {
-            result.add(toWardBrief(ward));
-        }
-        return result;
     }
 
     @Override
@@ -460,6 +457,8 @@ public class SystemFacadeServiceImpl implements SystemFacadeService {
         vo.setDeptCode(department.getDeptCode());
         vo.setParentId(department.getParentId());
         vo.setDeptName(department.getDeptName());
+        vo.setLocation(department.getLocation());
+        vo.setContactPhone(department.getContactPhone());
         vo.setDeptType(department.getDeptType());
         vo.setNodeType(department.getNodeType());
         vo.setStatus(department.getStatus());

@@ -172,7 +172,6 @@ import {
   deleteStaffSchedule,
   getErDutyPublic,
   getStaffScheduleListPage,
-  getStaffScheduleUnitSelectList,
   submitStaffSchedule,
   submitWeekStaffSchedule,
 } from '@/api/staffSchedule'
@@ -183,6 +182,7 @@ import StaffScheduleCopyEdit from './StaffScheduleCopyEdit.vue'
 import {
   canAuditPublish,
   canSubmitPublish,
+  loadScheduleDeptOptions,
   ORG_UNIT_TYPE_DEPT,
   SCHEDULE_SCOPE_ER,
 } from '@/lib/staffSchedule'
@@ -234,8 +234,8 @@ const deptId = ref(null)
 const deptOptions = ref([])
 const loadDeptOptions = async () => {
   try {
-    const res = await getStaffScheduleUnitSelectList({orgType: ORG_UNIT_TYPE_DEPT, scope: SCHEDULE_SCOPE_ER})
-    deptOptions.value = res.code === 200 ? (res.data || []) : []
+    // 急诊叶子科室走科室统一入口 selectTree（deptType=急诊），不在排班模块自造科室查询
+    deptOptions.value = await loadScheduleDeptOptions(SCHEDULE_SCOPE_ER)
     if (!deptId.value && deptOptions.value.length) {
       deptId.value = deptOptions.value[0].id
     }

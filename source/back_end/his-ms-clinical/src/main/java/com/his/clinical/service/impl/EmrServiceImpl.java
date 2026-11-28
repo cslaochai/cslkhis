@@ -19,6 +19,7 @@ import com.his.clinical.support.QcOperator;
 import com.his.clinical.support.QcSnapshot;
 import com.his.clinical.vo.*;
 import com.his.common.base.PageResult;
+import com.his.common.constant.SystemConfigKeyConst;
 import com.his.common.config.UploadProperties;
 import com.his.common.entity.CurrentUser;
 import com.his.common.enums.*;
@@ -2222,6 +2223,10 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
         insWrapper.eq(BizInspectionApply::getRecordId, record.getId());
         List<BizInspectionApply> insApplies = bizInspectionApplyMapper.selectList(insWrapper);
 
+        // 处方：判定取药去向（饮片方 → 中药房，西药/中成药方 → 西药房）
+        List<BizPrescription> prescriptions = bizPrescriptionMapper.selectList(
+                new LambdaQueryWrapper<BizPrescription>().eq(BizPrescription::getRecordId, record.getId()));
+
         try {
             // 创建PDF文档
             com.lowagie.text.Document document = new com.lowagie.text.Document(com.lowagie.text.PageSize.A4, 36, 36, 36, 36);
@@ -2276,7 +2281,10 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
                     }
                     document.add(createParagraph(labItem.toString(), normalFont));
                 }
-                document.add(createParagraph("  采样地点：一楼检验科", smallFont));
+                for (String location : deptLocationTexts(
+                        labApplies.stream().map(BizLaboratoryApply::getLaboratoryDeptId).collect(Collectors.toList()))) {
+                    document.add(createParagraph("  采样地点：" + location, smallFont));
+                }
                 boolean isFasting = labApplies.get(0).getIsFasting() != null && labApplies.get(0).getIsFasting() == 1;
                 document.add(createParagraph("  注意事项：" + (isFasting ? "需空腹" : "无特殊要求"), smallFont));
                 document.add(createParagraph(" ", normalFont));
@@ -2292,7 +2300,10 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
                     }
                     document.add(createParagraph(insItem.toString(), normalFont));
                 }
-                document.add(createParagraph("  检查地点：二楼检查科", smallFont));
+                for (String location : deptLocationTexts(
+                        insApplies.stream().map(BizInspectionApply::getInspectionDeptId).collect(Collectors.toList()))) {
+                    document.add(createParagraph("  检查地点：" + location, smallFont));
+                }
                 document.add(createParagraph(" ", normalFont));
             }
 
@@ -2314,7 +2325,14 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
             // 取药流程
             document.add(createParagraph("【取药流程】", headerFont));
             if (receivables.stream().anyMatch(r -> isDrugItemType(r.getItemType()))) {
-                document.add(createParagraph("您有药品费用，请凭处方前往一楼药房取药", normalFont));
+                boolean herbalRx = prescriptions.stream()
+                        .anyMatch(p -> Objects.equals(p.getPrescriptionType(), PrescriptionTypeEnum.TCM.getCode()));
+                String pharmacy = pharmacyLocationText(herbalRx);
+                if (TextUtil.hasText(pharmacy)) {
+                    document.add(createParagraph("您有药品费用，请凭处方前往" + pharmacy + "取药", normalFont));
+                } else {
+                    document.add(createParagraph("您有药品费用，请凭处方到门诊药房取药", normalFont));
+                }
                 document.add(createParagraph("取药时间：周一至周五 8:00-17:30", normalFont));
             } else {
                 document.add(createParagraph("本次就诊无药品费用", normalFont));
@@ -2328,9 +2346,15 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
             document.add(createParagraph("3. 复诊时间请遵医嘱", normalFont));
             document.add(createParagraph(" ", normalFont));
 
-            // 医院信息
-            document.add(createParagraph("医院地址：湖南省长沙市岳麓区金州大道520号", smallFont));
-            document.add(createParagraph("咨询电话：010-88888888", smallFont));
+            // 医院信息（地址 / 电话取自系统参数，未配置则不渲染该行，不写死院址）
+            String hospitalAddress = systemFacadeService.findConfigValue(SystemConfigKeyConst.HOSPITAL_ADDRESS);
+            String hospitalPhone = systemFacadeService.findConfigValue(SystemConfigKeyConst.HOSPITAL_PHONE);
+            if (TextUtil.hasText(hospitalAddress)) {
+                document.add(createParagraph("医院地址：" + hospitalAddress, smallFont));
+            }
+            if (TextUtil.hasText(hospitalPhone)) {
+                document.add(createParagraph("咨询电话：" + hospitalPhone, smallFont));
+            }
 
             document.close();
 
@@ -2344,6 +2368,44 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
         com.lowagie.text.Paragraph p = new com.lowagie.text.Paragraph(text, font);
         p.setSpacingAfter(4);
         return p;
+    }
+
+    /**
+     * 科室ID集合 → 「科室名（位置）」文案，按入参顺序去重；科室不存在或未维护名称时跳过，
+     * 位置未维护则只出科室名，绝不编造楼层 / 房间号。
+     */
+    private List<String> deptLocationTexts(List<Long> deptIds) {
+        if (deptIds == null || deptIds.isEmpty()) {
+            return List.of();
+        }
+        List<String> result = new ArrayList<>();
+        Set<Long> seen = new HashSet<>();
+        for (Long deptId : deptIds) {
+            if (deptId == null || !seen.add(deptId)) {
+                continue;
+            }
+            DeptBriefVO dept = systemFacadeService.findDepartment(deptId);
+            if (dept == null || !TextUtil.hasText(dept.getDeptName())) {
+                continue;
+            }
+            result.add(TextUtil.hasText(dept.getLocation())
+                    ? dept.getDeptName() + "（" + dept.getLocation() + "）"
+                    : dept.getDeptName());
+        }
+        return result;
+    }
+
+    /**
+     * 按处方类别取门诊药房地点文案；无匹配药房返回 {@code null}，由调用方给通用「门诊药房」提示。
+     */
+    private String pharmacyLocationText(Boolean herbal) {
+        DeptBriefVO pharmacy = systemFacadeService.findOutpatientPharmacy(herbal);
+        if (pharmacy == null || !TextUtil.hasText(pharmacy.getDeptName())) {
+            return null;
+        }
+        return TextUtil.hasText(pharmacy.getLocation())
+                ? pharmacy.getDeptName() + "（" + pharmacy.getLocation() + "）"
+                : pharmacy.getDeptName();
     }
 
     /**
@@ -2603,10 +2665,21 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
         }
 
         document.add(createParagraph(" ", normalFont));
-        document.add(createParagraph("取药流程：请凭本处方笺前往一楼药房取药", smallFont));
+        boolean herbalRx = rxs.stream()
+                .anyMatch(p -> Objects.equals(p.getPrescriptionType(), PrescriptionTypeEnum.TCM.getCode()));
+        String pharmacy = pharmacyLocationText(herbalRx);
+        document.add(createParagraph(TextUtil.hasText(pharmacy)
+                ? "取药流程：请凭本处方笺前往" + pharmacy + "取药"
+                : "取药流程：请凭本处方笺到门诊药房取药", smallFont));
         document.add(createParagraph("取药时间：周一至周五 8:00-17:30", smallFont));
-        document.add(createParagraph("医院地址：湖南省长沙市岳麓区金州大道520号", smallFont));
-        document.add(createParagraph("咨询电话：010-88888888", smallFont));
+        String hospitalAddress = systemFacadeService.findConfigValue(SystemConfigKeyConst.HOSPITAL_ADDRESS);
+        String hospitalPhone = systemFacadeService.findConfigValue(SystemConfigKeyConst.HOSPITAL_PHONE);
+        if (TextUtil.hasText(hospitalAddress)) {
+            document.add(createParagraph("医院地址：" + hospitalAddress, smallFont));
+        }
+        if (TextUtil.hasText(hospitalPhone)) {
+            document.add(createParagraph("咨询电话：" + hospitalPhone, smallFont));
+        }
     }
 
     /**

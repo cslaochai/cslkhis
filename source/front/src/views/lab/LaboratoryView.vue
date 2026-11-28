@@ -256,16 +256,16 @@
             <el-input v-model="auditRemark" :rows="3" placeholder="请输入审核意见（可选）..." type="textarea"/>
           </div>
 
-          <!-- 审核医师签名：引用员工档案预维护的签名笔迹（后端审核时自动落库） -->
+          <!-- 审核者签名：引用员工档案预维护的签名笔迹（后端审核时自动落库） -->
           <div class="rounded-lg border border-slate-200 p-4">
-            <h4 class="mb-2 text-sm font-bold text-slate-700">审核医师签名</h4>
-            <div v-if="auditSignLoading" class="text-xs text-slate-400">正在加载当前登录医师的签名笔迹…</div>
+            <h4 class="mb-2 text-sm font-bold text-slate-700">审核者签名</h4>
+            <div v-if="auditSignLoading" class="text-xs text-slate-400">正在加载当前登录人的签名笔迹…</div>
             <div v-else-if="auditSignImage" class="flex items-center gap-3">
-              <img :src="auditSignImage" alt="审核医师签名笔迹" class="h-12 rounded border border-slate-200 bg-white"/>
-              <span class="text-xs text-slate-500">将引用当前登录医师（员工档案）预维护的签名笔迹完成审核</span>
+              <img :src="auditSignImage" alt="审核者签名笔迹" class="h-12 rounded border border-slate-200 bg-white"/>
+              <span class="text-xs text-slate-500">将引用当前登录人（员工档案）预维护的签名笔迹完成审核</span>
             </div>
             <div v-else class="text-xs text-amber-600">
-              当前登录医师在员工档案未维护签名笔迹，本次审核仅完成电子证书签名（无笔迹落款）
+              当前登录人在员工档案未维护签名笔迹，本次审核仅完成电子证书签名（无笔迹落款）
             </div>
           </div>
         </div>
@@ -466,8 +466,10 @@ const handleReceiveSpecimen = async (row) => {
 const handleResultEntry = async (row) => {
   selectedOrder.value = row;
   // 加载已有的检验结果
+  let itemId = row.laboratoryItemId;
   try {
     const res = await getLaboratoryDetail(row.id);
+    itemId = res.data?.record?.laboratoryItemId || itemId;
     if (res.data?.results?.length > 0) {
       laboratoryResultForm.value = res.data.results.map((r) => ({
         id: r.id,
@@ -484,10 +486,10 @@ const handleResultEntry = async (row) => {
       }));
     } else {
       // 根据检验大项目加载明细项目
-      await loadLaboratoryItemDetails(row);
+      await loadLaboratoryItemDetails(row, itemId);
     }
   } catch {
-    await loadLaboratoryItemDetails(row);
+    await loadLaboratoryItemDetails(row, itemId);
   }
   // 初始化诊断和建议
   laboratoryDiagnosis.value = '';
@@ -495,19 +497,11 @@ const handleResultEntry = async (row) => {
   showResultDialog.value = true;
 };
 // 加载检验项目明细
-const loadLaboratoryItemDetails = async (row) => {
+const loadLaboratoryItemDetails = async (row, itemId) => {
   try {
-    // 从检验记录中获取检验项目ID
-    const recordRes = await getLaboratoryRecordListPage({
-      patientId: row.patientId || undefined,
-      pageNum: 1,
-      pageSize: 100
-    });
-    const records = recordRes.data?.records || [];
-    const record = records.find((r) => r.id === row.id);
-    if (record && record.laboratoryItemId) {
+    if (itemId) {
       // 根据检验项目ID加载明细
-      const detailRes = await getLaboratoryItemDetailList(record.laboratoryItemId);
+      const detailRes = await getLaboratoryItemDetailList(itemId);
       const details = detailRes.data || [];
       if (details.length > 0) {
         laboratoryResultForm.value = details.map((d) => ({
@@ -520,26 +514,17 @@ const loadLaboratoryItemDetails = async (row) => {
           abnormalFlag: FLAG_AUTO_JUDGE,
           abnormalDesc: '',
         }));
-      } else {
-        // 没有配置明细，使用默认
-        laboratoryResultForm.value = [{
-          laboratoryItemName: row.itemName,
-          resultValue: '',
-          resultUnit: '',
-          referenceRange: '',
-          abnormalFlag: FLAG_AUTO_JUDGE,
-        }];
+        return;
       }
-    } else {
-      // 没有找到检验项目ID，使用默认
-      laboratoryResultForm.value = [{
-        laboratoryItemName: row.itemName,
-        resultValue: '',
-        resultUnit: '',
-        referenceRange: '',
-        abnormalFlag: FLAG_AUTO_JUDGE,
-      }];
     }
+    // 没有配置明细，使用默认
+    laboratoryResultForm.value = [{
+      laboratoryItemName: row.itemName,
+      resultValue: '',
+      resultUnit: '',
+      referenceRange: '',
+      abnormalFlag: FLAG_AUTO_JUDGE,
+    }];
   } catch (e) {
     console.error('加载检验项目明细失败:', e);
     laboratoryResultForm.value = [{

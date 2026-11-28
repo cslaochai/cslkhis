@@ -26,17 +26,6 @@ public class NursingQcController {
     private final NursingQcService nursingQcService;
 
     /**
-     * 取当前岗位可见科室下的启用病区及其开放与占用床位数。
-     * 用于护理质控页查询卡的病区下拉，看板、检查表、台账三个页签共用同一份候选。
-     */
-    @PreAuthorize("isAuthenticated()")
-    @Operation(summary = "病区下拉（只含当前岗位可见科室的启用病区，附床位）")
-    @GetMapping("/wardSelectList")
-    public Result<List<NurseQcVO.Ward>> wardSelectList(@RequestParam(required = false) String keyword) {
-        return Result.success(nursingQcService.wardSelectList(keyword));
-    }
-
-    /**
      * 按病区取其所属科室的在职人员，作为检查人候选。
      * 用于检查单新增/修改弹框里选定病区后的检查人下拉。
      */

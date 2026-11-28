@@ -83,17 +83,16 @@
 <script lang="js" setup>
 import {computed, reactive, ref, watch} from 'vue'
 import {ElMessage} from 'element-plus'
-import {staffScheduleUpsert, getStaffScheduleUnitSelectList} from '@/api/staffSchedule'
-import {getEmployeeList} from '@/api/system'
+import {staffScheduleUpsert} from '@/api/staffSchedule'
+import {getEmployeeList, getWardSelectList} from '@/api/system'
 import {getShiftSelectList} from '@/api/appoint'
-import {getNurseWardSelectList} from '@/api/nurseSchedule'
 import {shiftOptionLabel} from '@/lib/scheduleShift'
 import {
   ATTEND_MODE_OPTIONS,
   DUTY_STATUS_OPTIONS,
   DUTY_STATUS_WORK,
   dutyStatusNeedShift,
-  ORG_UNIT_TYPE_DEPT,
+  loadScheduleDeptOptions,
   ORG_UNIT_TYPE_HOSPITAL,
   ORG_UNIT_TYPE_OPTIONS,
 } from '@/lib/staffSchedule'
@@ -187,15 +186,13 @@ let optionsLoaded = false
 const ensureOptions = async () => {
   if (optionsLoaded) return
   try {
-    // 科室候选用排班单元候选接口（带 scope 域过滤），不再用全量科室下拉 ——
-    // 员工排班页要排除急诊科室，急诊排班页只出急诊叶子科室
-    const [dRes, wRes, sRes] = await Promise.all([
-      getStaffScheduleUnitSelectList({orgType: ORG_UNIT_TYPE_DEPT, scope: props.scope}),
-      getNurseWardSelectList({}),
+    // 科室候选用科室统一入口 selectTree（按 scope 域收口）；病区走病区宿主下拉，班次仍走业务候选接口
+    const [wRes, sRes] = await Promise.all([
+      getWardSelectList(),
       getShiftSelectList({status: 1, useScope: props.shiftUseScope}),
     ])
-    deptOptions.value = (dRes?.data || []).map((d) => ({id: d.id, name: d.name}))
-    wardOptions.value = (wRes?.data || []).map((w) => ({id: w.id ?? w.wardId, name: w.wardName ?? w.name}))
+    deptOptions.value = await loadScheduleDeptOptions(props.scope)
+    wardOptions.value = (wRes?.data || []).map((w) => ({id: w.wardId, name: w.wardName}))
     shiftOptions.value = (sRes?.data || []).map((s) => ({id: s.id, shiftName: s.shiftName, useScope: s.useScope}))
     optionsLoaded = true
   } catch (e)  /* 错误已由全局拦截器统一提示，无需在此弹窗 */{

@@ -86,17 +86,16 @@
 <script lang="js" setup>
 import {computed, reactive, ref, watch} from 'vue'
 import {ElMessage} from 'element-plus'
-import {getStaffScheduleListPage, getStaffScheduleUnitSelectList, staffScheduleUpsert} from '@/api/staffSchedule'
-import {getEmployeeList} from '@/api/system'
+import {getStaffScheduleListPage, staffScheduleUpsert} from '@/api/staffSchedule'
+import {getEmployeeList, getWardSelectList} from '@/api/system'
 import {getShiftSelectList} from '@/api/appoint'
-import {getNurseWardSelectList} from '@/api/nurseSchedule'
 import {shiftOptionLabel} from '@/lib/scheduleShift'
 import {
   ATTEND_MODE_OPTIONS,
   DUTY_STATUS_OPTIONS,
   DUTY_STATUS_WORK,
   dutyStatusNeedShift,
-  ORG_UNIT_TYPE_DEPT,
+  loadScheduleDeptOptions,
   ORG_UNIT_TYPE_HOSPITAL,
   ORG_UNIT_TYPE_OPTIONS,
 } from '@/lib/staffSchedule'
@@ -173,15 +172,14 @@ const plannedCount = computed(() => dayCount.value * empCount.value)
 const loadOptions = async () => {
   empLoading.value = true
   try {
-    const [dRes, wRes, sRes, eRes] = await Promise.all([
-      getStaffScheduleUnitSelectList({orgType: ORG_UNIT_TYPE_DEPT, scope: props.scope}),
-      getNurseWardSelectList({}),
+    const [wRes, sRes, eRes] = await Promise.all([
+      getWardSelectList(),
       getShiftSelectList({status: 1, useScope: props.shiftUseScope}),
       // 候选与保存侧 assertScope 同一份域口径（急诊域只出急诊科室医生）
       getEmployeeList({pageSize: 200, scheduleScope: props.scope}),
     ])
-    deptOptions.value = (dRes?.data || []).map((d) => ({id: d.id, name: d.name}))
-    wardOptions.value = (wRes?.data || []).map((w) => ({id: w.id ?? w.wardId, name: w.wardName ?? w.name}))
+    deptOptions.value = await loadScheduleDeptOptions(props.scope)
+    wardOptions.value = (wRes?.data || []).map((w) => ({id: w.wardId, name: w.wardName}))
     shiftOptions.value = (sRes?.data || []).map((s) => ({id: s.id, shiftName: s.shiftName, useScope: s.useScope}))
     empOptions.value = (eRes?.data || []).map((e) => ({id: e.id, empName: e.empName, deptName: e.deptName}))
   } catch /* 全局拦截器已提示 */ {

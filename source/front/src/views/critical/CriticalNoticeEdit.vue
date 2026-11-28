@@ -79,7 +79,8 @@
  */
 import {computed, reactive, ref, watch} from 'vue'
 import {ElMessage} from 'element-plus'
-import {getNoticeBase, getNoticeById, getNoticeDoctorOptions, noticeUpsert} from '@/api/criticalNotice'
+import {getNoticeBase, getNoticeById, noticeUpsert} from '@/api/criticalNotice'
+import {getEmployeeList} from '@/api/system'
 import {gate} from '@/lib/criticalNotice'
 
 const props = defineProps({
@@ -123,12 +124,14 @@ const nowText = () => {
   const p = (n) => String(n).padStart(2, '0')
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:00`
 }
-// ---------------- 医师下拉（只这里用，组件内自 load） ----------------
+// ---------------- 医师下拉（员工宿主候选，组件内自 load） ----------------
 const doctors = ref([])
 const loadDoctors = async () => {
   if (doctors.value.length) return
-  const res = await gate(getNoticeDoctorOptions(), '加载医师候选失败')
-  if (res) doctors.value = res.data || []
+  const res = await gate(getEmployeeList({roleCode: '10013', status: 1}), '加载医师候选失败')
+  if (res) {
+    doctors.value = (res.data || []).map(e => ({employeeId: e.id, empName: e.empName, deptName: e.deptName}))
+  }
 }
 /** 编辑草稿：正文大字段不在台账行里，走详情接口补全（后端未脱敏正文，回显零损失） */
 const fillEditableContent = async (id) => {

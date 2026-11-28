@@ -10,7 +10,6 @@ import com.his.pharmacy.vo.AntibioticAliasVO;
 import com.his.pharmacy.vo.AntibioticAuthCheckVO;
 import com.his.pharmacy.vo.AntibioticAuthVO;
 import com.his.pharmacy.vo.AntibioticCatalogVO;
-import com.his.pharmacy.vo.AntibioticDoctorSelectListVO;
 import com.his.pharmacy.vo.AntibioticDrugSelectListVO;
 
 import java.util.List;
@@ -37,9 +36,6 @@ public interface AntibioticService {
 
     /** 抗菌药物下拉（selectList 口径） */
     List<AntibioticDrugSelectListVO> antibioticDrugSelectList();
-
-    /** 医师下拉（selectList 口径） */
-    List<AntibioticDoctorSelectListVO> doctorSelectList(String keyword);
 
     /** 处方权授权分页 */
     PageResult<AntibioticAuthVO> authListPage(AntibioticAuthPageQueryDTO query);

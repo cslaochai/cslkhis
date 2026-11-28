@@ -16,6 +16,7 @@ import com.his.platform.entity.SysDepartment;
 import com.his.platform.entity.SysEmployee;
 import com.his.platform.mapper.SysDepartmentMapper;
 import com.his.platform.mapper.SysEmployeeMapper;
+import com.his.platform.service.DeptCacheService;
 import com.his.platform.service.DeptScopeService;
 import com.his.platform.service.SysDepartmentService;
 import com.his.platform.vo.DepartmentTreeSelectVO;
@@ -35,6 +36,7 @@ public class SysDepartmentServiceImpl extends ServiceImpl<SysDepartmentMapper, S
      */
     private static final String ROOT_DEPT_CODE = "1001";
     private final DeptScopeService deptScopeService;
+    private final DeptCacheService deptCacheService;
     private final SysDepartmentMapper sysDepartmentMapper;
     private final SysEmployeeMapper sysEmployeeMapper;
 
@@ -77,7 +79,11 @@ public class SysDepartmentServiceImpl extends ServiceImpl<SysDepartmentMapper, S
         // 类型过滤命中的业务候选；祖先链补全时不受这层过滤剔除
         Set<Long> seedIds = all.stream()
                 .filter(d -> matchDeptType(d, selectDTO.getDeptType()))
+                // 排除类型：未传时不过滤（matchDeptType 对空条件恒返回 true，直接取反会把全院科室滤空）
+                .filter(d -> !TextUtil.hasText(selectDTO.getExcludeDeptType())
+                        || !matchDeptType(d, selectDTO.getExcludeDeptType()))
                 .filter(d -> matchNodeType(d, selectDTO.getNodeType()))
+                .filter(d -> !Boolean.TRUE.equals(selectDTO.getOpenOnly()) || isOpenDept(d))
                 .map(SysDepartment::getId)
                 .collect(Collectors.toSet());
 
@@ -114,12 +120,12 @@ public class SysDepartmentServiceImpl extends ServiceImpl<SysDepartmentMapper, S
                 .collect(Collectors.toList());
         sortDepts(rootDepts);
         return rootDepts.stream()
-                .map(d -> toTreeVO(d, mode, parentIds, childrenByParent))
+                .map(d -> toTreeVO(d, mode, parentIds, childrenByParent, ""))
                 .collect(Collectors.toList());
     }
 
     private DepartmentTreeSelectVO toTreeVO(SysDepartment dept, DeptSelectModeEnum mode, Set<Long> parentIds,
-                                            Map<Long, List<SysDepartment>> childrenByParent) {
+                                            Map<Long, List<SysDepartment>> childrenByParent, String parentPath) {
         DepartmentTreeSelectVO vo = new DepartmentTreeSelectVO();
         vo.setId(dept.getId());
         vo.setDeptCode(dept.getDeptCode());
@@ -128,13 +134,15 @@ public class SysDepartmentServiceImpl extends ServiceImpl<SysDepartmentMapper, S
         vo.setNodeType(dept.getNodeType());
         vo.setNodeTypeText(DeptNodeTypeEnum.getLabel(dept.getNodeType()));
         vo.setParentId(dept.getParentId());
+        String fullPath = TextUtil.hasText(parentPath) ? parentPath + " / " + dept.getDeptName() : dept.getDeptName();
+        vo.setFullPath(fullPath);
 
         String disabledReason = resolveDisabledReason(dept, mode, parentIds);
         vo.setDisabled(disabledReason != null);
         vo.setDisabledReason(disabledReason);
 
         List<DepartmentTreeSelectVO> children = childrenByParent.getOrDefault(dept.getId(), List.of()).stream()
-                .map(c -> toTreeVO(c, mode, parentIds, childrenByParent))
+                .map(c -> toTreeVO(c, mode, parentIds, childrenByParent, fullPath))
                 .collect(Collectors.toList());
         vo.setChildren(children);
         return vo;
@@ -195,6 +203,12 @@ public class SysDepartmentServiceImpl extends ServiceImpl<SysDepartmentMapper, S
         return splitCsv(nodeType).contains(StringUtils.trimToEmpty(dept.getNodeType()));
     }
 
+    /** 对外开放挂号：is_open=1 且未停用；停用口径与 resolveDisabledReason 一致。 */
+    private boolean isOpenDept(SysDepartment dept) {
+        boolean enabled = dept.getStatus() == null || dept.getStatus() == 1;
+        return enabled && Integer.valueOf(1).equals(dept.getIsOpen());
+    }
+
     private List<String> splitCsv(String csv) {
         return Arrays.stream(csv.split(",")).map(String::trim)
                 .filter(TextUtil::hasText).distinct().collect(Collectors.toList());
@@ -221,6 +235,7 @@ public class SysDepartmentServiceImpl extends ServiceImpl<SysDepartmentMapper, S
         if (dept.getId() == null) {
             dept.setDeptCode(generateDeptCode(dept.getParentId()));
             sysDepartmentMapper.insert(dept);
+            deptCacheService.evict(dept.getId());
             return "新增成功";
         }
         if (dept.getId().equals(dept.getParentId())) {
@@ -233,6 +248,7 @@ public class SysDepartmentServiceImpl extends ServiceImpl<SysDepartmentMapper, S
         }
 
         sysDepartmentMapper.updateById(dept);
+        deptCacheService.evict(dept.getId());
         return "修改成功";
     }
 
@@ -253,6 +269,7 @@ public class SysDepartmentServiceImpl extends ServiceImpl<SysDepartmentMapper, S
         }
 
         sysDepartmentMapper.deleteById(deptId);
+        deptCacheService.evict(deptId);
     }
 
     private LambdaQueryWrapper<SysDepartment> buildWrapper(DepartmentQueryDTO queryDTO) {

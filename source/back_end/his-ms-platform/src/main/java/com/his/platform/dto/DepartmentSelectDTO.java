@@ -33,6 +33,19 @@ public class DepartmentSelectDTO {
     private String deptType;
 
     /**
+     * 排除的科室类型（逗号分隔）：命中即剔除。用于「普通排班排除急诊」这类
+     * 反向场景——包含用 {@link #deptType}，排除用本字段，不再在调用方内存过滤。
+     */
+    @Schema(description = "排除科室类型逗号串，命中即剔除")
+    private String excludeDeptType;
+
+    /**
+     * 仅出对外开放挂号的科室（{@code is_open=1} 且启用），供小程序挂号目录等场景。
+     */
+    @Schema(description = "true-只出对外开放挂号科室")
+    private Boolean openOnly;
+
+    /**
      * 节点类型过滤（单值）。
      * <p>排班单元、开诊科室、收治科室这类「必须落到真人上班的地方」的下拉要传
      * {@code 2,3,4,6,7}（见 {@code DeptNodeTypeEnum#isBusinessDept}）把管理片区与行政后勤挡在外面；

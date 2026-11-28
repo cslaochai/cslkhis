@@ -14,6 +14,7 @@
  * 未知码值渲染「未知(n)」，绝不回落成某个合法值（未知[x] 是 bug 的线索，假数据不是）。
  */
 import {PUBLISH_DRAFT, PUBLISH_PENDING, isPublishEffective} from './publishStatus'
+import {loadDeptTreeOptions, flattenDeptTree} from './deptOptions'
 
 /** 排班单元类型（biz_staff_schedule.org_type） */
 export const ORG_UNIT_TYPE_TEXT = { 1: '科室', 2: '病区', 3: '全院' }
@@ -41,6 +42,22 @@ export const SCHEDULE_SCOPE_STAFF = 1
 export const SCHEDULE_SCOPE_ER = 2
 /** 门诊出诊域（出勤侧）：门诊排班页的休息/请假/培训/停班行，医生为主角 */
 export const SCHEDULE_SCOPE_OPD = 3
+
+/** 急诊科室类型码（DeptTypeEnum.ER，与后端 his-common 枚举逐字对齐） */
+export const DEPT_TYPE_ER = '6'
+
+/**
+ * 排班科室候选：走科室统一入口 selectTree，按排班域收口，不在排班模块自造科室查询。
+ * ER 域只出急诊叶子科室；STAFF/OPD 域排除急诊科室。返回 [{id, name: 完整路径}]。
+ */
+export async function loadScheduleDeptOptions(scope) {
+  const isEr = Number(scope) === SCHEDULE_SCOPE_ER
+  const tree = await loadDeptTreeOptions({
+    mode: 'LEAF',
+    ...(isEr ? { deptType: DEPT_TYPE_ER } : { excludeDeptType: DEPT_TYPE_ER }),
+  })
+  return flattenDeptTree(tree).map((d) => ({ id: d.id, name: d.fullPath || d.deptName }))
+}
 
 /**
  * 出勤状态（biz_staff_schedule.duty_status）

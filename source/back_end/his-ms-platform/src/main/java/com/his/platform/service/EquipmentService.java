@@ -62,4 +62,17 @@ public interface EquipmentService {
      * 维护设备是否进入共享池。只改 rentable 标志，不改台账状态。
      */
     void updateRentable(EquipmentRentableDTO dto);
+
+    /**
+     * 设备建档/修改：id 为空走建档，否则按 id 更新。
+     * 设备编码是资产编号，建档后不可改；8-物流设备（机器人）强制不进共享池，并同步物联网接入台账。
+     * 用于设备管理页「新增设备 / 编辑」弹框保存。
+     */
+    void equipmentUpsert(EquipmentUpsertDTO dto);
+
+    /**
+     * 设备状态变更（停用/启用/维修中/报废）；物流设备同步接入台账启停，停用的车不再参与派单。
+     * 用于设备管理页操作列的「停用 / 启用」动作。
+     */
+    void updateStatus(EquipmentStatusDTO dto);
 }

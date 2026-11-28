@@ -523,7 +523,7 @@ public enum XxxEnum {
   `username` 是账号拼音，混进操作人列会让按人名检索直接漏。
 - **禁塞默认值**：`"system"`/`"未知操作人"`/`"系统"`/`String.valueOf(empId)`/`try-catch-return-null` 全禁。取不到就是**报错
   **（NPE 兜 500，或自己抛 BusinessException），不继续执行。塞假值 = 「谁干的」被藏进库，零报错。
-- **四处定时任务豁免**（唯一允许落系统值）：
+- **五处定时任务豁免**（唯一允许落系统值）：
 
   | 位置 | 值 | 触发 |
     |---|---|---|
@@ -531,10 +531,12 @@ public enum XxxEnum {
   | `ExamAppointmentServiceImpl` | `system:examNoShow` | `ExamNoShowTrigger` 每 10 分钟 |
   | `FollowupTaskServiceImpl` | `system:autoFollowup` | `DischargeFollowupTrigger` 每 10 分钟 |
   | `QualityControlServiceImpl.autoRescanOutpatientQc` | `system:qcAutoRescan`（employeeId `0L`） | `QcAutoRescanTrigger` 每 10 分钟 |
+  | `RobotDispatchQueueTask.dispatchPending` | `system:robotDispatch`（employeeId `0L`） | `@Scheduled` 每 10 秒补派待调度机器人任务单 |
 
-  前三处做法是方法加 operator 参数由调用方显式传，**不是**方法内判空回落；第四处是补扫自己在方法里造
-  `QcOperator`（没有登录态可传），常量私有、名字带能力，回查能一眼看出「这不是人干的」。⚠ 改 cron
-  链路前用调用图查清会不会取当前人，别凭方法名猜。
+  前四处里，除 `QcAutoRescan` 外都是方法加 operator 参数由调用方显式传，**不是**方法内判空回落；
+  `RobotDispatchQueueTask` 走的是 `RobotDispatchService.assignAs(orderId, robotNo, operatorName, operatorId)` 的显式传参，
+  人工派车仍取当前登录人，两条路径共用同一个 `doAssign`。`QcAutoRescan` 是补扫自己在方法里造 `QcOperator`（没有登录态可传），
+  常量私有、名字带能力，回查能一眼看出「这不是人干的」。⚠ 改 cron 链路前用调用图查清会不会取当前人，别凭方法名猜。
 - **旁路审计特例**（不抛异常，也不塞假名字）：`FieldChangeRecorderImpl`/`PriceServiceImpl`/
   `SysLogServiceImpl`/`AiAuditServiceImpl` 取不到登录态留空/null（能看出「这条没操作人」）。⚠ 取操作人的行在 try 块内会被吞成
   warn——挪到 try 外或明确接受丢失。

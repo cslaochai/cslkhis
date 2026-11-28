@@ -212,7 +212,7 @@
               <el-button size="small" :loading="verifying" @click="verifyReportPdf">验签</el-button>
             </div>
           </div>
-          <p class="text-xs text-slate-400">已由审核医师数字签名（文件级），PDF 内含医师手写签名笔迹</p>
+          <p class="text-xs text-slate-400">已由审核者数字签名（文件级），PDF 内含手写签名笔迹</p>
           <p v-if="verifyResult" class="mt-2 text-xs"
              :class="verifyResult.valid ? 'text-emerald-600' : 'text-red-500'">
             {{ verifyResult.message }}

@@ -155,12 +155,6 @@ public class AntibioticServiceImpl extends ServiceImpl<BizAntibioticAliasMapper,
         return list;
     }
 
-    @Override
-    public List<AntibioticDoctorSelectListVO> doctorSelectList(String keyword) {
-        String kw = keyword == null ? null : keyword.trim();
-        return antibioticEmployeeMapper.selectDoctors(kw);
-    }
-
     // 处方权授权
 
     @Override

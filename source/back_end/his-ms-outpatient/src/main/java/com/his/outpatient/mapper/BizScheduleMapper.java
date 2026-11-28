@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.his.outpatient.dto.ErDeptRow;
 import com.his.outpatient.dto.NurseDutyRow;
 import com.his.outpatient.dto.StaffCheckRow;
+import com.his.outpatient.vo.DeptNurseCountVO;
 import com.his.outpatient.vo.NurseScheduleVO;
 import com.his.outpatient.vo.StaffWorkloadVO;
 import com.his.outpatient.vo.StaffWorkingGroupVO;
@@ -48,31 +49,6 @@ public interface BizScheduleMapper extends BaseMapper<BizSchedule> {
             + "                AND r.staff_type IN (2, 7)) ";
 
     /**
-     * 病区候选：只列启用病区；nurseCount=0 的病区排不了班，但要在下拉里看得见原因
-     */
-    @Select("""
-            <script>
-            SELECT 1 AS unitType, w.ward_id AS wardId, w.ward_code AS wardCode, w.ward_name AS wardName,
-                   w.dept_id AS deptId, d.dept_name AS deptName,
-                   (SELECT COUNT(*) FROM sys_employee e WHERE
-            """ + NURSE_WHERE + """
-             AND e.dept_id = w.dept_id) AS nurseCount
-              FROM sys_ward w
-              LEFT JOIN sys_department d ON d.id = w.dept_id
-             WHERE w.status = 1
-            <if test="deptIds != null">
-              AND w.dept_id IN <foreach collection="deptIds" item="d" open="(" separator="," close=")">#{d}</foreach>
-            </if>
-            <if test="keyword != null and keyword != ''">
-              AND (w.ward_name LIKE CONCAT('%', #{keyword}, '%') OR w.ward_code LIKE CONCAT('%', #{keyword}, '%'))
-            </if>
-             ORDER BY w.dept_id, w.ward_code, w.ward_id
-            </script>
-            """)
-    List<NurseScheduleVO.Ward> selectWardOptions(@Param("deptIds") List<Long> deptIds,
-                                                 @Param("keyword") String keyword);
-
-    /**
      * 病区快照（写排班前必查：病区存在且启用，并用它的 dept 做数据范围与护士归属判定）
      */
     @Select("""
@@ -104,32 +80,21 @@ public interface BizScheduleMapper extends BaseMapper<BizSchedule> {
     NurseScheduleVO.Ward selectUnit(@Param("unitType") Integer unitType, @Param("unitId") Long unitId);
 
     /**
-     * 门诊科室候选：只列「有护理编制」的启用科室。
-     * <p>{@code node_type} 收口（1-管理片区 5-行政后勤 不进候选）：片区挂着护士长不代表那里有护理单元，
-     * 把它们列进来，护士长就能在「内科系统」这个虚拟单元上排班。
+     * 各科室在册护理序列人数（护理业务统计后缀，不含科室名称；候选清单由科室/病区宿主提供）。
+     * 按当前岗位授权科室收口，deptIds 为空时由调用方兜 -1，避免 IN () 语法错。
      */
     @Select("""
             <script>
-            SELECT 2 AS unitType, t.id AS wardId, t.dept_code AS wardCode, t.dept_name AS wardName,
-                   t.id AS deptId, t.dept_name AS deptName,
-                   (SELECT COUNT(*) FROM sys_employee e WHERE
-            """ + NURSE_WHERE + """
-             AND e.dept_id = t.id) AS nurseCount
-              FROM sys_department t
-             WHERE t.del_flag = 0 AND t.status = 1
-               AND (t.node_type IS NULL OR t.node_type IN ('2','3','4','6','7'))
-               AND NOT EXISTS (SELECT 1 FROM sys_ward w WHERE w.status = 1 AND w.dept_id = t.id)
+            SELECT e.dept_id AS deptId, COUNT(*) AS nurseCount
+              FROM sys_employee e
+             WHERE """ + NURSE_WHERE + """
             <if test="deptIds != null">
-              AND t.id IN <foreach collection="deptIds" item="d" open="(" separator="," close=")">#{d}</foreach>
+              AND e.dept_id IN <foreach collection="deptIds" item="d" open="(" separator="," close=")">#{d}</foreach>
             </if>
-            <if test="keyword != null and keyword != ''">
-              AND (t.dept_name LIKE CONCAT('%', #{keyword}, '%') OR t.dept_code LIKE CONCAT('%', #{keyword}, '%'))
-            </if>
-             ORDER BY t.dept_code, t.id
+             GROUP BY e.dept_id
             </script>
             """)
-    List<NurseScheduleVO.Ward> selectDeptOptions(@Param("deptIds") List<Long> deptIds,
-                                                 @Param("keyword") String keyword);
+    List<DeptNurseCountVO> selectDeptNurseCounts(@Param("deptIds") List<Long> deptIds);
 
     /**
      * 急诊科室单元（sys_department.dept_type 含指定类型码，字典 his_dept_type）。

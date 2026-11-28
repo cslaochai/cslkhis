@@ -442,10 +442,6 @@ const loadData = async ({silent = false} = {}) => {
     latest.value = latestRes.data || [];
     coverage.value = {totalBeds: (map.beds || []).filter(b => b.bedNo).length, monitored: sensors.value.length};
     lastRefresh.value = new Date().toLocaleTimeString('zh-CN', {hour12: false});
-    if (!deptOptions.value.length && map.deptOptions) {
-      // bedMap 自带授权科室清单，首屏 deptOptions 拉取失败时兜底
-      deptOptions.value = (map.deptOptions || []).map(d => ({id: d.deptId, name: d.deptName, parentId: null}));
-    }
   } catch (e) {
     console.error('加载床位安全数据失败', e);
     loadError.value = e?.response?.data?.message || e?.message || '接口调用失败';

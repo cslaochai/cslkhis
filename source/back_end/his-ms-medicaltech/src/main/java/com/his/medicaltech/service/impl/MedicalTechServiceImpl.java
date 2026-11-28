@@ -67,9 +67,13 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -467,6 +471,8 @@ public class MedicalTechServiceImpl extends ServiceImpl<BizInspectionRecordMappe
         resultWrapper.eq(BizLabResult::getRecordId, recordId)
                 .orderByAsc(BizLabResult::getSortOrder);
         List<BizLabResult> results = bizLabResultMapper.selectList(resultWrapper);
+        // 历史行单位/参考区间缺快照时，读路径按主数据兜底回填（不落库，仅本次展示）
+        results.forEach(r -> backfillLabMaster(r, record));
 
         LaboratoryDetailVO result = new LaboratoryDetailVO();
         BizLaboratoryRecordVO recordVO = toLaboratoryRecordVO(record);
@@ -614,6 +620,10 @@ public class MedicalTechServiceImpl extends ServiceImpl<BizInspectionRecordMappe
         record.setRecordStatus(LabRecordStatusEnum.RESULTED.getCode());
         bizLaboratoryRecordMapper.updateById(record);
 
+        // 组套明细骨架兜底：前端只提交组套单行或缺明细时，按主数据明细补齐 WBC/RBC 等子项，
+        // 已填的明细结果按编码/名称带回；组套兜底行本身不进结果表。
+        results = expandLabDetails(record, results);
+
         // 保存检验结果
         for (BizLabResult result : results) {
             result.setRecordId(recordId);
@@ -741,6 +751,79 @@ public class MedicalTechServiceImpl extends ServiceImpl<BizInspectionRecordMappe
     }
 
     /**
+     * 组套明细展开兜底：以主数据 {@code sys_laboratory_item_detail} 为骨架补齐子项。
+     * <p>
+     * 前端未加载明细时只会提交一条组套兜底行（编码/名称等于大项目），报告上就只剩「血常规」
+     * 一行。这里按明细骨架重建结果集：已提交的明细结果按编码/名称带回，未填子项留空待录；
+     * 组套兜底行丢弃；骨架之外的自由行原样追加。
+     */
+    private List<BizLabResult> expandLabDetails(BizLaboratoryRecord record, List<BizLabResult> submitted) {
+        if (record.getLaboratoryItemId() == null) {
+            return submitted == null ? new ArrayList<>() : submitted;
+        }
+        List<SysLaboratoryItemDetail> details = sysLaboratoryItemDetailMapper.selectList(
+                new LambdaQueryWrapper<SysLaboratoryItemDetail>()
+                        .eq(SysLaboratoryItemDetail::getLaboratoryItemId, record.getLaboratoryItemId())
+                        .eq(SysLaboratoryItemDetail::getStatus, 1)
+                        .orderByAsc(SysLaboratoryItemDetail::getId));
+        if (details.isEmpty()) {
+            return submitted == null ? new ArrayList<>() : submitted;
+        }
+
+        Map<String, BizLabResult> byCode = new HashMap<>();
+        Map<String, BizLabResult> byName = new HashMap<>();
+        List<BizLabResult> freeRows = new ArrayList<>();
+        String groupCode = normalizeCode(record.getLaboratoryItemCode());
+        String groupName = StringUtils.trimToEmpty(record.getLaboratoryItemName());
+        if (submitted != null) {
+            for (BizLabResult row : submitted) {
+                boolean isGroupRow = Objects.equals(normalizeCode(row.getLaboratoryItemCode()), groupCode)
+                        || Objects.equals(StringUtils.trimToEmpty(row.getLaboratoryItemName()), groupName);
+                if (isGroupRow) {
+                    continue;
+                }
+                if (StringUtils.isNotBlank(row.getLaboratoryItemCode())) {
+                    byCode.putIfAbsent(normalizeCode(row.getLaboratoryItemCode()), row);
+                }
+                if (StringUtils.isNotBlank(row.getLaboratoryItemName())) {
+                    byName.putIfAbsent(row.getLaboratoryItemName().trim(), row);
+                }
+                freeRows.add(row);
+            }
+        }
+
+        List<BizLabResult> expanded = new ArrayList<>();
+        Set<BizLabResult> matched = new HashSet<>();
+        int sort = 0;
+        for (SysLaboratoryItemDetail detail : details) {
+            BizLabResult src = byCode.get(normalizeCode(detail.getItemCode()));
+            if (src == null) {
+                src = byName.get(StringUtils.trimToEmpty(detail.getItemName()));
+            }
+            BizLabResult row = new BizLabResult();
+            row.setLaboratoryItemId(record.getLaboratoryItemId());
+            row.setLaboratoryItemCode(detail.getItemCode());
+            row.setLaboratoryItemName(detail.getItemName());
+            row.setResultUnit(detail.getUnit());
+            row.setReferenceRange(detail.getReferenceRange());
+            if (src != null) {
+                row.setResultValue(src.getResultValue());
+                row.setAbnormalFlag(src.getAbnormalFlag());
+                row.setAbnormalDesc(src.getAbnormalDesc());
+                matched.add(src);
+            }
+            row.setSortOrder(sort++);
+            expanded.add(row);
+        }
+        freeRows.stream().filter(r -> !matched.contains(r)).forEach(expanded::add);
+        return expanded;
+    }
+
+    private String normalizeCode(String code) {
+        return code == null ? null : code.trim().toUpperCase();
+    }
+
+    /**
      * 科室名快照为空时按科室 ID 回查主数据兜底（历史申请单只落了科室 ID 的情形）。
      */
     private String deptNameOf(Long deptId, String snapshotName) {
@@ -777,6 +860,7 @@ public class MedicalTechServiceImpl extends ServiceImpl<BizInspectionRecordMappe
                     new LambdaQueryWrapper<BizLabResult>()
                             .eq(BizLabResult::getRecordId, recordId)
                             .orderByAsc(BizLabResult::getSortOrder));
+            results.forEach(r -> backfillLabMaster(r, record));
             ReportPdfFileVO pdfFile = reportPdfService.generateLaboratoryPdf(record, results, pin);
             if (pdfFile != null) {
                 record.setReportPdfPath(pdfFile.getRelativePath());

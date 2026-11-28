@@ -8,6 +8,7 @@ import com.his.outpatient.dto.NurseScheduleFileRejectDTO;
 import com.his.outpatient.dto.NurseScheduleLogQueryDTO;
 import com.his.outpatient.service.BizScheduleService;
 import com.his.outpatient.service.NurseScheduleLogService;
+import com.his.outpatient.vo.DeptNurseCountVO;
 import com.his.outpatient.vo.NurseScheduleLogVO;
 import com.his.outpatient.vo.NurseScheduleVO;
 import io.swagger.v3.oas.annotations.Operation;
@@ -33,25 +34,14 @@ public class BizScheduleController {
     private final NurseScheduleLogService nurseScheduleLogService;
 
     /**
-     * 病区候选下拉，可按关键词过滤。
-     * 用于全院岗位排班页登记排班时选择病区类型的排班单元。
+     * 各科室在册护理序列人数：候选行的业务统计后缀。
+     * 病区/科室候选清单分别走病区、科室宿主下拉，本接口只回护理在册人数叠加标注。
      */
     @PreAuthorize("isAuthenticated()")
-    @Operation(summary = "病区下拉")
-    @GetMapping("/wardSelectList")
-    public Result<List<NurseScheduleVO.Ward>> wardSelectList(@RequestParam(required = false) String keyword) {
-        return Result.success(bizScheduleService.wardSelectList(keyword));
-    }
-
-    /**
-     * 护理排班单元候选下拉，可按关键词过滤。
-     * 用于病区护理排班页顶部的排班单元切换。
-     */
-    @PreAuthorize("isAuthenticated()")
-    @Operation(summary = "护理排班单元下拉")
-    @GetMapping("/unitSelectList")
-    public Result<List<NurseScheduleVO.Ward>> unitSelectList(@RequestParam(required = false) String keyword) {
-        return Result.success(bizScheduleService.unitSelectList(keyword));
+    @Operation(summary = "科室在册护士数（候选统计后缀）")
+    @GetMapping("/unitNurseCounts")
+    public Result<List<DeptNurseCountVO>> unitNurseCounts() {
+        return Result.success(bizScheduleService.unitNurseCounts());
     }
 
     /**

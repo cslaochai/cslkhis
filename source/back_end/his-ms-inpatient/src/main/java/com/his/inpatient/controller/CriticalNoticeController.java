@@ -72,17 +72,6 @@ public class CriticalNoticeController {
     }
 
     /**
-     * 列出可指派的医师候选。
-     * 用于通知填写表单里告知医师与见证医师的下拉选择。
-     */
-    @PreAuthorize("hasAuthority('ipd:criticalNotice:list')")
-    @Operation(summary = "医师候选（告知/见证医师下拉）")
-    @GetMapping("/doctorOptions")
-    public Result<List<CriticalNoticeVO.DoctorOption>> doctorOptions() {
-        return Result.success(criticalNoticeService.doctorOptions());
-    }
-
-    /**
      * 统计各状态通知单张数。
      * 用于病危重通知页顶部统计卡。
      */

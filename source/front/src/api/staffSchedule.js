@@ -71,10 +71,8 @@ export function getStaffWorkload(data) {
   return request.post('/system/staffSchedule/monthWorkload', data)
 }
 
-/** 排班单元候选（科室/病区/全院）：页面按单元过滤、整周提交审核时选单元 */
-export function getStaffScheduleUnitSelectList(params) {
-  return request.get('/system/staffSchedule/unitSelectList', { params })
-}
+// 排班单元候选不再走本模块接口：科室走 /system/department/selectTree，病区走 /system/ward/selectList，
+// 「全院」为前端固定项。组装逻辑见 lib/staffSchedule.js#loadScheduleDeptOptions。
 
 // ========== 发布态流转（排班保存只到草稿，审核发布后才计在岗） ==========
 // 入参 id = 一行排班的主键（后端已 ToStringSerializer 字符串化）

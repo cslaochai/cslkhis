@@ -433,20 +433,6 @@ public class CriticalNoticeVO {
     }
 
     /**
-     * 医师候选（告知/见证医师下拉）
-     */
-    @Data
-    public static class DoctorOption {
-        @JsonSerialize(using = ToStringSerializer.class)
-        private Long employeeId;
-        private String empName;
-        /**
-         * 开单科室名称
-         */
-        private String deptName;
-    }
-
-    /**
      * 统计卡：四状态计数 + 待签收欠账
      */
     @Data

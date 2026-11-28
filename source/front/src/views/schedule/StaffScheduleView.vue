@@ -435,13 +435,13 @@ import {
   getScheduleChangeLogPage,
   getStaffOnDuty,
   getStaffScheduleListPage,
-  getStaffScheduleUnitSelectList,
   getStaffWorkload,
   recallStaffSchedule,
   rejectStaffSchedule,
   submitStaffSchedule,
   submitWeekStaffSchedule,
 } from '@/api/staffSchedule'
+import {getWardSelectList} from '@/api/system'
 import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination'
 import {publishStatusTagType, publishStatusText} from '@/lib/publishStatus'
 import {useTableMaxHeight} from '@/lib/useTableMaxHeight'
@@ -452,7 +452,11 @@ import {
   canSubmitPublish,
   DUTY_STATUS_OPTIONS,
   dutyStatusText,
+  loadScheduleDeptOptions,
+  ORG_UNIT_TYPE_DEPT,
+  ORG_UNIT_TYPE_HOSPITAL,
   ORG_UNIT_TYPE_OPTIONS,
+  ORG_UNIT_TYPE_WARD,
   orgUnitTypeText,
   PERM_SCHEDULE_AUDIT,
   SCHEDULE_SCOPE_STAFF,
@@ -490,8 +494,17 @@ const loadUnitOptions = async (orgType) => {
     return
   }
   try {
-    const res = await getStaffScheduleUnitSelectList({orgType, scope: SCHEDULE_SCOPE_STAFF})
-    unitOptions.value = res.code === 200 ? (res.data || []) : []
+    if (Number(orgType) === ORG_UNIT_TYPE_HOSPITAL) {
+      unitOptions.value = [{id: 0, name: '全院', deptName: null}]
+    } else if (Number(orgType) === ORG_UNIT_TYPE_DEPT) {
+      // 科室候选走科室统一入口 selectTree，STAFF 域排除急诊科室
+      unitOptions.value = await loadScheduleDeptOptions(SCHEDULE_SCOPE_STAFF)
+    } else if (Number(orgType) === ORG_UNIT_TYPE_WARD) {
+      const res = await getWardSelectList()
+      unitOptions.value = (res?.data || []).map((w) => ({id: w.wardId, name: w.wardName, deptName: w.deptName}))
+    } else {
+      unitOptions.value = []
+    }
   } catch {
     unitOptions.value = []
   }

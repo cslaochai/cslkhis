@@ -344,7 +344,6 @@ import {
   fileWeekNurseSchedule,
   getNurseMonthWorkload,
   getNurseScheduleRuleList,
-  getNurseUnitSelectList,
   getNurseWeekMatrix,
   listNurseScheduleLogPage,
   listNurseSchedulePage,
@@ -369,6 +368,7 @@ import {
   filingStatusTagType,
   hasFilingRow,
   isWeekFileRejected,
+  loadNurseUnitOptions,
   PERM_ADD,
   PERM_AUDIT,
   PERM_EDIT,
@@ -455,8 +455,7 @@ const weekEnd = computed(() => addDays(weekStart.value, 6));
 const today = dstr(new Date);
 const loadUnits = async () => {
   try {
-    const res = await getNurseUnitSelectList();
-    units.value = (res.data || []).map((u) => ({...u, unitType: Number(u.unitType) || 1}));
+    units.value = await loadNurseUnitOptions();
     // 全院单元几十个，默认落在第一个「有在册护士」的单元：一个护士都没有的单元点开只能看见一张空表，
     // 护士长进来就是要排班，不该先做一次无效选择
     if (!wardId.value && units.value.length) {

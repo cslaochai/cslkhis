@@ -11,11 +11,6 @@ import request from './request'
 
 // ========== 参照数据（跨岗位下拉，后端只要求登录） ==========
 
-// 病区下拉：只含当前岗位可见科室下的启用病区，附开放床位与占用床位数
-export function getQcWardSelectList(params) {
-  return request.get('/nursing/qc/wardSelectList', { params })
-}
-
 // 检查人下拉：该病区所属科室的在职人员（护士长 / 护理部质控组）
 export function getQcInspectorSelectList(params) {
   return request.get('/nursing/qc/inspectorSelectList', { params })

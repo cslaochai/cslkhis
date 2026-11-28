@@ -47,6 +47,7 @@ public class MqttTelemetrySubscriber {
     private final TsdbTelemetryWriter writer;
     private final IotEventService iotEventService;
     private final WaveformBuffer waveformBuffer;
+    private final DeviceWhitelist deviceWhitelist;
 
     private final ObjectMapper json = new ObjectMapper();
 
@@ -163,6 +164,10 @@ public class MqttTelemetrySubscriber {
                 log.debug("物联网遥测报文缺 deviceType/deviceId/metrics，丢弃：{}", topic);
                 return;
             }
+            // 台账白名单：HIS 没登记/已停用的设备，报文不进时序库
+            if (deviceWhitelist.check(id, type) != DeviceWhitelist.Verdict.PASS) {
+                return;
+            }
             if (!sane(type, id, metrics)) {
                 return;
             }
@@ -274,6 +279,9 @@ public class MqttTelemetrySubscriber {
             log.debug("物联网事件报文缺 deviceId/event，丢弃");
             return;
         }
+        if (deviceWhitelist.check(id, type) != DeviceWhitelist.Verdict.PASS) {
+            return;
+        }
         String tsText = text(node, "ts");
         String detail = text(node, "detail");
         JsonNode data = node.get("data");
@@ -296,6 +304,9 @@ public class MqttTelemetrySubscriber {
     private void onWave(JsonNode node) {
         String id = text(node, "deviceId");
         if (id == null) {
+            return;
+        }
+        if (deviceWhitelist.check(id, text(node, "deviceType")) != DeviceWhitelist.Verdict.PASS) {
             return;
         }
         JsonNode channels = node.get("channels");

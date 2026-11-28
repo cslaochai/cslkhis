@@ -14,25 +14,29 @@
  */
 import { getDepartmentSelectTree } from '@/api/system'
 
-/** 树形下拉缓存：key = `${scope}|${deptType ?? ''}|${nodeType ?? ''}|${mode}` → Promise<TreeNode[]> */
+/** 树形下拉缓存：key = `${scope}|${deptType}|${excludeDeptType}|${nodeType}|${openOnly}|${mode}` → Promise<TreeNode[]> */
 const treeCache = new Map()
 
 /**
  * 取科室树形下拉（带缓存）。节点可选性由服务端按 mode 标注 disabled，前端不自行判定。
  *
- * @param {string} [params.scope]    CURRENT（默认，按当前人授权）/ ALL（全量）
- * @param {string} [params.deptType] 服务范围逗号串：1 门诊 2 医技 3 药房 4 住院 5 其他
- * @param {string} [params.nodeType] 节点类型逗号串：1 片区 2 临床 3 医技 4 药剂 5 行政 6 辅助 7 其他
- * @param {string} [params.mode]      LEAF-仅末级业务科室 / TREE-父子均可（默认）/ ORG-组织归属维护
+ * @param {string} [params.scope]           CURRENT（默认，按当前人授权）/ ALL（全量）
+ * @param {string} [params.deptType]        服务范围逗号串：1 门诊 2 医技 3 药房 4 住院 5 其他
+ * @param {string} [params.excludeDeptType] 排除类型逗号串，命中即剔除（如普通排班排除急诊 6）
+ * @param {string} [params.nodeType]        节点类型逗号串：1 片区 2 临床 3 医技 4 药剂 5 行政 6 辅助 7 其他
+ * @param {boolean}[params.openOnly]        true 只出对外开放挂号科室
+ * @param {string} [params.mode]            LEAF-仅末级业务科室 / TREE-父子均可（默认）/ ORG-组织归属维护
  */
-export function loadDeptTreeOptions({ scope = 'CURRENT', deptType = null, nodeType = null, mode = 'TREE' } = {}) {
-  const key = `${scope}|${deptType ?? ''}|${nodeType ?? ''}|${mode}`
+export function loadDeptTreeOptions({ scope = 'CURRENT', deptType = null, excludeDeptType = null, nodeType = null, openOnly = null, mode = 'TREE' } = {}) {
+  const key = `${scope}|${deptType ?? ''}|${excludeDeptType ?? ''}|${nodeType ?? ''}|${openOnly ?? ''}|${mode}`
   if (!treeCache.has(key)) {
     const p = getDepartmentSelectTree({
       scope,
       mode,
       ...(deptType != null ? { deptType } : {}),
+      ...(excludeDeptType != null ? { excludeDeptType } : {}),
       ...(nodeType != null ? { nodeType } : {}),
+      ...(openOnly != null ? { openOnly } : {}),
     })
       .then((res) => res?.data || [])
       .catch((err) => {
@@ -52,7 +56,7 @@ export function flattenDeptTree(tree) {
   const walk = (list, parentName) => {
     for (const d of list || []) {
       if (!d.disabled) {
-        out.push({ id: d.id, deptName: d.deptName, deptType: d.deptType, nodeType: d.nodeType, parentId: d.parentId, parentDeptName: parentName || '' })
+        out.push({ id: d.id, deptName: d.deptName, fullPath: d.fullPath || d.deptName, deptType: d.deptType, nodeType: d.nodeType, parentId: d.parentId, parentDeptName: parentName || '' })
       }
       if (d.children && d.children.length) walk(d.children, d.deptName)
     }

@@ -148,15 +148,18 @@
                   >{{ retryLabel(row) }}
                   </el-button>
               </el-tooltip>
-              <el-button v-if="row.canRevoke && !row.expired && canRevokeAny"
-                         :data-testid="`p5-sign-cert-revoke-${row.certNo}`"
-                         link size="small" type="danger" @click="openRevoke(row)">{{ revokeLabel }}
-              </el-button>
               <!-- 临期=到期换发，过期/吊销=重新签发：同一个动作（给同一人开新证），文案跟着处境走 -->
               <el-button v-if="canReissue(row)" v-perm="'sign:cert:edit'"
                          :data-testid="`p5-sign-cert-reissue-${row.certNo}`"
                          link size="small" type="primary" @click="openReissue(row)">{{ reissueLabel(row) }}
               </el-button>
+              <!-- 吊销是破坏性操作，固定放最后；临期请走「到期换发」，旧证还要留着给历史签名验签 -->
+              <el-tooltip v-if="row.canRevoke && !row.expired && canRevokeAny"
+                          content="仅在证书丢失或私钥泄露时吊销；到期换证请用「到期换发」" placement="top">
+                <el-button :data-testid="`p5-sign-cert-revoke-${row.certNo}`"
+                           link size="small" type="danger" @click="openRevoke(row)">{{ revokeLabel }}
+                </el-button>
+              </el-tooltip>
             </template>
           </el-table-column>
           <template #empty>

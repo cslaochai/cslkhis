@@ -12,12 +12,6 @@ import java.util.List;
 public interface NursingQcService {
 
     /**
-     * 病区下拉：只含当前岗位可见科室的启用病区，附床位数。
-     * 用于「护理质控」页查询卡与各弹框的病区筛选。
-     */
-    List<NurseQcVO.Ward> wardSelectList(String keyword);
-
-    /**
      * 检查人下拉：指定病区所属科室的在职人员。
      * 用于检查单评分表单选择检查人。
      */

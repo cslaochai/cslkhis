@@ -23,6 +23,7 @@ import com.his.outpatient.service.BizScheduleService;
 import com.his.outpatient.service.NurseScheduleLogService;
 import com.his.outpatient.service.StaffPlanRuleService;
 import com.his.outpatient.service.StaffScheduleService;
+import com.his.outpatient.vo.DeptNurseCountVO;
 import com.his.outpatient.vo.NurseScheduleVO;
 import com.his.spi.service.SystemFacadeService;
 import com.his.spi.vo.DeptBriefVO;
@@ -174,16 +175,8 @@ public class BizScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, BizSc
     }
 
     @Override
-    public List<NurseScheduleVO.Ward> wardSelectList(String keyword) {
-        return bizScheduleMapper.selectWardOptions(scopedDeptIds(null), TextUtil.trimToNull(keyword));
-    }
-
-    @Override
-    public List<NurseScheduleVO.Ward> unitSelectList(String keyword) {
-        List<NurseScheduleVO.Ward> units = new ArrayList<>();
-        units.addAll(bizScheduleMapper.selectWardOptions(scopedDeptIds(null), TextUtil.trimToNull(keyword)));
-        units.addAll(bizScheduleMapper.selectDeptOptions(scopedDeptIds(null), TextUtil.trimToNull(keyword)));
-        return units;
+    public List<DeptNurseCountVO> unitNurseCounts() {
+        return bizScheduleMapper.selectDeptNurseCounts(scopedDeptIds(null));
     }
 
     @Override

@@ -32,19 +32,15 @@ public interface SystemFacadeService {
     DeptBriefVO findDepartment(Long deptId);
 
     /**
-     * 启用中的科室列表，用于排班「值守点位 / 排班单元」下拉候选。
+     * 按处方类别取门诊药房科室摘要：中药饮片处方 → 中药房；西药/中成药处方 → 西药房。
      *
-     * @return 按科室排序号、ID 升序
-     */
-    List<DeptBriefVO> listEnabledDepartments();
-
-    /**
-     * 批量取科室摘要，用于病区列表把所属科室ID翻译成科室名。
+     * <p>用于引导单 / 处方签的取药地点展示。系统未维护处方类别与药房的显式映射列，
+     * 匹配规则收口在科室宿主模块；无匹配药房时返回 {@code null}，调用方不得自行编造楼层房间。
      *
-     * @param deptIds 科室ID集合（空集合直接返回空列表，不发查询）
-     * @return 已删除的科室不会出现在结果里，调用方按缺行处理
+     * @param herbal true=中药饮片处方；false/null=西药 / 中成药处方
+     * @return 匹配的门诊药房；不存在或未维护时返回 {@code null}
      */
-    List<DeptBriefVO> listDepartmentsByIds(Collection<Long> deptIds);
+    DeptBriefVO findOutpatientPharmacy(Boolean herbal);
 
     /**
      * 指定员工作为全院岗位排班审核人所辖的科室列表，用于待审列表的科室收口。
@@ -106,13 +102,6 @@ public interface SystemFacadeService {
      * @return 不存在时返回 {@code null}
      */
     WardBriefVO findWard(Long wardId);
-
-    /**
-     * 启用中的病区列表，用于排班「值守点位 / 排班单元」下拉候选。
-     *
-     * @return 按病区编码、ID 升序
-     */
-    List<WardBriefVO> listEnabledWards();
 
     // ---------- 岗位与角色 ----------
 

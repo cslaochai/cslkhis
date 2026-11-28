@@ -14,7 +14,6 @@ import com.his.common.enums.RobotDispatchStatusEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.TextUtil;
 import com.his.common.utils.UserUtils;
-import com.his.iot.dto.IotDeviceQueryDTO;
 import com.his.iot.dto.IotLatestQueryDTO;
 import com.his.iot.dto.RobotDispatchAssignDTO;
 import com.his.iot.dto.RobotDispatchCancelDTO;
@@ -154,13 +153,31 @@ public class RobotDispatchServiceImpl extends ServiceImpl<IotRobotDispatchOrderM
     @Transactional(rollbackFor = Exception.class)
     public void assign(RobotDispatchAssignDTO dto) {
         CurrentUser user = requireUser();
-        IotRobotDispatchOrder order = requireOrder(dto.getId());
+        doAssign(dto.getId(), dto.getRobotNo(), user.getRealName(), user.getEmployeeId());
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void assignAs(Long orderId, String robotNo, String operatorName, Long operatorId) {
+        doAssign(orderId, robotNo, operatorName, operatorId);
+    }
+
+    /**
+     * 派车主体：人工派车与队列补派共用一条路径（选车 → 锁车 → 复核在途 → 下发 → 改单）。
+     * <p>
+     * operator 由调用方显式给出：手工派车取当前登录人，补派没有登录态，由任务传 {@code system:robotDispatch}。
+     * 不在这里回落"未知操作人"——取不到就是传错了，宁可报错。
+     */
+    private void doAssign(Long orderId, String requestedRobotNo, String operatorName, Long operatorId) {
+        IotRobotDispatchOrder order = requireOrder(orderId);
         if (!Objects.equals(RobotDispatchStatusEnum.PENDING_DISPATCH.getCode(), order.getStatus())) {
             throw new BusinessException(400, "当前状态不可派车：" + RobotDispatchStatusEnum.getLabelOrUnknown(order.getStatus()));
         }
 
-        String robotNo = TextUtil.hasText(dto.getRobotNo()) ? dto.getRobotNo() : pickFreeRobot(order);
-        IotDevice robot = requireRobot(robotNo);
+        String robotNo = TextUtil.hasText(requestedRobotNo) ? requestedRobotNo : pickFreeRobot(order);
+        // 锁车行 + 复核：选车到锁车之间可能被另一张单抢先派走，锁住之后再确认一次才算数
+        lockRobot(robotNo);
+        assertRobotIdle(robotNo);
 
         ObjectNode payload = buildPayload(order);
         boolean sent = publisher.publishCommand("robot", robotNo, "ASSIGN_TASK", order.getOrderNo(), payload);
@@ -170,10 +187,22 @@ public class RobotDispatchServiceImpl extends ServiceImpl<IotRobotDispatchOrderM
 
         order.setRobotNo(robotNo);
         order.setStatus(RobotDispatchStatusEnum.DISPATCHED.getCode());
-        order.setDispatchBy(user.getRealName());
-        order.setDispatchById(user.getEmployeeId());
+        order.setDispatchBy(operatorName);
+        order.setDispatchById(operatorId);
         order.setDispatchTime(LocalDateTime.now());
         baseMapper.updateById(order);
+    }
+
+    @Override
+    public List<Long> pendingOrderIds(int limit) {
+        int cap = Math.max(1, Math.min(limit, 50));
+        return baseMapper.selectList(new LambdaQueryWrapper<IotRobotDispatchOrder>()
+                        .eq(IotRobotDispatchOrder::getStatus, RobotDispatchStatusEnum.PENDING_DISPATCH.getCode())
+                        .orderByDesc(IotRobotDispatchOrder::getPriority)
+                        .orderByAsc(IotRobotDispatchOrder::getCreateTime)
+                        .orderByAsc(IotRobotDispatchOrder::getId)
+                        .last("LIMIT " + cap))
+                .stream().map(IotRobotDispatchOrder::getId).toList();
     }
 
     @Override
@@ -195,9 +224,8 @@ public class RobotDispatchServiceImpl extends ServiceImpl<IotRobotDispatchOrderM
 
     @Override
     public List<RobotFleetVO> fleet() {
-        IotDeviceQueryDTO query = new IotDeviceQueryDTO();
-        query.setDeviceType("robot");
-        List<IotDeviceVO> roster = iotDeviceService.selectList(query);
+        // 车队全院共享：走不收口的清单，受限岗位也要看到整队
+        List<IotDeviceVO> roster = iotDeviceService.listSharedFleet("robot");
 
         IotLatestQueryDTO latestQuery = new IotLatestQueryDTO();
         latestQuery.setDeviceType("robot");
@@ -310,9 +338,7 @@ public class RobotDispatchServiceImpl extends ServiceImpl<IotRobotDispatchOrderM
                                 .isNotNull(IotRobotDispatchOrder::getRobotNo))
                 .stream().map(IotRobotDispatchOrder::getRobotNo).collect(Collectors.toSet());
 
-        IotDeviceQueryDTO query = new IotDeviceQueryDTO();
-        query.setDeviceType("robot");
-        List<IotDeviceVO> roster = iotDeviceService.selectList(query);
+        List<IotDeviceVO> roster = iotDeviceService.listSharedFleet("robot");
 
         IotLatestQueryDTO latestQuery = new IotLatestQueryDTO();
         latestQuery.setDeviceType("robot");
@@ -423,19 +449,35 @@ public class RobotDispatchServiceImpl extends ServiceImpl<IotRobotDispatchOrderM
                 .collect(Collectors.joining("、"));
     }
 
-    private IotDevice requireRobot(String robotNo) {
+    /**
+     * 锁住车号对应的机器人台账行（FOR UPDATE），同时校验存在与启用。
+     * <p>
+     * 必须在本方法所属事务内调用：行锁到事务提交才释放，用来把"同车并发派单"串行化。
+     */
+    private IotDevice lockRobot(String robotNo) {
         if (!TextUtil.hasText(robotNo)) {
             throw new BusinessException(400, "未指定机器人");
         }
-        IotDevice robot = iotDeviceMapper.selectOne(
-                new LambdaQueryWrapper<IotDevice>()
-                        .eq(IotDevice::getDeviceNo, robotNo)
-                        .eq(IotDevice::getDeviceType, "robot")
-                        .last("LIMIT 1"));
+        IotDevice robot = iotDeviceMapper.selectRobotForUpdate(robotNo);
         if (robot == null || !Objects.equals(robot.getEnabled(), 1)) {
             throw new BusinessException(400, "机器人不存在或已停用：" + robotNo);
         }
         return robot;
+    }
+
+    /**
+     * 锁车之后复核在途单：并发派车时前一张单可能刚提交（DISPATCHED/DELIVERING），
+     * 此时本单必须放弃，换车或留在队列，不能把同一台车派两次。
+     */
+    private void assertRobotIdle(String robotNo) {
+        long active = baseMapper.selectCount(new LambdaQueryWrapper<IotRobotDispatchOrder>()
+                .eq(IotRobotDispatchOrder::getRobotNo, robotNo)
+                .in(IotRobotDispatchOrder::getStatus,
+                        List.of(RobotDispatchStatusEnum.DISPATCHED.getCode(),
+                                RobotDispatchStatusEnum.DELIVERING.getCode())));
+        if (active > 0) {
+            throw new BusinessException(400, "机器人已被其他任务占用：" + robotNo + "；任务单留在待调度队列");
+        }
     }
 
     private ObjectNode buildPayload(IotRobotDispatchOrder order) {
@@ -458,9 +500,7 @@ public class RobotDispatchServiceImpl extends ServiceImpl<IotRobotDispatchOrderM
     }
 
     private Map<String, String> robotNameMap() {
-        IotDeviceQueryDTO query = new IotDeviceQueryDTO();
-        query.setDeviceType("robot");
-        return iotDeviceService.selectList(query).stream()
+        return iotDeviceService.listSharedFleet("robot").stream()
                 .collect(Collectors.toMap(IotDeviceVO::getDeviceNo, IotDeviceVO::getDeviceName, (a, b) -> a));
     }
 

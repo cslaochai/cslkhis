@@ -31,10 +31,6 @@ export function getNoticeInpatients(params) {
   return request.get('/patient/criticalNotice/inpatients', { params })
 }
 
-export function getNoticeDoctorOptions() {
-  return request.get('/patient/criticalNotice/doctorOptions')
-}
-
 export function getNoticeStats() {
   return request.get('/patient/criticalNotice/stats')
 }

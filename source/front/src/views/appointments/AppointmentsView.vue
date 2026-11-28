@@ -27,7 +27,7 @@
             <el-select v-model="deskDeptId" class="!w-64" clearable data-testid="desk-dept-select" filterable
                        placeholder="全部科室" @change="handleDeskDeptChange">
               <el-option v-for="d in departments" :key="d.id"
-                         :label="d.parentDeptName ? `${d.parentDeptName} / ${d.deptName}` : d.deptName"
+                         :label="d.fullPath || d.deptName"
                          :value="d.id ?? d.deptName"/>
             </el-select>
             <span class="text-sm font-medium text-slate-700">医生</span>
@@ -444,7 +444,7 @@
               <el-form-item label="科室">
                 <el-select v-model="searchForm.deptId" class="!w-56" clearable filterable placeholder="全部科室">
                   <el-option v-for="d in departments" :key="d.id"
-                             :label="d.parentDeptName ? `${d.parentDeptName} / ${d.deptName}` : d.deptName"
+                             :label="d.fullPath || d.deptName"
                              :value="d.id ?? d.deptName"/>
                 </el-select>
               </el-form-item>

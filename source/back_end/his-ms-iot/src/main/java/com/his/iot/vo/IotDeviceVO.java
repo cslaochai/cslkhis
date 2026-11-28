@@ -36,7 +36,7 @@ public class IotDeviceVO implements Serializable {
     @Schema(description = "固定安装床位号（仅床垫/在床监测类设备）")
     private String bedNo;
 
-    @Schema(description = "资产标签绑定的设备台账ID（仅 asset 类型，Long 防精度丢失）")
+    @Schema(description = "资产台账绑定的设备台账ID（asset/robot 类型，Long 防精度丢失）")
     @JsonSerialize(using = ToStringSerializer.class)
     private Long equipmentId;
 

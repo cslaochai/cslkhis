@@ -61,7 +61,7 @@ public class IotDevice extends BaseEntity {
     private String bedNo;
 
     /**
-     * 资产标签绑定的设备台账ID（仅 asset 类型）。设备科台账在 platform 模块，
+     * 资产台账绑定的设备台账ID（asset 标签类与 robot 物流机器人共用）。设备台账在 platform 模块，
      * 本模块只存外键，展示时由前端调设备台账接口补编码/维保，不跨模块查表。
      */
     private Long equipmentId;

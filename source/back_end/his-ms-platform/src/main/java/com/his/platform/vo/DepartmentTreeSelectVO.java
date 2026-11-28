@@ -50,6 +50,12 @@ public class DepartmentTreeSelectVO {
     private Long parentId;
 
     /**
+     * 祖先路径（自根到当前节点，斜杠拼接，如「内科系统 / 神经内科」）。
+     * 平铺下拉用整行路径展示与同名消歧；树形下拉不消费本字段。
+     */
+    private String fullPath;
+
+    /**
      * 是否不可选：true 时前端灰显，仅作分组展示
      */
     private Boolean disabled;
